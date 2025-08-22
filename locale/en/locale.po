@@ -1,0 +1,31 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2024-12-01T16:21:26+00:00\n"
+"PO-Revision-Date: 2024-12-01T16:21:26+00:00\n"
+"Language: \n"
+
+msgid "plugins.generic.codecheck.displayName"
+msgstr "CODECHECK Plugin"
+
+msgid "plugins.generic.codecheck.description"
+msgstr "Integrates CODECHECK code execution verification into the OJS peer review workflow"
+
+msgid "plugins.generic.codecheck.settings.title"
+msgstr "CODECHECK Settings"
+
+msgid "plugins.generic.codecheck.settings.description"
+msgstr "Configure CODECHECK integration settings for this journal"
+
+# Future settings - add as placeholders for now
+msgid "plugins.generic.codecheck.settings.enableCodecheck"
+msgstr "Enable CODECHECK for this journal"
+
+msgid "plugins.generic.codecheck.settings.enableCodecheck.description"
+msgstr "Allow editors to assign codecheckers to submissions"
