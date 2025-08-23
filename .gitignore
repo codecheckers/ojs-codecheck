@@ -24,3 +24,6 @@
 /app/Config/database.php
 /vendors/*
 
+# macOS
+.DS_Store
+*.pem
