@@ -29,10 +29,10 @@
 		{fbvFormSection}
 			{fbvElement
 				type="checkbox"
-				id="enableCodecheck"
-				checked=$enableCodecheck
-				label="plugins.generic.codecheck.settings.enableCodecheck"
-				description="plugins.generic.codecheck.settings.enableCodecheck.description"
+				id="codecheckEnabled"
+				checked=$codecheckEnabled
+				label="plugins.generic.codecheck.settings.codecheckEnabled"
+				description="plugins.generic.codecheck.settings.codecheckEnabled.description"
 			}
 		{/fbvFormSection}
 		
