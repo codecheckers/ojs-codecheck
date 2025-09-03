@@ -22,7 +22,7 @@
 }
 
 .codecheck-certificate {
-    border: 2px solid #28a745;
+    border: 2px solid #008033;
     background: linear-gradient(135deg, #f8fff9 0%, #e8f5e8 100%);
     padding: 1.5rem;
     margin: 1rem 0;
@@ -35,7 +35,7 @@
     position: absolute;
     top: -10px;
     right: -10px;
-    background: #28a745;
+    background: #008033;
     color: white;
     border-radius: 50%;
     width: 30px;
@@ -48,7 +48,7 @@
 
 .codecheck-badge {
     display: inline-block;
-    background: #28a745;
+    background: #008033;
     color: white;
     padding: 0.25rem 0.75rem;
     border-radius: 1rem;
@@ -58,7 +58,7 @@
 }
 
 .codecheck-badge:hover {
-    background: #218838;
+    background: #006629;
     color: white;
     text-decoration: none;
 }
