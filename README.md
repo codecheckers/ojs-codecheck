@@ -86,7 +86,6 @@ This plugin follows the official CODECHECK brand guidelines and integrates with 
 
 - OJS 3.5.0 or later
 - PHP 8.2.0 or later
-- Modern web browser for admin interface
 
 ### File Structure
 
@@ -137,30 +136,30 @@ codecheck/
 
 Copyright (c) 2025 CODECHECK Initiative
 
-This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License.
+This program is free software; you can redistribute it and/or modify it under the terms of the Apache License Version 2.0, see file LICENSE.
 
 ## Support
 
 - **Documentation**: [CODECHECK Guide](https://codecheck.org.uk/guide/)
 - **Issues**: [GitHub Issues](https://github.com/codecheckers/ojs-codecheck/issues)
 - **Community**: [CODECHECK Community](https://codecheck.org.uk/get-involved/)
-- **Email**: For sensitive issues, contact the CODECHECK team directly
+- **Email**: For sensitive issues, contact the CODECHECK team directly at [team@cdchck.science](mailto:team@cdchck.science)
 
 ## Changelog
 
 ### Version 1.0.0.0 (Development)
+
 - Initial plugin structure
 - OJS 3.5.x compatibility
-- Official CODECHECK brand color integration
+- Color scheme documentation
 
 ## Acknowledgments
 
-- [CODECHECK Initiative](https://codecheck.org.uk/) for the codechecking framework
-- [Public Knowledge Project](https://pkp.sfu.ca/) for Open Journal Systems
-- The scholarly publishing community for supporting computational reproducibility
+The [CHECK-PUB](https://codecheck.org.uk/pub/) project (2025-2026) is empored by [TU Delft Library](https://www.tudelft.nl/en/library/).
+
+<img src="https://codecheck.org.uk/img/TUDelft_logo_rgb.png" alt="TU Delft Library Logo" width="240">
 
 ## Related Projects
 
-- [CODECHECK](https://codecheck.org.uk/) - The main CODECHECK project
-- [OJS](https://pkp.sfu.ca/software/ojs/) - Open Journal Systems
-- [CODECHECK Register](https://codecheck.org.uk/register/) - Registry of codechecked papers
+- [CODECHECK](https://codecheck.org.uk/)
+- [OJS](https://pkp.sfu.ca/software/ojs/) by [PKP](https://pkp.sfu.ca/)
