@@ -2,8 +2,7 @@
 /**
  * @file classes/Settings/Actions.php
  *
- * Copyright (c) 2024 Technische Universität Dresden
- * Copyright (c) 2024 CODECHECK Initiative
+ * Copyright (c) 2025 CODECHECK Initiative
  * Distributed under the GNU GPL v3. For full terms see the file docs/COPYING.
  *
  * @class Actions
