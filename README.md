@@ -117,7 +117,7 @@ codecheck/
 
 ### Contributing
 
-If you want to contribute to this project, we kindly ask you to follow our [contribution guidelines](CONTRIBUTING.md)
+If you want to contribute to this project, we kindly ask you to follow our [contribution guidelines](CONTRIBUTING.md).
 
 ## License
 
