@@ -136,7 +136,7 @@ codecheck/
 
 Copyright (c) 2025 CODECHECK Initiative
 
-This program is free software; you can redistribute it and/or modify it under the terms of the Apache License Version 2.0, see file LICENSE.
+This program is free software; you can redistribute it and/or modify it under the terms of the Apache License Version 2.0, see file [LICENSE](LICENSE).
 
 ## Support
 
