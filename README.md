@@ -1,16 +1,26 @@
-# <img src="https://avatars.githubusercontent.com/u/51200812?s=48&v=4" alt="Logo" width="30"/>  ojs-codecheck
+<img src="https://codecheck.org.uk/img/codecheck_logo.svg" alt="Logo" width="150"/>
 
-An [OJS Plugin](https://codecheck.org.uk/pub/) to streamline codechecking of submissions and display [CODECHECK](https://codecheck.org.uk/) certificates.
+# <img src="https://avatars.githubusercontent.com/u/51200812?s=48&v=4" alt="Logo" width="25"/>  ojs-codecheck
+
+<a href="https://www.repostatus.org/#wip">
+    <img src="https://www.repostatus.org/badges/latest/wip.svg" alt="Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public." />
+</a>
+<br /><br />
+An [OJS Plugin](https://docs.pkp.sfu.ca/dev/plugin-guide/en/) to streamline codechecking of submissions and display [CODECHECK](https://codecheck.org.uk/) certificates.
 
 ## About
 
-This plugin integrates the [CODECHECK](https://codecheck.org.uk/) process into the submission and review workflows within Open Journal Systems (OJS), allowing journals to streamline code and computational reproducibility checking of scholarly submissions. The plugin provides tools for metadata creation and certificate deposition, displaying certificates and ensuring computational transparency in published research. Furthermore the plugin will also connect with the CODECHECK infrastructure for publication of certificates and metadata.
+This plugin integrates the [CODECHECK](https://codecheck.org.uk/) process into the submission and review workflows within Open Journal Systems (OJS), allowing journals to streamline code and computational reproducibility checking of scholarly submissions. The plugin provides tools for metadata creation and certificate deposition, displaying certificates, ensuring computational transparency in published research, as well as certificate and metadata publication. Therefore the plugin connects seamlessly with the CODECHECK infrastructure.
+
+The ojs-codecheck plugin is developed as part of the [CHECK-PUB](https://codecheck.org.uk/pub/) project.
 
 ## Features
 
-- **Certificate Display**: Automatically display CODECHECK certificates for verified submissions
 - **Submission Integration**: Seamless integration with OJS submission workflow
+- **CODECHECK Metadata**: Built-in tools for creation and publication of CODECHECK metadata
+- **Certificate Creation**: Built-in workflow to create CODECHECK certificates from metadata
 - **Certificate Verification**: Built-in tools for verifying CODECHECK certificates
+- **Certificate Display**: Automatically display CODECHECK certificates for verified submissions
 - **Customizable Settings**: Configure CODECHECK display preferences and requirements
 
 ## Installation
@@ -61,6 +71,11 @@ This plugin follows the official CODECHECK brand guidelines and integrates with 
 
 ## Usage
 
+### For Codecheckers
+1. **Metadata Creation**: Automatically create new valid CODECHECK metadata file `codecheck.yml`
+2. **Metadata Import**: If `codecheck.yml` already exists, you can also use it instead
+3. **Manage CODECHECKs**: The plugin enables you to manage your different ongoing CODECHECKs
+
 ### For Journal Managers
 
 1. **Enable the Plugin**: Activate through the plugin management interface
@@ -107,12 +122,13 @@ codecheck/
 ├── LICENSE                     # License file
 ├── locale/                     # Internationalization
 │   └── en/
-│       └── locale.po          # English localization strings
-├── README.md                  # This documentation
-├── templates/                 # Template files
-│   ├── codecheck-assets.tpl  # CSS/JS assets and styling
-│   └── settings.tpl          # Plugin settings form template
-└── version.xml               # Plugin metadata and version info
+│       └── locale.po           # English localization strings
+├── README.md                   # This documentation
+├── CONTRIBUTING.md             # Contibuting guidelines for this repo
+├── templates/                  # Template files
+│   ├── codecheck-assets.tpl    # CSS/JS assets and styling
+│   └── settings.tpl            # Plugin settings form template
+└── version.xml                 # Plugin metadata and version info
 ```
 
 ### Contributing
