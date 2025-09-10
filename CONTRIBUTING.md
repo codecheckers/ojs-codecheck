@@ -1,8 +1,10 @@
-# Contributing to the ojs-codecheck plugin
+# Contributing to the ojs-codecheck plugin <img src="https://avatars.githubusercontent.com/u/51200812?s=48&v=4" alt="Logo" width="25"/>
 
 First off, thanks for taking the time to contribute! 
 
-All types of contributions are encouraged and valued. See the [Table of Contents](#table-of-contents) for different ways to help and details about how this project handles them. Please make sure to read the relevant section before making your contribution. It will make it a lot easier for us maintainers and smooth out the experience for all involved. The community looks forward to your contributions. 
+We encurage and value all types of contributions. Look at the [Table of Contents](#table-of-contents) for different ways to help and details about how this project handles them. Please make sure to read the relevant section before making your contribution. It will make it a lot easier for us maintainers and smooth out the experience for everyone involved.
+
+The community looks forward to your contributions ☺️
 
 > And if you like ojs-codecheck, but just don't have time to contribute, that's fine. There are other easy ways to support ojs-codecheck, as well as the CHECK-PUB project and the CODECHECK initiative and show your appreciation, which we would also be very happy about:
 > - Conduct a CODECHECK yourself
@@ -14,41 +16,54 @@ All types of contributions are encouraged and valued. See the [Table of Contents
 
 ## Table of Contents
 
+- [How Do I Contribute](#how-do-i-contribute)
+  - [Contributing to ojs-codecheck](#contributing-to-ojs-codecheck)
+  - [Coding Standards](#coding-standards)
+  - [Improving The Documentation](#improving-the-documentation)
 - [I Have a Question](#i-have-a-question)
-- [I Want To Contribute](#i-want-to-contribute)
-- [Reporting Bugs](#reporting-bugs)
-- [Suggesting Enhancements](#suggesting-enhancements)
-- [Contributing to ojs-codecheck](#contributing-to-ojs-codecheck)
-- [Coding Standards](#coding-standards)
-- [Improving The Documentation](#improving-the-documentation)
-- [Styleguides](#styleguides)
+- [What can I contribute](#what-can-i-contribute)
+  - [Reporting Bugs](#reporting-bugs)
+  - [Suggesting Enhancements](#suggesting-enhancements)
 - [Commit Messages](#commit-messages)
 
 
-## I Have a Question
+## How Do I Contribute
 
-> If you want to ask a question, we assume that you have read the available Documentation inside the [README.md](https://github.com/codecheckers/ojs-codecheck/blob/main/README.md),on the [CODECHECK](https://codecheck.org.uk/) and [CHECK-PUB](https://codecheck.org.uk/pub/) websites, as well as the [CODECHECK paper](https://doi.org/10.12688/f1000research.51738.2).
+> ### Legal Notice ⚖️
+> When contributing to this project, you must agree that you have authored 100% of the content, that you have the necessary rights to the content and that the content you contribute may be provided under the projects [Apache License](https://github.com/codecheckers/ojs-codecheck/blob/main/LICENSE).
 
-Before you ask a question, it is best to search for existing [Issues](/issues) that might help you. In case you have found a suitable issue and still need clarification, you can write your question as a comment to this issue. It is also advisable to search the internet for answers first.
+### Contributing to ojs-codecheckk
 
-If you then still feel the need to ask a question and need clarification, we recommend the following:
+If you want to contribute to this project, please follow these guidelines:
 
-- Open an [Issue](/issues/new).
-- Provide as much context as you can about what you're running into.
-- Provide project and platform versions (OJS, PHP, etc), depending on what seems relevant.
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes following the [coding standards](#coding-standards)
+4. Update tests and documentation
+  - If you've added code that should be tested, add tests
+  - If you've changed APIs, update the documentation
+5. Ensure the test suite passes
+6. Commit your changes (`git commit -m 'Add amazing feature'`)
+7. Push to the branch (`git push origin feature/amazing-feature`)
+8. Open a Pull Request
 
-We will then take care of the issue as soon as possible and as good as we can.
+### Coding Standards
+
+- Follow [PSR-12](https://www.php-fig.org/psr/psr-12/) coding standards
+- Use meaningful variable and function names
+- Document all public methods and classes
+- Maintain backward compatibility within major versions
+- Make sure your code lints
+
+### Improving The Documentation
+
+- when contributing to the documentation inside the [README.md](https://github.com/codecheckers/ojs-codecheck/blob/main/README.md), [CONTRIBUTING.md](https://github.com/codecheckers/ojs-codecheck/blob/main/CONTRIBUTING.md), or [CHANGELOG.md]() please follow the same rules listed in [Contributing to ojs-codecheckk](#contributing-to-ojs-codecheckk)- instead of creating a feature branch though, please consider creating a documentation branch (`git checkout -b documentation/my-doc-improvement`)
 
 
-
-## I Want To Contribute
-
-> ### Legal Notice 
-> When contributing to this project, you must agree that you have authored 100% of the content, that you have the necessary rights to the content and that the content you contribute may be provided under the project [license](https://github.com/codecheckers/ojs-codecheck/blob/main/LICENSE).
+## What can I contribute
 
 ### Reporting Bugs
-
-
+- - -
 #### Before Submitting a Bug Report
 
 Your bug report shouldn't leave others needing to chase you up for more information. Therefore, we ask you kindly to investigate carefully, collect information and describe the issue in detail in your report. Please complete the following steps in advance to help us fix any potential bug as fast as possible.
@@ -64,7 +79,6 @@ Your bug report shouldn't leave others needing to chase you up for more informat
   - Possibly your input and the output (if the bug happened e.g. during CODECHECK metadata creation)
   - Can you reliably reproduce the issue, or was it just a one time occurenece?
   - Can you reproduce the bug with older versions as well?
-
 
 #### How Do I Submit a Good Bug Report?
 
@@ -84,8 +98,7 @@ Once it's filed:
 - A team member will try to reproduce the issue with your provided steps. If there are no reproduction steps or no obvious way to reproduce the issue, the team will ask you for those steps and mark the issue as `question`. Bugs with the `question` label will not be addressed until they are reproduced.
 - If the team is able to reproduce the issue, it will be marked `bug`, as well as possibly other tags (such as `help wanted` or even `enhancement`), and the issue will be left to be [implemented by someone](#contributing-to-ojs-codecheck).
 
-
-
+- - -
 
 ### Suggesting Enhancements
 
@@ -114,34 +127,24 @@ Enhancement suggestions are tracked as [GitHub issues](/issues).
 - **Explain why this enhancement would be useful** to most users of the ojs-codecheck plugin. You may also want to point out the other projects that solved it better and which could serve as inspiration.
 
 
+## I Have a Question
 
-### Contributing to ojs-codecheckk
+> If you want to ask a question, we assume that you have read the available Documentation inside the [README.md](https://github.com/codecheckers/ojs-codecheck/blob/main/README.md),on the [CODECHECK](https://codecheck.org.uk/) and [CHECK-PUB](https://codecheck.org.uk/pub/) websites, as well as the [CODECHECK paper](https://doi.org/10.12688/f1000research.51738.2).
 
-If you want to contribute to this project, please follow these guidelines:
+Before you ask a question, it is best to search for existing [Issues](/issues) that might help you. In case you have found a suitable issue and still need clarification, you can write your question as a comment to this issue. It is also advisable to search the internet for answers first.
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes following the [coding standards](#coding-standards)
-4. Update tests and documentation
-5. Commit your changes (`git commit -m 'Add amazing feature'`)
-6. Push to the branch (`git push origin feature/amazing-feature`)
-7. Open a Pull Request
+If you then still feel the need to ask a question and need clarification, we recommend the following:
 
-### Coding Standards
+- Open an [Issue](/issues/new).
+- Provide as much context as you can about what you're running into.
+- Provide project and platform versions (OJS, PHP, etc), depending on what seems relevant.
 
-- Follow [PSR-12](https://www.php-fig.org/psr/psr-12/) coding standards
-- Use meaningful variable and function names
-- Document all public methods and classes
-- Maintain backward compatibility within major versions
+We will then take care of the issue as soon as possible and as good as we can.
 
-### Improving The Documentation
 
-When contributing to the documentation inside the [README.md](https://github.com/codecheckers/ojs-codecheck/blob/main/README.md), [CONTRIBUTING.md](https://github.com/codecheckers/ojs-codecheck/blob/main/CONTRIBUTING.md), or [CHANGELOG.md]() please follow the same rules listed in [Contributing to ojs-codecheckk](#contributing-to-ojs-codecheckk). Instead of creating a feature branch though, please consider creating a documentation branch (`git checkout -b documentation/my-doc-improvement`).
-
-## Styleguides
-### Commit Messages
+## Commit Messages
 
 Please try to keep your commit messages short and concise and mark the issue you are working on in your commit message.
 
 ## Attribution
-This guide is based on the **contributing.md**. [Make your own](https://contributing.md/)!
+This contributing.md is based on and adapted from the [**CONTRIBUTING.MD Example**](https://contributing.md/example/) of https://contributing.md/.
