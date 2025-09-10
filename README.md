@@ -1,10 +1,10 @@
-# ojs-codecheck
+# <img src="https://avatars.githubusercontent.com/u/51200812?s=48&v=4" alt="Logo" width="30"/>  ojs-codecheck
 
-An OJS Plugin to streamline codechecking of submissions and display CODECHECK certificates.
+An [OJS Plugin](https://codecheck.org.uk/pub/) to streamline codechecking of submissions and display [CODECHECK](https://codecheck.org.uk/) certificates.
 
 ## About
 
-This plugin integrates the [CODECHECK](https://codecheck.org.uk/) process into Open Journal Systems (OJS), allowing journals to streamline the code and computational reproducibility checking of scholarly submissions. The plugin provides tools for managing codechecks, displaying certificates, and ensuring computational transparency in published research.
+This plugin integrates the [CODECHECK](https://codecheck.org.uk/) process into the submission and review workflows within Open Journal Systems (OJS), allowing journals to streamline code and computational reproducibility checking of scholarly submissions. The plugin provides tools for metadata creation and certificate deposition, displaying certificates and ensuring computational transparency in published research. Furthermore the plugin will also connect with the CODECHECK infrastructure for publication of certificates and metadata.
 
 ## Features
 
