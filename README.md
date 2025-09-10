@@ -36,8 +36,8 @@ The ojs-codecheck plugin is developed as part of the [CHECK-PUB](https://codeche
 
 The `1.x.y.z` versions of this plugin are compatible with OJS 3.5.x.
 
-| Plugin Version | OJS Version | Status |
-|----------------|-------------|---------|
+| Plugin Version | OJS Version | Status             |
+|----------------|-------------|--------------------|
 | 1.0.0.0        | 3.5.0+      | Active Development |
 
 ## Color Scheme
@@ -107,29 +107,29 @@ This plugin follows the official CODECHECK brand guidelines and integrates with 
 
 ```
 codecheck/
-├── classes/                    # Plugin classes
-│   ├── Constants.php           # Plugin constants and definitions
-│   ├── FrontEnd/               # Frontend display components
-│   │   └── ArticleDetails.php  # Article page integration
-│   └── Settings/               # Settings management
-│       ├── Actions.php         # Settings actions and handlers
-│       ├── Manage.php          # Settings management logic
-│       └── SettingsForm.php    # Settings form handling
-├── CodecheckPlugin.php         # Main plugin class
-├── cypress/                    # End-to-end testing
+├── classes/                            # Plugin classes
+│   ├── Constants.php                   # Plugin constants and definitions
+│   ├── FrontEnd/                       # Frontend display components
+│   │   └── ArticleDetails.php          # Article page integration
+│   └── Settings/                       # Settings management
+│       ├── Actions.php                 # Settings actions and handlers
+│       ├── Manage.php                  # Settings management logic
+│       └── SettingsForm.php            # Settings form handling
+├── CodecheckPlugin.php                 # Main plugin class
+├── cypress/                            # End-to-end testing
 │   └── tests/
 │       └── functional/
-│           └── CodecheckPlugin.cy.js  # Cypress test suite
-├── LICENSE                     # License file
-├── locale/                     # Internationalization
+│           └── CodecheckPlugin.cy.js   # Cypress test suite
+├── LICENSE                             # License file
+├── locale/                             # Internationalization
 │   └── en/
-│       └── locale.po           # English localization strings
-├── README.md                   # This documentation
-├── CONTRIBUTING.md             # Contibuting guidelines for this repo
-├── templates/                  # Template files
-│   ├── codecheck-assets.tpl    # CSS/JS assets and styling
-│   └── settings.tpl            # Plugin settings form template
-└── version.xml                 # Plugin metadata and version info
+│       └── locale.po                   # English localization strings
+├── README.md                           # This documentation
+├── CONTRIBUTING.md                     # Contibuting guidelines for this repo
+├── templates/                          # Template files
+│   ├── codecheck-assets.tpl            # CSS/JS assets and styling
+│   └── settings.tpl                    # Plugin settings form template
+└── version.xml                         # Plugin metadata and version info
 ```
 
 ### Contributing
