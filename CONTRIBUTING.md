@@ -115,7 +115,7 @@ Enhancement suggestions are tracked as [GitHub issues](/issues).
 
 
 
-### Contributing to ojs-codecheckk
+### Contributing to ojs-codecheck
 
 If you want to contribute to this project, please follow these guidelines:
 
