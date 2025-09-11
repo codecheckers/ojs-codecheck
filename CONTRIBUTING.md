@@ -171,4 +171,4 @@ Our Standards
 
 
 ## Attribution
-This contributing.md is based on and adapted from the [**CONTRIBUTING.MD Example**](https://contributing.md/example/) as well as the [Contributing to Transcriptase](https://gist.github.com/briandk/3d2e8b3ec8daf5a27a62) and [Good Contributing.md](https://gist.github.com/PurpleBooth/b24679402957c63ec426) templates.
+This CONTRIBUTING.md is based on and adapted from the [**CONTRIBUTING.MD Example**](https://contributing.md/example/) as well as the [Contributing to Transcriptase](https://gist.github.com/briandk/3d2e8b3ec8daf5a27a62) and [Good Contributing.md](https://gist.github.com/PurpleBooth/b24679402957c63ec426) templates.
