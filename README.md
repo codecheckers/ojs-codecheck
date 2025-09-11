@@ -32,13 +32,18 @@ The ojs-codecheck plugin is developed as part of the [CHECK-PUB](https://codeche
 4. Find "CODECHECK" and click **Enable**
 5. Configure the plugin settings as needed
 
+## Changelog
+
+If you are interested in the changes made to this project and the different versions, feel free to view the projects [Changelog](CHANGELOG.md).
+
 ## Version Compatibility
 
-The `1.x.y.z` versions of this plugin are compatible with OJS 3.5.x.
+The `0.y.z` versions of this plugin are compatible with OJS 3.5.x.
+For the full features of each version, feel free to look into the [Changelog](#changelog).
 
 | Plugin Version | OJS Version | Status             |
 |----------------|-------------|--------------------|
-| 1.0.0.0        | 3.5.0+      | Active Development |
+| Unreleased     | 3.5.0+      | Active Development |
 
 ## Color Scheme
 
@@ -148,14 +153,6 @@ This program is free software; you can redistribute it and/or modify it under th
 - **Issues**: [GitHub Issues](https://github.com/codecheckers/ojs-codecheck/issues)
 - **Community**: [CODECHECK Community](https://codecheck.org.uk/get-involved/)
 - **Email**: For sensitive issues, contact the CODECHECK team directly at [team@cdchck.science](mailto:team@cdchck.science)
-
-## Changelog
-
-### Version 1.0.0.0 (Development)
-
-- Initial plugin structure
-- OJS 3.5.x compatibility
-- Color scheme documentation
 
 ## Acknowledgments
 
