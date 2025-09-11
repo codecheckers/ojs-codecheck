@@ -2,10 +2,9 @@
 
 # <img src="https://avatars.githubusercontent.com/u/51200812?s=48&v=4" alt="Logo" width="25"/>  ojs-codecheck
 
-<a href="https://www.repostatus.org/#wip">
-    <img src="https://www.repostatus.org/badges/latest/wip.svg" alt="Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public." />
-</a>
-<br /><br />
+[![repo status](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+<br />
 
 An [OJS Plugin](https://docs.pkp.sfu.ca/dev/plugin-guide/en/) to streamline codechecking of submissions and display [CODECHECK](https://codecheck.org.uk/) certificates.
 
