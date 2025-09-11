@@ -7,22 +7,24 @@
 [![Contributions - welcome](https://img.shields.io/badge/Contributions-welcome-blueviolet)](https://github.com/codecheckers/ojs-codecheck/blob/main/CONTRIBUTING.md)
 <br />
 
-An [OJS Plugin](https://docs.pkp.sfu.ca/dev/plugin-guide/en/) to streamline codechecking of submissions and display [CODECHECK](https://codecheck.org.uk/) certificates.
+An [OJS Plugin](https://docs.pkp.sfu.ca/dev/plugin-guide/en/) to streamline codechecking of submissions and display of [CODECHECK](https://codecheck.org.uk/) certificates.
 
 ## About
 
 This plugin integrates the [CODECHECK](https://codecheck.org.uk/) process into the submission and review workflows within Open Journal Systems (OJS), allowing journals to streamline code and computational reproducibility checking of scholarly submissions. The plugin provides tools for metadata creation and certificate deposition, displaying certificates, ensuring computational transparency in published research, as well as certificate and metadata publication. Therefore the plugin connects seamlessly with the CODECHECK infrastructure.
 
-The ojs-codecheck plugin is developed as part of the [CHECK-PUB](https://codecheck.org.uk/pub/) project.
+The ojs-codecheck plugin development was started as part of the [CHECK-PUB](https://codecheck.org.uk/pub/) project with support from TU Delft Library.
 
 ## Features
 
-- **Submission Integration**: Seamless integration with OJS submission workflow
-- **CODECHECK Metadata**: Built-in tools for creation and publication of CODECHECK metadata
+- **Submission integration**: Seamless integration with the OJS submission and review workflow
+- **CODECHECK metadata**: Built-in tools for creation and publication of CODECHECK metadata
+<!--
 - **Certificate Creation**: Built-in workflow to create CODECHECK certificates from metadata
 - **Certificate Verification**: Built-in tools for verifying CODECHECK certificates
-- **Certificate Display**: Automatically display CODECHECK certificates for verified submissions
-- **Customizable Settings**: Configure CODECHECK display preferences and requirements
+-->
+- **Certificate display**: Automatically display CODECHECK certificates for verified submissions
+- **Customizable settings**: Configure CODECHECK workflow and display preferences
 
 ## Installation
 
@@ -36,24 +38,25 @@ The ojs-codecheck plugin is developed as part of the [CHECK-PUB](https://codeche
 
 If you are interested in the changes made to this project and the different versions, feel free to view the projects [Changelog](CHANGELOG.md).
 
-## Version Compatibility
+## Version compatibility
 
-The `0.y.z` versions of this plugin are compatible with OJS 3.5.x.<br />
+The `1.y.z` versions of this plugin are compatible with OJS `3.5.x`.
+
 For the full features of each version, feel free to look into the [Changelog](#changelog).
 
 | Plugin Version | OJS Version | Status             |
 |----------------|-------------|--------------------|
 | Unreleased     | 3.5.0+      | Active Development |
 
-## Color Scheme
+## Color scheme
 
-This plugin follows the official CODECHECK brand guidelines and integrates with OJS design patterns.
+This plugin follows the CODECHECK brand guidelines and integrates with OJS design patterns.
 
-### Primary Colors
+### Primary colors
 
 | Color | Hex Code | Usage | Source |
 |-------|----------|-------|---------|
-| **CODECHECK Main Green** | `#008033` | Primary brand color, certificates, badges | [Official CODECHECK brand](https://github.com/codecheckers/codecheckers.github.io#logo-and-badge) |
+| **CODECHECK Main Green** | `#008033` | Primary brand color, certificates, badges | [CODECHECK brand](https://github.com/codecheckers/codecheckers.github.io#logo-and-badge) |
 | **CODECHECK Dark Green** | `#006629` | Hover states, borders, emphasis | Derived from main green (80% brightness) |
 | **CODECHECK Light Green** | `#e8f5e8` | Certificate backgrounds, success states | Derived from main green (95% lightness) |
 
@@ -68,7 +71,7 @@ This plugin follows the official CODECHECK brand guidelines and integrates with 
 | **Form Borders** | `#ced4da` | Input borders, form elements | Bootstrap neutral (OJS compatibility) |
 | **Background Light** | `#f8fff9` to `#e8f5e8` | Light backgrounds, certificate gradients | Custom light green variants |
 
-### Color Usage Guidelines
+### Color usage guidelines
 
 - **Primary Green (`#008033`)**: Use for all CODECHECK-specific elements (certificates, badges, primary actions)
 - **Secondary Colors**: Use for supporting UI elements that need to integrate with OJS design
@@ -77,29 +80,28 @@ This plugin follows the official CODECHECK brand guidelines and integrates with 
 
 ## Usage
 
-### For Codecheckers
-1. **Metadata Creation**: Automatically create new valid CODECHECK metadata file `codecheck.yml`
-2. **Metadata Import**: If `codecheck.yml` already exists, you can also use it instead
-3. **Manage CODECHECKs**: The plugin enables you to manage your different ongoing CODECHECKs
+### For codecheckers
 
-### For Journal Managers
+1. **Metadata creation**: Assistance for creating a CODECHECK metadata file `codecheck.yml`
+2. **Metadata import**: If `codecheck.yml` already exists, you can also use it instead
+3. **Manage CODECHECKs**: The plugin enables you to manage your different ongoing CODECHECK tasks
 
-1. **Enable the Plugin**: Activate through the plugin management interface
-2. **Configure Settings**: Set up display preferences and verification options
-3. **Workflow Integration**: The plugin automatically integrates with your submission workflow
-4. **Monitor Certificates**: View and manage CODECHECK certificates through the admin interface
+### For journal managers and editors
 
-### For Authors
+1. **Manage the plugin**: Activate through the plugin management interface and set up display preferences and workflow options
+3. **Workflow integration**: The plugin automatically integrates with your submission workflow
+4. **Monitor certificates**: View and manage CODECHECK certificates through the admin interface
 
-1. **Submit Code**: Include computational materials with your submission
+### For authors
+
+<!-- 1. **Submit Code**: Include computational materials with your submission -->
 2. **CODECHECK Process**: Work with codecheckers to verify your computational work
 3. **Certificate Integration**: Certificates are automatically displayed once verification is complete
 
 ### For Readers
 
-1. **View Certificates**: See CODECHECK certificates on published articles
-2. **Verify Authenticity**: Click verification buttons to confirm certificate validity
-3. **Access Materials**: Links to computational materials and reproduction repositories
+1. **View certificates**: Explore CODECHECK certificates on published articles
+2. **Access materials**: Links to computational materials and repositories
 
 ## Development
 
