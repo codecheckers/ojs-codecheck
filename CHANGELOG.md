@@ -2,8 +2,13 @@
 
 All notable changes to the [ojs-codecheck](https://github.com/codecheckers/ojs-codecheck) project are documented in this file.
 
-The CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).<br />
+The [ojs-codecheck](https://github.com/codecheckers/ojs-codecheck) project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).<br />
+Therefore version names are of the format `x.y.z(.0)` and incremented as follows:
+- `x`: **Major** version change (e.g. when we adapt a new OJS version)
+- `y`: **Minor** version change (e.g. when we add functionality or enhancements)
+- `z`: **Patch** version change (e.g. when we make backward compatible bug fixes)
+- `.0`: *Occasionally* appended when needed for **PKP/OJS style**
 
 ## [Unreleased]
 

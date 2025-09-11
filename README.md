@@ -38,7 +38,7 @@ The ojs-codecheck plugin development was started as part of the [CHECK-PUB](http
 
 If you are interested in the changes made to this project and the different versions, feel free to view the projects [Changelog](CHANGELOG.md).
 
-## Version compatibility
+### Version compatibility
 
 The `1.y.z` versions of this plugin are compatible with OJS `3.5.x`.
 
@@ -46,7 +46,8 @@ For the full features of each version, feel free to look into the [Changelog](#c
 
 | Plugin Version | OJS Version | Status             |
 |----------------|-------------|--------------------|
-| Unreleased     | 3.5.0+      | Active Development |
+| `Unreleased`   | `3.5.0+`    | Active Development |
+| `1.y.z`        | `3.5.0+`    | Active Development |
 
 ## Color scheme
 
