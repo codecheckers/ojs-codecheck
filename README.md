@@ -1,9 +1,10 @@
-<img src="https://codecheck.org.uk/img/codecheck_logo.svg" alt="Logo" width="150"/>
+<a href="https://codecheck.org.uk/"><img src="https://codecheck.org.uk/img/codecheck_logo.svg" alt="Logo" width="150"/></a>
 
-# <img src="https://avatars.githubusercontent.com/u/51200812?s=48&v=4" alt="Logo" width="25"/>  ojs-codecheck
+# <a href="https://codecheck.org.uk/"><img src="https://avatars.githubusercontent.com/u/51200812?s=48&v=4" alt="Logo" width="25"/></a>  ojs-codecheck
 
 [![repo status](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+![Contributions - welcome](https://img.shields.io/badge/Contributions-welcome-blueviolet)
 <br />
 
 An [OJS Plugin](https://docs.pkp.sfu.ca/dev/plugin-guide/en/) to streamline codechecking of submissions and display [CODECHECK](https://codecheck.org.uk/) certificates.
