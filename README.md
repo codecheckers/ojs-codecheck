@@ -130,7 +130,8 @@ codecheck/
 │   └── en/
 │       └── locale.po                   # English localization strings
 ├── README.md                           # This documentation
-├── CONTRIBUTING.md                     # Contibuting guidelines for this repo
+├── CONTRIBUTING.md                     # Contibution guidelines for this repo
+├── CHANGELOG.md                        # The projects Changelog with details for each version
 ├── templates/                          # Template files
 │   ├── codecheck-assets.tpl            # CSS/JS assets and styling
 │   └── settings.tpl                    # Plugin settings form template
