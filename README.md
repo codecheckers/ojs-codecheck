@@ -38,7 +38,7 @@ If you are interested in the changes made to this project and the different vers
 
 ## Version Compatibility
 
-The `0.y.z` versions of this plugin are compatible with OJS 3.5.x.
+The `0.y.z` versions of this plugin are compatible with OJS 3.5.x.<br />
 For the full features of each version, feel free to look into the [Changelog](#changelog).
 
 | Plugin Version | OJS Version | Status             |
