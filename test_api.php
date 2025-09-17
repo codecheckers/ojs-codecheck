@@ -32,6 +32,26 @@ class Set {
     }
 }
 
+enum Codecheck_Type {
+    case check_nl;
+    case community;
+    case conference_workshop;
+    case institution;
+    case journal;
+    case lifecycle_journal;
+
+    public function labels(): array {
+        return match($this) {
+            self::check_nl              => ['check-nl', 'community'],
+            self::community             => ['community'],
+            self::conference_workshop   => ['conference/workshop'],
+            self::institution           => ['institution'],
+            self::journal               => ['journal'],
+            self::lifecycle_journal     => ['lifecycle journal'],
+        };
+    }
+}
+
 class Certificate_Identifier {
     private $year;
     private $id;
@@ -236,7 +256,7 @@ class Codecheck_Register_Github_Issues_API_Parser {
         }
     }
 
-    function add_issue($certificate_identifier) {
+    function add_issue($certificate_identifier, $codecheck_type) {
         $token = $_ENV['CODECHECK_REGISTER_GITHUB_TOKEN'];
 
         $this->client->authenticate($token, null, Client::AUTH_ACCESS_TOKEN);
@@ -245,13 +265,17 @@ class Codecheck_Register_Github_Issues_API_Parser {
         $repository_name = 'dxL1nus';
         $issue_title = 'New CODECHECK | ' . $certificate_identifier->to_str();
         $issue_body = '';
+        $labels = ['id assigned'];
+
+        $labels = array_merge($labels, $codecheck_type->labels());
 
         $issue = $this->client->api('issue')->create(
             $repository_owner,
             $repository_name,
             [
                 'title' => $issue_title,
-                'body'  => $issue_body
+                'body'  => $issue_body,
+                'labels' => $labels
             ]
         );
     }
@@ -276,7 +300,7 @@ echo $codecheck_register->get_newest_identifier()->to_str() . "\n";
 
 $new_identifier = Certificate_Identifier::new_unique_identifier($codecheck_register);
 
-$api_parser->add_issue($new_identifier);
+$api_parser->add_issue($new_identifier, Codecheck_Type::check_nl);
 
 echo "Added new issue with identifier: " . $new_identifier->to_str() . "\n";
 
