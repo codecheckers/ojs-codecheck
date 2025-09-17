@@ -9,209 +9,233 @@ use Dotenv\Dotenv;
 $dotenv = Dotenv::createImmutable(__DIR__);
 $dotenv->load();
 
-class Set {
-    protected $array_set = [];
+class Set
+{
+    protected $arraySet = [];
 
-    function insert($element) {
-        foreach ($this->array_set as $list_element) {
-            if($list_element->to_str() == $element->to_str()) {
+    public function insert($element): void
+    {
+        foreach ($this->arraySet as $listElement) {
+            if($listElement->toStr() == $element->toStr()) {
                 return;
             }
         }
-        $this->array_set[] = $element;
+        $this->arraySet[] = $element;
     }
 
-    function insert_array($array) {
+    public function insertArray(array $array): void
+    {
         foreach ($array as $element) {
             $this->insert($element);
         }
     }
 
-    function get_array(): array {
-        return $this->array_set;
+    public function getArray(): array
+    {
+        return $this->arraySet;
     }
 }
 
-enum Codecheck_Type {
-    case check_nl;
+enum CodecheckType
+{
+    case checkNL;
     case community;
     case conference_workshop;
     case institution;
     case journal;
-    case lifecycle_journal;
+    case lifecycleJournal;
 
-    public function labels(): array {
+    public function labels(): array
+    {
         return match($this) {
-            self::check_nl              => ['check-nl', 'community'],
+            self::checkNL               => ['check-nl', 'community'],
             self::community             => ['community'],
             self::conference_workshop   => ['conference/workshop'],
             self::institution           => ['institution'],
             self::journal               => ['journal'],
-            self::lifecycle_journal     => ['lifecycle journal'],
+            self::lifecycleJournal      => ['lifecycle journal'],
         };
     }
 }
 
-class Certificate_Identifier {
+class CertificateIdentifier
+{
     private $year;
     private $id;
 
-    function set_year($year) {
+    public function setYear(int $year): void
+    {
         $this->year = $year;
     }
 
-    function set_id($id) {
+    public function setId(int $id): void
+    {
         $this->id = $id;
     }
 
-    function get_year(): int {
+    public function getYear(): int
+    {
         return $this->year;
     }
 
-    function get_id(): int {
+    public function getId(): int
+    {
         return $this->id;
     }
 
     // Factory Method for Certificate Identifier
-    static function from_str($identifier_str): Certificate_Identifier {
+    static function fromStr(string $identifier_str): CertificateIdentifier
+    {
         // split Identifier String at '-'
         list($year, $id) = explode('-', $identifier_str);
-        // create new instance of $certificate_identifier
-        $certificate_identifier = new Certificate_Identifier();
+        // create new instance of $certificateIdentifier
+        $certificateIdentifier = new CertificateIdentifier();
         // set year and id (cast to int from str)
-        $certificate_identifier->set_year((int) $year);
-        $certificate_identifier->set_id((int) $id);
-        // return new instance of $certificate_identifier
-        return $certificate_identifier;
+        $certificateIdentifier->setYear((int) $year);
+        $certificateIdentifier->setId((int) $id);
+        // return new instance of $certificateIdentifier
+        return $certificateIdentifier;
     }
 
     // Factory Method for new unique Identifier
-    static function new_unique_identifier($codecheck_register): Certificate_Identifier {
-        $latest_identifier = $codecheck_register->get_newest_identifier();
+    static function newUniqueIdentifier(CodecheckRegister $codecheckRegister): CertificateIdentifier
+    {
+        $latest_identifier = $codecheckRegister->getNewestIdentifier();
         $current_year = (int) date("Y");
 
-        $new_identifier = new Certificate_Identifier();
+        $new_identifier = new CertificateIdentifier();
 
         // different year, so this is the first CODECHECK certificate of the year -> id 001
-        if($current_year != $latest_identifier->get_year()) {
+        if($current_year != $latest_identifier->getYear()) {
             // configure new Identifier
-            $new_identifier->set_year($current_year);
-            $new_identifier->set_id(1);
+            $new_identifier->setYear($current_year);
+            $new_identifier->setId(1);
             return $new_identifier;
         }
 
         // get the latest id
-        $latest_id = (int) $latest_identifier->get_id();
+        $latest_id = (int) $latest_identifier->getId();
         // increment the latest id by one to get a new unique one
         $latest_id++;
         // configure new Identifier
-        $new_identifier->set_year($latest_identifier->get_year());
-        $new_identifier->set_id($latest_id);
+        $new_identifier->setYear($latest_identifier->getYear());
+        $new_identifier->setId($latest_id);
         return $new_identifier;
     }
 
-    function to_str(): string {
+    public function toStr(): string
+    {
         // pad with leading zeros (3 digits) in case number doesn't have 3 digits already
         return $this->year . '-' . str_pad($this->id, 3, '0', STR_PAD_LEFT);;
     }
 }
 
-class Codecheck_Register extends Set {
-    // Factory Method to create a new Codecheck_Register from a GitHub API fetch
-    static function from_api($api_parser): Codecheck_Register {
-        $new_codecheck_register = new Codecheck_Register();
+class CodecheckRegister extends Set
+{
+    // Factory Method to create a new CodecheckRegister from a GitHub API fetch
+    static function fromApi(
+        CodecheckRegisterGithubIssuesApiParser $apiParser
+    ): CodecheckRegister {
+        $newCodecheckRegister = new CodecheckRegister();
 
         // fetch API
-        $api_parser->fetch_api();
+        $apiParser->fetchApi();
 
-        foreach ($api_parser->get_issues() as $issue) {
+        foreach ($apiParser->getIssues() as $issue) {
             // raw identifier (can still have ranges of identifiers);
-            $raw_identifier = get_raw_identifier($issue['title']);
+            $rawIdentifier = getRawIdentifier($issue['title']);
             
             // append to all identifiers in new Register
-            $new_codecheck_register->append_to_certificate_id_list($raw_identifier);
+            $newCodecheckRegister->appendToCertificateIdList($rawIdentifier);
         }
 
         // return the new Register
-        return $new_codecheck_register;
+        return $newCodecheckRegister;
     }
 
-    function append_to_certificate_id_list($raw_identifier) {
+    public function appendToCertificateIdList(string $rawIdentifier): void
+    {
         // list of certificate identifiers in range
-        $id_range = [];
+        $idRange = [];
 
         // if it is a range
-        if(strpos($raw_identifier, '/')) {
-            // split into "from_str" and "to_str"
-            list($from_str, $to_str) = explode('/', $raw_identifier);
+        if(strpos($rawIdentifier, '/')) {
+            // split into "fromIdStr" and "toIdStr"
+            list($fromIdStr, $toIdStr) = explode('/', $rawIdentifier);
 
-            $from_identifier = Certificate_Identifier::from_str($from_str);
-            $to_identifier = Certificate_Identifier::from_str($to_str);
+            $from_identifier = CertificateIdentifier::fromStr($fromIdStr);
+            $to_identifier = CertificateIdentifier::fromStr($toIdStr);
 
-            // append to $id_range list
-            for ($id_count = $from_identifier->get_id(); $id_count <= $to_identifier->get_id(); $id_count++) {
-                $new_identifier = new Certificate_Identifier();
-                $new_identifier->set_year($from_identifier->get_year());
-                $new_identifier->set_id($id_count);
+            // append to $idRange list
+            for ($id_count = $from_identifier->getId(); $id_count <= $to_identifier->getId(); $id_count++) {
+                $new_identifier = new CertificateIdentifier();
+                $new_identifier->setYear($from_identifier->getYear());
+                $new_identifier->setId($id_count);
                 // append new identifier
-                $id_range[] = $new_identifier;
+                $idRange[] = $new_identifier;
             }
         }
         // if it isn't a list then just append on identifier
         else {
-            $new_identifier = Certificate_Identifier::from_str($raw_identifier);
-            $id_range[] = $new_identifier;
+            $new_identifier = CertificateIdentifier::fromStr($rawIdentifier);
+            $idRange[] = $new_identifier;
         }
 
         // append to all certificate identifiers
-        $this->insert_array($id_range);
+        $this->insertArray($idRange);
     }
 
     // sort ascending Certificate Identifiers
-    function sort_asc() {
-        usort($this->array_set, function($a, $b) {
+    public function sortAsc(): void
+    {
+        usort($this->arraySet, function($a, $b) {
             // First, compare year
-            if ($a->get_year() !== $b->get_year()) {
-                return $a->get_year() <=> $b->get_year();
+            if ($a->getYear() !== $b->getYear()) {
+                return $a->getYear() <=> $b->getYear();
             }
             // If years are equal, compare ID
-            return $a->get_id() <=> $b->get_id();
+            return $a->getId() <=> $b->getId();
         });
     }
 
-    function sort_desc() {
-        usort($this->array_set, function($a, $b) {
+    public function sortDesc(): void
+    {
+        usort($this->arraySet, function($a, $b) {
             // First, compare year descending
-            if ($a->get_year() !== $b->get_year()) {
-                return $b->get_year() <=> $a->get_year();
+            if ($a->getYear() !== $b->getYear()) {
+                return $b->getYear() <=> $a->getYear();
             }
             // If years are equal, compare ID descending
-            return $b->get_id() <=> $a->get_id();
+            return $b->getId() <=> $a->getId();
         });
     }
 
-    function get_number_of_identifiers(): int {
-        return count($this->array_set);
+    public function getNumberOfIdentifiers(): int
+    {
+        return count($this->arraySet);
     }
 
     // return the latest identifier
-    function get_newest_identifier(): Certificate_Identifier {
-        $this->sort_desc();
+    public function getNewestIdentifier(): CertificateIdentifier
+    {
+        $this->sortDesc();
         // get first element of sort descending -> newest element
-        return $this->array_set[0];
+        return $this->arraySet[0];
     }
 
-    function to_str(): string {
+    public function toStr(): string
+    {
         $return_str = "Certificate Identifiers:\n";
-        foreach ($this->array_set as $id) {
-            $return_str = $return_str . $id->to_str() . "\n";
+        foreach ($this->arraySet as $id) {
+            $return_str = $return_str . $id->toStr() . "\n";
         }
         return $return_str;
     }
 }
 
 // get the certificate ID from the issue description
-function get_raw_identifier($title): string {
+function getRawIdentifier(string $title): string
+{
     $title = strtolower($title); // convert whole title to lowercase
 
     //$title = "Arabsheibani, Winter, Tomko | 2025-026/2025-029";
@@ -223,25 +247,28 @@ function get_raw_identifier($title): string {
         $seperator++;
 
         // Find where the next line break occurs after "certificate"
-        $raw_identifier = substr($title, $seperator);
+        $rawIdentifier = substr($title, $seperator);
         // remove white spaces
-        $raw_identifier = preg_replace('/[\s]+/', '', $raw_identifier);
+        $rawIdentifier = preg_replace('/[\s]+/', '', $rawIdentifier);
     }
 
-    return $raw_identifier;
+    return $rawIdentifier;
 }
 
 // api call
-class Codecheck_Register_Github_Issues_API_Parser {
+class CodecheckRegisterGithubIssuesApiParser
+{
     private $issues = [];
     private $client;
 
-    function __construct() {
+    function __construct()
+    {
         $this->client = new Client();
     }
 
-    function fetch_api() {
-        $all_issues = $this->client->api('issue')->all('codecheckers', 'register', [
+    public function fetchApi(): void
+    {
+        $allissues = $this->client->api('issue')->all('codecheckers', 'register', [
             'state'     => 'all',          // 'open', 'closed', or 'all'
             'labels'    => 'id assigned',  // label
             'sort'      => 'updated',
@@ -249,7 +276,7 @@ class Codecheck_Register_Github_Issues_API_Parser {
             'per_page'  => 100,            // get all issues in page
         ]);
 
-        foreach ($all_issues as $issue) {
+        foreach ($allissues as $issue) {
             // check if this issue has the certificate identifier in the title
             if(strpos($issue['title'], '|') !== false) {
                 $this->issues[] = $issue;
@@ -257,52 +284,56 @@ class Codecheck_Register_Github_Issues_API_Parser {
         }
     }
 
-    function add_issue($certificate_identifier, $codecheck_type) {
+    public function addIssue(
+        CertificateIdentifier $certificateIdentifier,
+        CodecheckType $codecheckType
+    ): void {
         $token = $_ENV['CODECHECK_REGISTER_GITHUB_TOKEN'];
 
         $this->client->authenticate($token, null, Client::AUTH_ACCESS_TOKEN);
 
-        $repository_owner = 'dxL1nus';
-        $repository_name = 'dxL1nus';
-        $issue_title = 'New CODECHECK | ' . $certificate_identifier->to_str();
-        $issue_body = '';
+        $repositoryOwner = 'dxL1nus';
+        $repositoryName = 'dxL1nus';
+        $issueTitle = 'New CODECHECK | ' . $certificateIdentifier->toStr();
+        $issueBody = '';
         $labels = ['id assigned'];
 
-        $labels = array_merge($labels, $codecheck_type->labels());
+        $labels = array_merge($labels, $codecheckType->labels());
 
         $issue = $this->client->api('issue')->create(
-            $repository_owner,
-            $repository_name,
+            $repositoryOwner,
+            $repositoryName,
             [
-                'title' => $issue_title,
-                'body'  => $issue_body,
+                'title' => $issueTitle,
+                'body'  => $issueBody,
                 'labels' => $labels
             ]
         );
     }
 
-    function get_issues(): array {
+    public function getIssues(): array
+    {
         return $this->issues;
     }
 }
 
 
 // CODECHECK GitHub Issue Register API parser
-$api_parser = new Codecheck_Register_Github_Issues_API_Parser();
+$apiParser = new CodecheckRegisterGithubIssuesApiParser();
 
 // CODECHECK Register with list of all identifiers in range
-$codecheck_register = Codecheck_Register::from_api($api_parser);
+$codecheckRegister = CodecheckRegister::fromApi($apiParser);
 
 // print Certificate Identifier list
-$codecheck_register->sort_desc();
-echo $codecheck_register->to_str();
+$codecheckRegister->sortDesc();
+echo $codecheckRegister->toStr();
 
-echo $codecheck_register->get_newest_identifier()->to_str() . "\n";
+echo $codecheckRegister->getNewestIdentifier()->toStr() . "\n";
 
-$new_identifier = Certificate_Identifier::new_unique_identifier($codecheck_register);
+$new_identifier = CertificateIdentifier::newUniqueIdentifier($codecheckRegister);
 
-$api_parser->add_issue($new_identifier, Codecheck_Type::check_nl);
+$apiParser->addIssue($new_identifier, CodecheckType::checkNL);
 
-echo "Added new issue with identifier: " . $new_identifier->to_str() . "\n";
+echo "Added new issue with identifier: " . $new_identifier->toStr() . "\n";
 
 //echo "{$num_of_issues}";
