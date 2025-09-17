@@ -3,6 +3,11 @@
 require __DIR__ . '/vendor/autoload.php';
 
 use Github\Client;
+use Dotenv\Dotenv;
+
+// Load .env variables
+$dotenv = Dotenv::createImmutable(__DIR__);
+$dotenv->load();
 
 class Set {
     protected $array_set = [];
@@ -231,6 +236,26 @@ class Codecheck_Register_Github_Issues_API_Parser {
         }
     }
 
+    function add_issue($certificate_identifier) {
+        $token = $_ENV['CODECHECK_REGISTER_GITHUB_TOKEN'];
+
+        $this->client->authenticate($token, null, Client::AUTH_ACCESS_TOKEN);
+
+        $repository_owner = 'dxL1nus';
+        $repository_name = 'dxL1nus';
+        $issue_title = 'New CODECHECK | ' . $certificate_identifier->to_str();
+        $issue_body = '';
+
+        $issue = $this->client->api('issue')->create(
+            $repository_owner,
+            $repository_name,
+            [
+                'title' => $issue_title,
+                'body'  => $issue_body
+            ]
+        );
+    }
+
     function get_issues() {
         return $this->issues;
     }
@@ -251,6 +276,8 @@ echo $codecheck_register->get_newest_identifier()->to_str() . "\n";
 
 $new_identifier = Certificate_Identifier::new_unique_identifier($codecheck_register);
 
-echo "New identifier: " . $new_identifier->to_str() . "\n";
+$api_parser->add_issue($new_identifier);
+
+echo "Added new issue with identifier: " . $new_identifier->to_str() . "\n";
 
 //echo "{$num_of_issues}";
