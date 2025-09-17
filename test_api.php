@@ -27,7 +27,7 @@ class Set {
         }
     }
 
-    function get_array() {
+    function get_array(): array {
         return $this->array_set;
     }
 }
@@ -64,16 +64,16 @@ class Certificate_Identifier {
         $this->id = $id;
     }
 
-    function get_year() {
+    function get_year(): int {
         return $this->year;
     }
 
-    function get_id() {
+    function get_id(): int {
         return $this->id;
     }
 
     // Factory Method for Certificate Identifier
-    static function from_str($identifier_str) {
+    static function from_str($identifier_str): Certificate_Identifier {
         // split Identifier String at '-'
         list($year, $id) = explode('-', $identifier_str);
         // create new instance of $certificate_identifier
@@ -86,7 +86,7 @@ class Certificate_Identifier {
     }
 
     // Factory Method for new unique Identifier
-    static function new_unique_identifier($codecheck_register) {
+    static function new_unique_identifier($codecheck_register): Certificate_Identifier {
         $latest_identifier = $codecheck_register->get_newest_identifier();
         $current_year = (int) date("Y");
 
@@ -110,7 +110,7 @@ class Certificate_Identifier {
         return $new_identifier;
     }
 
-    function to_str() {
+    function to_str(): string {
         // pad with leading zeros (3 digits) in case number doesn't have 3 digits already
         return $this->year . '-' . str_pad($this->id, 3, '0', STR_PAD_LEFT);;
     }
@@ -118,7 +118,7 @@ class Certificate_Identifier {
 
 class Codecheck_Register extends Set {
     // Factory Method to create a new Codecheck_Register from a GitHub API fetch
-    static function from_api($api_parser) {
+    static function from_api($api_parser): Codecheck_Register {
         $new_codecheck_register = new Codecheck_Register();
 
         // fetch API
@@ -190,27 +190,28 @@ class Codecheck_Register extends Set {
         });
     }
 
-    function get_number_of_identifiers() {
+    function get_number_of_identifiers(): int {
         return count($this->array_set);
     }
 
     // return the latest identifier
-    function get_newest_identifier() {
+    function get_newest_identifier(): Certificate_Identifier {
         $this->sort_desc();
         // get first element of sort descending -> newest element
         return $this->array_set[0];
     }
 
-    function to_str() {
-        echo "Certificate Identifiers:\n";
+    function to_str(): string {
+        $return_str = "Certificate Identifiers:\n";
         foreach ($this->array_set as $id) {
-            echo $id->to_str() . "\n";
+            $return_str = $return_str . $id->to_str() . "\n";
         }
+        return $return_str;
     }
 }
 
 // get the certificate ID from the issue description
-function get_raw_identifier($title) {
+function get_raw_identifier($title): string {
     $title = strtolower($title); // convert whole title to lowercase
 
     //$title = "Arabsheibani, Winter, Tomko | 2025-026/2025-029";
@@ -280,7 +281,7 @@ class Codecheck_Register_Github_Issues_API_Parser {
         );
     }
 
-    function get_issues() {
+    function get_issues(): array {
         return $this->issues;
     }
 }
@@ -294,7 +295,7 @@ $codecheck_register = Codecheck_Register::from_api($api_parser);
 
 // print Certificate Identifier list
 $codecheck_register->sort_desc();
-$codecheck_register->to_str();
+echo $codecheck_register->to_str();
 
 echo $codecheck_register->get_newest_identifier()->to_str() . "\n";
 
