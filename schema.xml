@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE schema SYSTEM "../../../lib/pkp/dtd/xmlSchema.dtd">
+<schema version="0.2">
+    <table name="codecheck_metadata">
+        <field name="submission_id" type="I8">
+            <KEY/>
+            <NOTNULL/>
+        </field>
+        <field name="opt_in" type="I1">
+            <NOTNULL/>
+            <DEFAULT VALUE="0"/>
+        </field>
+        <field name="code_repository" type="C2" size="500"/>
+        <field name="data_repository" type="C2" size="500"/>
+        <field name="dependencies" type="X"/>
+        <field name="execution_instructions" type="X"/>
+        <field name="created_at" type="T"/>
+        <field name="updated_at" type="T"/>
+        <index name="codecheck_metadata_submission_id">
+            <col>submission_id</col>
+        </index>
+    </table>
+</schema>
