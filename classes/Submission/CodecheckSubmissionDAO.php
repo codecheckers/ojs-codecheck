@@ -2,7 +2,7 @@
 
 namespace APP\plugins\generic\codecheck\classes\Submission;
 
-use PKP\db\DAORegistry;
+use Illuminate\Support\Facades\DB;
 
 class CodecheckSubmissionDAO
 {
@@ -11,15 +11,12 @@ class CodecheckSubmissionDAO
      */
     public function getBySubmissionId(int $submissionId): ?CodecheckSubmission
     {
-        $db = DAORegistry::getDAO('XMLDAO');
-        $result = $db->retrieve(
-            'SELECT * FROM codecheck_metadata WHERE submission_id = ?',
-            [$submissionId]
-        );
+        $result = DB::table('codecheck_metadata')
+            ->where('submission_id', $submissionId)
+            ->first();
 
-        if ($result->RecordCount() > 0) {
-            $row = $result->getRowAssoc(false);
-            return $this->fromRow($row);
+        if ($result) {
+            return new CodecheckSubmission((array) $result);
         }
 
         return null;
@@ -30,39 +27,39 @@ class CodecheckSubmissionDAO
      */
     public function insertOrUpdate(int $submissionId, array $data): void
     {
-        $db = DAORegistry::getDAO('XMLDAO');
-
         $existing = $this->getBySubmissionId($submissionId);
 
         if ($existing) {
-            $db->update(
-                'UPDATE codecheck_metadata SET 
-                    opt_in = ?, code_repository = ?, data_repository = ?, 
-                    dependencies = ?, execution_instructions = ?, updated_at = NOW() 
-                WHERE submission_id = ?',
-                [
-                    $data['opt_in'] ? 1 : 0,
-                    $data['code_repository'] ?? '',
-                    $data['data_repository'] ?? '',
-                    $data['dependencies'] ?? '',
-                    $data['execution_instructions'] ?? '',
-                    $submissionId
-                ]
-            );
+            DB::table('codecheck_metadata')
+                ->where('submission_id', $submissionId)
+                ->update([
+                    'opt_in' => $data['opt_in'] ? 1 : 0,
+                    'code_repository' => $data['code_repository'] ?? '',
+                    'data_repository' => $data['data_repository'] ?? '',
+                    'dependencies' => $data['dependencies'] ?? '',
+                    'execution_instructions' => $data['execution_instructions'] ?? '',
+                    'certificate_doi' => $data['certificate_doi'] ?? '',
+                    'certificate_url' => $data['certificate_url'] ?? '',
+                    'codechecker_names' => $data['codechecker_names'] ?? '',
+                    'check_status' => $data['check_status'] ?? '',
+                    'certificate_date' => $data['certificate_date'] ?? null,
+                    'updated_at' => now(),
+                ]);
         } else {
-            $db->update(
-                'INSERT INTO codecheck_metadata 
-                (submission_id, opt_in, code_repository, data_repository, dependencies, execution_instructions, created_at) 
-                VALUES (?, ?, ?, ?, ?, ?, NOW())',
-                [
-                    $submissionId,
-                    $data['opt_in'] ? 1 : 0,
-                    $data['code_repository'] ?? '',
-                    $data['data_repository'] ?? '',
-                    $data['dependencies'] ?? '',
-                    $data['execution_instructions'] ?? ''
-                ]
-            );
+            DB::table('codecheck_metadata')->insert([
+                'submission_id' => $submissionId,
+                'opt_in' => $data['opt_in'] ? 1 : 0,
+                'code_repository' => $data['code_repository'] ?? '',
+                'data_repository' => $data['data_repository'] ?? '',
+                'dependencies' => $data['dependencies'] ?? '',
+                'execution_instructions' => $data['execution_instructions'] ?? '',
+                'certificate_doi' => $data['certificate_doi'] ?? '',
+                'certificate_url' => $data['certificate_url'] ?? '',
+                'codechecker_names' => $data['codechecker_names'] ?? '',
+                'check_status' => $data['check_status'] ?? '',
+                'certificate_date' => $data['certificate_date'] ?? null,
+                'created_at' => now(),
+            ]);
         }
     }
 
@@ -93,4 +90,41 @@ class CodecheckSubmission
     public function getDataRepository(): string { return $this->data['data_repository'] ?? ''; }
     public function getDependencies(): string { return $this->data['dependencies'] ?? ''; }
     public function getExecutionInstructions(): string { return $this->data['execution_instructions'] ?? ''; }
+    
+    // New certificate getters
+    public function getCertificateDoi(): string { return $this->data['certificate_doi'] ?? ''; }
+    public function getCertificateUrl(): string { return $this->data['certificate_url'] ?? ''; }
+    public function getCodecheckerNames(): string { return $this->data['codechecker_names'] ?? ''; }
+    public function getCheckStatus(): string { return $this->data['check_status'] ?? ''; }
+    public function getCertificateDate(): ?string { return $this->data['certificate_date'] ?? null; }
+    
+    /**
+     * Check if this submission has a completed CODECHECK
+     */
+    public function hasCompletedCheck(): bool {
+        return !empty($this->getCertificateDoi()) || !empty($this->getCertificateUrl());
+    }
+
+    /**
+     * Get the primary certificate link (prefer DOI over URL)
+     */
+    public function getCertificateLink(): string {
+        if (!empty($this->getCertificateDoi())) {
+            return 'https://doi.org/' . $this->getCertificateDoi();
+        }
+        return $this->getCertificateUrl();
+    }
+
+    /**
+     * Get display text for the certificate link
+     */
+    public function getCertificateLinkText(): string {
+        if (!empty($this->getCertificateDoi())) {
+            return $this->getCertificateDoi();
+        }
+        if (!empty($this->getCertificateUrl())) {
+            return 'View Certificate';
+        }
+        return '';
+    }
 }

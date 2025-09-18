@@ -65,3 +65,46 @@ msgstr "Step-by-step instructions to reproduce your analysis"
 
 msgid "plugins.generic.codecheck.preview"
 msgstr "Preview codecheck.yml"
+
+# Certificate management strings - NEW ADDITIONS
+msgid "plugins.generic.codecheck.certificate.title"
+msgstr "CODECHECK Certificate"
+
+msgid "plugins.generic.codecheck.certificate.doi"
+msgstr "Certificate DOI"
+
+msgid "plugins.generic.codecheck.certificate.doi.description"
+msgstr "DOI of the published CODECHECK certificate"
+
+msgid "plugins.generic.codecheck.certificate.url"
+msgstr "Certificate URL"
+
+msgid "plugins.generic.codecheck.certificate.url.description"
+msgstr "Direct link to the certificate if no DOI is available"
+
+msgid "plugins.generic.codecheck.certificate.codecheckers"
+msgstr "Codechecker Names"
+
+msgid "plugins.generic.codecheck.certificate.codecheckers.description"
+msgstr "Names of the codecheckers who performed the verification"
+
+msgid "plugins.generic.codecheck.certificate.status"
+msgstr "Check Status"
+
+msgid "plugins.generic.codecheck.certificate.date"
+msgstr "Certificate Date"
+
+msgid "plugins.generic.codecheck.certificate.date.description"
+msgstr "Date when the CODECHECK was completed"
+
+msgid "plugins.generic.codecheck.certificate.verified"
+msgstr "Computational Reproducibility Verified"
+
+msgid "plugins.generic.codecheck.certificate.pending"
+msgstr "CODECHECK In Progress"
+
+msgid "plugins.generic.codecheck.certificate.description.verified"
+msgstr "This article's computational workflow has been independently verified through CODECHECK."
+
+msgid "plugins.generic.codecheck.certificate.description.pending"
+msgstr "This article has been submitted for computational reproducibility verification through CODECHECK."

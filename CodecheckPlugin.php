@@ -24,7 +24,7 @@ class CodecheckPlugin extends GenericPlugin
         if ($success && $this->getEnabled()) {
             // Display CODECHECK information on the article details page
             $articleDetails = new ArticleDetails($this);
-            Hook::add('Templates::Article::Main', $articleDetails->addCodecheckInfo(...));
+            Hook::add('Templates::Article::Details', $articleDetails->addCodecheckInfo(...));
 
             // REPLACED: Use proper OJS 3.5 Custom Fields approach
             // Extend the submission schema to add CODECHECK fields
@@ -36,7 +36,7 @@ class CodecheckPlugin extends GenericPlugin
             Hook::add('Template::SubmissionWizard::Section::Review::Details', $this->addCodecheckReviewDisplay(...));
             // Add hook to save custom field data
             Hook::add('Submission::edit', $this->saveSubmissionData(...));
-Hook::add('Submission::edit::before', $this->debugSubmissionData(...));
+            Hook::add('Submission::edit::before', $this->debugSubmissionData(...));
 
             // Hook::add('Form::config::after', $this->validateCodecheckFiles(...));
 

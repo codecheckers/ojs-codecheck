@@ -14,6 +14,12 @@
         <field name="data_repository" type="C2" size="500"/>
         <field name="dependencies" type="X"/>
         <field name="execution_instructions" type="X"/>
+        <!-- New certificate fields -->
+        <field name="certificate_doi" type="C2" size="255"/>
+        <field name="certificate_url" type="C2" size="500"/>
+        <field name="codechecker_names" type="C2" size="1000"/>
+        <field name="check_status" type="C2" size="50"/>
+        <field name="certificate_date" type="T"/>
         <field name="created_at" type="T"/>
         <field name="updated_at" type="T"/>
         <index name="codecheck_metadata_submission_id">
