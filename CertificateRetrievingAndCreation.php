@@ -98,9 +98,9 @@ class CertificateIdentifier
     }
 
     // Factory Method for new unique Identifier
-    static function newUniqueIdentifier(CodecheckRegister $codecheckRegister): CertificateIdentifier
+    static function newUniqueIdentifier(CertificateIdentifierList $certificateIdentifierList): CertificateIdentifier
     {
-        $latest_identifier = $codecheckRegister->getNewestIdentifier();
+        $latest_identifier = $certificateIdentifierList->getNewestIdentifier();
         $current_year = (int) date("Y");
 
         $new_identifier = new CertificateIdentifier();
@@ -130,13 +130,13 @@ class CertificateIdentifier
     }
 }
 
-class CodecheckRegister extends Set
+class CertificateIdentifierList extends Set
 {
-    // Factory Method to create a new CodecheckRegister from a GitHub API fetch
+    // Factory Method to create a new CertificateIdentifierList from a GitHub API fetch
     static function fromApi(
         CodecheckRegisterGithubIssuesApiParser $apiParser
-    ): CodecheckRegister {
-        $newCodecheckRegister = new CodecheckRegister();
+    ): CertificateIdentifierList {
+        $newCertificateIdentifierList = new CertificateIdentifierList();
 
         // fetch API
         $apiParser->fetchApi();
@@ -146,11 +146,11 @@ class CodecheckRegister extends Set
             $rawIdentifier = getRawIdentifier($issue['title']);
             
             // append to all identifiers in new Register
-            $newCodecheckRegister->appendToCertificateIdList($rawIdentifier);
+            $newCertificateIdentifierList->appendToCertificateIdList($rawIdentifier);
         }
 
         // return the new Register
-        return $newCodecheckRegister;
+        return $newCertificateIdentifierList;
     }
 
     public function appendToCertificateIdList(string $rawIdentifier): void
@@ -322,15 +322,15 @@ class CodecheckRegisterGithubIssuesApiParser
 $apiParser = new CodecheckRegisterGithubIssuesApiParser();
 
 // CODECHECK Register with list of all identifiers in range
-$codecheckRegister = CodecheckRegister::fromApi($apiParser);
+$certificateIdentifierList = CertificateIdentifierList::fromApi($apiParser);
 
 // print Certificate Identifier list
-$codecheckRegister->sortDesc();
-echo $codecheckRegister->toStr();
+$certificateIdentifierList->sortDesc();
+echo $certificateIdentifierList->toStr();
 
-echo $codecheckRegister->getNewestIdentifier()->toStr() . "\n";
+echo $certificateIdentifierList->getNewestIdentifier()->toStr() . "\n";
 
-$new_identifier = CertificateIdentifier::newUniqueIdentifier($codecheckRegister);
+$new_identifier = CertificateIdentifier::newUniqueIdentifier($certificateIdentifierList);
 
 $apiParser->addIssue($new_identifier, CodecheckType::checkNL);
 
