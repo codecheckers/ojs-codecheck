@@ -255,6 +255,16 @@ function getRawIdentifier(string $title): string
     return $rawIdentifier;
 }
 
+class NoMatchingIssuesFoundException extends \Exception {
+    public function __construct(
+        string $message = "No more issues available from GitHub API",
+        int $code = 0,
+        ?\Throwable $previous = null
+    ) {
+        parent::__construct($message, $code, $previous);
+    }
+}
+
 // api call
 class CodecheckRegisterGithubIssuesApiParser
 {
@@ -268,20 +278,34 @@ class CodecheckRegisterGithubIssuesApiParser
 
     public function fetchApi(): void
     {
-        $allissues = $this->client->api('issue')->all('codecheckers', 'register', [
-            'state'     => 'all',          // 'open', 'closed', or 'all'
-            'labels'    => 'id assigned',  // label
-            'sort'      => 'updated',
-            'direction' => 'desc',
-            'per_page'  => 100,            // get all issues in page
-        ]);
+        $issuePage = 1;
+        $issuesToFetchPerPage = 20;
+        $fetchedMatchingIssue = false;
 
-        foreach ($allissues as $issue) {
-            // check if this issue has the certificate identifier in the title
-            if(strpos($issue['title'], '|') !== false) {
-                $this->issues[] = $issue;
+        do {
+            $allissues = $this->client->api('issue')->all('codecheckers', 'register', [
+                'state'     => 'all',          // 'open', 'closed', or 'all'
+                'labels'    => 'id assigned',  // label
+                'sort'      => 'updated',
+                'direction' => 'desc',
+                'per_page'  => $issuesToFetchPerPage, // issues that will be fetched per page
+                'page'      => $issuePage,
+            ]);
+
+            // stop looping if no more issues exist and we haven't yet found a matching issue
+            if (empty($allissues) && empty($this->issue)) {
+                throw new NoMatchingIssuesFoundException("There was no Issue found with a '|' inside the GitHub Codecheck Register.");
             }
-        }
+
+            foreach ($allissues as $issue) {
+                if (strpos($issue['title'], '|') !== false) {
+                    $this->issues[] = $issue;
+                    $fetchedMatchingIssue = true;
+                }
+            }
+
+            $issuePage++;
+        } while (!$fetchedMatchingIssue);
     }
 
     public function addIssue(
