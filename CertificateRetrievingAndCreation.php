@@ -316,8 +316,8 @@ class CodecheckRegisterGithubIssuesApiParser
 
         $this->client->authenticate($token, null, Client::AUTH_ACCESS_TOKEN);
 
-        $repositoryOwner = 'dxL1nus';
-        $repositoryName = 'dxL1nus';
+        $repositoryOwner = 'codecheckers';
+        $repositoryName = 'testing-dev-register';
         $issueTitle = 'New CODECHECK | ' . $certificateIdentifier->toStr();
         $issueBody = '';
         $labels = ['id assigned'];
