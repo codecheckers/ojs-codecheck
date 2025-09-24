@@ -141,6 +141,31 @@ class CodecheckVenueNames extends Set {
     }
 }
 
+class CodecheckVenue {
+    private $venueName;
+    private $venueType;
+
+    public function setVenueName(string $venueName)
+    {
+        $this->venueName = str_replace(["\r", "\n"], "", $venueName);
+    }
+
+    public function setVenueType(string $venueType)
+    {
+        $this->venueType = str_replace(["\r", "\n"], "", $venueType);
+    }
+
+    public function getVenueName(): string
+    {
+        return $this->venueName;
+    }
+
+    public function getVenueType(): string
+    {
+        return $this->venueType;
+    }
+}
+
 class CertificateIdentifier
 {
     private $year;
@@ -434,12 +459,22 @@ $new_identifier = CertificateIdentifier::newUniqueIdentifier($certificateIdentif
 $codecheckVenueTypes = new CodecheckVenueTypes();
 $codecheckVenueNames = new CodecheckVenueNames();
 
+$codecheckVenue = new CodecheckVenue();
+
 print_r($codecheckVenueTypes->getArray());
 echo "\n";
 print_r($codecheckVenueNames->getArray());
 
-// TODO: Add more logic here onto what Venue Type & Venue Name combination is allowed here
-$apiParser->addIssue($new_identifier, $codecheckVenueTypes->getArray()[1], $codecheckVenueNames->getArray()[0]);
+// TODO: Replace CLI logic here to Venue Type & Venue Name combination being selected by form in journal plugin settings
+$stdin = fopen("php://stdin","r");
+echo "Enter a Venue Type:\n";
+$codecheckVenue->setVenueType(fgets($stdin));
+echo "\nEnter a Venue Name:\n";
+$codecheckVenue->setVenueName(fgets($stdin));
+
+echo $codecheckVenue->getVenueType() . ", " . $codecheckVenue->getVenueName();
+
+$apiParser->addIssue($new_identifier, $codecheckVenue->getVenueType(), $codecheckVenue->getVenueName());
 
 echo "Added new issue with identifier: " . $new_identifier->toStr() . "\n";
 
