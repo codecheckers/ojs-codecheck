@@ -16,7 +16,18 @@ class Set
     public function insert($element): void
     {
         foreach ($this->arraySet as $listElement) {
-            if($listElement->toStr() == $element->toStr()) {
+            if(!(
+                is_bool($element) ||
+                is_double($element) ||
+                is_float($element) ||
+                is_int($element) ||
+                is_string($element)
+            )) {
+                if($listElement->toStr() == $element->toStr()) {
+                    return;
+                }
+            }
+            if($listElement == $element) {
                 return;
             }
         }
@@ -36,25 +47,97 @@ class Set
     }
 }
 
-enum CodecheckType
-{
-    case checkNL;
-    case community;
-    case conference_workshop;
-    case institution;
-    case journal;
-    case lifecycleJournal;
+class NoMatchingIssuesFoundException extends \Exception {
+    public function __construct(
+        string $message = "No more issues available from GitHub API",
+        int $code = 0,
+        ?\Throwable $previous = null
+    ) {
+        parent::__construct($message, $code, $previous);
+    }
+}
 
-    public function labels(): array
+class ApiFetchException extends \Exception {
+    public function __construct(
+        string $message = "Error fetching the API data",
+        int $code = 0,
+        ?\Throwable $previous = null
+    ) {
+        parent::__construct($message, $code, $previous);
+    }
+}
+
+class JsonApiCaller {
+    private $url;
+    private $jsonData = [];
+
+    function __construct(string $url)
     {
-        return match($this) {
-            self::checkNL               => ['check-nl', 'community'],
-            self::community             => ['community'],
-            self::conference_workshop   => ['conference/workshop'],
-            self::institution           => ['institution'],
-            self::journal               => ['journal'],
-            self::lifecycleJournal      => ['lifecycle journal'],
-        };
+        $this->url = $url;
+    }
+
+    public function fetch()
+    {
+        // Fetch JSON from API
+        $response = file_get_contents($this->url);
+
+        // throw error if no data was fetched from API
+        if ($response === FALSE) {
+            throw new ApiFetchException("Error fetching the API data");
+        }
+
+        // Decode JSON into PHP array
+        $this->data = json_decode($response, true);
+    }
+
+    public function getData(): array
+    {
+        return $this->data;
+    }
+}
+
+class CodecheckVenueTypes extends Set {
+    function __construct()
+    {
+        // Intialize API caller
+        $jsonApiCaller = new JsonApiCaller("https://codecheck.org.uk/register/venues/index.json");
+        // fetch CODECHECK Type data
+        $jsonApiCaller->fetch();
+        // get json Data from API Caller
+        $data = $jsonApiCaller->getData();
+
+        foreach($data as $venue) {
+            // insert every type (as this is a Set each Type will only occur once)
+            $type = $venue["Venue type"];
+            if($type == "conference") {
+                $type = "conference/workshop";
+            }
+            $this->insert($type);
+        }
+    }
+}
+
+class CodecheckVenueNames extends Set {
+    function __construct()
+    {
+        // Intialize API caller
+        $jsonApiCaller = new JsonApiCaller("https://codecheck.org.uk/register/venues/index.json");
+        // fetch CODECHECK Type data
+        $jsonApiCaller->fetch();
+        // get json Data from API Caller
+        $data = $jsonApiCaller->getData();
+
+        foreach($data as $venue) {
+            // insert every name (as this is a Set each name will only occur once)
+            $name = $venue["Venue name"];
+            if($name == "CODECHECK NL") {
+                $name = "check-nl";
+                $this->insert($name);
+            } else if($name == "Lifecycle Journal") {
+                $name = "lifecycle journal";
+                $this->insert($name);
+            }
+        }
     }
 }
 
@@ -255,16 +338,6 @@ function getRawIdentifier(string $title): string
     return $rawIdentifier;
 }
 
-class NoMatchingIssuesFoundException extends \Exception {
-    public function __construct(
-        string $message = "No more issues available from GitHub API",
-        int $code = 0,
-        ?\Throwable $previous = null
-    ) {
-        parent::__construct($message, $code, $previous);
-    }
-}
-
 // api call
 class CodecheckRegisterGithubIssuesApiParser
 {
@@ -310,7 +383,8 @@ class CodecheckRegisterGithubIssuesApiParser
 
     public function addIssue(
         CertificateIdentifier $certificateIdentifier,
-        CodecheckType $codecheckType
+        string $codecheckVenueType,
+        string $codecheckVenueName
     ): void {
         $token = $_ENV['CODECHECK_REGISTER_GITHUB_TOKEN'];
 
@@ -322,7 +396,8 @@ class CodecheckRegisterGithubIssuesApiParser
         $issueBody = '';
         $labels = ['id assigned'];
 
-        $labels = array_merge($labels, $codecheckType->labels());
+        $labels[] = $codecheckVenueType;
+        $labels[] = $codecheckVenueName;
 
         $issue = $this->client->api('issue')->create(
             $repositoryOwner,
@@ -356,7 +431,15 @@ echo $certificateIdentifierList->getNewestIdentifier()->toStr() . "\n";
 
 $new_identifier = CertificateIdentifier::newUniqueIdentifier($certificateIdentifierList);
 
-$apiParser->addIssue($new_identifier, CodecheckType::checkNL);
+$codecheckVenueTypes = new CodecheckVenueTypes();
+$codecheckVenueNames = new CodecheckVenueNames();
+
+print_r($codecheckVenueTypes->getArray());
+echo "\n";
+print_r($codecheckVenueNames->getArray());
+
+// TODO: Add more logic here onto what Venue Type & Venue Name combination is allowed here
+$apiParser->addIssue($new_identifier, $codecheckVenueTypes->getArray()[1], $codecheckVenueNames->getArray()[0]);
 
 echo "Added new issue with identifier: " . $new_identifier->toStr() . "\n";
 
