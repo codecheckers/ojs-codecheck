@@ -103,35 +103,34 @@ class ArticleDetails
 
         $html = '
         <div class="item certificate" style="padding: 15px; margin: 5px 0;">
-            <div style="display: flex; align-items: center;">
+            <div class="sub_item" style="display: block;">
                 <img src="' . htmlspecialchars($logoUrl) . '" alt="CODECHECK" style="height: 18px; margin-right: 3px;">
-                <span style=" padding: 3px 8px; border-radius: 12px; font-size: 0.8em;">
-                    <strong style="font-size:1.1em;">Authors:</strong><br>' . htmlspecialchars($codecheckerNames) . '
+                 <h2 class="label">Codecheckers</h2>
+                <span>
+                   ' . htmlspecialchars($codecheckerNames) . '
                 </span>
             </div>
-            
-            <h4 style="margin: 0 0 0px 0; font-size: 0.9em; font-weight: 600;">
+        <div class="sub_item">
+            <h2 class="label">
                 Certificate
-            </h4>';
+            </h2>';
 
         if ($certificateLink) {
-            $html .= '<p style="margin: 0 0 -4px 0; font-size: 0.8em;">
-                <a href="' . htmlspecialchars($certificateLink) . '" target="_blank" 
-                   style="color: #006798; text-decoration: underline; font-weight: 500;">
+            $html .= '<div class="value">
+                <a href="' . htmlspecialchars($certificateLink) . '" target="_blank">
                     ' . htmlspecialchars($linkText) . '
                 </a>
-            </p>';
+            </div>';
         }
         if ($getDoiLink) {
-            $html .= '<p style="margin: 0 0 8px 0; font-size: 0.8em;">
-                <a href="' . htmlspecialchars($getDoiLink) . '" target="_blank" 
-                   style="color: #006798; text-decoration: underline; font-weight: 500;">
+            $html .= '<div class="value">
+                <a href="' . htmlspecialchars($getDoiLink) . '" target="_blank">
                     ' . htmlspecialchars($getDoiLink) . '
                 </a>
-            </p>';
+            </div>';
         }
 
-        $html .= '</div>';
+        $html .= ' </div></div>';
 
         return $html;
     }
