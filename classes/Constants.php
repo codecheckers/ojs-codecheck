@@ -22,4 +22,11 @@ class Constants
      * Basic plugin setting
      */
     public const SETTING_ENABLE_CODECHECK = 'enableCodecheck';
+    
+    /**
+     * Plugin settings keys - NEW ADDITIONS
+     */
+    public const CODECHECK_ENABLED = 'enabled';
+    public const CODECHECK_API_ENDPOINT = 'codecheckApiEndpoint';
+    public const CODECHECK_API_KEY = 'codecheckApiKey';
 }
