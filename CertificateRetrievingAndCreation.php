@@ -87,12 +87,12 @@ class JsonApiCaller {
         }
 
         // Decode JSON into PHP array
-        $this->data = json_decode($response, true);
+        $this->jsonData = json_decode($response, true);
     }
 
     public function getData(): array
     {
-        return $this->data;
+        return $this->jsonData;
     }
 }
 
@@ -424,7 +424,7 @@ class CodecheckRegisterGithubIssuesApiParser
         $labels[] = $codecheckVenueType;
         $labels[] = $codecheckVenueName;
 
-        $issue = $this->client->api('issue')->create(
+        $this->client->api('issue')->create(
             $repositoryOwner,
             $repositoryName,
             [
