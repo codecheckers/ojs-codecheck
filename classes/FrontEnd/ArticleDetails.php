@@ -85,8 +85,10 @@ class ArticleDetails
 
         if ($codecheckData->hasCompletedCheck()) {
             return $this->generateCompletedSidebarDisplay($codecheckData, $logoUrl);
-        } else {
+        } elseif ($codecheckData->hasAssignedChecker()) {
             return $this->generatePendingSidebarDisplay($codecheckData, $logoUrl);
+        } else {
+            return '';
         }
     }
 
@@ -117,13 +119,17 @@ class ArticleDetails
 
         if ($certificateLink) {
             $html .= '<div class="value">
-                <a href="' . htmlspecialchars($certificateLink) . '" target="_blank">
+                <a href="' . htmlspecialchars($certificateLink) . '" 
+                target="_blank"
+                title="Link to the certificate landing page with all related information">
                     ' . htmlspecialchars($linkText) . '
                 </a>
             </div>';
         }
         if ($getDoiLink) {
-            $html .= '<div class="value">
+            $html .= '<div class="value"
+            target="_blank"
+            title="Link to the actual certificate document">
                 <a href="' . htmlspecialchars($getDoiLink) . '" target="_blank">
                     ' . htmlspecialchars($getDoiLink) . '
                 </a>

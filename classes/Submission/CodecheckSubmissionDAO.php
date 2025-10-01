@@ -106,6 +106,17 @@ class CodecheckSubmission
     }
 
     /**
+     * Check if a codechecker has been assigned to this submission
+     * 
+     * @return bool
+     */
+    public function hasAssignedChecker(): bool
+    {
+        // TODO: Implement actual logic to check if checker is assigned
+        return false;
+    }
+
+    /**
      * Get the primary certificate link (prefer DOI over URL)
      */
     public function getCertificateLink(): string {
