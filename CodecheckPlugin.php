@@ -231,20 +231,22 @@ if ($form->id === 'titleAbstract') {
     
     if ($submission && $submission->getData('codecheckOptIn')) {
         
-        $form->addField(new \PKP\components\forms\FieldText('codeRepository', [
-            'label' => 'Code Repository URL',
-            'description' => 'Link to your code repository (GitHub, GitLab, etc.)',
-            'groupId' => 'default',
-            'isRequired' => false,
-            'value' => $submission->getData('codeRepository'),
-        ]));
-        
-        $form->addField(new \PKP\components\forms\FieldText('dataRepository', [
-            'label' => 'Data Repository URL', 
-            'description' => 'Link to your data repository (Zenodo, OSF, etc.) - optional',
-            'groupId' => 'default',
-            'value' => $submission->getData('dataRepository'),
-        ]));
+    $form->addField(new \PKP\components\forms\FieldTextarea('codeRepository', [
+        'label' => 'Code Repository URLs',
+        'description' => 'Link(s) to your code repository (GitHub, GitLab, etc.)',
+        'groupId' => 'default',
+        'isRequired' => false,
+        'rows' => 3,
+        'value' => $submission->getData('codeRepository'),
+    ]));
+
+    $form->addField(new \PKP\components\forms\FieldTextarea('dataRepository', [
+        'label' => 'Data Repository URLs', 
+        'description' => 'Link(s) to your data repository (Zenodo, OSF, etc.) - optional',
+        'groupId' => 'default',
+        'rows' => 3,
+        'value' => $submission->getData('dataRepository'),
+    ]));
         
         $form->addField(new \PKP\components\forms\FieldTextarea('manifestFiles', [
             'label' => 'Expected Output Files',
@@ -513,9 +515,9 @@ public function addToReviewForm(string $hookName, \PKP\components\forms\FormComp
         );
         
         // Add manifest files JavaScript for backend (submission forms)
-        $manifestJsUrl = $request->getBaseUrl() . '/' . $this->getPluginPath() . '/js/manifest-files.js';
+        $manifestJsUrl = $request->getBaseUrl() . '/' . $this->getPluginPath() . '/js/submission-fields.js';
         $templateMgr->addJavaScript(
-            'manifest-files-js', 
+            'submission-fields-js', 
             $manifestJsUrl, 
             ['contexts' => 'backend']
         );
