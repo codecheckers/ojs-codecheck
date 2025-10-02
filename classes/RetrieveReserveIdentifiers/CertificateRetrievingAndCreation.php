@@ -87,7 +87,7 @@ class CodecheckVenueTypes
         }
     }
 
-    public function getSet(): Set
+    public function get(): Set
     {
         return $this->set;
     }
@@ -121,7 +121,7 @@ class CodecheckVenueNames
         }
     }
 
-    public function getSet(): Set
+    public function get(): Set
     {
         return $this->set;
     }
@@ -459,9 +459,9 @@ $codecheckVenueNames = new CodecheckVenueNames();
 
 $codecheckVenue = new CodecheckVenue();
 
-print_r($codecheckVenueTypes->getSet()->toArray());
+print_r($codecheckVenueTypes->get()->toArray());
 echo "\n";
-print_r($codecheckVenueNames->getSet()->toArray());
+print_r($codecheckVenueNames->get()->toArray());
 
 // TODO: Replace CLI logic here to Venue Type & Venue Name combination being selected by form in journal plugin settings
 $stdin = fopen("php://stdin","r");
