@@ -29,7 +29,7 @@ class CodecheckPlugin extends GenericPlugin
 
             // Display CODECHECK information on the article details page
             $articleDetails = new ArticleDetails($this);
-            Hook::add('Templates::Article::Main', $articleDetails->addCodecheckInfo(...));
+            Hook::add('Templates::Article::Details', $articleDetails->addCodecheckInfo(...));
 
             // REPLACED: Use proper OJS 3.5 Custom Fields approach
             // Extend the submission schema to add CODECHECK fields
@@ -520,14 +520,6 @@ public function addToReviewForm(string $hookName, \PKP\components\forms\FormComp
             'submission-fields-js', 
             $manifestJsUrl, 
             ['contexts' => 'backend']
-        );
-        
-        // Add general CODECHECK JavaScript for frontend
-        $jsUrl = $request->getBaseUrl() . '/' . $this->getPluginPath() . '/js/codecheck-submission.js';
-        $templateMgr->addJavaScript(
-            'codecheck-js', 
-            $jsUrl, 
-            ['contexts' => 'frontend']
         );
         
         error_log("CODECHECK: Assets loaded successfully");
