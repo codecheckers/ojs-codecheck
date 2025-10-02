@@ -158,6 +158,12 @@ class CertificateIdentifier
     private $year;
     private $number;
 
+    function __construct(int $year, int $number)
+    {
+        $this->year = $year;
+        $this->number = $number;
+    }
+
     public function setYear(int $year): void
     {
         $this->year = $year;
@@ -183,11 +189,8 @@ class CertificateIdentifier
     {
         // split Identifier String at '-'
         list($year, $number) = explode('-', $identifier_str);
-        // create new instance of $certificateIdentifier
-        $certificateIdentifier = new CertificateIdentifier();
-        // set year and id (cast to int from str)
-        $certificateIdentifier->setYear((int) $year);
-        $certificateIdentifier->setNumber((int) $number);
+        // create new instance of $certificateIdentifier (cast to int from str)
+        $certificateIdentifier = new CertificateIdentifier((int) $year, (int) $number);
         // return new instance of $certificateIdentifier
         return $certificateIdentifier;
     }
@@ -198,13 +201,10 @@ class CertificateIdentifier
         $latest_identifier = $certificateIdentifierList->getNewestIdentifier();
         $current_year = (int) date("Y");
 
-        $new_identifier = new CertificateIdentifier();
-
         // different year, so this is the first CODECHECK certificate of the year -> id 001
         if($current_year != $latest_identifier->getYear()) {
-            // configure new Identifier
-            $new_identifier->setYear($current_year);
-            $new_identifier->setNumber(1);
+            // configure new Identifier which is the first identifier of a new year
+            $new_identifier = new CertificateIdentifier((int) $current_year, 1);
             return $new_identifier;
         }
 
@@ -212,9 +212,8 @@ class CertificateIdentifier
         $latest_id = (int) $latest_identifier->getNumber();
         // increment the latest id by one to get a new unique one
         $latest_id++;
-        // configure new Identifier
-        $new_identifier->setYear($latest_identifier->getYear());
-        $new_identifier->setNumber($latest_id);
+        // create new Identifier
+        $new_identifier = new CertificateIdentifier($latest_identifier->getYear(), $latest_id);
         return $new_identifier;
     }
 
