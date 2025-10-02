@@ -1,53 +1,17 @@
 <?php
 
-require __DIR__ . '/vendor/autoload.php';
+require __DIR__ . '/../../vendor/autoload.php';
 
 use Github\Client;
 use Dotenv\Dotenv;
+use Ds\Set;
 
 // Load .env variables
-$dotenv = Dotenv::createImmutable(__DIR__);
+$dotenv = Dotenv::createImmutable(__DIR__ . '/../../');
 $dotenv->load();
 
-class Set
+class NoMatchingIssuesFoundException extends \Exception
 {
-    protected $arraySet = [];
-
-    public function insert($element): void
-    {
-        foreach ($this->arraySet as $listElement) {
-            if(!(
-                is_bool($element) ||
-                is_double($element) ||
-                is_float($element) ||
-                is_int($element) ||
-                is_string($element)
-            )) {
-                if($listElement->toStr() == $element->toStr()) {
-                    return;
-                }
-            }
-            if($listElement == $element) {
-                return;
-            }
-        }
-        $this->arraySet[] = $element;
-    }
-
-    public function insertArray(array $array): void
-    {
-        foreach ($array as $element) {
-            $this->insert($element);
-        }
-    }
-
-    public function getArray(): array
-    {
-        return $this->arraySet;
-    }
-}
-
-class NoMatchingIssuesFoundException extends \Exception {
     public function __construct(
         string $message = "No more issues available from GitHub API",
         int $code = 0,
@@ -57,7 +21,8 @@ class NoMatchingIssuesFoundException extends \Exception {
     }
 }
 
-class ApiFetchException extends \Exception {
+class ApiFetchException extends \Exception
+{
     public function __construct(
         string $message = "Error fetching the API data",
         int $code = 0,
@@ -67,7 +32,8 @@ class ApiFetchException extends \Exception {
     }
 }
 
-class JsonApiCaller {
+class JsonApiCaller
+{
     private $url;
     private $jsonData = [];
 
@@ -96,9 +62,14 @@ class JsonApiCaller {
     }
 }
 
-class CodecheckVenueTypes extends Set {
+class CodecheckVenueTypes
+{
+    private Set $set;
+
     function __construct()
     {
+        // Initialize Set
+        $this->set = new Set();
         // Intialize API caller
         $jsonApiCaller = new JsonApiCaller("https://codecheck.org.uk/register/venues/index.json");
         // fetch CODECHECK Type data
@@ -112,14 +83,24 @@ class CodecheckVenueTypes extends Set {
             if($type == "conference") {
                 $type = "conference/workshop";
             }
-            $this->insert($type);
+            $this->set->add($type);
         }
+    }
+
+    public function get(): Set
+    {
+        return $this->set;
     }
 }
 
-class CodecheckVenueNames extends Set {
+class CodecheckVenueNames
+{
+    private Set $set;
+
     function __construct()
     {
+        // Initialize Set
+        $this->set = new Set();
         // Intialize API caller
         $jsonApiCaller = new JsonApiCaller("https://codecheck.org.uk/register/venues/index.json");
         // fetch CODECHECK Type data
@@ -132,16 +113,22 @@ class CodecheckVenueNames extends Set {
             $name = $venue["Venue name"];
             if($name == "CODECHECK NL") {
                 $name = "check-nl";
-                $this->insert($name);
+                $this->set->add($name);
             } else if($name == "Lifecycle Journal") {
                 $name = "lifecycle journal";
-                $this->insert($name);
+                $this->set->add($name);
             }
         }
     }
+
+    public function get(): Set
+    {
+        return $this->set;
+    }
 }
 
-class CodecheckVenue {
+class CodecheckVenue
+{
     private $venueName;
     private $venueType;
 
@@ -169,16 +156,22 @@ class CodecheckVenue {
 class CertificateIdentifier
 {
     private $year;
-    private $id;
+    private $number;
+
+    function __construct(int $year, int $number)
+    {
+        $this->year = $year;
+        $this->number = $number;
+    }
 
     public function setYear(int $year): void
     {
         $this->year = $year;
     }
 
-    public function setId(int $id): void
+    public function setNumber(int $number): void
     {
-        $this->id = $id;
+        $this->number = $number;
     }
 
     public function getYear(): int
@@ -186,21 +179,18 @@ class CertificateIdentifier
         return $this->year;
     }
 
-    public function getId(): int
+    public function getNumber(): int
     {
-        return $this->id;
+        return $this->number;
     }
 
     // Factory Method for Certificate Identifier
     static function fromStr(string $identifier_str): CertificateIdentifier
     {
         // split Identifier String at '-'
-        list($year, $id) = explode('-', $identifier_str);
-        // create new instance of $certificateIdentifier
-        $certificateIdentifier = new CertificateIdentifier();
-        // set year and id (cast to int from str)
-        $certificateIdentifier->setYear((int) $year);
-        $certificateIdentifier->setId((int) $id);
+        list($year, $number) = explode('-', $identifier_str);
+        // create new instance of $certificateIdentifier (cast to int from str)
+        $certificateIdentifier = new CertificateIdentifier((int) $year, (int) $number);
         // return new instance of $certificateIdentifier
         return $certificateIdentifier;
     }
@@ -211,35 +201,38 @@ class CertificateIdentifier
         $latest_identifier = $certificateIdentifierList->getNewestIdentifier();
         $current_year = (int) date("Y");
 
-        $new_identifier = new CertificateIdentifier();
-
         // different year, so this is the first CODECHECK certificate of the year -> id 001
         if($current_year != $latest_identifier->getYear()) {
-            // configure new Identifier
-            $new_identifier->setYear($current_year);
-            $new_identifier->setId(1);
+            // configure new Identifier which is the first identifier of a new year
+            $new_identifier = new CertificateIdentifier((int) $current_year, 1);
             return $new_identifier;
         }
 
         // get the latest id
-        $latest_id = (int) $latest_identifier->getId();
+        $latest_id = (int) $latest_identifier->getNumber();
         // increment the latest id by one to get a new unique one
         $latest_id++;
-        // configure new Identifier
-        $new_identifier->setYear($latest_identifier->getYear());
-        $new_identifier->setId($latest_id);
+        // create new Identifier
+        $new_identifier = new CertificateIdentifier($latest_identifier->getYear(), $latest_id);
         return $new_identifier;
     }
 
     public function toStr(): string
     {
         // pad with leading zeros (3 digits) in case number doesn't have 3 digits already
-        return $this->year . '-' . str_pad($this->id, 3, '0', STR_PAD_LEFT);;
+        return $this->year . '-' . str_pad($this->number, 3, '0', STR_PAD_LEFT);;
     }
 }
 
-class CertificateIdentifierList extends Set
+class CertificateIdentifierList
 {
+    private Set $set;
+
+    function __construct()
+    {
+        $this->set = new Set();   
+    }
+
     // Factory Method to create a new CertificateIdentifierList from a GitHub API fetch
     static function fromApi(
         CodecheckRegisterGithubIssuesApiParser $apiParser
@@ -275,10 +268,10 @@ class CertificateIdentifierList extends Set
             $to_identifier = CertificateIdentifier::fromStr($toIdStr);
 
             // append to $idRange list
-            for ($id_count = $from_identifier->getId(); $id_count <= $to_identifier->getId(); $id_count++) {
+            for ($id_count = $from_identifier->getNumber(); $id_count <= $to_identifier->getNumber(); $id_count++) {
                 $new_identifier = new CertificateIdentifier();
                 $new_identifier->setYear($from_identifier->getYear());
-                $new_identifier->setId($id_count);
+                $new_identifier->setNumber($id_count);
                 // append new identifier
                 $idRange[] = $new_identifier;
             }
@@ -290,37 +283,41 @@ class CertificateIdentifierList extends Set
         }
 
         // append to all certificate identifiers
-        $this->insertArray($idRange);
+        foreach ($idRange as $identifier) {
+            if (!$this->set->contains($identifier)) {
+                $this->set->add($identifier);
+            }
+        }
     }
 
     // sort ascending Certificate Identifiers
     public function sortAsc(): void
     {
-        usort($this->arraySet, function($a, $b) {
+        $this->set->sort(function($a, $b) {
             // First, compare year
             if ($a->getYear() !== $b->getYear()) {
                 return $a->getYear() <=> $b->getYear();
             }
             // If years are equal, compare ID
-            return $a->getId() <=> $b->getId();
+            return $a->getNumber() <=> $b->getNumber();
         });
     }
 
     public function sortDesc(): void
     {
-        usort($this->arraySet, function($a, $b) {
+        $this->set->sort(function($a, $b) {
             // First, compare year descending
             if ($a->getYear() !== $b->getYear()) {
                 return $b->getYear() <=> $a->getYear();
             }
             // If years are equal, compare ID descending
-            return $b->getId() <=> $a->getId();
+            return $b->getNumber() <=> $a->getNumber();
         });
     }
 
     public function getNumberOfIdentifiers(): int
     {
-        return count($this->arraySet);
+        return $this->set->count();
     }
 
     // return the latest identifier
@@ -328,14 +325,14 @@ class CertificateIdentifierList extends Set
     {
         $this->sortDesc();
         // get first element of sort descending -> newest element
-        return $this->arraySet[0];
+        return $this->set->first();
     }
 
     public function toStr(): string
     {
         $return_str = "Certificate Identifiers:\n";
-        foreach ($this->arraySet as $id) {
-            $return_str = $return_str . $id->toStr() . "\n";
+        foreach ($this->set as $identifier) {
+            $return_str .= $identifier->toStr() . "\n";
         }
         return $return_str;
     }
@@ -461,9 +458,9 @@ $codecheckVenueNames = new CodecheckVenueNames();
 
 $codecheckVenue = new CodecheckVenue();
 
-print_r($codecheckVenueTypes->getArray());
+print_r($codecheckVenueTypes->get()->toArray());
 echo "\n";
-print_r($codecheckVenueNames->getArray());
+print_r($codecheckVenueNames->get()->toArray());
 
 // TODO: Replace CLI logic here to Venue Type & Venue Name combination being selected by form in journal plugin settings
 $stdin = fopen("php://stdin","r");
