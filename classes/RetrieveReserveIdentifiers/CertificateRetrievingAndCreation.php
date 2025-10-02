@@ -1,53 +1,17 @@
 <?php
 
-require __DIR__ . '/vendor/autoload.php';
+require __DIR__ . '/../../vendor/autoload.php';
 
 use Github\Client;
 use Dotenv\Dotenv;
+use Ds\Set;
 
 // Load .env variables
-$dotenv = Dotenv::createImmutable(__DIR__);
+$dotenv = Dotenv::createImmutable(__DIR__ . '/../../');
 $dotenv->load();
 
-class Set
+class NoMatchingIssuesFoundException extends \Exception
 {
-    protected $arraySet = [];
-
-    public function insert($element): void
-    {
-        foreach ($this->arraySet as $listElement) {
-            if(!(
-                is_bool($element) ||
-                is_double($element) ||
-                is_float($element) ||
-                is_int($element) ||
-                is_string($element)
-            )) {
-                if($listElement->toStr() == $element->toStr()) {
-                    return;
-                }
-            }
-            if($listElement == $element) {
-                return;
-            }
-        }
-        $this->arraySet[] = $element;
-    }
-
-    public function insertArray(array $array): void
-    {
-        foreach ($array as $element) {
-            $this->insert($element);
-        }
-    }
-
-    public function getArray(): array
-    {
-        return $this->arraySet;
-    }
-}
-
-class NoMatchingIssuesFoundException extends \Exception {
     public function __construct(
         string $message = "No more issues available from GitHub API",
         int $code = 0,
@@ -57,7 +21,8 @@ class NoMatchingIssuesFoundException extends \Exception {
     }
 }
 
-class ApiFetchException extends \Exception {
+class ApiFetchException extends \Exception
+{
     public function __construct(
         string $message = "Error fetching the API data",
         int $code = 0,
@@ -67,7 +32,8 @@ class ApiFetchException extends \Exception {
     }
 }
 
-class JsonApiCaller {
+class JsonApiCaller
+{
     private $url;
     private $jsonData = [];
 
@@ -96,9 +62,14 @@ class JsonApiCaller {
     }
 }
 
-class CodecheckVenueTypes extends Set {
+class CodecheckVenueTypes
+{
+    private Set $set;
+
     function __construct()
     {
+        // Initialize Set
+        $this->set = new Set();
         // Intialize API caller
         $jsonApiCaller = new JsonApiCaller("https://codecheck.org.uk/register/venues/index.json");
         // fetch CODECHECK Type data
@@ -112,14 +83,24 @@ class CodecheckVenueTypes extends Set {
             if($type == "conference") {
                 $type = "conference/workshop";
             }
-            $this->insert($type);
+            $this->set->add($type);
         }
+    }
+
+    public function getSet(): Set
+    {
+        return $this->set;
     }
 }
 
-class CodecheckVenueNames extends Set {
+class CodecheckVenueNames
+{
+    private Set $set;
+
     function __construct()
     {
+        // Initialize Set
+        $this->set = new Set();
         // Intialize API caller
         $jsonApiCaller = new JsonApiCaller("https://codecheck.org.uk/register/venues/index.json");
         // fetch CODECHECK Type data
@@ -132,16 +113,22 @@ class CodecheckVenueNames extends Set {
             $name = $venue["Venue name"];
             if($name == "CODECHECK NL") {
                 $name = "check-nl";
-                $this->insert($name);
+                $this->set->add($name);
             } else if($name == "Lifecycle Journal") {
                 $name = "lifecycle journal";
-                $this->insert($name);
+                $this->set->add($name);
             }
         }
     }
+
+    public function getSet(): Set
+    {
+        return $this->set;
+    }
 }
 
-class CodecheckVenue {
+class CodecheckVenue
+{
     private $venueName;
     private $venueType;
 
@@ -238,8 +225,15 @@ class CertificateIdentifier
     }
 }
 
-class CertificateIdentifierList extends Set
+class CertificateIdentifierList
 {
+    private Set $set;
+
+    function __construct()
+    {
+        $this->set = new Set();   
+    }
+
     // Factory Method to create a new CertificateIdentifierList from a GitHub API fetch
     static function fromApi(
         CodecheckRegisterGithubIssuesApiParser $apiParser
@@ -290,13 +284,17 @@ class CertificateIdentifierList extends Set
         }
 
         // append to all certificate identifiers
-        $this->insertArray($idRange);
+        foreach ($idRange as $identifier) {
+            if (!$this->set->contains($identifier)) {
+                $this->set->add($identifier);
+            }
+        }
     }
 
     // sort ascending Certificate Identifiers
     public function sortAsc(): void
     {
-        usort($this->arraySet, function($a, $b) {
+        $this->set->sort(function($a, $b) {
             // First, compare year
             if ($a->getYear() !== $b->getYear()) {
                 return $a->getYear() <=> $b->getYear();
@@ -308,7 +306,7 @@ class CertificateIdentifierList extends Set
 
     public function sortDesc(): void
     {
-        usort($this->arraySet, function($a, $b) {
+        $this->set->sort(function($a, $b) {
             // First, compare year descending
             if ($a->getYear() !== $b->getYear()) {
                 return $b->getYear() <=> $a->getYear();
@@ -320,7 +318,7 @@ class CertificateIdentifierList extends Set
 
     public function getNumberOfIdentifiers(): int
     {
-        return count($this->arraySet);
+        return $this->set->count();
     }
 
     // return the latest identifier
@@ -328,14 +326,14 @@ class CertificateIdentifierList extends Set
     {
         $this->sortDesc();
         // get first element of sort descending -> newest element
-        return $this->arraySet[0];
+        return $this->set->first();
     }
 
     public function toStr(): string
     {
         $return_str = "Certificate Identifiers:\n";
-        foreach ($this->arraySet as $id) {
-            $return_str = $return_str . $id->toStr() . "\n";
+        foreach ($this->set as $id) {
+            $return_str .= $id->toStr() . "\n";
         }
         return $return_str;
     }
@@ -461,9 +459,9 @@ $codecheckVenueNames = new CodecheckVenueNames();
 
 $codecheckVenue = new CodecheckVenue();
 
-print_r($codecheckVenueTypes->getArray());
+print_r($codecheckVenueTypes->getSet()->toArray());
 echo "\n";
-print_r($codecheckVenueNames->getArray());
+print_r($codecheckVenueNames->getSet()->toArray());
 
 // TODO: Replace CLI logic here to Venue Type & Venue Name combination being selected by form in journal plugin settings
 $stdin = fopen("php://stdin","r");
