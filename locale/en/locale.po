@@ -29,3 +29,39 @@ msgstr "Enable CODECHECK for this journal"
 
 msgid "plugins.generic.codecheck.settings.enableCodecheck.description"
 msgstr "Allow editors to assign codecheckers to submissions"
+
+msgid "plugins.generic.codecheck.title"
+msgstr "CODECHECK"
+
+msgid "plugins.generic.codecheck.optIn.description"
+msgstr "Yes, I want my paper to be codechecked. See:"
+
+msgid "plugins.generic.codecheck.details.title"
+msgstr "CODECHECK Details"
+
+msgid "plugins.generic.codecheck.codeRepository"
+msgstr "Code Repository URL"
+
+msgid "plugins.generic.codecheck.codeRepository.description"
+msgstr "Link to your code repository (GitHub, GitLab, etc.)"
+
+msgid "plugins.generic.codecheck.dataRepository"
+msgstr "Data Repository URL"
+
+msgid "plugins.generic.codecheck.dataRepository.description"
+msgstr "Link to your data repository (Zenodo, OSF, etc.) - optional"
+
+msgid "plugins.generic.codecheck.dependencies"
+msgstr "Software Dependencies"
+
+msgid "plugins.generic.codecheck.dependencies.description"
+msgstr "List all software dependencies and versions"
+
+msgid "plugins.generic.codecheck.executionInstructions"
+msgstr "Execution Instructions"
+
+msgid "plugins.generic.codecheck.executionInstructions.description"
+msgstr "Step-by-step instructions to reproduce your analysis"
+
+msgid "plugins.generic.codecheck.preview"
+msgstr "Preview codecheck.yml"
