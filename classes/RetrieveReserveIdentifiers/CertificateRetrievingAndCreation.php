@@ -156,16 +156,16 @@ class CodecheckVenue
 class CertificateIdentifier
 {
     private $year;
-    private $id;
+    private $number;
 
     public function setYear(int $year): void
     {
         $this->year = $year;
     }
 
-    public function setId(int $id): void
+    public function setNumber(int $number): void
     {
-        $this->id = $id;
+        $this->number = $number;
     }
 
     public function getYear(): int
@@ -173,21 +173,21 @@ class CertificateIdentifier
         return $this->year;
     }
 
-    public function getId(): int
+    public function getNumber(): int
     {
-        return $this->id;
+        return $this->number;
     }
 
     // Factory Method for Certificate Identifier
     static function fromStr(string $identifier_str): CertificateIdentifier
     {
         // split Identifier String at '-'
-        list($year, $id) = explode('-', $identifier_str);
+        list($year, $number) = explode('-', $identifier_str);
         // create new instance of $certificateIdentifier
         $certificateIdentifier = new CertificateIdentifier();
         // set year and id (cast to int from str)
         $certificateIdentifier->setYear((int) $year);
-        $certificateIdentifier->setId((int) $id);
+        $certificateIdentifier->setNumber((int) $number);
         // return new instance of $certificateIdentifier
         return $certificateIdentifier;
     }
@@ -204,24 +204,24 @@ class CertificateIdentifier
         if($current_year != $latest_identifier->getYear()) {
             // configure new Identifier
             $new_identifier->setYear($current_year);
-            $new_identifier->setId(1);
+            $new_identifier->setNumber(1);
             return $new_identifier;
         }
 
         // get the latest id
-        $latest_id = (int) $latest_identifier->getId();
+        $latest_id = (int) $latest_identifier->getNumber();
         // increment the latest id by one to get a new unique one
         $latest_id++;
         // configure new Identifier
         $new_identifier->setYear($latest_identifier->getYear());
-        $new_identifier->setId($latest_id);
+        $new_identifier->setNumber($latest_id);
         return $new_identifier;
     }
 
     public function toStr(): string
     {
         // pad with leading zeros (3 digits) in case number doesn't have 3 digits already
-        return $this->year . '-' . str_pad($this->id, 3, '0', STR_PAD_LEFT);;
+        return $this->year . '-' . str_pad($this->number, 3, '0', STR_PAD_LEFT);;
     }
 }
 
@@ -269,10 +269,10 @@ class CertificateIdentifierList
             $to_identifier = CertificateIdentifier::fromStr($toIdStr);
 
             // append to $idRange list
-            for ($id_count = $from_identifier->getId(); $id_count <= $to_identifier->getId(); $id_count++) {
+            for ($id_count = $from_identifier->getNumber(); $id_count <= $to_identifier->getNumber(); $id_count++) {
                 $new_identifier = new CertificateIdentifier();
                 $new_identifier->setYear($from_identifier->getYear());
-                $new_identifier->setId($id_count);
+                $new_identifier->setNumber($id_count);
                 // append new identifier
                 $idRange[] = $new_identifier;
             }
@@ -300,7 +300,7 @@ class CertificateIdentifierList
                 return $a->getYear() <=> $b->getYear();
             }
             // If years are equal, compare ID
-            return $a->getId() <=> $b->getId();
+            return $a->getNumber() <=> $b->getNumber();
         });
     }
 
@@ -312,7 +312,7 @@ class CertificateIdentifierList
                 return $b->getYear() <=> $a->getYear();
             }
             // If years are equal, compare ID descending
-            return $b->getId() <=> $a->getId();
+            return $b->getNumber() <=> $a->getNumber();
         });
     }
 
@@ -332,8 +332,8 @@ class CertificateIdentifierList
     public function toStr(): string
     {
         $return_str = "Certificate Identifiers:\n";
-        foreach ($this->set as $id) {
-            $return_str .= $id->toStr() . "\n";
+        foreach ($this->set as $identifier) {
+            $return_str .= $identifier->toStr() . "\n";
         }
         return $return_str;
     }
