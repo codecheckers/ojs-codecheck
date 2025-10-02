@@ -16,7 +16,6 @@ use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionDAO;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmission;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
-use PKP\core\PKPString;
 
 class ArticleDetails
 {
@@ -62,7 +61,7 @@ class ArticleDetails
         }
 
         // Generate and add the CODECHECK display
-        $codecheckHtml = $this->generateSidebarDisplay($codecheckData);
+        $codecheckHtml = $this->generateSidebarDisplay($codecheckData, $templateMgr);
         
         if ($codecheckHtml) {
             $output .= $codecheckHtml;
@@ -74,117 +73,34 @@ class ArticleDetails
     /**
      * Generate sidebar display for CODECHECK certificate
      */
-    private function generateSidebarDisplay(CodecheckSubmission $codecheckData): string
+    private function generateSidebarDisplay(CodecheckSubmission $codecheckData, $templateMgr): string
     {
         $request = Application::get()->getRequest();
-        $baseUrl = $request->getBaseUrl();
-        $pluginPath = $this->plugin->getPluginPath();
         
-        // Path to your CODECHECK logo
-        $logoUrl = $baseUrl . '/' . $pluginPath . '/assets/img/codeworks-badge.png';
+        // Prepare common template variables
+        $templateMgr->assign([
+            'logoUrl' => $request->getBaseUrl() . '/' . $this->plugin->getPluginPath() . '/assets/img/codeworks-badge.png',
+        ]);
 
         if ($codecheckData->hasCompletedCheck()) {
-            return $this->generateCompletedSidebarDisplay($codecheckData, $logoUrl);
+            $templateMgr->assign([
+                'codecheckStatus' => 'completed',
+                'certificateLink' => $codecheckData->getCertificateLink(),
+                'doiLink' => $codecheckData->getDoiLink(),
+                'linkText' => $codecheckData->getFormattedCertificateLinkText(),
+                'codecheckerNames' => $codecheckData->getCodecheckerNames(),
+                'certificateDate' => $codecheckData->getCertificateDate(),
+            ]);
         } elseif ($codecheckData->hasAssignedChecker()) {
-            return $this->generatePendingSidebarDisplay($codecheckData, $logoUrl);
+            $templateMgr->assign([
+                'codecheckStatus' => 'pending',
+                'codeRepo' => $codecheckData->getCodeRepository(),
+                'dataRepo' => $codecheckData->getDataRepository(),
+            ]);
         } else {
             return '';
         }
-    }
 
-    /**
-     * Generate completed certificate sidebar display
-     */
-    private function generateCompletedSidebarDisplay(CodecheckSubmission $codecheckData, string $logoUrl): string
-    {
-        $certificateLink = $codecheckData->getCertificateLink();
-        $getDoiLink = $codecheckData->getDoiLink();
-        $linkText = $codecheckData->getFormattedCertificateLinkText();
-        $codecheckerNames = $codecheckData->getCodecheckerNames();
-        $certificateDate = $codecheckData->getCertificateDate();
-
-        $html = '
-        <div class="item certificate" style="padding: 15px; margin: 5px 0;">
-            <div class="sub_item" style="display: block;">
-                <img src="' . htmlspecialchars($logoUrl) . '" alt="CODECHECK" style="height: 18px; margin-right: 3px;">
-                 <h2 class="label">Codecheckers</h2>
-                <span>
-                   ' . htmlspecialchars($codecheckerNames) . '
-                </span>
-            </div>
-        <div class="sub_item">
-            <h2 class="label">
-                Certificate
-            </h2>';
-
-        if ($certificateLink) {
-            $html .= '<div class="value">
-                <a href="' . htmlspecialchars($certificateLink) . '" 
-                target="_blank"
-                title="Link to the certificate landing page with all related information">
-                    ' . htmlspecialchars($linkText) . '
-                </a>
-            </div>';
-        }
-        if ($getDoiLink) {
-            $html .= '<div class="value"
-            target="_blank"
-            title="Link to the actual certificate document">
-                <a href="' . htmlspecialchars($getDoiLink) . '" target="_blank">
-                    ' . htmlspecialchars($getDoiLink) . '
-                </a>
-            </div>';
-        }
-
-        $html .= ' </div></div>';
-
-        return $html;
-    }
-
-    /**
-     * Generate pending check sidebar display
-     */
-    private function generatePendingSidebarDisplay(CodecheckSubmission $codecheckData, string $logoUrl): string
-    {
-        $codeRepo = $codecheckData->getCodeRepository();
-        $dataRepo = $codecheckData->getDataRepository();
-
-        $html = '
-        <div class="item codecheck-pending" style="background: #fff8e1; border: 2px solid #ffc107; border-radius: 8px; padding: 15px; margin: 15px 0;">
-            <div style="display: flex; align-items: center; margin-bottom: 12px;">
-                <img src="' . htmlspecialchars($logoUrl) . '" alt="CODECHECK" style="height: 24px; margin-right: 8px;">
-                <span style="background: #ffc107; color: #212529; padding: 3px 8px; border-radius: 12px; font-size: 0.8em; font-weight: bold;">
-                    ⏳ In Progress
-                </span>
-            </div>
-            
-            <h4 style="color: #bf8f00; margin: 0 0 10px 0; font-size: 1.1em; font-weight: bold;">
-                CODECHECK
-            </h4>
-            
-            <p style="margin: 0 0 10px 0; font-size: 0.85em; color: #666; line-height: 1.4;">
-                Computational reproducibility verification in progress.
-            </p>';
-
-        if ($codeRepo || $dataRepo) {
-            $html .= '<div style="font-size: 0.8em; color: #666;">';
-            if ($codeRepo) {
-                $html .= '<p style="margin: 2px 0; word-break: break-all;">
-                    <strong>Code:</strong> <a href="' . htmlspecialchars($codeRepo) . '" target="_blank" style="color: #bf8f00;">' . 
-                    htmlspecialchars(strlen($codeRepo) > 30 ? substr($codeRepo, 0, 30) . '...' : $codeRepo) . '</a>
-                </p>';
-            }
-            if ($dataRepo) {
-                $html .= '<p style="margin: 2px 0; word-break: break-all;">
-                    <strong>Data:</strong> <a href="' . htmlspecialchars($dataRepo) . '" target="_blank" style="color: #bf8f00;">' . 
-                    htmlspecialchars(strlen($dataRepo) > 30 ? substr($dataRepo, 0, 30) . '...' : $dataRepo) . '</a>
-                </p>';
-            }
-            $html .= '</div>';
-        }
-
-        $html .= '</div>';
-
-        return $html;
+        return $templateMgr->fetch($this->plugin->getTemplateResource('frontend/objects/article_codecheck.tpl'));
     }
 }
