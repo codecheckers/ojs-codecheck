@@ -80,9 +80,7 @@ class CodecheckVenueTypes
         foreach($data as $venue) {
             // insert every type (as this is a Set each Type will only occur once)
             $type = $venue["Venue type"];
-            if($type == "conference") {
-                $type = "conference/workshop";
-            }
+            // Add every venue type to the Set
             $this->set->add($type);
         }
     }
