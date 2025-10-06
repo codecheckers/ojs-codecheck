@@ -99,23 +99,26 @@ class CodecheckVenueNames
     {
         // Initialize Set
         $this->set = new Set();
-        // Intialize API caller
-        $jsonApiCaller = new JsonApiCaller("https://codecheck.org.uk/register/venues/index.json");
-        // fetch CODECHECK Type data
-        $jsonApiCaller->fetch();
-        // get json Data from API Caller
-        $data = $jsonApiCaller->getData();
 
-        foreach($data as $venue) {
-            // insert every name (as this is a Set each name will only occur once)
-            $name = $venue["Venue name"];
-            if($name == "CODECHECK NL") {
-                $name = "check-nl";
-                $this->set->add($name);
-            } else if($name == "Lifecycle Journal") {
-                $name = "lifecycle journal";
-                $this->set->add($name);
+        $apiCaller = new CodecheckRegisterGithubIssuesApiParser();
+
+        // fetch CODECHECK Certificate GitHub Labels
+        $apiCaller->fetchLabels();
+        // get Labels from API Caller
+        $labels = $apiCaller->getLabels();
+
+        // find all venue Types
+        // TODO: Remove this once the actualy Codecheck API contains the labels/ Venue Names to fetch
+        $codecheckVenueTypes = new CodecheckVenueTypes();
+
+        foreach($labels as $label) {
+            // If a Label is already a Venue Type it can't also be a venue Name
+            // Therefore this Label has to be skipped
+            if($codecheckVenueTypes->get()->contains($label) || $label == "id assigned") {
+                continue;
             }
+            // add Label to Venue Names
+            $this->set->add($label);
         }
     }
 
@@ -238,7 +241,7 @@ class CertificateIdentifierList
         $newCertificateIdentifierList = new CertificateIdentifierList();
 
         // fetch API
-        $apiParser->fetchApi();
+        $apiParser->fetchIssues();
 
         foreach ($apiParser->getIssues() as $issue) {
             // raw identifier (can still have ranges of identifiers);
@@ -267,9 +270,7 @@ class CertificateIdentifierList
 
             // append to $idRange list
             for ($id_count = $from_identifier->getNumber(); $id_count <= $to_identifier->getNumber(); $id_count++) {
-                $new_identifier = new CertificateIdentifier();
-                $new_identifier->setYear($from_identifier->getYear());
-                $new_identifier->setNumber($id_count);
+                $new_identifier = new CertificateIdentifier($from_identifier->getYear(), $id_count);
                 // append new identifier
                 $idRange[] = $new_identifier;
             }
@@ -362,14 +363,16 @@ function getRawIdentifier(string $title): string
 class CodecheckRegisterGithubIssuesApiParser
 {
     private $issues = [];
+    private Set $labels;
     private $client;
 
     function __construct()
     {
         $this->client = new Client();
+        $this->labels = new Set();
     }
 
-    public function fetchApi(): void
+    public function fetchIssues(): void
     {
         $issuePage = 1;
         $issuesToFetchPerPage = 20;
@@ -399,6 +402,14 @@ class CodecheckRegisterGithubIssuesApiParser
 
             $issuePage++;
         } while (!$fetchedMatchingIssue);
+    }
+
+    public function fetchLabels(): void
+    {
+        $fetchedLabels = $this->client->api('issue')->labels()->all('codecheckers', 'register');
+        foreach($fetchedLabels as $label) {
+            $this->labels->add($label["name"]);
+        }
     }
 
     public function addIssue(
@@ -433,6 +444,11 @@ class CodecheckRegisterGithubIssuesApiParser
     public function getIssues(): array
     {
         return $this->issues;
+    }
+
+    public function getLabels(): Set
+    {
+        return $this->labels;
     }
 }
 
