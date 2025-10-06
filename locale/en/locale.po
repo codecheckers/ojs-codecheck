@@ -65,3 +65,15 @@ msgstr "Step-by-step instructions to reproduce your analysis"
 
 msgid "plugins.generic.codecheck.preview"
 msgstr "Preview codecheck.yml"
+
+msgid "plugins.generic.codecheck.certificate.landingPage.title"
+msgstr "Link to the certificate landing page with all related information"
+
+msgid "plugins.generic.codecheck.certificate.document.title"
+msgstr "Link to the actual certificate document"
+
+msgid "plugins.generic.codecheck.status.inProgress"
+msgstr "In Progress"
+
+msgid "plugins.generic.codecheck.status.verificationInProgress"
+msgstr "Computational reproducibility verification in progress."
