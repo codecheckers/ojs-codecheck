@@ -114,7 +114,7 @@ class CodecheckVenueNames
         foreach($labels as $label) {
             // If a Label is already a Venue Type it can't also be a venue Name
             // Therefore this Label has to be skipped
-            if($codecheckVenueTypes->get()->contains($label) || $label == "id assigned") {
+            if($codecheckVenueTypes->get()->contains($label) || $label == "id assigned" || $label == "development") {
                 continue;
             }
             // add Label to Venue Names
