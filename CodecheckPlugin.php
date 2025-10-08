@@ -182,6 +182,12 @@ public function createCodecheckGenres(): void
             'apiSummary' => true,
             'validation' => ['nullable']
         ];
+
+        $schema->properties->retrieveReserveCertificateIdentifier = (object) [
+            'type' => 'string',
+            'apiSummary' => true,
+            'validation' => ['nullable']
+        ];
         
         $schema->properties->codeRepository = (object) [
             'type' => 'string',
@@ -204,7 +210,7 @@ public function createCodecheckGenres(): void
      */
     public function addToSubmissionForm(string $hookName, \PKP\components\forms\FormComponent $form): bool
     {
-    error_log("CODECHECK: Checking form ID: " . $form->id);
+        error_log("CODECHECK: Checking form ID: " . $form->id);
 
         // Target the submission start form (before the wizard steps)
         if ($form->id === 'submitStart' || $form->id === 'submissionStart' || str_contains($form->id, 'start')) {
@@ -225,49 +231,58 @@ public function createCodecheckGenres(): void
         }
         
         // Target submission wizard steps for detailed fields
-if ($form->id === 'titleAbstract') {
-    $request = \APP\core\Application::get()->getRequest();
-    $submission = $request->getRouter()->getHandler()->getAuthorizedContextObject(ASSOC_TYPE_SUBMISSION);
-    
-    if ($submission && $submission->getData('codecheckOptIn')) {
-        
-    $form->addField(new \PKP\components\forms\FieldTextarea('codeRepository', [
-        'label' => 'Code Repository URLs',
-        'description' => 'Link(s) to your code repository (GitHub, GitLab, etc.)',
-        'groupId' => 'default',
-        'isRequired' => false,
-        'rows' => 3,
-        'value' => $submission->getData('codeRepository'),
-    ]));
+        if ($form->id === 'titleAbstract') {
+            $request = \APP\core\Application::get()->getRequest();
+            $submission = $request->getRouter()->getHandler()->getAuthorizedContextObject(ASSOC_TYPE_SUBMISSION);
+            
+            if ($submission && $submission->getData('codecheckOptIn')) {
+                
+                $form->addField(new \PKP\components\forms\FieldTextarea('retrieveReserveCertificateIdentifier', [
+                    'label' => 'Certificate Identifier',
+                    'description' => 'e.g.: 2025-001',
+                    'groupId' => 'default',
+                    'isRequired' => false,
+                    'rows' => 1,
+                    'value' => $submission->getData('retrieveReserveCertificateIdentifier'),
+                ]));
 
-    $form->addField(new \PKP\components\forms\FieldTextarea('dataRepository', [
-        'label' => 'Data Repository URLs', 
-        'description' => 'Link(s) to your data repository (Zenodo, OSF, etc.) - optional',
-        'groupId' => 'default',
-        'rows' => 3,
-        'value' => $submission->getData('dataRepository'),
-    ]));
-        
-        $form->addField(new \PKP\components\forms\FieldTextarea('manifestFiles', [
-            'label' => 'Expected Output Files',
-            'description' => 'List the main figures, tables, and results your code should produce.',
-            'groupId' => 'default',
-            'rows' => 6,
-            'isRequired' => true,
-            'value' => $submission->getData('manifestFiles'),
-        ]));  
+                $form->addField(new \PKP\components\forms\FieldTextarea('codeRepository', [
+                    'label' => 'Code Repository URLs',
+                    'description' => 'Link(s) to your code repository (GitHub, GitLab, etc.)',
+                    'groupId' => 'default',
+                    'isRequired' => false,
+                    'rows' => 3,
+                    'value' => $submission->getData('codeRepository'),
+                ]));
 
-        $form->addField(new \PKP\components\forms\FieldRichTextarea('dataAvailabilityStatement', [
-            'label' => 'Data and Software Availability',
-            'description' => 'Copy from your manuscript\'s data availability section, or describe how readers can access your code and data',
-            'groupId' => 'default', 
-            'rows' => 4,
-            'value' => $submission->getData('dataAvailabilityStatement'),
-        ]));
-        
-        error_log("CODECHECK: Added all fields to titleAbstract form");
-    }
-}
+                $form->addField(new \PKP\components\forms\FieldTextarea('dataRepository', [
+                    'label' => 'Data Repository URLs', 
+                    'description' => 'Link(s) to your data repository (Zenodo, OSF, etc.) - optional',
+                    'groupId' => 'default',
+                    'rows' => 3,
+                    'value' => $submission->getData('dataRepository'),
+                ]));
+                
+                $form->addField(new \PKP\components\forms\FieldTextarea('manifestFiles', [
+                    'label' => 'Expected Output Files',
+                    'description' => 'List the main figures, tables, and results your code should produce.',
+                    'groupId' => 'default',
+                    'rows' => 6,
+                    'isRequired' => true,
+                    'value' => $submission->getData('manifestFiles'),
+                ]));  
+
+                $form->addField(new \PKP\components\forms\FieldRichTextarea('dataAvailabilityStatement', [
+                    'label' => 'Data and Software Availability',
+                    'description' => 'Copy from your manuscript\'s data availability section, or describe how readers can access your code and data',
+                    'groupId' => 'default', 
+                    'rows' => 4,
+                    'value' => $submission->getData('dataAvailabilityStatement'),
+                ]));
+                
+                error_log("CODECHECK: Added all fields to titleAbstract form");
+            }
+        }
         return false;
     }
 
@@ -303,6 +318,13 @@ public function addCodecheckReviewDisplay(string $hookName, array $args): void
                     <div class="value">This submission will be codechecked</div>
                 </div>';
         
+        if ($submission->getData('retrieveReserveCertificateIdentifier')) {
+            $output .= '<div class="field">
+                    <div class="label">Certificate Identifier</div>
+                    <div class="value">' . htmlspecialchars($submission->getData('retrieveReserveCertificateIdentifier')) . '</div>
+                </div>';
+        }
+
         if ($submission->getData('codeRepository')) {
             $output .= '<div class="field">
                     <div class="label">Code Repository</div>
@@ -344,7 +366,14 @@ public function saveSubmissionData(string $hookName, array $params): bool
     $params_array = $params[2];
     
     // Check if our fields are in the parameters being saved
-    $fields = ['codeRepository', 'dataRepository', 'manifestFiles', 'dataAvailabilityStatement'];
+    $fields = [
+        'retrieveReserveCertificateIdentifier',
+        'codeRepository',
+        'dataRepository',
+        'manifestFiles',
+        'dataAvailabilityStatement'
+    ];
+
     foreach ($fields as $field) {
         if (isset($params_array[$field])) {
             $value = $params_array[$field];
@@ -474,6 +503,11 @@ public function addToReviewForm(string $hookName, \PKP\components\forms\FormComp
         
         if ($submission && $submission->getData('codecheckOptIn')) {
             // Add read-only fields to review form
+            $form->addField(new \PKP\components\forms\FieldHTML('retrieveReserveCertificateIdentifierReview', [
+                'label' => 'Certificate Identifier',
+                'description' => $submission->getData('retrieveReserveCertificateIdentifier'),
+            ]));
+            
             $form->addField(new \PKP\components\forms\FieldHTML('codeRepositoryReview', [
                 'label' => 'Code Repository URL',
                 'description' => $submission->getData('codeRepository'),
