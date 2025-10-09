@@ -57,7 +57,7 @@ function initializeCertificateIdentiferSection(textarea) {
             </button>
             <button
                 type="button"
-                onclick="removeIdentifier(this)" 
+                onclick="removeIdentifier()" 
                 style="background: #dc3545; color: white; border: none; font-size:.875rem; line-height:1.25rem; padding: .4375rem .75rem; border-radius: 3px;"
             >
                 Remove Identifier
@@ -73,9 +73,9 @@ function reserveIdentifier() {
     // TODO: Return new identifier inside the input of the Certificate Identifier
 }
 
-function removeIdentifier(container) {
+function removeIdentifier() {
     // TODO: Remove Identifier from inside of the input
-    const input = container.querySelector('input[name="certificateIdentifierInput"]');
+    const input = document.querySelector('input[name="certificateIdentifierInput"]');
     if (input) {
         input.value = '';
     }
