@@ -45,19 +45,23 @@ function initializeCertificateIdentiferSection(textarea) {
                 <input
                     type="text"
                     name="certificateIdentifierInput"
-                    placeholder="e.g.: 2025-001"
+                    placeholder="ID - e.g.: 2025-001"
                     style="flex: 1; font-size:14px; padding: 6px; border: 1px solid #ccc; border-radius: 3px; height: 2.5rem;" 
                 >
                 <select
                     id="venueTypes"
+                    name="venueTypes"
                     style="font-size:14px; padding: 6px; border: 1px solid #ccc; border-radius: 3px; height: 2.5rem; background: #fff;"
                 >
+                    <option selected disabled value="default">Venue Type</option>
                     <option>workshop</option>
                 </select>
                 <select
                     id="venueNames"
+                    name="venueTypes"
                     style="font-size:14px; padding: 6px; border: 1px solid #ccc; border-radius: 3px; height: 2.5rem; background: #fff;"
                 >
+                    <option selected disabled value="default">Venue Name</option>
                     <option>check-nl</option>
                 </select>
             </div>
