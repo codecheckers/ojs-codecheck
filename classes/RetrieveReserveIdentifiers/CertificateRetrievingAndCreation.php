@@ -1,4 +1,6 @@
 <?php
+// header for AJAX calls
+header('Content-Type: application/json');
 
 require __DIR__ . '/../../vendor/autoload.php';
 
@@ -452,41 +454,78 @@ class CodecheckRegisterGithubIssuesApiParser
     }
 }
 
+// function called by JS script via AJAX that returns JSON encoding of venue types and names
+function getVenueData()
+{
+    $codecheckVenueTypes = new CodecheckVenueTypes();
+    $codecheckVenueNames = new CodecheckVenueNames();
 
-// CODECHECK GitHub Issue Register API parser
-$apiParser = new CodecheckRegisterGithubIssuesApiParser();
+    echo json_encode([
+        'success' => true,
+        'venueTypes' => $codecheckVenueTypes->get()->toArray(),
+        'venueNames' => $codecheckVenueNames->get()->toArray(),
+    ]);
+}
 
-// CODECHECK Register with list of all identifiers in range
-$certificateIdentifierList = CertificateIdentifierList::fromApi($apiParser);
 
-// print Certificate Identifier list
-$certificateIdentifierList->sortDesc();
-echo $certificateIdentifierList->toStr();
+function reserveIdentifier(string $venueType, string $venueName)
+{
+    // CODECHECK GitHub Issue Register API parser
+    $apiParser = new CodecheckRegisterGithubIssuesApiParser();
 
-echo $certificateIdentifierList->getNewestIdentifier()->toStr() . "\n";
+    // CODECHECK Register with list of all identifiers in range
+    $certificateIdentifierList = CertificateIdentifierList::fromApi($apiParser);
 
-$new_identifier = CertificateIdentifier::newUniqueIdentifier($certificateIdentifierList);
+    // print Certificate Identifier list
+    $certificateIdentifierList->sortDesc();
+    //echo $certificateIdentifierList->toStr();
 
-$codecheckVenueTypes = new CodecheckVenueTypes();
-$codecheckVenueNames = new CodecheckVenueNames();
+    //echo $certificateIdentifierList->getNewestIdentifier()->toStr() . "\n";
 
-$codecheckVenue = new CodecheckVenue();
+    $new_identifier = CertificateIdentifier::newUniqueIdentifier($certificateIdentifierList);
 
-print_r($codecheckVenueTypes->get()->toArray());
-echo "\n";
-print_r($codecheckVenueNames->get()->toArray());
+    $codecheckVenue = new CodecheckVenue();
 
-// TODO: Replace CLI logic here to Venue Type & Venue Name combination being selected by form in journal plugin settings
-$stdin = fopen("php://stdin","r");
-echo "Enter a Venue Type:\n";
-$codecheckVenue->setVenueType(fgets($stdin));
-echo "\nEnter a Venue Name:\n";
-$codecheckVenue->setVenueName(fgets($stdin));
+    // TODO: Replace CLI logic here to Venue Type & Venue Name combination being selected by form in journal plugin settings
+    $codecheckVenue->setVenueType($venueType);
+    $codecheckVenue->setVenueName($venueName);
 
-echo $codecheckVenue->getVenueType() . ", " . $codecheckVenue->getVenueName();
+    /*$stdin = fopen("php://stdin","r");
+    echo "Enter a Venue Type:\n";
+    $codecheckVenue->setVenueType(fgets($stdin));
+    echo "\nEnter a Venue Name:\n";
+    $codecheckVenue->setVenueName(fgets($stdin));*/
 
-$apiParser->addIssue($new_identifier, $codecheckVenue->getVenueType(), $codecheckVenue->getVenueName());
+    //echo $codecheckVenue->getVenueType() . ", " . $codecheckVenue->getVenueName();
 
-echo "Added new issue with identifier: " . $new_identifier->toStr() . "\n";
+    $apiParser->addIssue($new_identifier, $codecheckVenue->getVenueType(), $codecheckVenue->getVenueName());
+
+    echo json_encode(['success' => true, 'alert' => "Added new issue with identifier: " . $new_identifier->toStr() . "\n"]);
+}
+
+$action = $_POST['action'] ?? $_GET['action'] ?? null;
+
+switch ($action) {
+    case 'getVenueData':
+        getVenueData();
+        break;
+
+    case 'reserveIdentifier':
+        $venueType = $_POST['venueType'] ?? '';
+        $venueName = $_POST['venueName'] ?? '';
+        if(empty($venueType) || empty($venueName)) {
+            echo json_encode([
+                'success' => false,
+                'error'   => "Venue Type and/ or Name can't be left empty and need to be selected",
+            ]);
+        } else {
+            reserveIdentifier($venueType, $venueName);
+        }
+        break;
+
+    default:
+        echo json_encode(['success' => false, 'error' => 'Unknown AJAX action']);
+        break;
+}
 
 //echo "{$num_of_issues}";

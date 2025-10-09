@@ -58,7 +58,7 @@ function initializeCertificateIdentiferSection(textarea) {
                 </select>
                 <select
                     id="venueNames"
-                    name="venueTypes"
+                    name="venueNames"
                     style="font-size:14px; padding: 6px; border: 1px solid #ccc; border-radius: 3px; height: 2.5rem; background: #fff;"
                 >
                     <option selected disabled value="default">Venue Name</option>
@@ -88,7 +88,50 @@ function initializeCertificateIdentiferSection(textarea) {
         </div>
     `;
 
+    // AJAX call to PHP script to get venue Types and Names
+    fetch(`${window.location.origin}/plugins/generic/codecheck/classes/RetrieveReserveIdentifiers/CertificateRetrievingAndCreation.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ action: 'getVenueData' }),
+    })
+        /*.then((res) => res.json())
+        .then((data) => {
+            if (data.success) {
+                fillSelectWithOptions('select[name="venueTypes"]', data.venueTypes);
+                fillSelectWithOptions('select[name="venueTypes"]', data.venueNames);
+            } else {
+                alert('Failed: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch((err) => console.error(err));*/
+        .then(res => res.text())   // get raw text
+        .then(text => {
+            console.log('Raw response from server:', text);
+
+            // Now try to parse it
+            try {
+                const data = JSON.parse(text);
+                console.log('Parsed JSON:', data);
+            } catch (e) {
+                console.error('Failed to parse JSON:', e);
+            }
+        })
+        .catch(err => console.error('Fetch error:', err));
+
     textarea.parentNode.insertBefore(container, textarea.nextSibling);
+}
+
+function fillSelectWithOptions(selectName, options) {
+    const select = document.querySelector(selectName);
+
+    console.log("Trying to fill selects with data");
+
+    options.forEach(element => {
+        // Create a new option
+        const newOption = new Option(element, element); // text, value
+        // Append it to the select
+        select.add(newOption);
+    });
 }
 
 function reserveIdentifier() {
