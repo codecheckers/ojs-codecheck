@@ -42,19 +42,22 @@ function initializeCertificateIdentiferSection(textarea) {
                 justify-content: center;
             "
         >
-            <input type="text" placeholder="e.g.: 2025-001" value="" 
-               style="flex: 1; font-size:14px; padding: 6px; border: 1px solid #ccc; border-radius: 3px; height: 2.5rem;" 
-               onchange="updateRepositoryData('')">
+            <input
+                type="text"
+                name="certificateIdentifierInput"
+                placeholder="e.g.: 2025-001"
+                style="flex: 1; font-size:14px; padding: 6px; border: 1px solid #ccc; border-radius: 3px; height: 2.5rem;" 
+            >
             <button
                 type="button"
-                onclick="addManifestFile()"
+                onclick="reserveIdentifier()"
                 style="background: #006798; font-size:.875rem; color: white; line-height:1.25rem; border: none; padding: .4375rem .75rem; border-radius: 4px;"
             >
                 Reserve Identifier
             </button>
             <button
                 type="button"
-                onclick="removeRepository(this, '')" 
+                onclick="removeIdentifier(this)" 
                 style="background: #dc3545; color: white; border: none; font-size:.875rem; line-height:1.25rem; padding: .4375rem .75rem; border-radius: 3px;"
             >
                 Remove Identifier
@@ -63,7 +66,19 @@ function initializeCertificateIdentiferSection(textarea) {
     `;
 
     textarea.parentNode.insertBefore(container, textarea.nextSibling);
-    console.log("Done Building Section for Retrieving and Reserving the Identifiers");
+}
+
+function reserveIdentifier() {
+    // TODO: Ajax call to CertificateRetrievingAndCreation.php with function that handles that
+    // TODO: Return new identifier inside the input of the Certificate Identifier
+}
+
+function removeIdentifier(container) {
+    // TODO: Remove Identifier from inside of the input
+    const input = container.querySelector('input[name="certificateIdentifierInput"]');
+    if (input) {
+        input.value = '';
+    }
 }
 
 // ============================================
