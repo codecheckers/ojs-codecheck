@@ -239,10 +239,10 @@ public function createCodecheckGenres(): void
                 
                 $form->addField(new \PKP\components\forms\FieldTextarea('retrieveReserveCertificateIdentifier', [
                     'label' => 'Certificate Identifier',
-                    'description' => 'e.g.: 2025-001',
+                    'description' => 'ID of the CODECHECK Certificate',
                     'groupId' => 'default',
-                    'isRequired' => false,
-                    'rows' => 1,
+                    'isRequired' => true,
+                    'rows' => 3,
                     'value' => $submission->getData('retrieveReserveCertificateIdentifier'),
                 ]));
 

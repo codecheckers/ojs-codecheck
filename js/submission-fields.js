@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function() {    
     // Initialize manifest files
     const manifestTextarea = document.querySelector('textarea[name="manifestFiles"]');
     if (manifestTextarea) {
@@ -16,7 +16,55 @@ document.addEventListener('DOMContentLoaded', function() {
     if (dataRepoTextarea) {
         initializeRepositoryList(dataRepoTextarea, 'data');
     }
+
+    // Initialize Certificate Identifier
+    const certificateIdentifierTextarea = document.querySelector('textarea[name="retrieveReserveCertificateIdentifier"]');
+    if (certificateIdentifierTextarea) {
+        initializeCertificateIdentiferSection(certificateIdentifierTextarea);
+    }
 });
+
+// =========================================================
+// RETRIEVE AND RESERVE CERTIFICATE IDENTIFIER FUNCTIONALITY
+// =========================================================
+
+function initializeCertificateIdentiferSection(textarea) {
+    textarea.style.display = 'none';
+
+    const container = document.createElement('div');
+    container.innerHTML = `
+        <div
+            id="certificateIdentiferSection"
+            style="
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                justify-content: center;
+            "
+        >
+            <input type="text" placeholder="e.g.: 2025-001" value="" 
+               style="flex: 1; font-size:14px; padding: 6px; border: 1px solid #ccc; border-radius: 3px; height: 2.5rem;" 
+               onchange="updateRepositoryData('')">
+            <button
+                type="button"
+                onclick="addManifestFile()"
+                style="background: #006798; font-size:.875rem; color: white; line-height:1.25rem; border: none; padding: .4375rem .75rem; border-radius: 4px;"
+            >
+                Reserve Identifier
+            </button>
+            <button
+                type="button"
+                onclick="removeRepository(this, '')" 
+                style="background: #dc3545; color: white; border: none; font-size:.875rem; line-height:1.25rem; padding: .4375rem .75rem; border-radius: 3px;"
+            >
+                Remove Identifier
+            </button>
+        </div>
+    `;
+
+    textarea.parentNode.insertBefore(container, textarea.nextSibling);
+    console.log("Done Building Section for Retrieving and Reserving the Identifiers");
+}
 
 // ============================================
 // MANIFEST FILES FUNCTIONALITY
