@@ -41,135 +41,150 @@ class CodecheckPlugin extends GenericPlugin
             Hook::add('Template::SubmissionWizard::Section::Review::Details', $this->addCodecheckReviewDisplay(...));
             // Add hook to save custom field data
             Hook::add('Submission::edit', $this->saveSubmissionData(...));
+            // Add hook for Ajax API calls
+            Hook::add('LoadHandler', $this->setupAPIHandler(...));
         }
 
         return $success;
     }
 
+    public function setupAPIHandler($hookName, $params)
+    {
+        $request = Application::get()->getRequest();
+        $handler = $params[0];
+        
+        if ($handler === 'plugins.generic.codecheck.controllers.CodecheckAPIHandler') {
+            define('HANDLER_CLASS', 'APP\plugins\generic\codecheck\controllers\CodecheckAPIHandler');
+            return true;
+        }
+        
+        return false;
+    }
+
     /**
      * Add CODECHECK file components to submission file forms
      */
-public function addCodecheckFileOptions(string $hookName, \PKP\components\forms\FormComponent $form): bool
-{
-    if ($form->id === 'submissionFile') {
-        $request = \APP\core\Application::get()->getRequest();
-        $submission = $request->getRouter()->getHandler()->getAuthorizedContextObject(ASSOC_TYPE_SUBMISSION);
-        
-        if ($submission && $submission->getData('codecheckOptIn')) {
-            // Check if CODECHECK options are already in the form
-            foreach ($form->fields as $field) {
-                if ($field instanceof \PKP\components\forms\FieldOptions && $field->name === 'genreId') {
-                    // Check if CODECHECK options already exist
-                    $hasCodecheckOptions = false;
-                    foreach ($field->options as $option) {
-                        if (str_contains($option['label'], 'CODECHECK') || str_contains($option['label'], 'codecheck')) {
-                            $hasCodecheckOptions = true;
-                            break;
-                        }
-                    }
-                    
-                    if ($hasCodecheckOptions) {
-                        error_log("CODECHECK: Options already exist in form, skipping");
-                        return false;
-                    }
-                    
-                    // Create genres if needed (only once)
-                    $this->createCodecheckGenres();
-                    
-                    // Get fresh genres from database
-                    $context = $request->getContext();
-                    $genreDao = \PKP\db\DAORegistry::getDAO('GenreDAO');
-                    $genres = $genreDao->getByContextId($context->getId());
-                    
-                    $codecheckGenres = [];
-                    while ($genre = $genres->next()) {
-                        $name = $genre->getLocalizedName();
-                        if (is_array($name)) {
-                            $name = $name['en'] ?? $name[array_key_first($name)] ?? '';
+    public function addCodecheckFileOptions(string $hookName, \PKP\components\forms\FormComponent $form): bool
+    {
+        if ($form->id === 'submissionFile') {
+            $request = \APP\core\Application::get()->getRequest();
+            $submission = $request->getRouter()->getHandler()->getAuthorizedContextObject(ASSOC_TYPE_SUBMISSION);
+            
+            if ($submission && $submission->getData('codecheckOptIn')) {
+                // Check if CODECHECK options are already in the form
+                foreach ($form->fields as $field) {
+                    if ($field instanceof \PKP\components\forms\FieldOptions && $field->name === 'genreId') {
+                        // Check if CODECHECK options already exist
+                        $hasCodecheckOptions = false;
+                        foreach ($field->options as $option) {
+                            if (str_contains($option['label'], 'CODECHECK') || str_contains($option['label'], 'codecheck')) {
+                                $hasCodecheckOptions = true;
+                                break;
+                            }
                         }
                         
-                        if (str_contains($name, 'CODECHECK') || str_contains($name, 'codecheck')) {
-                            $codecheckGenres[] = [
-                                'value' => $genre->getId(),
-                                'label' => $name
-                            ];
+                        if ($hasCodecheckOptions) {
+                            error_log("CODECHECK: Options already exist in form, skipping");
+                            return false;
                         }
+                        
+                        // Create genres if needed (only once)
+                        $this->createCodecheckGenres();
+                        
+                        // Get fresh genres from database
+                        $context = $request->getContext();
+                        $genreDao = \PKP\db\DAORegistry::getDAO('GenreDAO');
+                        $genres = $genreDao->getByContextId($context->getId());
+                        
+                        $codecheckGenres = [];
+                        while ($genre = $genres->next()) {
+                            $name = $genre->getLocalizedName();
+                            if (is_array($name)) {
+                                $name = $name['en'] ?? $name[array_key_first($name)] ?? '';
+                            }
+                            
+                            if (str_contains($name, 'CODECHECK') || str_contains($name, 'codecheck')) {
+                                $codecheckGenres[] = [
+                                    'value' => $genre->getId(),
+                                    'label' => $name
+                                ];
+                            }
+                        }
+                        
+                        if (!empty($codecheckGenres)) {
+                            $currentOptions = $field->options ?? [];
+                            $field->options = array_merge($currentOptions, $codecheckGenres);
+                            error_log("CODECHECK: Added " . count($codecheckGenres) . " options to form");
+                        }
+                        break;
                     }
-                    
-                    if (!empty($codecheckGenres)) {
-                        $currentOptions = $field->options ?? [];
-                        $field->options = array_merge($currentOptions, $codecheckGenres);
-                        error_log("CODECHECK: Added " . count($codecheckGenres) . " options to form");
-                    }
-                    break;
                 }
             }
         }
+        return false;
     }
-    return false;
-}
 
-public function debugSubmissionData(string $hookName, array $params): bool
-{
-    $params_array = $params[2] ?? [];
-    
-    if (isset($params_array['codeRepository']) || isset($params_array['manifestFiles'])) {
-        error_log("CODECHECK SAVE DEBUG: Data being saved:");
-        error_log("CODECHECK SAVE DEBUG: " . print_r(array_intersect_key($params_array, array_flip(['codeRepository', 'dataRepository', 'manifestFiles', 'dataAvailabilityStatement'])), true));
+    public function debugSubmissionData(string $hookName, array $params): bool
+    {
+        $params_array = $params[2] ?? [];
+        
+        if (isset($params_array['codeRepository']) || isset($params_array['manifestFiles'])) {
+            error_log("CODECHECK SAVE DEBUG: Data being saved:");
+            error_log("CODECHECK SAVE DEBUG: " . print_r(array_intersect_key($params_array, array_flip(['codeRepository', 'dataRepository', 'manifestFiles', 'dataAvailabilityStatement'])), true));
+        }
+        
+        return false;
     }
-    
-    return false;
-}
 
-/**
- * Create CODECHECK genres manually
- */
-public function createCodecheckGenres(): void
-{
-    static $genresCreated = false; // Prevent multiple calls in same request
-    
-    if ($genresCreated) {
-        return;
-    }
-    
-    $request = \APP\core\Application::get()->getRequest();
-    $context = $request->getContext();
-    
-    if (!$context) {
-        return;
-    }
-    
-    $genreDao = \PKP\db\DAORegistry::getDAO('GenreDAO');
-    
-    // Check if any CODECHECK genre already exists in database
-        $checkSql = "SELECT COUNT(*) as count FROM genre_settings WHERE setting_value = 'codecheck.yml'";
-        $result = $genreDao->retrieve($checkSql);
-        $row = $result->current();
-
-        if ($row && $row->count > 0) {
-            error_log("CODECHECK: codecheck.yml genre already exists");
-            $genresCreated = true;
+    /**
+     * Create CODECHECK genres manually
+     */
+    public function createCodecheckGenres(): void
+    {
+        static $genresCreated = false; // Prevent multiple calls in same request
+        
+        if ($genresCreated) {
             return;
         }
-    
-    try {
-        // Create in the order you want: yml, README, LICENSE
-        $ymlGenre = $genreDao->newDataObject();
-        $ymlGenre->setContextId($context->getId());
-        $ymlGenre->setName('codecheck.yml', 'en');
-        $ymlGenre->setCategory(1);
-        $ymlGenre->setSupplementary(true);
-        $ymlGenre->setRequired(false);
-        $ymlGenre->setSequence(98); // First
-        $genreDao->insertObject($ymlGenre);
         
-        $genresCreated = true;
-        error_log("CODECHECK: Created 3 genres in correct order");
+        $request = \APP\core\Application::get()->getRequest();
+        $context = $request->getContext();
         
-    } catch (Exception $e) {
-        error_log("CODECHECK: Error creating genres: " . $e->getMessage());
+        if (!$context) {
+            return;
+        }
+        
+        $genreDao = \PKP\db\DAORegistry::getDAO('GenreDAO');
+        
+        // Check if any CODECHECK genre already exists in database
+            $checkSql = "SELECT COUNT(*) as count FROM genre_settings WHERE setting_value = 'codecheck.yml'";
+            $result = $genreDao->retrieve($checkSql);
+            $row = $result->current();
+
+            if ($row && $row->count > 0) {
+                error_log("CODECHECK: codecheck.yml genre already exists");
+                $genresCreated = true;
+                return;
+            }
+        
+        try {
+            // Create in the order you want: yml, README, LICENSE
+            $ymlGenre = $genreDao->newDataObject();
+            $ymlGenre->setContextId($context->getId());
+            $ymlGenre->setName('codecheck.yml', 'en');
+            $ymlGenre->setCategory(1);
+            $ymlGenre->setSupplementary(true);
+            $ymlGenre->setRequired(false);
+            $ymlGenre->setSequence(98); // First
+            $genreDao->insertObject($ymlGenre);
+            
+            $genresCreated = true;
+            error_log("CODECHECK: Created 3 genres in correct order");
+            
+        } catch (Exception $e) {
+            error_log("CODECHECK: Error creating genres: " . $e->getMessage());
+        }
     }
-}
     /**
      * Extend the submission entity's schema with CODECHECK properties
      */

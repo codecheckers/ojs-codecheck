@@ -1,4 +1,6 @@
 <?php
+namespace APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers;
+
 // header for AJAX calls
 header('Content-Type: application/json');
 

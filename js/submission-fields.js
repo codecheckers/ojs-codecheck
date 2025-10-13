@@ -89,36 +89,39 @@ function initializeCertificateIdentiferSection(textarea) {
     `;
 
     // AJAX call to PHP script to get venue Types and Names
-    fetch(`${window.location.origin}/plugins/generic/codecheck/classes/RetrieveReserveIdentifiers/CertificateRetrievingAndCreation.php`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ action: 'getVenueData' }),
-    })
-        /*.then((res) => res.json())
-        .then((data) => {
-            if (data.success) {
-                fillSelectWithOptions('select[name="venueTypes"]', data.venueTypes);
-                fillSelectWithOptions('select[name="venueTypes"]', data.venueNames);
-            } else {
-                alert('Failed: ' + (data.error || 'Unknown error'));
-            }
-        })
-        .catch((err) => console.error(err));*/
-        .then(res => res.text())   // get raw text
-        .then(text => {
-            console.log('Raw response from server:', text);
-
-            // Now try to parse it
-            try {
-                const data = JSON.parse(text);
-                console.log('Parsed JSON:', data);
-            } catch (e) {
-                console.error('Failed to parse JSON:', e);
-            }
-        })
-        .catch(err => console.error('Fetch error:', err));
+    getVenueData();
 
     textarea.parentNode.insertBefore(container, textarea.nextSibling);
+}
+
+async function getVenueData() {
+    const { apiUrl } = pkp.const;
+
+    try {
+        const response = await fetch(`${apiUrl}/codecheck/getVenueData`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Csrf-Token': pkp.currentUser.csrfToken,
+            },
+            body: JSON.stringify({
+                venueTypes: venueTypes,
+                venueNames: venueNames,
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            console.log('Success:', data.message);
+            fillSelectWithOptions('select[name="venueTypes"]', data.venueTypes);
+            fillSelectWithOptions('select[name="venueTypes"]', data.venueNames);
+        } else {
+            console.error('Error:', data.error);
+        }
+    } catch (error) {
+        console.error('Request failed:', error);
+    }
 }
 
 function fillSelectWithOptions(selectName, options) {
