@@ -9,6 +9,9 @@ use PKP\security\authorization\PolicySet;
 use PKP\security\authorization\RoleBasedHandlerOperationPolicy;
 use PKP\security\Role;
 
+// header for AJAX calls
+header('Content-Type: application/json');
+
 class CodecheckAPIHandler extends APIHandler
 {
     public function __construct()
@@ -31,7 +34,7 @@ class CodecheckAPIHandler extends APIHandler
         $this->addPolicy(new RoleBasedHandlerOperationPolicy(
             $request,
             $roleAssignments,
-            ['processCodecheck']
+            ['getVenueData']
         ));
         
         return parent::authorize($request, $args, $roleAssignments);

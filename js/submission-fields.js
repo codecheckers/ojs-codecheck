@@ -104,10 +104,10 @@ async function getVenueData() {
                 'Content-Type': 'application/json',
                 'X-Csrf-Token': pkp.currentUser.csrfToken,
             },
-            body: JSON.stringify({
+            /*body: JSON.stringify({
                 venueTypes: venueTypes,
                 venueNames: venueNames,
-            })
+            })*/
         });
         
         const data = await response.json();
