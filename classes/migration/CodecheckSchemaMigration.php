@@ -34,6 +34,15 @@ class CodecheckSchemaMigration extends Migration
                 $table->boolean('opt_in')->default(false);
                 $table->string('code_repository', 500)->nullable();
                 $table->string('data_repository', 500)->nullable();
+                $table->text('dependencies')->nullable();
+                $table->text('execution_instructions')->nullable();
+                // Certificate fields
+                $table->string('certificate_doi', 255)->nullable();
+                $table->string('certificate_url', 500)->nullable();
+                $table->string('codechecker_names', 1000)->nullable();
+                $table->string('check_status', 50)->nullable();
+                $table->timestamp('certificate_date')->nullable();
+                // Timestamps
                 $table->timestamp('created_at')->nullable();
                 $table->timestamp('updated_at')->nullable();
                 $table->index('submission_id');

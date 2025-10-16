@@ -20,7 +20,7 @@ class CodecheckPlugin extends GenericPlugin
             $this->addAssets();
 
             $articleDetails = new ArticleDetails($this);
-            Hook::add('Templates::Article::Main', $articleDetails->addCodecheckInfo(...));
+            Hook::add('Templates::Article::Details', $articleDetails->addCodecheckInfo(...));
 
             Hook::add('Schema::get::submission', $this->addToSubmissionSchema(...));
             Hook::add('Form::config::before', $this->addToSubmissionForm(...));
