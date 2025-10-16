@@ -5,6 +5,8 @@ use APP\core\Application;
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CodecheckVenueTypes;
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CodecheckVenueNames;
 use PKP\handler\APIHandler;
+use PKP\core\APIResponse;
+use Slim\Http\Request as SlimRequest;
 use PKP\security\authorization\PolicySet;
 use PKP\security\authorization\RoleBasedHandlerOperationPolicy;
 use PKP\security\Role;
@@ -43,7 +45,7 @@ class CodecheckAPIHandler extends APIHandler
     /**
      * Function that returns JSON encoding of venue types and names
      */
-    public function getVenueData($response)
+    public function getVenueData(SlimRequest $slimRequest, APIResponse $response, array $args): APIResponse
     {
         $request = Application::get()->getRequest();
         

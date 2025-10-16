@@ -21,6 +21,8 @@ class CodecheckPlugin extends GenericPlugin
 {
     public function register($category, $path, $mainContextId = null): bool
     {
+        error_log('[CodecheckPlugin] register() called, path=' . $path);
+        
         $success = parent::register($category, $path);
 
         if ($success && $this->getEnabled()) {
@@ -42,19 +44,25 @@ class CodecheckPlugin extends GenericPlugin
             // Add hook to save custom field data
             Hook::add('Submission::edit', $this->saveSubmissionData(...));
             // Add hook for Ajax API calls
-            Hook::add('API::endpoints', $this->registerAPIEndpoints(...));
+            Hook::add('LoadHandler', $this->setupAPIHandler(...));
         }
 
         return $success;
     }
 
-    public function registerAPIEndpoints($hookName, $args)
+    public function setupAPIHandler($hookName, $params)
     {
-        $endpoints =& $args[0]; // This is the array of all registered API endpoints
+        error_log('[CodecheckPlugin] registerAPIEndpoints fired');
 
-        $endpoints['codecheck'] = new \APP\plugins\generic\codecheck\controllers\CodecheckAPIHandler();
-
-        return false; // Let other plugins continue registering
+        $request = Application::get()->getRequest();
+        $handler = $params[0];
+        
+        if ($handler === 'plugins.generic.codecheck.controllers.CodecheckAPIHandler') {
+            define('HANDLER_CLASS', 'APP\plugins\generic\codecheck\controllers\CodecheckAPIHandler');
+            return true;
+        }
+        
+        return false;
     }
 
     /**
