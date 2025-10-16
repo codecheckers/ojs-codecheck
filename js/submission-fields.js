@@ -95,10 +95,10 @@ function initializeCertificateIdentiferSection(textarea) {
 }
 
 async function getVenueData() {
-    const { apiUrl } = pkp.const;
+    const apiUrl = pkp.context.apiBaseUrl;
 
     try {
-        const response = await fetch(`${apiUrl}/codecheck/getVenueData`, {
+        const response = await fetch(`${apiUrl}codecheck/getVenueData`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
