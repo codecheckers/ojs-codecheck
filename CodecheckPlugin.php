@@ -13,10 +13,10 @@ use APP\plugins\generic\codecheck\classes\migration\CodecheckSchemaMigration;
 use PKP\core\JSONMessage;
 use PKP\plugins\GenericPlugin;
 use PKP\plugins\Hook;
-use PKP\plugins\HookRegistry;
 use PKP\components\forms\FieldOptions;
 use APP\core\Application;
 use APP\template\TemplateManager;
+use APP\plugins\generic\codecheck\controllers\CodecheckAPIHandler;
 
 class CodecheckPlugin extends GenericPlugin
 {
@@ -53,15 +53,14 @@ class CodecheckPlugin extends GenericPlugin
 
     public function setupAPIHandler($hookName, $params)
     {
-        $handler = $params[0];
-        $page = $params[1];
-        $op = $params[2];
+        $page = $params[0];
 
-        error_log("[CodecheckPlugin] LoadHandler called for: $handler, page=$page, op=$op");
+        error_log("[CodecheckPlugin] LoadHandler called for: $page");
 
         if ($page === 'codecheck') {
-            define('HANDLER_CLASS', 'APP\plugins\generic\codecheck\controllers\CodecheckAPIHandler');
-            return true; // stop further processing, use our handler
+            $handler = new CodecheckAPIHandler();
+            $handler->getVenueData();
+            return true;
         }
 
         return false;
