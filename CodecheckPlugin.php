@@ -13,6 +13,7 @@ use APP\plugins\generic\codecheck\classes\migration\CodecheckSchemaMigration;
 use PKP\core\JSONMessage;
 use PKP\plugins\GenericPlugin;
 use PKP\plugins\Hook;
+use PKP\plugins\HookRegistry;
 use PKP\components\forms\FieldOptions;
 use APP\core\Application;
 use APP\template\TemplateManager;
@@ -22,7 +23,7 @@ class CodecheckPlugin extends GenericPlugin
     public function register($category, $path, $mainContextId = null): bool
     {
         error_log('[CodecheckPlugin] register() called, path=' . $path);
-        
+
         $success = parent::register($category, $path);
 
         if ($success && $this->getEnabled()) {
@@ -44,7 +45,7 @@ class CodecheckPlugin extends GenericPlugin
             // Add hook to save custom field data
             Hook::add('Submission::edit', $this->saveSubmissionData(...));
             // Add hook for Ajax API calls
-            Hook::add('LoadHandler', $this->setupAPIHandler(...));
+            Hook::add('LoadHandler', [$this, 'setupAPIHandler']);
         }
 
         return $success;
@@ -52,16 +53,17 @@ class CodecheckPlugin extends GenericPlugin
 
     public function setupAPIHandler($hookName, $params)
     {
-        error_log('[CodecheckPlugin] registerAPIEndpoints fired');
-
-        $request = Application::get()->getRequest();
         $handler = $params[0];
-        
-        if ($handler === 'plugins.generic.codecheck.controllers.CodecheckAPIHandler') {
+        $page = $params[1];
+        $op = $params[2];
+
+        error_log("[CodecheckPlugin] LoadHandler called for: $handler, page=$page, op=$op");
+
+        if ($page === 'codecheck') {
             define('HANDLER_CLASS', 'APP\plugins\generic\codecheck\controllers\CodecheckAPIHandler');
-            return true;
+            return true; // stop further processing, use our handler
         }
-        
+
         return false;
     }
 
