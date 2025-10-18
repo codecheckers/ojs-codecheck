@@ -14,51 +14,19 @@ use PKP\security\Role;
 // header for AJAX calls
 header('Content-Type: application/json');
 
-class CodecheckAPIHandler extends APIHandler
+class CodecheckAPIHandler
 {
-    public function __construct()
+    public static function getVenueData()
     {
-        $endpoints = [
-            'POST' => [
-                [
-                    'pattern' => 'codecheck/getVenueData',
-                    'handler' => [$this, 'getVenueData'],
-                    'roles' => [Role::ROLE_ID_AUTHOR, Role::ROLE_ID_MANAGER, Role::ROLE_ID_SITE_ADMIN],
-                ],
-            ],
-        ];
-        
-        parent::__construct($endpoints);
-    }
-
-    public function authorize($request, &$args, $roleAssignments)
-    {
-        $this->addPolicy(new RoleBasedHandlerOperationPolicy(
-            $request,
-            $roleAssignments,
-            ['getVenueData']
-        ));
-        
-        return parent::authorize($request, $args, $roleAssignments);
-    }
-
-    /**
-     * Function that returns JSON encoding of venue types and names
-     */
-    public function getVenueData(SlimRequest $slimRequest, APIResponse $response, array $args): APIResponse
-    {
-        $request = Application::get()->getRequest();
-        
         $codecheckVenueTypes = new CodecheckVenueTypes();
         $codecheckVenueNames = new CodecheckVenueNames();
 
-        // Your PHP logic here
         $result = [
             'success' => true,
             'venueTypes' => $codecheckVenueTypes->get()->toArray(),
             'venueNames' => $codecheckVenueNames->get()->toArray(),
         ];
-        
-        return $response->withJson($result, 200);
+
+        echo json_encode($result);
     }
 }
