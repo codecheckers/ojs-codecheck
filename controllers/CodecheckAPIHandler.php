@@ -18,7 +18,7 @@ class CodecheckAPIHandler extends APIHandler
 {
     public function __construct()
     {
-        $this->_endpoints = [
+        $endpoints = [
             'POST' => [
                 [
                     'pattern' => 'codecheck/getVenueData',
@@ -28,7 +28,7 @@ class CodecheckAPIHandler extends APIHandler
             ],
         ];
         
-        parent::__construct();
+        parent::__construct($endpoints);
     }
 
     public function authorize($request, &$args, $roleAssignments)
