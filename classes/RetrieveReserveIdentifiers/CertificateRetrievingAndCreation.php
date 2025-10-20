@@ -1,14 +1,10 @@
 <?php
 namespace APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers;
 
-// header for AJAX calls
-header('Content-Type: application/json');
-
 require __DIR__ . '/../../vendor/autoload.php';
 
 use Github\Client;
 use Dotenv\Dotenv;
-use Ds\Set;
 
 // Load .env variables
 $dotenv = Dotenv::createImmutable(__DIR__ . '/../../');
@@ -33,6 +29,72 @@ class ApiFetchException extends \Exception
         ?\Throwable $previous = null
     ) {
         parent::__construct($message, $code, $previous);
+    }
+}
+
+class UniqueArray
+{
+    private $array = [];
+
+    public static function from(array $arr): UniqueArray
+    {
+        $uniqueArray = new UniqueArray();
+        foreach ($arr as $element) {
+            $uniqueArray->add($element);
+        }
+
+        return $uniqueArray;
+    }
+
+    public function add($element): void
+    {
+        if(!$this->contains($element)) {
+            $this->array[] = $element;
+        }
+        $this->array = array_values(array_unique($this->array, SORT_REGULAR));
+    }
+
+    public function remove(int $index): void
+    {
+        unset($this->array[$index]);
+        $this->array = array_values($this->array);
+    }
+
+    public function at(int $index)
+    {
+        return $this->array[$index] ?? null;;
+    }
+
+    public function contains($searchElement): bool
+    {
+        foreach ($this->array as $arrayElement) {
+            if($arrayElement == $searchElement) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function toArray(): array
+    {
+        return $this->array;
+    }
+
+    /**
+     * Sorts the unique array using a user-defined comparison function.
+     *
+     * @param callable $comparator A comparison closure: fn($a, $b): int
+     * @return void
+     */
+    public function sort(callable $comparator): void
+    {
+        usort($this->array, $comparator);
+    }
+
+    public function count(): int
+    {
+        return count($this->array);
     }
 }
 
@@ -68,12 +130,12 @@ class JsonApiCaller
 
 class CodecheckVenueTypes
 {
-    private Set $set;
+    private UniqueArray $uniqueArray;
 
     function __construct()
     {
-        // Initialize Set
-        $this->set = new Set();
+        // Initialize unique Array
+        $this->uniqueArray = new UniqueArray();
         // Intialize API caller
         $jsonApiCaller = new JsonApiCaller("https://codecheck.org.uk/register/venues/index.json");
         // fetch CODECHECK Type data
@@ -82,27 +144,27 @@ class CodecheckVenueTypes
         $data = $jsonApiCaller->getData();
 
         foreach($data as $venue) {
-            // insert every type (as this is a Set each Type will only occur once)
+            // insert every type (as this is a unique Array each Type will only occur once)
             $type = $venue["Venue type"];
-            // Add every venue type to the Set
-            $this->set->add($type);
+            // Add every venue type to the unique Array
+            $this->uniqueArray->add($type);
         }
     }
 
-    public function get(): Set
+    public function get(): UniqueArray
     {
-        return $this->set;
+        return $this->uniqueArray;
     }
 }
 
 class CodecheckVenueNames
 {
-    private Set $set;
+    private UniqueArray $uniqueArray;
 
     function __construct()
     {
-        // Initialize Set
-        $this->set = new Set();
+        // Initialize unique Array
+        $this->uniqueArray = new UniqueArray();
 
         $apiCaller = new CodecheckRegisterGithubIssuesApiParser();
 
@@ -115,20 +177,20 @@ class CodecheckVenueNames
         // TODO: Remove this once the actualy Codecheck API contains the labels/ Venue Names to fetch
         $codecheckVenueTypes = new CodecheckVenueTypes();
 
-        foreach($labels as $label) {
+        foreach($labels->toArray() as $label) {
             // If a Label is already a Venue Type it can't also be a venue Name
             // Therefore this Label has to be skipped
             if($codecheckVenueTypes->get()->contains($label) || $label == "id assigned" || $label == "development") {
                 continue;
             }
             // add Label to Venue Names
-            $this->set->add($label);
+            $this->uniqueArray->add($label);
         }
     }
 
-    public function get(): Set
+    public function get(): UniqueArray
     {
-        return $this->set;
+        return $this->uniqueArray;
     }
 }
 
@@ -231,11 +293,11 @@ class CertificateIdentifier
 
 class CertificateIdentifierList
 {
-    private Set $set;
+    private UniqueArray $uniqueArray;
 
     function __construct()
     {
-        $this->set = new Set();   
+        $this->uniqueArray = new UniqueArray();   
     }
 
     // Factory Method to create a new CertificateIdentifierList from a GitHub API fetch
@@ -287,8 +349,8 @@ class CertificateIdentifierList
 
         // append to all certificate identifiers
         foreach ($idRange as $identifier) {
-            if (!$this->set->contains($identifier)) {
-                $this->set->add($identifier);
+            if (!$this->uniqueArray->contains($identifier)) {
+                $this->uniqueArray->add($identifier);
             }
         }
     }
@@ -296,7 +358,7 @@ class CertificateIdentifierList
     // sort ascending Certificate Identifiers
     public function sortAsc(): void
     {
-        $this->set->sort(function($a, $b) {
+        $this->uniqueArray->sort(function($a, $b) {
             // First, compare year
             if ($a->getYear() !== $b->getYear()) {
                 return $a->getYear() <=> $b->getYear();
@@ -308,7 +370,7 @@ class CertificateIdentifierList
 
     public function sortDesc(): void
     {
-        $this->set->sort(function($a, $b) {
+        $this->uniqueArray->sort(function($a, $b) {
             // First, compare year descending
             if ($a->getYear() !== $b->getYear()) {
                 return $b->getYear() <=> $a->getYear();
@@ -320,7 +382,7 @@ class CertificateIdentifierList
 
     public function getNumberOfIdentifiers(): int
     {
-        return $this->set->count();
+        return $this->uniqueArray->count();
     }
 
     // return the latest identifier
@@ -328,13 +390,13 @@ class CertificateIdentifierList
     {
         $this->sortDesc();
         // get first element of sort descending -> newest element
-        return $this->set->first();
+        return $this->uniqueArray->at(0);
     }
 
     public function toStr(): string
     {
         $return_str = "Certificate Identifiers:\n";
-        foreach ($this->set as $identifier) {
+        foreach ($this->uniqueArray as $identifier) {
             $return_str .= $identifier->toStr() . "\n";
         }
         return $return_str;
@@ -367,13 +429,13 @@ function getRawIdentifier(string $title): string
 class CodecheckRegisterGithubIssuesApiParser
 {
     private $issues = [];
-    private Set $labels;
+    private UniqueArray $labels;
     private $client;
 
     function __construct()
     {
         $this->client = new Client();
-        $this->labels = new Set();
+        $this->labels = new UniqueArray();
     }
 
     public function fetchIssues(): void
@@ -429,10 +491,10 @@ class CodecheckRegisterGithubIssuesApiParser
         $repositoryName = 'testing-dev-register';
         $issueTitle = 'New CODECHECK | ' . $certificateIdentifier->toStr();
         $issueBody = '';
-        $labels = ['id assigned'];
+        $labelStrings = ['id assigned'];
 
-        $labels[] = $codecheckVenueType;
-        $labels[] = $codecheckVenueName;
+        $labelStrings[] = $codecheckVenueType;
+        $labelStrings[] = $codecheckVenueName;
 
         $this->client->api('issue')->create(
             $repositoryOwner,
@@ -440,7 +502,7 @@ class CodecheckRegisterGithubIssuesApiParser
             [
                 'title' => $issueTitle,
                 'body'  => $issueBody,
-                'labels' => $labels
+                'labels' => $labelStrings
             ]
         );
     }
@@ -450,7 +512,7 @@ class CodecheckRegisterGithubIssuesApiParser
         return $this->issues;
     }
 
-    public function getLabels(): Set
+    public function getLabels(): UniqueArray
     {
         return $this->labels;
     }
@@ -505,6 +567,10 @@ function reserveIdentifier(string $venueType, string $venueName)
     echo json_encode(['success' => true, 'alert' => "Added new issue with identifier: " . $new_identifier->toStr() . "\n"]);
 }
 
+getVenueData();
+
+reserveIdentifier("journal", "metadata pending");
+/*
 $action = $_POST['action'] ?? $_GET['action'] ?? null;
 
 switch ($action) {
@@ -528,6 +594,6 @@ switch ($action) {
     default:
         echo json_encode(['success' => false, 'error' => 'Unknown AJAX action']);
         break;
-}
+}*/
 
 //echo "{$num_of_issues}";

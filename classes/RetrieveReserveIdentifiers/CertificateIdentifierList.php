@@ -2,7 +2,7 @@
 
 namespace APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers;
 
-use Ds\Set;
+use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\UniqueArray;
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CodecheckRegisterGithubIssuesApiParser;
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CertificateIdentifier;
 
@@ -30,11 +30,11 @@ function getRawIdentifier(string $title): string
 
 class CertificateIdentifierList
 {
-    private Set $set;
+    private UniqueArray $uniqueArray;
 
     function __construct()
     {
-        $this->set = new Set();   
+        $this->uniqueArray = new UniqueArray();   
     }
 
     // Factory Method to create a new CertificateIdentifierList from a GitHub API fetch
@@ -86,8 +86,8 @@ class CertificateIdentifierList
 
         // append to all certificate identifiers
         foreach ($idRange as $identifier) {
-            if (!$this->set->contains($identifier)) {
-                $this->set->add($identifier);
+            if (!$this->uniqueArray->contains($identifier)) {
+                $this->uniqueArray->add($identifier);
             }
         }
     }
@@ -95,7 +95,7 @@ class CertificateIdentifierList
     // sort ascending Certificate Identifiers
     public function sortAsc(): void
     {
-        $this->set->sort(function($a, $b) {
+        $this->uniqueArray->sort(function($a, $b) {
             // First, compare year
             if ($a->getYear() !== $b->getYear()) {
                 return $a->getYear() <=> $b->getYear();
@@ -107,7 +107,7 @@ class CertificateIdentifierList
 
     public function sortDesc(): void
     {
-        $this->set->sort(function($a, $b) {
+        $this->uniqueArray->sort(function($a, $b) {
             // First, compare year descending
             if ($a->getYear() !== $b->getYear()) {
                 return $b->getYear() <=> $a->getYear();
@@ -119,7 +119,7 @@ class CertificateIdentifierList
 
     public function getNumberOfIdentifiers(): int
     {
-        return $this->set->count();
+        return $this->uniqueArray->count();
     }
 
     // return the latest identifier
@@ -127,13 +127,13 @@ class CertificateIdentifierList
     {
         $this->sortDesc();
         // get first element of sort descending -> newest element
-        return $this->set->first();
+        return $this->uniqueArray->at(0);
     }
 
     public function toStr(): string
     {
         $return_str = "Certificate Identifiers:\n";
-        foreach ($this->set as $identifier) {
+        foreach ($this->uniqueArray as $identifier) {
             $return_str .= $identifier->toStr() . "\n";
         }
         return $return_str;
