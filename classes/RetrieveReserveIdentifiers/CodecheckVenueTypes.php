@@ -1,17 +1,17 @@
 <?php
 namespace APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers;
 
-use Ds\Set;
+use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\UniqueArray;
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\JsonApiCaller;
 
 class CodecheckVenueTypes
 {
-    private Set $set;
+    private UniqueArray $uniqueArray;
 
     function __construct()
     {
-        // Initialize Set
-        $this->set = new Set();
+        // Initialize unique Array
+        $this->uniqueArray = new UniqueArray();
         // Intialize API caller
         $jsonApiCaller = new JsonApiCaller("https://codecheck.org.uk/register/venues/index.json");
         // fetch CODECHECK Type data
@@ -20,15 +20,15 @@ class CodecheckVenueTypes
         $data = $jsonApiCaller->getData();
 
         foreach($data as $venue) {
-            // insert every type (as this is a Set each Type will only occur once)
+            // insert every type (as this is a unique Array each Type will only occur once)
             $type = $venue["Venue type"];
-            // Add every venue type to the Set
-            $this->set->add($type);
+            // Add every venue type to the unique Array
+            $this->uniqueArray->add($type);
         }
     }
 
-    public function get(): Set
+    public function get(): UniqueArray
     {
-        return $this->set;
+        return $this->uniqueArray;
     }
 }

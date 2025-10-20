@@ -2,9 +2,9 @@
 
 namespace APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers;
 
-use Ds\Set;
 use Github\Client;
 use Dotenv\Dotenv;
+use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\UniqueArray;
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CertificateIdentifier;
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\Exceptions\NoMatchingIssuesFoundException;
 
@@ -16,13 +16,13 @@ $dotenv->load();
 class CodecheckRegisterGithubIssuesApiParser
 {
     private $issues = [];
-    private Set $labels;
+    private UniqueArray $labels;
     private $client;
 
     function __construct()
     {
         $this->client = new Client();
-        $this->labels = new Set();
+        $this->labels = new UniqueArray();
     }
 
     public function fetchIssues(): void
@@ -78,10 +78,10 @@ class CodecheckRegisterGithubIssuesApiParser
         $repositoryName = 'testing-dev-register';
         $issueTitle = 'New CODECHECK | ' . $certificateIdentifier->toStr();
         $issueBody = '';
-        $labels = ['id assigned'];
+        $labelStrings = ['id assigned'];
 
-        $labels[] = $codecheckVenueType;
-        $labels[] = $codecheckVenueName;
+        $labelStrings[] = $codecheckVenueType;
+        $labelStrings[] = $codecheckVenueName;
 
         $this->client->api('issue')->create(
             $repositoryOwner,
@@ -89,7 +89,7 @@ class CodecheckRegisterGithubIssuesApiParser
             [
                 'title' => $issueTitle,
                 'body'  => $issueBody,
-                'labels' => $labels
+                'labels' => $labelStrings
             ]
         );
     }
@@ -99,7 +99,7 @@ class CodecheckRegisterGithubIssuesApiParser
         return $this->issues;
     }
 
-    public function getLabels(): Set
+    public function getLabels(): UniqueArray
     {
         return $this->labels;
     }

@@ -1,18 +1,18 @@
 <?php
 namespace APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers;
 
-use Ds\Set;
+use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\UniqueArray;
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CodecheckRegisterGithubIssuesApiParser;
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CodecheckVenueTypes;
 
 class CodecheckVenueNames
 {
-    private Set $set;
+    private UniqueArray $uniqueArray;
 
     function __construct()
     {
-        // Initialize Set
-        $this->set = new Set();
+        // Initialize unique Array
+        $this->uniqueArray = new UniqueArray();
 
         $apiCaller = new CodecheckRegisterGithubIssuesApiParser();
 
@@ -25,19 +25,19 @@ class CodecheckVenueNames
         // TODO: Remove this once the actualy Codecheck API contains the labels/ Venue Names to fetch
         $codecheckVenueTypes = new CodecheckVenueTypes();
 
-        foreach($labels as $label) {
+        foreach($labels->toArray() as $label) {
             // If a Label is already a Venue Type it can't also be a venue Name
             // Therefore this Label has to be skipped
             if($codecheckVenueTypes->get()->contains($label) || $label == "id assigned" || $label == "development") {
                 continue;
             }
             // add Label to Venue Names
-            $this->set->add($label);
+            $this->uniqueArray->add($label);
         }
     }
 
-    public function get(): Set
+    public function get(): UniqueArray
     {
-        return $this->set;
+        return $this->uniqueArray;
     }
 }
