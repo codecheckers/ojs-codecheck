@@ -2,6 +2,8 @@
 
 namespace APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers;
 
+require __DIR__ . '/../../vendor/autoload.php';
+
 use Github\Client;
 use Dotenv\Dotenv;
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\UniqueArray;
