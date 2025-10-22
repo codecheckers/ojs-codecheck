@@ -54,7 +54,6 @@ function initializeCertificateIdentiferSection(textarea) {
                     style="font-size:14px; padding: 6px; border: 1px solid #ccc; border-radius: 3px; height: 2.5rem; background: #fff;"
                 >
                     <option selected disabled value="default">Venue Type</option>
-                    <option>workshop</option>
                 </select>
                 <select
                     id="venueNames"
@@ -62,7 +61,6 @@ function initializeCertificateIdentiferSection(textarea) {
                     style="font-size:14px; padding: 6px; border: 1px solid #ccc; border-radius: 3px; height: 2.5rem; background: #fff;"
                 >
                     <option selected disabled value="default">Venue Name</option>
-                    <option>check-nl</option>
                 </select>
             </div>
             <div
@@ -95,10 +93,14 @@ function initializeCertificateIdentiferSection(textarea) {
 }
 
 async function getVenueData() {
-    const apiUrl = pkp.context.apiBaseUrl;
+    var codecheckApiUrl = pkp.context.apiBaseUrl;
+    codecheckApiUrl = codecheckApiUrl.replace(/\/api\/v1\/?$/, '');
+    codecheckApiUrl += "/codecheck_api"
+
+    console.log(`${codecheckApiUrl}`);
 
     try {
-        const response = await fetch(`${apiUrl}codecheck/getVenueData`, {
+        const response = await fetch(`${codecheckApiUrl}/getVenueData`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -115,7 +117,7 @@ async function getVenueData() {
         if (data.success) {
             console.log('Success:', data.message);
             fillSelectWithOptions('select[name="venueTypes"]', data.venueTypes);
-            fillSelectWithOptions('select[name="venueTypes"]', data.venueNames);
+            fillSelectWithOptions('select[name="venueNames"]', data.venueNames);
         } else {
             console.error('Error:', data.error);
         }
