@@ -53,13 +53,14 @@ class CodecheckPlugin extends GenericPlugin
 
     public function setupAPIHandler($hookName, $params)
     {
-        $page = $params[0];
+        $route = $params[0];
+        $apiRoute = $params[1];
 
-        error_log("[CodecheckPlugin] LoadHandler called for: $page");
+        error_log("[CodecheckPlugin] LoadHandler called for: $route, $apiRoute");
 
-        if ($page === 'codecheck') {
-            $handler = new CodecheckAPIHandler();
-            $handler->getVenueData();
+        if ($route === 'codecheck_api') {
+            $handler = new CodecheckAPIHandler($apiRoute);
+            $handler->serveApiRoute();
             return true;
         }
 
