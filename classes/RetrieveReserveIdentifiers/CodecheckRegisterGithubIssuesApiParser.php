@@ -67,11 +67,19 @@ class CodecheckRegisterGithubIssuesApiParser
         }
     }
 
+    /**
+     * Adds an Issue with the new Certificate Identifier to the CODECHECK GitHub Register
+     *
+     * @param CertificateIdentifier $certificateIdentifier The Certificate identifier to be added
+     * @param string $codecheckVenueType The CODECHECK Venue Type that will be added as a label to the issue
+     * @param string $codecheckVenueName The CODECHECK Venue Name that will be added as a second label to the issue
+     * @return string Returns the GitHub URL of the newly created issue
+     */
     public function addIssue(
         CertificateIdentifier $certificateIdentifier,
         string $codecheckVenueType,
         string $codecheckVenueName
-    ): void {
+    ): string {
         $token = $_ENV['CODECHECK_REGISTER_GITHUB_TOKEN'];
 
         $this->client->authenticate($token, null, Client::AUTH_ACCESS_TOKEN);
@@ -85,7 +93,7 @@ class CodecheckRegisterGithubIssuesApiParser
         $labelStrings[] = $codecheckVenueType;
         $labelStrings[] = $codecheckVenueName;
 
-        $this->client->api('issue')->create(
+        $issue = $this->client->api('issue')->create(
             $repositoryOwner,
             $repositoryName,
             [
@@ -94,6 +102,8 @@ class CodecheckRegisterGithubIssuesApiParser
                 'labels' => $labelStrings
             ]
         );
+
+        return $issue['html_url'];
     }
 
     public function getIssues(): array
