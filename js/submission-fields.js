@@ -170,8 +170,8 @@ async function reserveIdentifier() {
 
         if (data.success) {
             fillIndetifierInput(data.identifier);
-            alert('Added new issue with identifier: ' + data.identifier);
-            console.log('Added new issue with identifier: ', data.identifier);
+            alert('Added new issue with identifier: ' + data.identifier + '\n' + data.issueUrl);
+            console.log('Added new issue with identifier: ', data.identifier, data.issueUrl);
         } else {
             console.error('Error:', data.error);
         }

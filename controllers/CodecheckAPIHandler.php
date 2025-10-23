@@ -88,12 +88,13 @@ class CodecheckAPIHandler
         $codecheckVenue->setVenueName($venueName);
 
         // Add the new issue to the CODECHECK GtiHub Register
-        $apiParser->addIssue($new_identifier, $codecheckVenue->getVenueType(), $codecheckVenue->getVenueName());
+        $issueGithubUrl = $apiParser->addIssue($new_identifier, $codecheckVenue->getVenueType(), $codecheckVenue->getVenueName());
 
         // return a success result
         $result = [
             'success' => true,
             'identifier' => $new_identifier->toStr(),
+            'issueUrl' => $issueGithubUrl,
         ];
 
         echo json_encode($result);
