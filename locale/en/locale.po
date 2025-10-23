@@ -23,7 +23,6 @@ msgstr "CODECHECK Settings"
 msgid "plugins.generic.codecheck.settings.description"
 msgstr "Configure CODECHECK integration settings for this journal"
 
-# Future settings - add as placeholders for now
 msgid "plugins.generic.codecheck.settings.enableCodecheck"
 msgstr "Enable CODECHECK for this journal"
 
@@ -66,14 +65,32 @@ msgstr "Step-by-step instructions to reproduce your analysis"
 msgid "plugins.generic.codecheck.preview"
 msgstr "Preview codecheck.yml"
 
-msgid "plugins.generic.codecheck.certificate.landingPage.title"
-msgstr "Link to the certificate landing page with all related information"
+msgid "plugins.generic.codecheck.manifestFiles.label"
+msgstr "Expected Output Files"
 
-msgid "plugins.generic.codecheck.certificate.document.title"
-msgstr "Link to the actual certificate document"
+msgid "plugins.generic.codecheck.manifestFiles.filenamePlaceholder"
+msgstr "Filename (e.g., figures/figure1.png)"
 
-msgid "plugins.generic.codecheck.status.inProgress"
-msgstr "In Progress"
+msgid "plugins.generic.codecheck.manifestFiles.commentPlaceholder"
+msgstr "Comment (e.g., Main result visualization)"
 
-msgid "plugins.generic.codecheck.status.verificationInProgress"
-msgstr "Computational reproducibility verification in progress."
+msgid "plugins.generic.codecheck.manifestFiles.addFile"
+msgstr "+ Add File"
+
+msgid "plugins.generic.codecheck.repository.placeholder"
+msgstr "Repository URL (e.g., https://github.com/username/repo)"
+
+msgid "plugins.generic.codecheck.repository.add"
+msgstr "+ Add Repository"
+
+msgid "plugins.generic.codecheck.dataAvailability"
+msgstr "Data and Software Availability"
+
+msgid "plugins.generic.codecheck.review.title"
+msgstr "CODECHECK Information"
+
+msgid "plugins.generic.codecheck.review.status"
+msgstr "Status"
+
+msgid "plugins.generic.codecheck.review.willBeCodechecked"
+msgstr "This submission will be codechecked"
