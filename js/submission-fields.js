@@ -46,7 +46,8 @@ function initializeCertificateIdentiferSection(textarea) {
                     type="text"
                     name="certificateIdentifierInput"
                     placeholder="ID - e.g.: 2025-001"
-                    style="flex: 1; font-size:14px; padding: 6px; border: 1px solid #ccc; border-radius: 3px; height: 2.5rem;" 
+                    style="flex: 1; font-size:14px; padding: 6px; border: 1px solid #ccc; border-radius: 3px; height: 2.5rem;"
+                    readonly 
                 >
                 <select
                     id="venueTypes"
@@ -97,7 +98,7 @@ async function getVenueData() {
     codecheckApiUrl = codecheckApiUrl.replace(/\/api\/v1\/?$/, '');
     codecheckApiUrl += "/codecheck_api"
 
-    console.log(`${codecheckApiUrl}`);
+    console.log(`Calling: ${codecheckApiUrl}/getVenueData`);
 
     try {
         const response = await fetch(`${codecheckApiUrl}/getVenueData`, {
@@ -106,10 +107,6 @@ async function getVenueData() {
                 'Content-Type': 'application/json',
                 'X-Csrf-Token': pkp.currentUser.csrfToken,
             },
-            /*body: JSON.stringify({
-                venueTypes: venueTypes,
-                venueNames: venueNames,
-            })*/
         });
         
         const data = await response.json();
@@ -139,10 +136,55 @@ function fillSelectWithOptions(selectName, options) {
     });
 }
 
-function reserveIdentifier() {
+async function reserveIdentifier() {
+    const venueType = document.querySelector('select[name="venueTypes"]').value;
+    const venueName = document.querySelector('select[name="venueNames"]').value;
+
+    if(venueType == "default" || venueName == "default") {
+        alert('Error: Please select a Venue Type and a Venue Name and leave non of the two selects on the default selection!');
+        return;
+    }
+
     // TODO: Ajax call to CertificateRetrievingAndCreation.php with function that handles that
     // TODO: Return new identifier inside the input of the Certificate Identifier
+    let codecheckApiUrl = pkp.context.apiBaseUrl;
+    codecheckApiUrl = codecheckApiUrl.replace(/\/api\/v1\/?$/, '');
+    codecheckApiUrl += "/codecheck_api";
 
+    console.log(`Calling: ${codecheckApiUrl}/reserveIdentifier`);
+
+    try {
+        const response = await fetch(`${codecheckApiUrl}/reserveIdentifier`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Csrf-Token': pkp.currentUser.csrfToken,
+            },
+            body: JSON.stringify({
+                venueType: venueType,
+                venueName: venueName,
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            fillIndetifierInput(data.identifier);
+            alert('Added new issue with identifier: ' + data.identifier);
+            console.log('Added new issue with identifier: ', data.identifier);
+        } else {
+            console.error('Error:', data.error);
+        }
+    } catch (error) {
+        console.error('Request failed:', error);
+    }
+}
+
+function fillIndetifierInput(identifier) {
+    const input = document.querySelector('input[name="certificateIdentifierInput"]');
+    if (input) {
+        input.value = identifier;
+    }
 }
 
 function removeIdentifier() {
