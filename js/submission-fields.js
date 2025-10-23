@@ -64,6 +64,7 @@ function initializeCertificateIdentiferSection(textarea) {
                     <option selected disabled value="default">Venue Name</option>
                 </select>
             </div>
+            <div id="linkToGithubIssue"></div>
             <div
                 style="
                     padding-top: 0.5rem;
@@ -170,7 +171,8 @@ async function reserveIdentifier() {
 
         if (data.success) {
             fillIndetifierInput(data.identifier);
-            alert('Added new issue with identifier: ' + data.identifier + '\n' + data.issueUrl);
+            fillLinkToIssue(data.issueUrl);
+            alert('Added new issue with identifier: ' + data.identifier);
             console.log('Added new issue with identifier: ', data.identifier, data.issueUrl);
         } else {
             console.error('Error:', data.error);
@@ -184,6 +186,15 @@ function fillIndetifierInput(identifier) {
     const input = document.querySelector('input[name="certificateIdentifierInput"]');
     if (input) {
         input.value = identifier;
+    }
+}
+
+function fillLinkToIssue(link) {
+    const linkWrapper = document.querySelector('div[id="linkToGithubIssue"]');
+    if(linkWrapper) {
+        linkWrapper.innerHTML = `
+            <a href="${link}">View the newly created GitHub Issue for this Certificate Identifier</a>
+        `;
     }
 }
 
