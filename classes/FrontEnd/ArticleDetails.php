@@ -13,8 +13,9 @@ namespace APP\plugins\generic\codecheck\classes\FrontEnd;
 
 use APP\core\Application;
 use APP\plugins\generic\codecheck\classes\Constants;
+use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionDAO;
+use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmission;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
-use PKP\core\PKPString;
 
 class ArticleDetails
 {
@@ -28,17 +29,13 @@ class ArticleDetails
     }
 
     /**
-     * Add CODECHECK information to the article details page.
-     *
-     * @param string $hookName
-     * @param array $params [
-     *   @option array Additional parameters passed with the hook
-     *   @option TemplateManager
-     *   @option string The HTML output
-     * ]
+     * Add CODECHECK information to the article sidebar.
      */
     public function addCodecheckInfo(string $hookName, array $params): bool
     {
+        $templateMgr = $params[1];
+        $output = &$params[2];
+
         // Get the CODECHECK settings for this journal or press
         $context = Application::get()->getRequest()->getContext();
         $codecheckEnabled = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_ENABLED);
@@ -48,30 +45,62 @@ class ArticleDetails
             return false;
         }
 
-        // TODO: In future iterations, replace this with actual certificate display logic
-        // For now, just show a placeholder indicating CODECHECK is enabled
-        $output = &$params[2];
-        $codecheckInfo = '<div class="codecheck-info alert alert-info">' .
-            '<h4><strong>CODECHECK</strong></h4>' .
-            '<p>This article supports computational reproducibility through CODECHECK. ' .
-            'Code execution verification system integration coming in future updates.</p>' .
-            '</div>';
+        // Get the current article/submission
+        $article = $templateMgr->getTemplateVars('article');
+        if (!$article) {
+            return false;
+        }
 
-        $output .= $codecheckInfo;
+        // Get CODECHECK data for this submission
+        $dao = new CodecheckSubmissionDAO();
+        $codecheckData = $dao->getBySubmissionId($article->getId());
+
+        // Only show CODECHECK info if user opted in
+        if (!$codecheckData || !$codecheckData->getOptIn()) {
+            return false;
+        }
+
+        // Generate and add the CODECHECK display
+        $codecheckHtml = $this->generateSidebarDisplay($codecheckData, $templateMgr);
+        
+        if ($codecheckHtml) {
+            $output .= $codecheckHtml;
+        }
 
         return false;
     }
 
     /**
-     * Future method: Display actual CODECHECK certificate
-     * 
-     * @param array $article Article data
-     * @return string HTML for certificate display
+     * Generate sidebar display for CODECHECK certificate
      */
-    public function displayCertificate(array $article): string
+    private function generateSidebarDisplay(CodecheckSubmission $codecheckData, $templateMgr): string
     {
-        // TODO: Implement certificate retrieval and display logic
-        // This will fetch and display actual CODECHECK certificates
-        return '';
+        $request = Application::get()->getRequest();
+        
+        // Prepare common template variables
+        $templateMgr->assign([
+            'logoUrl' => $request->getBaseUrl() . '/' . $this->plugin->getPluginPath() . '/assets/img/codeworks-badge.png',
+        ]);
+
+        if ($codecheckData->hasCompletedCheck()) {
+            $templateMgr->assign([
+                'codecheckStatus' => 'completed',
+                'certificateLink' => $codecheckData->getCertificateLink(),
+                'doiLink' => $codecheckData->getDoiLink(),
+                'linkText' => $codecheckData->getFormattedCertificateLinkText(),
+                'codecheckerNames' => $codecheckData->getCodecheckerNames(),
+                'certificateDate' => $codecheckData->getCertificateDate(),
+            ]);
+        } elseif ($codecheckData->hasAssignedChecker()) {
+            $templateMgr->assign([
+                'codecheckStatus' => 'pending',
+                'codeRepo' => $codecheckData->getCodeRepository(),
+                'dataRepo' => $codecheckData->getDataRepository(),
+            ]);
+        } else {
+            return '';
+        }
+
+        return $templateMgr->fetch($this->plugin->getTemplateResource('frontend/objects/article_codecheck.tpl'));
     }
 }
