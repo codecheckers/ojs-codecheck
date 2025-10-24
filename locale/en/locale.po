@@ -94,3 +94,138 @@ msgstr "Status"
 
 msgid "plugins.generic.codecheck.review.willBeCodechecked"
 msgstr "This submission will be codechecked"
+
+msgid "plugins.generic.codecheck.workflow.title"
+msgstr "CODECHECK Metadata"
+
+msgid "plugins.generic.codecheck.configVersion"
+msgstr "CODECHECK config version"
+
+msgid "plugins.generic.codecheck.publishWithDOI"
+msgstr "Check published with a DOI (e.g., Zenodo)"
+
+msgid "plugins.generic.codecheck.publishSeparate"
+msgstr "Check published in separate section of the journal"
+
+msgid "plugins.generic.codecheck.manifest.title"
+msgstr "Manifest"
+
+msgid "plugins.generic.codecheck.manifest.description"
+msgstr "The output files and their descriptions created by the editorial workflow and considered in the CODECHECK"
+
+msgid "plugins.generic.codecheck.manifest.outputFile"
+msgstr "Output File"
+
+msgid "plugins.generic.codecheck.manifest.description"
+msgstr "Description"
+
+msgid "plugins.generic.codecheck.manifest.addFile"
+msgstr "File"
+
+msgid "plugins.generic.codecheck.paperMetadata.title"
+msgstr "Paper Metadata"
+
+msgid "plugins.generic.codecheck.paperMetadata.authors"
+msgstr "Authors"
+
+msgid "plugins.generic.codecheck.paperMetadata.addAuthor"
+msgstr "Author"
+
+msgid "plugins.generic.codecheck.paperMetadata.reference"
+msgstr "Reference (e.g. the DOI of the preprint)"
+
+msgid "plugins.generic.codecheck.paperMetadata.referenceHelp"
+msgstr "Enter the DOI or URL of the preprint"
+
+msgid "plugins.generic.codecheck.paperMetadata.source"
+msgstr "Source of the checked material"
+
+msgid "plugins.generic.codecheck.codecheckers.title"
+msgstr "CODECHECKers"
+
+msgid "plugins.generic.codecheck.codecheckers.add"
+msgstr "CODECHECKer"
+
+msgid "plugins.generic.codecheck.certificate.title"
+msgstr "CODECHECK Certificate"
+
+msgid "plugins.generic.codecheck.certificate.location"
+msgstr "CODECHECK certificate: where is it stored (e.g. the DOI) or upload new certificate"
+
+msgid "plugins.generic.codecheck.certificate.locationHelp"
+msgstr "Enter the DOI or URL where the certificate is stored"
+
+msgid "plugins.generic.codecheck.certificate.upload"
+msgstr "Upload Certificate"
+
+msgid "plugins.generic.codecheck.certificate.uploadButton"
+msgstr "Upload Certificate"
+
+msgid "plugins.generic.codecheck.certificate.summary"
+msgstr "Summary of the CODECHECK"
+
+msgid "plugins.generic.codecheck.repositories.title"
+msgstr "Repositories"
+
+msgid "plugins.generic.codecheck.repositories.add"
+msgstr "Repository"
+
+msgid "plugins.generic.codecheck.completionTime.title"
+msgstr "Time the CODECHECK was completed"
+
+msgid "plugins.generic.codecheck.completionTime.label"
+msgstr "Completion Time"
+
+msgid "plugins.generic.codecheck.identifier.title"
+msgstr "Identifier"
+
+msgid "plugins.generic.codecheck.identifier.label"
+msgstr "ID of the CODECHECK certificate"
+
+msgid "plugins.generic.codecheck.identifier.save"
+msgstr "Save Identifier"
+
+msgid "plugins.generic.codecheck.identifier.reserve"
+msgstr "Reserve Identifier"
+
+msgid "plugins.generic.codecheck.identifier.remove"
+msgstr "Remove Identifier"
+
+msgid "plugins.generic.codecheck.identifier.reserveConfirm"
+msgstr "Do you want to reserve a new identifier for this CODECHECK?"
+
+msgid "plugins.generic.codecheck.identifier.removeConfirm"
+msgstr "Are you sure you want to remove this identifier?"
+
+msgid "plugins.generic.codecheck.previewYaml"
+msgstr "Preview CODECHECK metadata file"
+
+msgid "plugins.generic.codecheck.savedSuccessfully"
+msgstr "CODECHECK metadata saved successfully"
+
+msgid "plugins.generic.codecheck.saveFailed"
+msgstr "Failed to save CODECHECK metadata. Please try again."
+
+msgid "plugins.generic.codecheck.reviewTitle"
+msgstr "CODECHECK Information"
+
+msgid "plugins.generic.codecheck.status"
+msgstr "Status"
+
+msgid "plugins.generic.codecheck.status.complete"
+msgstr "Complete"
+
+msgid "plugins.generic.codecheck.status.inProgress"
+msgstr "In Progress"
+
+msgid "plugins.generic.codecheck.status.pending"
+msgstr "Pending"
+
+msgid "plugins.generic.codecheck.notYetAssigned"
+msgstr "Not yet assigned"
+
+msgid "plugins.generic.codecheck.viewFullMetadata"
+msgstr "View Full CODECHECK Metadata"
+
+msgid "plugins.generic.codecheck.notOptedIn"
+msgstr "This submission has not opted in for CODECHECK"
