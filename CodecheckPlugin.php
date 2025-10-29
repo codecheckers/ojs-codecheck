@@ -35,44 +35,11 @@ class CodecheckPlugin extends GenericPlugin
             Hook::add('Form::config::before', $this->addToSubmissionForm(...));
             Hook::add('Form::config::before', $this->addCodecheckFileOptions(...));
             Hook::add('Submission::edit', $this->saveSubmissionData(...));
+            // Add hook for Ajax API calls
+            Hook::add('LoadHandler', [$this, 'setupAPIHandler']);
             // Add hook for the Template Manager
             Hook::add('TemplateManager::display', $this->callbackTemplateManagerDisplay(...));
         }
-
-        // Add hook for Ajax API calls
-        Hook::add('APIHandler::endpoints::users', function(string $hookName, PKPBaseController $apiController, APIHandler $apiHandler): bool {
-        
-            // This allow to add a route on fly without defining a api controller
-            // Through this allow quick add/modify routes, it's better to use
-            // controller based appraoch which is more structured and understandable
-            $apiHandler->addRoute(
-                'GET',
-                'codecheck',
-                function (IlluminateRequest $request): JsonResponse {
-                    return response()->json([
-                        'message' => 'A new codecheck route added successfully on fly',
-                    ], Response::HTTP_OK);
-                },
-                'test.onfly',
-                [
-                    Role::ROLE_ID_SITE_ADMIN,
-                    Role::ROLE_ID_MANAGER,
-                    Role::ROLE_ID_SUB_EDITOR,
-                ],
-                // Optional param to define a set to Authorization Policies for route
-                // new class implements HasAuthorizationPolicy
-                // {
-                //     public function getPolicies(PKPRequest $request, array &$args, array $roleAssignments): array
-                //     {
-                //         return [
-                //             new \PKP\security\authorization\ContextAccessPolicy($request, $roleAssignments)
-                //         ];
-                //     }
-                // }
-            );
-            
-            return Hook::CONTINUE;
-        });
 
         return $success;
     }

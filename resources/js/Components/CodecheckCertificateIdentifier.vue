@@ -10,7 +10,8 @@
             />
             <select
                 v-model="venueType"
-                class="certificate-identifier-venue-types"
+                class="certificate-identifier-select certificate-identifier-venue-types"
+                :disabled="isIdentifierReserved"
             >
                 <option disabled value="default">Venue Type</option>
                 <option v-for="type in venueTypes" :key="type" :value="type">
@@ -19,7 +20,8 @@
             </select>
             <select
                 v-model="venueName"
-                class="certificate-identifier-venue-names"
+                class="certificate-identifier-select certificate-identifier-venue-names"
+                :disabled="isIdentifierReserved"
             >
                 <option disabled value="default">Venue Name</option>
                 <option v-for="name in venueNames" :key="name" :value="name">
@@ -30,14 +32,16 @@
 
         <div v-if="issueUrl" class="certificate-identifier-link-wrapper">
             <a :href="issueUrl" target="_blank">
-                View the newly created GitHub Issue for this Certificate Identifier
+                View GitHub Issue
             </a>
         </div>
 
         <div class="certificate-identifier-button-wrapper">
             <button
                 type="button"
-                class="certificate-identifier-button bg-blue"
+                class="certificate-identifier-button"
+                :class="isIdentifierReserved ? 'bg-gray' : 'bg-blue'"
+                :disabled="isIdentifierReserved"
                 @click="reserveIdentifier"
             >
                 Reserve Identifier
@@ -54,7 +58,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, computed } from 'vue';
 
 const props = defineProps({
     name: String,
@@ -69,6 +73,9 @@ const venueName = ref('default');
 const venueTypes = ref([]);
 const venueNames = ref([]);
 const issueUrl = ref('');
+
+// variable that stores if the Identifier was set and thus buttons should be disabled
+const isIdentifierReserved = computed(() => identifier.value.trim() !== '');
 
 onMounted(() => {
     getVenueData();
@@ -167,6 +174,22 @@ a {
     height: 2.5rem;
 }
 
+.certificate-identifier-select:disabled {
+    /* Centeres the Text in the select */
+    text-align: center;
+    text-align-last: center;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: none !important; /* removes arrow background */
+    background-color: #868686;
+    color: #ffffff;
+    cursor: not-allowed;
+    pointer-events: none;
+    opacity: 0.6;
+    font-weight: 600;
+}
+
 .certificate-identifier-venue-types {
     font-size:14px;
     padding: 6px;
@@ -198,13 +221,32 @@ a {
     border-radius: 4px;
     margin-right: 0.5rem;
     font-weight: 600;
+    cursor: pointer;
 }
 
 .bg-blue {
     background: #006798;
 }
 
+.bg-blue:hover {
+  background: #005580;
+}
+
 .bg-red {
     background: #dc3545;
+}
+
+.bg-red:hover {
+  background: #c82333;
+}
+
+.bg-gray {
+    background: #868686;
+}
+
+.certificate-identifier-button:disabled {
+    opacity: 0.6;
+    pointer-events: none;
+    cursor: not-allowed;
 }
 </style>
