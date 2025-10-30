@@ -10,6 +10,7 @@ pkp.registry.registerComponent("CodecheckReviewDisplay", CodecheckReviewDisplay)
 pkp.registry.registerComponent("CodecheckMetadataForm", CodecheckMetadataForm);
 pkp.registry.registerComponent("CodecheckManifestFiles", CodecheckManifestFiles);
 pkp.registry.registerComponent("CodecheckRepositoryList", CodecheckRepositoryList);
+pkp.registry.registerComponent("CodecheckCertificateIdentifier", CodecheckCertificateIdentifier);
 
 // Extend workflow store to add CODECHECK tab/section
 pkp.registry.storeExtend("workflow", (piniaContext) => {
@@ -200,7 +201,7 @@ function mountCodecheckVueComponents() {
       textarea.dispatchEvent(new Event('input', { bubbles: true }));
     });
   }
-  
+
   // Mount code repository component
   const codeRepoContainer = document.querySelector('textarea[name="codeRepository"]')?.parentElement;
   if (codeRepoContainer) {
@@ -243,12 +244,12 @@ function mountCodecheckVueComponents() {
     });
   }
 
-  // Mount Certificate Identifier Component
-  const certIdentifierContainer = document.querySelector('textarea[name="retrieveReserveCertificateIdentifier"]')?.parentElement;
-  if (certIdentifierContainer) {
-      const textarea = certIdentifierContainer.querySelector('textarea');
+  // Mount Certificate Identifier Component to the Submission Form
+  const certificateIdentifierContainer = document.querySelector('textarea[name="retrieveReserveCertificateIdentifier"]')?.parentElement;
+  if (certificateIdentifierContainer) {
+      const textarea = certificateIdentifierContainer.querySelector('textarea');
       const vueDiv = document.createElement('div');
-      certIdentifierContainer.insertBefore(vueDiv, textarea);
+      certificateIdentifierContainer.insertBefore(vueDiv, textarea);
       textarea.style.display = 'none';
 
       createApp(CodecheckCertificateIdentifier, {
@@ -262,6 +263,17 @@ function mountCodecheckVueComponents() {
           textarea.value = e.detail;
           textarea.dispatchEvent(new Event('input', { bubbles: true }));
       });
+  }
+
+  // Mount Certificate Identifier Component to the CODECHECK Metadata From in the editorial Workflow
+  const certificateIdentifierContainerMetadataForm = document.querySelector('#certificate-identifier-container');
+  if (certificateIdentifierContainerMetadataForm) {
+    createApp(CodecheckCertificateIdentifier, {
+      name: 'retrieveReserveCertificateIdentifier',
+      label: 'Certificate Identifier',
+      description: 'CODECHECK Certificate ID, Venue Type and Venue Name',
+      value: '' // or initial value from textarea if you have one
+    }).mount(certificateIdentifierContainerMetadataForm);
   }
 }
 
