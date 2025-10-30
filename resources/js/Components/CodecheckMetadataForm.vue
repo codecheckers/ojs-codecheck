@@ -228,25 +228,11 @@
     <!-- Identifier -->
     <div class="form-section">
       <h3 class="section-title full-width-title">
-        Identifier: ID of the CODECHECK certificate 
+        Certificate Identifier: CODECHECK Certificate ID, Venue Type and Venue Name 
         <span class="required">*</span>
       </h3>
-      
-      <div class="field-group full-width">
-        <input
-          type="text"
-          v-model="metadata.identifier"
-          class="pkpFormField__input full-width-input"
-          placeholder="ID of the CODECHECK certificate"
-          required
-        />
-      </div>
-      
-      <div class="identifier-actions">
-        <button class="pkpButton codecheck-btn" @click="saveIdentifier">Save Identifier</button>
-        <button class="pkpButton codecheck-btn" @click="reserveIdentifier">Reserve Identifier</button>
-        <button class="pkpButton codecheck-btn pkpButton--isWarnable codecheck-btn-warning" @click="removeIdentifier">Remove Identifier</button>
-      </div>
+
+      <div id="certificate-identifier-container"></div>
     </div>
 
     <!-- Footer -->
