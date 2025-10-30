@@ -3,6 +3,7 @@ import CodecheckManifestFiles from "./Components/CodecheckManifestFiles.vue";
 import CodecheckRepositoryList from "./Components/CodecheckRepositoryList.vue";
 import CodecheckReviewDisplay from "./Components/CodecheckReviewDisplay.vue";
 import CodecheckMetadataForm from "./Components/CodecheckMetadataForm.vue";
+import CodecheckCertificateIdentifier from "./Components/CodecheckCertificateIdentifier.vue";
 
 // Register components with PKP registry
 pkp.registry.registerComponent("CodecheckReviewDisplay", CodecheckReviewDisplay);
@@ -240,6 +241,27 @@ function mountCodecheckVueComponents() {
       textarea.value = e.detail;
       textarea.dispatchEvent(new Event('input', { bubbles: true }));
     });
+  }
+
+  // Mount Certificate Identifier Component
+  const certIdentifierContainer = document.querySelector('textarea[name="retrieveReserveCertificateIdentifier"]')?.parentElement;
+  if (certIdentifierContainer) {
+      const textarea = certIdentifierContainer.querySelector('textarea');
+      const vueDiv = document.createElement('div');
+      certIdentifierContainer.insertBefore(vueDiv, textarea);
+      textarea.style.display = 'none';
+
+      createApp(CodecheckCertificateIdentifier, {
+          name: 'retrieveReserveCertificateIdentifier',
+          label: 'Certificate Identifier',
+          description: 'CODECHECK Certificate ID, Venue Type and Venue Name',
+          value: textarea.value,
+      }).mount(vueDiv);
+
+      vueDiv.addEventListener('update', (e) => {
+          textarea.value = e.detail;
+          textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      });
   }
 }
 
