@@ -6,9 +6,12 @@ use APP\template\TemplateManager;
 use APP\plugins\generic\codecheck\classes\FrontEnd\ArticleDetails;
 use APP\plugins\generic\codecheck\classes\Settings\Actions;
 use APP\plugins\generic\codecheck\classes\migration\CodecheckSchemaMigration;
+use APP\plugins\generic\codecheck\classes\Submission\Schema;
+use APP\plugins\generic\codecheck\classes\Submission\SubmissionWizardHandler;
 use PKP\plugins\GenericPlugin;
 use PKP\plugins\Hook;
 use PKP\components\forms\FieldOptions;
+use APP\facades\Repo;
 
 class CodecheckPlugin extends GenericPlugin
 {
@@ -22,10 +25,33 @@ class CodecheckPlugin extends GenericPlugin
             $articleDetails = new ArticleDetails($this);
             Hook::add('Templates::Article::Details', $articleDetails->addCodecheckInfo(...));
 
-            Hook::add('Schema::get::submission', $this->addToSubmissionSchema(...));
-            Hook::add('Form::config::before', $this->addToSubmissionForm(...));
-            Hook::add('Form::config::before', $this->addCodecheckFileOptions(...));
-            Hook::add('Submission::edit', $this->saveSubmissionData(...));
+            // Opt-in checkbox on submission start
+            Hook::add('Schema::get::submission', $this->addOptInToSchema(...));
+            Hook::add('Form::config::before', $this->addOptInCheckbox(...));
+            Hook::add('Submission::edit', $this->saveOptIn(...));
+            
+            // Wizard fields schema
+            $codecheckSchema = new Schema();
+            Hook::add('Schema::get::publication', function($hookName, $args) use ($codecheckSchema) {
+                return $codecheckSchema->addToSchemaPublication($hookName, $args);
+            });
+
+            // Wizard template handlers
+            $codecheckWizard = new SubmissionWizardHandler($this);
+            Hook::add('TemplateManager::display', function($hookName, $params) use ($codecheckWizard) {
+                return $codecheckWizard->addToSubmissionWizardSteps($hookName, $params);
+            });
+            Hook::add('Template::SubmissionWizard::Section', function($hookName, $params) use ($codecheckWizard) {
+                return $codecheckWizard->addToSubmissionWizardTemplate($hookName, $params);
+            });
+            Hook::add('Template::SubmissionWizard::Section::Review', function($hookName, $params) use ($codecheckWizard) {
+                return $codecheckWizard->addToSubmissionWizardReviewTemplate($hookName, $params);
+            });
+            
+            // Save wizard fields on validation
+            Hook::add('Submission::validate', $this->saveWizardFieldsFromRequest(...));
+            
+            // Workflow state
             Hook::add('TemplateManager::display', $this->callbackTemplateManagerDisplay(...));
         }
 
@@ -55,9 +81,9 @@ class CodecheckPlugin extends GenericPlugin
         
         $cssUrl = $request->getBaseUrl() . '/' . $this->getPluginPath() . '/css/codecheck.css';
         $templateMgr->addStyleSheet(
-            'codecheck-frontend-styles',
+            'codecheck-styles',
             $cssUrl,
-            ['contexts' => ['frontend']]
+            ['contexts' => ['backend', 'frontend']]
         );
     }
 
@@ -70,14 +96,15 @@ class CodecheckPlugin extends GenericPlugin
             $submission = $request->getRouter()->getHandler()->getAuthorizedContextObject(ASSOC_TYPE_SUBMISSION);
             
             if ($submission) {
+                $publication = $submission->getCurrentPublication();
                 $templateMgr->setState([
                     'codecheckSubmission' => [
                         'id' => $submission->getId(),
                         'codecheckOptIn' => $submission->getData('codecheckOptIn'),
-                        'codeRepository' => $submission->getData('codeRepository'),
-                        'dataRepository' => $submission->getData('dataRepository'),
-                        'manifestFiles' => $submission->getData('manifestFiles'),
-                        'dataAvailabilityStatement' => $submission->getData('dataAvailabilityStatement'),
+                        'codeRepository' => $publication?->getData('codeRepository'),
+                        'dataRepository' => $publication?->getData('dataRepository'),
+                        'manifestFiles' => $publication?->getData('manifestFiles'),
+                        'dataAvailabilityStatement' => $publication?->getData('dataAvailabilityStatement'),
                     ]
                 ]);
             }
@@ -86,103 +113,7 @@ class CodecheckPlugin extends GenericPlugin
         return false;
     }
 
-    public function addCodecheckFileOptions(string $hookName, \PKP\components\forms\FormComponent $form): bool
-    {
-        if ($form->id === 'submissionFile') {
-            $request = Application::get()->getRequest();
-            $submission = $request->getRouter()->getHandler()->getAuthorizedContextObject(ASSOC_TYPE_SUBMISSION);
-            
-            if ($submission && $submission->getData('codecheckOptIn')) {
-                foreach ($form->fields as $field) {
-                    if ($field instanceof \PKP\components\forms\FieldOptions && $field->name === 'genreId') {
-                        $hasCodecheckOptions = false;
-                        foreach ($field->options as $option) {
-                            if (str_contains($option['label'], 'CODECHECK') || str_contains($option['label'], 'codecheck')) {
-                                $hasCodecheckOptions = true;
-                                break;
-                            }
-                        }
-                        
-                        if ($hasCodecheckOptions) {
-                            return false;
-                        }
-                        
-                        $this->createCodecheckGenres();
-                        
-                        $context = $request->getContext();
-                        $genreDao = \PKP\db\DAORegistry::getDAO('GenreDAO');
-                        $genres = $genreDao->getByContextId($context->getId());
-                        
-                        $codecheckGenres = [];
-                        while ($genre = $genres->next()) {
-                            $name = $genre->getLocalizedName();
-                            if (is_array($name)) {
-                                $name = $name['en'] ?? $name[array_key_first($name)] ?? '';
-                            }
-                            
-                            if (str_contains($name, 'CODECHECK') || str_contains($name, 'codecheck')) {
-                                $codecheckGenres[] = [
-                                    'value' => $genre->getId(),
-                                    'label' => $name
-                                ];
-                            }
-                        }
-                        
-                        if (!empty($codecheckGenres)) {
-                            $currentOptions = $field->options ?? [];
-                            $field->options = array_merge($currentOptions, $codecheckGenres);
-                        }
-                        break;
-                    }
-                }
-            }
-        }
-        return false;
-    }
-
-    public function createCodecheckGenres(): void
-    {
-        static $genresCreated = false;
-        
-        if ($genresCreated) {
-            return;
-        }
-        
-        $request = Application::get()->getRequest();
-        $context = $request->getContext();
-        
-        if (!$context) {
-            return;
-        }
-        
-        $genreDao = \PKP\db\DAORegistry::getDAO('GenreDAO');
-        
-        $checkSql = "SELECT COUNT(*) as count FROM genre_settings WHERE setting_value = 'codecheck.yml'";
-        $result = $genreDao->retrieve($checkSql);
-        $row = $result->current();
-
-        if ($row && $row->count > 0) {
-            $genresCreated = true;
-            return;
-        }
-        
-        try {
-            $ymlGenre = $genreDao->newDataObject();
-            $ymlGenre->setContextId($context->getId());
-            $ymlGenre->setName('codecheck.yml', 'en');
-            $ymlGenre->setCategory(1);
-            $ymlGenre->setSupplementary(true);
-            $ymlGenre->setRequired(false);
-            $ymlGenre->setSequence(98);
-            $genreDao->insertObject($ymlGenre);
-            
-            $genresCreated = true;
-        } catch (Exception $e) {
-            error_log("CODECHECK: Error creating genres: " . $e->getMessage());
-        }
-    }
-
-    public function addToSubmissionSchema(string $hookName, array $args): bool
+    public function addOptInToSchema(string $hookName, array $args): bool
     {
         $schema = $args[0];
         
@@ -192,41 +123,20 @@ class CodecheckPlugin extends GenericPlugin
             'validation' => ['nullable']
         ];
         
-        $schema->properties->codeRepository = (object) [
-            'type' => 'string',
-            'apiSummary' => true,
-            'validation' => ['nullable']
-        ];
-        
-        $schema->properties->dataRepository = (object) [
-            'type' => 'string',
-            'apiSummary' => true,
-            'validation' => ['nullable']
-        ];
-        
-        $schema->properties->manifestFiles = (object) [
-            'type' => 'string',
-            'apiSummary' => true,
-            'validation' => ['nullable']
-        ];
-        
-        $schema->properties->dataAvailabilityStatement = (object) [
-            'type' => 'string',
-            'apiSummary' => true,
-            'validation' => ['nullable']
-        ];
-        
         return false;
     }
 
-    public function addToSubmissionForm(string $hookName, \PKP\components\forms\FormComponent $form): bool
+    public function addOptInCheckbox(string $hookName, \PKP\components\forms\FormComponent $form): bool
     {
         if ($form->id === 'submitStart' || $form->id === 'submissionStart' || str_contains($form->id, 'start')) {
             $form->addField(new FieldOptions('codecheckOptIn', [
-                'label' => 'CODECHECK',
+                'label' => __('plugins.generic.codecheck.displayName'),
                 'type' => 'checkbox',
                 'options' => [
-                    ['value' => 1, 'label' => 'Yes, I want my paper to be codechecked. See: <a href="https://codecheck.org.uk/" target="_blank">CODECHECK</a>']
+                    [
+                        'value' => 1, 
+                        'label' => __('plugins.generic.codecheck.optIn.description') . ' <a href="https://codecheck.org.uk/" target="_blank">CODECHECK</a>'
+                    ]
                 ],
                 'value' => false,
                 'groupId' => 'default'
@@ -235,59 +145,48 @@ class CodecheckPlugin extends GenericPlugin
             return false;
         }
         
-        if ($form->id === 'titleAbstract') {
-            $request = Application::get()->getRequest();
-            $submission = $request->getRouter()->getHandler()->getAuthorizedContextObject(ASSOC_TYPE_SUBMISSION);
-            
-            if ($submission && $submission->getData('codecheckOptIn')) {
-                $form->addField(new \PKP\components\forms\FieldTextarea('codeRepository', [
-                    'label' => 'Code Repository URLs',
-                    'description' => 'Link(s) to your code repository (GitHub, GitLab, etc.)',
-                    'groupId' => 'default',
-                    'rows' => 3,
-                    'value' => $submission->getData('codeRepository'),
-                ]));
+        return false;
+    }
 
-                $form->addField(new \PKP\components\forms\FieldTextarea('dataRepository', [
-                    'label' => 'Data Repository URLs', 
-                    'description' => 'Link(s) to your data repository (Zenodo, OSF, etc.) - optional',
-                    'groupId' => 'default',
-                    'rows' => 3,
-                    'value' => $submission->getData('dataRepository'),
-                ]));
-                
-                $form->addField(new \PKP\components\forms\FieldTextarea('manifestFiles', [
-                    'label' => 'Expected Output Files',
-                    'description' => 'List the main figures, tables, and results your code should produce.',
-                    'groupId' => 'default',
-                    'rows' => 6,
-                    'isRequired' => true,
-                    'value' => $submission->getData('manifestFiles'),
-                ]));  
-
-                $form->addField(new \PKP\components\forms\FieldRichTextarea('dataAvailabilityStatement', [
-                    'label' => 'Data and Software Availability',
-                    'description' => 'Copy from your manuscript\'s data availability section',
-                    'groupId' => 'default', 
-                    'rows' => 4,
-                    'value' => $submission->getData('dataAvailabilityStatement'),
-                ]));
-            }
+    public function saveOptIn(string $hookName, array $params): bool
+    {
+        $submission = $params[0];
+        $params_array = $params[2];
+        
+        if (isset($params_array['codecheckOptIn'])) {
+            $submission->setData('codecheckOptIn', $params_array['codecheckOptIn']);
         }
         
         return false;
     }
 
-    public function saveSubmissionData(string $hookName, array $params): bool
+    public function saveWizardFieldsFromRequest(string $hookName, array $params): bool
     {
-        $newSubmission = $params[0];
-        $params_array = $params[2];
+        $submission = $params[1];
         
-        $fields = ['codecheckOptIn', 'codeRepository', 'dataRepository', 'manifestFiles', 'dataAvailabilityStatement'];
+        if (!$submission) {
+            return false;
+        }
         
-        foreach ($fields as $field) {
-            if (isset($params_array[$field])) {
-                $newSubmission->setData($field, $params_array[$field]);
+        $request = Application::get()->getRequest();
+        
+        $codeRepository = $request->getUserVar('codeRepository');
+        $dataRepository = $request->getUserVar('dataRepository');
+        $manifestFiles = $request->getUserVar('manifestFiles');
+        $dataAvailabilityStatement = $request->getUserVar('dataAvailabilityStatement');
+        
+        if ($codeRepository || $dataRepository || $manifestFiles || $dataAvailabilityStatement) {
+            $publication = $submission->getCurrentPublication();
+            if ($publication) {
+                $updates = [];
+                if ($codeRepository) $updates['codeRepository'] = $codeRepository;
+                if ($dataRepository) $updates['dataRepository'] = $dataRepository;
+                if ($manifestFiles) $updates['manifestFiles'] = $manifestFiles;
+                if ($dataAvailabilityStatement) $updates['dataAvailabilityStatement'] = $dataAvailabilityStatement;
+                
+                if (!empty($updates)) {
+                    Repo::publication()->edit($publication, $updates);
+                }
             }
         }
         
@@ -318,8 +217,8 @@ class CodecheckPlugin extends GenericPlugin
             try {
                 $migration = new CodecheckSchemaMigration();
                 $migration->up();
-            } catch (Exception $e) {
-                error_log("CODECHECK: " . $e->getMessage());
+            } catch (\Exception $e) {
+                error_log('CODECHECK Plugin: Migration failed - ' . $e->getMessage());
             }
         }
         
