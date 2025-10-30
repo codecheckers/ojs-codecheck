@@ -16,15 +16,20 @@
           @input="updateValue"
           class="form-control"
         />
-        <button type="button" @click="removeFile(index)" class="btn-remove">Remove</button>
+        <button type="button" @click="removeFile(index)" class="btn-remove">×</button>
       </div>
     </div>
-    <button type="button" @click="addFile" class="btn-add">+ Add File</button>
+    <button type="button" @click="addFile" class="btn-add">
+      + Add File
+    </button>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from "vue";
+
+const { useLocalize } = pkp.modules.useLocalize;
+const { t } = useLocalize();
 
 const props = defineProps({
   name: { type: String, required: true },
@@ -41,7 +46,10 @@ onMounted(() => {
     props.value.split('\n').forEach(line => {
       if (line.trim()) {
         const parts = line.split(' - ');
-        files.value.push({ filename: parts[0] || '', comment: parts[1] || '' });
+        files.value.push({ 
+          filename: parts[0]?.trim() || '', 
+          comment: parts[1]?.trim() || '' 
+        });
       }
     });
   }
@@ -54,16 +62,25 @@ function addFile() {
 
 function removeFile(index) {
   files.value.splice(index, 1);
+  if (files.value.length === 0) addFile();
   updateValue();
 }
 
 function updateValue() {
   const data = files.value
     .filter(f => f.filename.trim())
-    .map(f => f.filename + (f.comment ? ' - ' + f.comment : ''));
+    .map(f => {
+      const filename = f.filename.trim();
+      const comment = f.comment.trim();
+      return comment ? `${filename} - ${comment}` : filename;
+    })
+    .join('\n');
   
-  const event = new CustomEvent('update', { detail: data.join('\n') });
-  document.querySelector(`[data-name="${props.name}"]`)?.dispatchEvent(event);
+  const event = new CustomEvent('update', { detail: data, bubbles: true });
+  const vueRoot = document.querySelector(`textarea[name="${props.name}"]`)?.previousElementSibling;
+  if (vueRoot) {
+    vueRoot.dispatchEvent(event);
+  }
 }
 </script>
 
@@ -84,16 +101,23 @@ function updateValue() {
   font-size: 14px;
 }
 
+.form-control:focus {
+  outline: none;
+  border-color: #007ab2;
+  box-shadow: 0 0 0 2px rgba(0, 122, 178, 0.2);
+}
+
 .btn-remove {
   background: #dc3545;
   color: white;
   border: none;
-  font-size: .875rem;
+  font-size: 1.2rem;
   font-weight: 600;
-  padding: .4375rem .75rem;
+  padding: .3rem .75rem;
   border-radius: 4px;
-  line-height: 1.25rem;
+  line-height: 1.60rem;
   cursor: pointer;
+  min-width: 40px;
 }
 
 .btn-add {
