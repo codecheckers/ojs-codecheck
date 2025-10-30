@@ -9,11 +9,20 @@ use APP\plugins\generic\codecheck\classes\migration\CodecheckSchemaMigration;
 use PKP\plugins\GenericPlugin;
 use PKP\plugins\Hook;
 use PKP\components\forms\FieldOptions;
+use PKP\core\PKPBaseController;
+use PKP\handler\APIHandler;
+use APP\plugins\generic\codecheck\controllers\CodecheckAPIHandler;
+use Illuminate\Http\Request as IlluminateRequest;
+use Illuminate\Http\Response;
+use Illuminate\Http\JsonResponse;
+use PKP\security\Role;
 
 class CodecheckPlugin extends GenericPlugin
 {
     public function register($category, $path, $mainContextId = null): bool
     {
+        error_log('[CodecheckPlugin] register() called, path=' . $path);
+
         $success = parent::register($category, $path);
 
         if ($success && $this->getEnabled()) {
@@ -26,10 +35,29 @@ class CodecheckPlugin extends GenericPlugin
             Hook::add('Form::config::before', $this->addToSubmissionForm(...));
             Hook::add('Form::config::before', $this->addCodecheckFileOptions(...));
             Hook::add('Submission::edit', $this->saveSubmissionData(...));
+            // Add hook for Ajax API calls
+            Hook::add('LoadHandler', [$this, 'setupAPIHandler']);
+            // Add hook for the Template Manager
             Hook::add('TemplateManager::display', $this->callbackTemplateManagerDisplay(...));
         }
 
         return $success;
+    }
+
+    public function setupAPIHandler($hookName, $params)
+    {
+        $route = $params[0];
+        $apiRoute = $params[1];
+
+        error_log("[CodecheckPlugin] LoadHandler called for: $route, $apiRoute");
+
+        if ($route === 'codecheck_api') {
+            $handler = new CodecheckAPIHandler($apiRoute, file_get_contents('php://input'));
+            $handler->serveApiRoute();
+            return true;
+        }
+
+        return false;
     }
 
     private function addAssets(): void
@@ -74,6 +102,7 @@ class CodecheckPlugin extends GenericPlugin
                     'codecheckSubmission' => [
                         'id' => $submission->getId(),
                         'codecheckOptIn' => $submission->getData('codecheckOptIn'),
+                        'retrieveReserveCertificateIdentifier' => $submission->getData('retrieveReserveCertificateIdentifier'),
                         'codeRepository' => $submission->getData('codeRepository'),
                         'dataRepository' => $submission->getData('dataRepository'),
                         'manifestFiles' => $submission->getData('manifestFiles'),
@@ -86,15 +115,20 @@ class CodecheckPlugin extends GenericPlugin
         return false;
     }
 
+    /**
+     * Add CODECHECK file components to submission file forms
+     */
     public function addCodecheckFileOptions(string $hookName, \PKP\components\forms\FormComponent $form): bool
     {
         if ($form->id === 'submissionFile') {
-            $request = Application::get()->getRequest();
+            $request = \APP\core\Application::get()->getRequest();
             $submission = $request->getRouter()->getHandler()->getAuthorizedContextObject(ASSOC_TYPE_SUBMISSION);
             
             if ($submission && $submission->getData('codecheckOptIn')) {
+                // Check if CODECHECK options are already in the form
                 foreach ($form->fields as $field) {
                     if ($field instanceof \PKP\components\forms\FieldOptions && $field->name === 'genreId') {
+                        // Check if CODECHECK options already exist
                         $hasCodecheckOptions = false;
                         foreach ($field->options as $option) {
                             if (str_contains($option['label'], 'CODECHECK') || str_contains($option['label'], 'codecheck')) {
@@ -181,13 +215,19 @@ class CodecheckPlugin extends GenericPlugin
             error_log("CODECHECK: Error creating genres: " . $e->getMessage());
         }
     }
-
+    
     public function addToSubmissionSchema(string $hookName, array $args): bool
     {
         $schema = $args[0];
         
         $schema->properties->codecheckOptIn = (object) [
             'type' => 'boolean',
+            'apiSummary' => true,
+            'validation' => ['nullable']
+        ];
+
+        $schema->properties->retrieveReserveCertificateIdentifier = (object) [
+            'type' => 'string',
             'apiSummary' => true,
             'validation' => ['nullable']
         ];
@@ -240,6 +280,15 @@ class CodecheckPlugin extends GenericPlugin
             $submission = $request->getRouter()->getHandler()->getAuthorizedContextObject(ASSOC_TYPE_SUBMISSION);
             
             if ($submission && $submission->getData('codecheckOptIn')) {
+                $form->addField(new \PKP\components\forms\FieldTextarea('retrieveReserveCertificateIdentifier', [
+                    'label' => 'Certificate Identifier',
+                    'description' => 'CODECHECK Certificate ID, Venue Type and Venue Name',
+                    'groupId' => 'default',
+                    'isRequired' => true,
+                    'rows' => 3,
+                    'value' => $submission->getData('retrieveReserveCertificateIdentifier'),
+                ]));
+
                 $form->addField(new \PKP\components\forms\FieldTextarea('codeRepository', [
                     'label' => 'Code Repository URLs',
                     'description' => 'Link(s) to your code repository (GitHub, GitLab, etc.)',
@@ -283,7 +332,14 @@ class CodecheckPlugin extends GenericPlugin
         $newSubmission = $params[0];
         $params_array = $params[2];
         
-        $fields = ['codecheckOptIn', 'codeRepository', 'dataRepository', 'manifestFiles', 'dataAvailabilityStatement'];
+        $fields = [
+            'codecheckOptIn',
+            'retrieveReserveCertificateIdentifier',
+            'codeRepository',
+            'dataRepository',
+            'manifestFiles',
+            'dataAvailabilityStatement',
+        ];
         
         foreach ($fields as $field) {
             if (isset($params_array[$field])) {
