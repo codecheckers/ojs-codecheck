@@ -236,7 +236,7 @@
         <div class="certificate-identifier-input-wrapper">
             <input
                 type="text"
-                v-model="identifier"
+                v-model="metadata.identifier"
                 placeholder="ID - e.g.: 2025-001"
                 class="certificate-identifier-input"
                 readonly
@@ -246,7 +246,7 @@
                 class="certificate-identifier-select certificate-identifier-venue-types"
                 :disabled="isIdentifierReserved"
             >
-                <option disabled value="default" selected>Venue Type</option>
+                <option disabled value="">Venue Type</option>
                 <option v-for="type in venueTypes" :key="type" :value="type">
                 {{ type }}
                 </option>
@@ -256,11 +256,13 @@
                 class="certificate-identifier-select certificate-identifier-venue-names"
                 :disabled="isIdentifierReserved"
             >
-                <option disabled value="default" selected>Venue Name</option>
+                <option disabled value="">Venue Name</option>
                 <option v-for="name in venueNames" :key="name" :value="name">
                 {{ name }}
                 </option>
             </select>
+            <p>Selected Type: {{ venueType }}</p>
+<p>Selected Name: {{ venueName }}</p>
         </div>
 
         <div v-if="issueUrl" class="certificate-identifier-link-wrapper">
@@ -304,7 +306,9 @@ export default {
   name: 'CodecheckMetadataForm',
   props: {
     submission: { type: Object, required: true },
-    canEdit: { type: Boolean, default: true }
+    canEdit: { type: Boolean, default: true },
+    name: {type: String},
+    value: {type: String},
   },
   data() {
     return {
@@ -323,12 +327,25 @@ export default {
         completionTime: '',
         identifier: ''
       },
+      // Further information neccesary for retrieving and reserving the Certificate Identifier
+      venueType: '',
+      venueName: '',
+      venueTypes: [],
+      venueNames: [],
+      issueUrl: '',
       fileCounter: 0,
       fileInputId: 'codecheck-file-input-' + Math.random().toString(36).substr(2, 9)
     }
   },
+  computed: {
+    // variable that stores if the Identifier was set and thus buttons should be disabled
+    isIdentifierReserved() {
+      return this.metadata.identifier.trim() !== '';
+    }
+  },
   mounted() {
     this.loadSubmissionData();
+    this.getVenueData();
   },
   methods: {
     loadSubmissionData() {
@@ -609,17 +626,78 @@ export default {
       alert('Certificate upload functionality will be implemented here.');
     },
 
-    reserveIdentifier() {
-      const newId = `CODECHECK-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9999)).padStart(4, '0')}`;
-      this.metadata.identifier = newId;
-      alert(`New identifier reserved: ${newId}`);
+    async getVenueData() {
+      let codecheckApiUrl = pkp.context.apiBaseUrl.replace(/\/api\/v1\/?$/, '');
+      codecheckApiUrl += '/codecheck_api';
+
+      try {
+          const response = await fetch(`${codecheckApiUrl}/getVenueData`, {
+              method: 'POST',
+              headers: {
+              'Content-Type': 'application/json',
+              'X-Csrf-Token': pkp.currentUser.csrfToken,
+              },
+          });
+          const data = await response.json();
+
+          if (data.success) {
+              console.log('Success:', data.message);
+              this.venueTypes = data.venueTypes;
+              this.venueNames = data.venueNames;
+              console.log('Venue types:', this.venueTypes);
+              console.log('Venue names:', this.venueNames);
+          } else {
+              console.error('Error:', data.error);
+          }
+      } catch (error) {
+          console.error('Failed to fetch venue data:', error);
+      }
+    },
+
+    async reserveIdentifier() {
+      if (this.venueType === 'default' || this.venueName === 'default') {
+        alert('Please select both a Venue Type and a Venue Name.');
+        return;
+      }
+
+      console.log(this.venueType + ', ' + this.venueName);
+
+      let codecheckApiUrl = pkp.context.apiBaseUrl.replace(/\/api\/v1\/?$/, '');
+      codecheckApiUrl += '/codecheck_api';
+
+      try {
+          const response = await fetch(`${codecheckApiUrl}/reserveIdentifier`, {
+              method: 'POST',
+              headers: {
+              'Content-Type': 'application/json',
+              'X-Csrf-Token': pkp.currentUser.csrfToken,
+              },
+              body: JSON.stringify({
+                venueType: this.venueType,
+                venueName: this.venueName,
+              }),
+          });
+          const data = await response.json();
+
+          if (data.success) {
+              this.metadata.identifier = data.identifier;
+              this.issueUrl = data.issueUrl;
+              this.$emit('update', this.metadata.identifier);
+              alert(`New identifier reserved: ${data.identifier}`);
+              console.log('New identifier reserved: ', data.identifier, data.issueUrl);
+          } else {
+              console.error('Error:', data.error);
+          }
+      } catch (error) {
+          console.error('Request failed:', error);
+      }
     },
 
     removeIdentifier() {
       if (confirm('Are you sure you want to remove this identifier?')) {
         this.metadata.identifier = '';
-        identifier.value = '';
-        issueUrl.value = '';
+        this.issueUrl = '';
+        this.$emit('update', this.metadata.identifier);
       }
     },
 
