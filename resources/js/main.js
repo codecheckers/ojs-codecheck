@@ -266,15 +266,25 @@ function mountCodecheckVueComponents() {
   }
 
   // Mount Certificate Identifier Component to the CODECHECK Metadata From in the editorial Workflow
-  const certificateIdentifierContainerMetadataForm = document.querySelector('#certificate-identifier-container');
+  /*const certificateIdentifierContainerMetadataForm = document.querySelector('#certificate-identifier-container');
   if (certificateIdentifierContainerMetadataForm) {
+    const input = certificateIdentifierContainerMetadataForm.querySelector('input');
+    const vueDiv = document.createElement('div');
+    certificateIdentifierContainerMetadataForm.insertBefore(vueDiv, input);
+    input.style.display = 'none';
+
     createApp(CodecheckCertificateIdentifier, {
       name: 'retrieveReserveCertificateIdentifier',
       label: 'Certificate Identifier',
       description: 'CODECHECK Certificate ID, Venue Type and Venue Name',
       value: '' // or initial value from textarea if you have one
-    }).mount(certificateIdentifierContainerMetadataForm);
-  }
+    }).mount(vueDiv);
+
+    vueDiv.addEventListener('update', (e) => {
+        input.value = e.detail;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  }*/
 }
 
 // Add CODECHECK file status component

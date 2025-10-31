@@ -232,7 +232,62 @@
         <span class="required">*</span>
       </h3>
 
-      <div id="certificate-identifier-container"></div>
+      <div class="certificate-identifier-section">
+        <div class="certificate-identifier-input-wrapper">
+            <input
+                type="text"
+                v-model="identifier"
+                placeholder="ID - e.g.: 2025-001"
+                class="certificate-identifier-input"
+                readonly
+            />
+            <select
+                v-model="venueType"
+                class="certificate-identifier-select certificate-identifier-venue-types"
+                :disabled="isIdentifierReserved"
+            >
+                <option disabled value="default" selected>Venue Type</option>
+                <option v-for="type in venueTypes" :key="type" :value="type">
+                {{ type }}
+                </option>
+            </select>
+            <select
+                v-model="venueName"
+                class="certificate-identifier-select certificate-identifier-venue-names"
+                :disabled="isIdentifierReserved"
+            >
+                <option disabled value="default" selected>Venue Name</option>
+                <option v-for="name in venueNames" :key="name" :value="name">
+                {{ name }}
+                </option>
+            </select>
+        </div>
+
+        <div v-if="issueUrl" class="certificate-identifier-link-wrapper">
+            <a :href="issueUrl" target="_blank">
+                View GitHub Issue
+            </a>
+        </div>
+
+        <div class="identifier-actions" id="certificate-identifier-button-wrapper">
+            <button
+                type="button"
+                class="pkpButton codecheck-btn"
+                :class="isIdentifierReserved ? 'bg-gray' : ''"
+                :disabled="isIdentifierReserved"
+                @click="reserveIdentifier"
+            >
+                Reserve Identifier
+            </button>
+            <button
+                type="button"
+                class="pkpButton codecheck-btn pkpButton--isWarnable codecheck-btn-warning"
+                @click="removeIdentifier"
+            >
+                Remove Identifier
+            </button>
+        </div>
+      </div>
     </div>
 
     <!-- Footer -->
@@ -554,14 +609,6 @@ export default {
       alert('Certificate upload functionality will be implemented here.');
     },
 
-    saveIdentifier() {
-      if (this.metadata.identifier) {
-        alert(`Identifier "${this.metadata.identifier}" saved successfully!`);
-      } else {
-        alert('Please enter an identifier first.');
-      }
-    },
-
     reserveIdentifier() {
       const newId = `CODECHECK-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9999)).padStart(4, '0')}`;
       this.metadata.identifier = newId;
@@ -571,6 +618,8 @@ export default {
     removeIdentifier() {
       if (confirm('Are you sure you want to remove this identifier?')) {
         this.metadata.identifier = '';
+        identifier.value = '';
+        issueUrl.value = '';
       }
     },
 
@@ -1073,5 +1122,101 @@ repositories:
   margin: 0;
   white-space: pre-wrap;
   word-wrap: break-word;
+}
+
+a {
+    word-break: break-all;
+}
+
+.certificate-identifier-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
+.certificate-identifier-input {
+    flex: 1;
+    font-size:14px;
+    padding: 6px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    height: 2.5rem;
+}
+
+.certificate-identifier-select:disabled {
+    /* Centeres the Text in the select */
+    text-align: center;
+    text-align-last: center;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: none !important; /* removes arrow background */
+    background-color: #868686;
+    color: #ffffff;
+    cursor: not-allowed;
+    pointer-events: none;
+    opacity: 0.6;
+    font-weight: 600;
+}
+
+.certificate-identifier-venue-types {
+    font-size:14px;
+    padding: 6px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    height: 2.5rem;
+    background: #fff;
+}
+
+.certificate-identifier-venue-names {
+    font-size:14px;
+    padding: 6px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    height: 2.5rem;
+    background: #fff;
+}
+
+#certificate-identifier-button-wrapper {
+    padding-top: 0.5rem;
+}
+
+.certificate-identifier-button {
+    font-size:.875rem;
+    color: white;
+    line-height:1.25rem;
+    border: none;
+    padding: .4375rem .75rem;
+    border-radius: 4px;
+    margin-right: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.bg-blue {
+    background: #006798;
+}
+
+.bg-blue:hover {
+  background: #005580;
+}
+
+.bg-red {
+    background: #dc3545;
+}
+
+.bg-red:hover {
+  background: #c82333;
+}
+
+.bg-gray {
+    background: #868686;
+}
+
+.certificate-identifier-button:disabled {
+    opacity: 0.6;
+    pointer-events: none;
+    cursor: not-allowed;
 }
 </style>
