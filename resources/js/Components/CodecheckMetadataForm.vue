@@ -11,6 +11,8 @@
             <option value="1.0">v1.0</option>
           </select>
         </div>
+
+        <div>{{ this.selectedVersion }}</div>
       </div>
     </div>
 
