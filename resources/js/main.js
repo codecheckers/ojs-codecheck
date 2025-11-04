@@ -3,11 +3,13 @@ import CodecheckManifestFiles from "./Components/CodecheckManifestFiles.vue";
 import CodecheckRepositoryList from "./Components/CodecheckRepositoryList.vue";
 import CodecheckReviewDisplay from "./Components/CodecheckReviewDisplay.vue";
 import CodecheckMetadataForm from "./Components/CodecheckMetadataForm.vue";
+import CodecheckMetadataFormWrapper from "./Components/CodecheckMetadataFormWrapper.vue";
 import CodecheckCertificateIdentifier from "./Components/CodecheckCertificateIdentifier.vue";
 
 // Register components with PKP registry
 pkp.registry.registerComponent("CodecheckReviewDisplay", CodecheckReviewDisplay);
 pkp.registry.registerComponent("CodecheckMetadataForm", CodecheckMetadataForm);
+pkp.registry.registerComponent("CodecheckMetadataFormWrapper", CodecheckMetadataFormWrapper);
 pkp.registry.registerComponent("CodecheckManifestFiles", CodecheckManifestFiles);
 pkp.registry.registerComponent("CodecheckRepositoryList", CodecheckRepositoryList);
 pkp.registry.registerComponent("CodecheckCertificateIdentifier", CodecheckCertificateIdentifier);
@@ -72,7 +74,7 @@ pkp.registry.storeExtend("workflow", (piniaContext) => {
     ) {
       return [
         {
-          component: "CodecheckMetadataForm",
+          component: "CodecheckMetadataFormWrapper",
           props: { 
             submission: submission,
             canEdit: true
@@ -265,25 +267,20 @@ function mountCodecheckVueComponents() {
       });
   }
 
-  // Mount Certificate Identifier Component to the CODECHECK Metadata From in the editorial Workflow
-  /*const certificateIdentifierContainerMetadataForm = document.querySelector('#certificate-identifier-container');
-  if (certificateIdentifierContainerMetadataForm) {
-    const input = certificateIdentifierContainerMetadataForm.querySelector('input');
+  // Mount CODECHECK Metadata Form Component in the editorial Workflow
+  /*const metadataFormContainer = document.querySelector('#codecheck-metadata-container');
+  if (metadataFormContainer) {
+    const input = metadataFormContainer.querySelector('div');
     const vueDiv = document.createElement('div');
-    certificateIdentifierContainerMetadataForm.insertBefore(vueDiv, input);
+    metadataFormContainer.insertBefore(vueDiv, input);
     input.style.display = 'none';
 
-    createApp(CodecheckCertificateIdentifier, {
-      name: 'retrieveReserveCertificateIdentifier',
-      label: 'Certificate Identifier',
-      description: 'CODECHECK Certificate ID, Venue Type and Venue Name',
+    createApp(CodecheckMetadataForm, {
+      name: 'metadataForm',
+      label: 'Metadata Form',
+      description: 'Form with CODECHECK Metadata',
       value: '' // or initial value from textarea if you have one
     }).mount(vueDiv);
-
-    vueDiv.addEventListener('update', (e) => {
-        input.value = e.detail;
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-    });
   }*/
 }
 
