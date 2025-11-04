@@ -73,12 +73,14 @@ class CodecheckRegisterGithubIssuesApiParser
      * @param CertificateIdentifier $certificateIdentifier The Certificate identifier to be added
      * @param string $codecheckVenueType The CODECHECK Venue Type that will be added as a label to the issue
      * @param string $codecheckVenueName The CODECHECK Venue Name that will be added as a second label to the issue
+     * @param string $authorString The formatted author string e.g. `author name et al.`
      * @return string Returns the GitHub URL of the newly created issue
      */
     public function addIssue(
         CertificateIdentifier $certificateIdentifier,
         string $codecheckVenueType,
-        string $codecheckVenueName
+        string $codecheckVenueName,
+        string $authorString,
     ): string {
         $token = $_ENV['CODECHECK_REGISTER_GITHUB_TOKEN'];
 
@@ -86,7 +88,8 @@ class CodecheckRegisterGithubIssuesApiParser
 
         $repositoryOwner = 'codecheckers';
         $repositoryName = 'testing-dev-register';
-        $issueTitle = 'New CODECHECK | ' . $certificateIdentifier->toStr();
+        $authorString = empty($authorString) ? 'New CODECHECK' : $authorString;
+        $issueTitle = $authorString . ' | ' . $certificateIdentifier->toStr();
         $issueBody = '';
         $labelStrings = ['id assigned'];
 

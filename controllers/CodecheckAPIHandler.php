@@ -36,10 +36,11 @@ class CodecheckAPIHandler
                 // get the Params that where sent from the JS script via AJAX
                 $venueType = $this->params["venueType"];
                 $venueName = $this->params["venueName"];
+                $authorString = $this->params["authorString"];
 
                 // check if they are of type string (If not return success false over the API)
-                if(is_string($venueType) && is_string($venueName)) {
-                    $this->reserveIdentifier($venueType, $venueName);
+                if(is_string($venueType) && is_string($venueName) && is_string($authorString)) {
+                    $this->reserveIdentifier($venueType, $venueName, $authorString);
                 } else {
                     $this->returnApiError(400, 'Bad Request', "The CODECHECK Venue Type and/ or Venue Names aren't of Type string as expected.");
                 }
@@ -67,7 +68,7 @@ class CodecheckAPIHandler
         exit();
     }
 
-    public function reserveIdentifier(string $venueType, string $venueName): void
+    public function reserveIdentifier(string $venueType, string $venueName, string $authorString): void
     {
         // CODECHECK GitHub Issue Register API parser
         $apiParser = new CodecheckRegisterGithubIssuesApiParser();
@@ -88,7 +89,7 @@ class CodecheckAPIHandler
         $codecheckVenue->setVenueName($venueName);
 
         // Add the new issue to the CODECHECK GtiHub Register
-        $issueGithubUrl = $apiParser->addIssue($new_identifier, $codecheckVenue->getVenueType(), $codecheckVenue->getVenueName());
+        $issueGithubUrl = $apiParser->addIssue($new_identifier, $codecheckVenue->getVenueType(), $codecheckVenue->getVenueName(), $authorString);
 
         // return a success result
         $result = [
