@@ -3,7 +3,7 @@
     <!-- Header Section -->
     <div class="codecheck-header">
       <div class="header-content">
-        <h2 class="workflow-title">WORKFLOW: REVIEW (CODECHECK)</h2>
+        <h2 class="workflow-title">WORKFLOW: CODECHECK</h2>
         <div class="version-selector">
           <label class="version-label">CODECHECK config version</label>
           <select v-model="selectedVersion" class="version-select">
@@ -11,8 +11,6 @@
             <option value="1.0">v1.0</option>
           </select>
         </div>
-
-        <div>{{ this.selectedVersion }}</div>
       </div>
     </div>
 
@@ -263,8 +261,6 @@
                 {{ name }}
                 </option>
             </select>
-            <p>Selected Type: {{ certificateIdentifier.venueType }}</p>
-<p>Selected Name: {{ certificateIdentifier.venueName }}</p>
         </div>
 
         <div v-if="certificateIdentifier.issueUrl" class="certificate-identifier-link-wrapper">
@@ -331,8 +327,8 @@ export default {
       },
       // Further information neccesary for retrieving and reserving the Certificate Identifier
       certificateIdentifier: {
-        venueType: '',
-        venueName: '',
+        venueType: 'default',
+        venueName: 'default',
         venueTypes: [],
         venueNames: [],
         issueUrl: '',
@@ -892,9 +888,10 @@ repositories:
 
 .workflow-title {
   margin: 0;
-  font-size: 14px;
+  font-size: inherit;
   font-weight: 700;
   text-transform: uppercase;
+  line-height: 1.75;
   color: #333;
 }
 
