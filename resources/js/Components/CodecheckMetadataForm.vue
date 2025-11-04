@@ -272,7 +272,7 @@
         <div class="identifier-actions" id="certificate-identifier-button-wrapper">
             <button
                 type="button"
-                class="pkpButton codecheck-btn"
+                class="pkpButton codecheck-btn certificate-identifier-button"
                 :class="isIdentifierReserved ? 'bg-gray' : ''"
                 :disabled="isIdentifierReserved"
                 @click="reserveIdentifier"
@@ -281,7 +281,7 @@
             </button>
             <button
                 type="button"
-                class="pkpButton codecheck-btn pkpButton--isWarnable codecheck-btn-warning"
+                class="pkpButton codecheck-btn pkpButton--isWarnable codecheck-btn-warning certificate-identifier-button"
                 @click="showRemoveIdentifierModal"
             >
                 Remove Identifier
@@ -326,12 +326,14 @@ export default {
         identifier: ''
       },
       // Further information neccesary for retrieving and reserving the Certificate Identifier
+      // rgb(208 10 108 / var(--tw-text-opacity, 1))
       certificateIdentifier: {
         venueType: 'default',
         venueName: 'default',
         venueTypes: [],
         venueNames: [],
         issueUrl: '',
+        authorShortSring: '',
       },
       fileCounter: 0,
       fileInputId: 'codecheck-file-input-' + Math.random().toString(36).substr(2, 9)
@@ -352,6 +354,9 @@ export default {
       const submission = this.submission;
       
       if (submission && submission.publications && submission.publications[0]) {
+
+        this.certificateIdentifier.authorShortSring = submission.publications[0].authorsStringShort;
+
         this.metadata.title = this.localizeSubmission(
           submission.publications[0].fullTitle,
           submission.locale
@@ -660,7 +665,7 @@ export default {
         return;
       }
 
-      console.log(this.certificateIdentifier.venueType + ', ' + this.certificateIdentifier.venueName);
+      console.log(this.certificateIdentifier.authorShortSring);
 
       let codecheckApiUrl = pkp.context.apiBaseUrl.replace(/\/api\/v1\/?$/, '');
       codecheckApiUrl += '/codecheck_api';
@@ -675,6 +680,7 @@ export default {
               body: JSON.stringify({
                 venueType: this.certificateIdentifier.venueType,
                 venueName: this.certificateIdentifier.venueName,
+                authorString: this.certificateIdentifier.authorShortSring,
               }),
           });
           const data = await response.json();
@@ -1303,18 +1309,6 @@ a {
     padding-top: 0.5rem;
 }
 
-.certificate-identifier-button {
-    font-size:.875rem;
-    color: white;
-    line-height:1.25rem;
-    border: none;
-    padding: .4375rem .75rem;
-    border-radius: 4px;
-    margin-right: 0.5rem;
-    font-weight: 600;
-    cursor: pointer;
-}
-
 .bg-blue {
     background: #006798;
 }
@@ -1332,12 +1326,18 @@ a {
 }
 
 .bg-gray {
-    background: #868686;
+  background: #868686;
+  border: 1px solid #868686;
+}
+
+.bg-gray:hover {
+  background: #868686;
+  border: 1px solid #868686;
 }
 
 .certificate-identifier-button:disabled {
-    opacity: 0.6;
-    pointer-events: none;
-    cursor: not-allowed;
+    opacity: 0.6 !important;
+    pointer-events: none !important;
+    cursor: not-allowed !important;
 }
 </style>
