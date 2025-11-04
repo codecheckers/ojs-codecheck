@@ -4,42 +4,35 @@ import CodecheckRepositoryList from "./Components/CodecheckRepositoryList.vue";
 import CodecheckReviewDisplay from "./Components/CodecheckReviewDisplay.vue";
 import CodecheckMetadataForm from "./Components/CodecheckMetadataForm.vue";
 
-// Register components with PKP registry
 pkp.registry.registerComponent("CodecheckReviewDisplay", CodecheckReviewDisplay);
 pkp.registry.registerComponent("CodecheckMetadataForm", CodecheckMetadataForm);
 pkp.registry.registerComponent("CodecheckManifestFiles", CodecheckManifestFiles);
 pkp.registry.registerComponent("CodecheckRepositoryList", CodecheckRepositoryList);
 
-// Extend workflow store to add CODECHECK tab/section
+const { useLocalize } = pkp.modules.useLocalize;
+const { t } = useLocalize();
+
 pkp.registry.storeExtend("workflow", (piniaContext) => {
   const workflowStore = piniaContext.store;
 
-  // Modify the workflow menu to add CODECHECK inside the Workflow tab
   workflowStore.extender.extendFn("getMenuItems", (menuItems, args) => {
     const submission = args?.submission;
-        
-    const hasCodecheck = submission?.codecheckOptIn;
-    console.log("Extending workflow menu, hasCodecheck:", submission);
+    const hasCodecheck = submission?.codecheckOptIn == true || submission?.codecheckOptIn == 1 || submission?.codecheckOptIn === "1";
+
     if (hasCodecheck) {
-      // Clone the menu items
       const updatedMenuItems = [...menuItems];
-      
-      // Find the Workflow menu item
       const workflowMenuItem = updatedMenuItems.find(item => item.key === 'workflow');
       
       if (workflowMenuItem && workflowMenuItem.items) {
-        
-        // Add CODECHECK to workflow items (after Review)
         const codecheckItem = {
           key: 'codecheck',
-          label: 'CODECHECK',
+          label: t('plugins.generic.codecheck.workflow.label'),
           state: { 
             primaryMenuItem: 'workflow',
-            stageId: 999  // Custom stage ID
+            stageId: 999
           }
         };
         
-        // Find Review index and insert after it
         const reviewIndex = workflowMenuItem.items.findIndex(
           item => item.state?.stageId === pkp.const.WORKFLOW_STAGE_ID_EXTERNAL_REVIEW
         );
@@ -47,10 +40,8 @@ pkp.registry.storeExtend("workflow", (piniaContext) => {
         if (reviewIndex >= 0) {
           workflowMenuItem.items.splice(reviewIndex + 1, 0, codecheckItem);
         } else {
-          // If Review not found, just add to end
           workflowMenuItem.items.push(codecheckItem);
         }
-        
       }
       
       return updatedMenuItems;
@@ -59,11 +50,9 @@ pkp.registry.storeExtend("workflow", (piniaContext) => {
     return menuItems;
   });
 
-  // Render CODECHECK metadata form when selected
   workflowStore.extender.extendFn("getPrimaryItems", (primaryItems, args) => {
     const submission = args?.submission;
         
-    // Show CODECHECK form when stageId is 999
     if (
       args?.selectedMenuState?.primaryMenuItem === "workflow" &&
       args?.selectedMenuState?.stageId === 999
@@ -79,7 +68,6 @@ pkp.registry.storeExtend("workflow", (piniaContext) => {
       ];
     }
     
-    // Keep your existing review stage code...
     if (
       args?.selectedMenuState?.primaryMenuItem === "workflow" &&
       args?.selectedMenuState?.stageId === pkp.const.WORKFLOW_STAGE_ID_EXTERNAL_REVIEW &&
@@ -98,11 +86,9 @@ pkp.registry.storeExtend("workflow", (piniaContext) => {
   });
 });
 
-// File manager extensions for CODECHECK
 pkp.registry.storeExtend("fileManager_SUBMISSION_FILES", (piniaContext) => {
   const fileStore = piniaContext.store;
   
-  // Only extend for submissions with CODECHECK
   const workflowStore = pkp.registry.getPiniaStore("workflow");
   const submission = workflowStore?.submission;
   
@@ -112,11 +98,7 @@ pkp.registry.storeExtend("fileManager_SUBMISSION_FILES", (piniaContext) => {
 
   fileStore.extender.extendFn("getColumns", (columns, args) => {
     const newColumns = [...columns];
-    
-    const { useLocalize } = pkp.modules.useLocalize;
-    const { t } = useLocalize();
 
-    // Add CODECHECK status column before actions
     newColumns.splice(newColumns.length - 1, 0, {
       header: t("plugins.generic.codecheck.codecheckStatus"),
       component: "CodecheckFileStatus",
@@ -131,31 +113,28 @@ pkp.registry.storeExtend("fileManager_SUBMISSION_FILES", (piniaContext) => {
       return [
         ...originalResult,
         {
-          label: "Mark as CODECHECK Output",
+          label: t("plugins.generic.codecheck.markAsOutput"),
           name: "markCodecheckOutput",
           icon: "CheckCircle",
           actionFn: ({ file }) => {
             const { useModal } = pkp.modules.useModal;
-            const { useLocalize } = pkp.modules.useLocalize;
-
             const { openDialog } = useModal();
             const { localize } = useLocalize();
 
             openDialog({
-              title: "Mark as CODECHECK Output",
-              message: `Do you want to mark "${localize(file.name)}" as a CODECHECK output file?`,
+              title: t("plugins.generic.codecheck.markAsOutputTitle"),
+              message: t("plugins.generic.codecheck.markAsOutputConfirm", { fileName: localize(file.name) }),
               actions: [
                 {
-                  label: "Yes",
+                  label: t("common.yes"),
                   isPrimary: true,
                   callback: (close) => {
-                    // TODO: Implement marking file as CODECHECK output
                     console.log("Marking file as CODECHECK output:", file);
                     close();
                   },
                 },
                 {
-                  label: "No",
+                  label: t("common.no"),
                   callback: (close) => {
                     close();
                   },
@@ -170,7 +149,6 @@ pkp.registry.storeExtend("fileManager_SUBMISSION_FILES", (piniaContext) => {
   });
 });
 
-// Mount Vue components for traditional form fields
 window.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
     mountCodecheckVueComponents();
@@ -178,7 +156,6 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 function mountCodecheckVueComponents() {
-  // Mount manifest files component
   const manifestContainer = document.querySelector('textarea[name="manifestFiles"]')?.parentElement;
   if (manifestContainer) {
     const textarea = manifestContainer.querySelector('textarea');
@@ -200,7 +177,6 @@ function mountCodecheckVueComponents() {
     });
   }
   
-  // Mount code repository component
   const codeRepoContainer = document.querySelector('textarea[name="codeRepository"]')?.parentElement;
   if (codeRepoContainer) {
     const textarea = codeRepoContainer.querySelector('textarea');
@@ -210,8 +186,8 @@ function mountCodecheckVueComponents() {
     
     createApp(CodecheckRepositoryList, {
       name: 'codeRepository',
-      label: 'Code Repository URLs',
-      description: 'Link(s) to your code repository',
+      label: 'Code Repository URL(s)',
+      description: 'Link(s) to your code repository(ies)',
       value: textarea.value,
     }).mount(vueDiv);
     
@@ -221,7 +197,6 @@ function mountCodecheckVueComponents() {
     });
   }
   
-  // Mount data repository component
   const dataRepoContainer = document.querySelector('textarea[name="dataRepository"]')?.parentElement;
   if (dataRepoContainer) {
     const textarea = dataRepoContainer.querySelector('textarea');
@@ -231,8 +206,8 @@ function mountCodecheckVueComponents() {
     
     createApp(CodecheckRepositoryList, {
       name: 'dataRepository',
-      label: 'Data Repository URLs',
-      description: 'Link(s) to your data repository',
+      label: 'Data Repository URL(s)',
+      description: 'Link(s) to your data repository(ies)',
       value: textarea.value,
     }).mount(vueDiv);
     
@@ -243,7 +218,6 @@ function mountCodecheckVueComponents() {
   }
 }
 
-// Add CODECHECK file status component
 const CodecheckFileStatus = {
   template: `
     <pkp-table-cell>
@@ -253,11 +227,13 @@ const CodecheckFileStatus = {
   props: ['file'],
   computed: {
     statusText() {
-      // TODO: Implement actual status checking
-      return 'Pending';
+      if (this.file.codecheckOutput) {
+        return t("plugins.generic.codecheck.status.marked");
+      }
+      return t("plugins.generic.codecheck.status.notMarked");
     },
     statusClass() {
-      return 'status-pending';
+      return this.file.codecheckOutput ? 'status-marked' : 'status-not-marked';
     }
   }
 };
