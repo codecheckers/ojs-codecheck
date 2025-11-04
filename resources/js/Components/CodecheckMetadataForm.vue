@@ -244,31 +244,31 @@
                 readonly
             />
             <select
-                v-model="venueType"
+                v-model="certificateIdentifier.venueType"
                 class="certificate-identifier-select certificate-identifier-venue-types"
                 :disabled="isIdentifierReserved"
             >
-                <option disabled value="">Venue Type</option>
-                <option v-for="type in venueTypes" :key="type" :value="type">
+                <option disabled value="default" selected>Venue Type</option>
+                <option v-for="type in certificateIdentifier.venueTypes" :key="type" :value="type">
                 {{ type }}
                 </option>
             </select>
             <select
-                v-model="venueName"
+                v-model="certificateIdentifier.venueName"
                 class="certificate-identifier-select certificate-identifier-venue-names"
                 :disabled="isIdentifierReserved"
             >
-                <option disabled value="">Venue Name</option>
-                <option v-for="name in venueNames" :key="name" :value="name">
+                <option disabled value="default" selected>Venue Name</option>
+                <option v-for="name in certificateIdentifier.venueNames" :key="name" :value="name">
                 {{ name }}
                 </option>
             </select>
-            <p>Selected Type: {{ venueType }}</p>
-<p>Selected Name: {{ venueName }}</p>
+            <p>Selected Type: {{ certificateIdentifier.venueType }}</p>
+<p>Selected Name: {{ certificateIdentifier.venueName }}</p>
         </div>
 
-        <div v-if="issueUrl" class="certificate-identifier-link-wrapper">
-            <a :href="issueUrl" target="_blank">
+        <div v-if="certificateIdentifier.issueUrl" class="certificate-identifier-link-wrapper">
+            <a :href="certificateIdentifier.issueUrl" target="_blank">
                 View GitHub Issue
             </a>
         </div>
@@ -286,7 +286,7 @@
             <button
                 type="button"
                 class="pkpButton codecheck-btn pkpButton--isWarnable codecheck-btn-warning"
-                @click="removeIdentifier"
+                @click="showRemoveIdentifierModal"
             >
                 Remove Identifier
             </button>
@@ -330,11 +330,13 @@ export default {
         identifier: ''
       },
       // Further information neccesary for retrieving and reserving the Certificate Identifier
-      venueType: '',
-      venueName: '',
-      venueTypes: [],
-      venueNames: [],
-      issueUrl: '',
+      certificateIdentifier: {
+        venueType: '',
+        venueName: '',
+        venueTypes: [],
+        venueNames: [],
+        issueUrl: '',
+      },
       fileCounter: 0,
       fileInputId: 'codecheck-file-input-' + Math.random().toString(36).substr(2, 9)
     }
@@ -644,10 +646,10 @@ export default {
 
           if (data.success) {
               console.log('Success:', data.message);
-              this.venueTypes = data.venueTypes;
-              this.venueNames = data.venueNames;
-              console.log('Venue types:', this.venueTypes);
-              console.log('Venue names:', this.venueNames);
+              this.certificateIdentifier.venueTypes = data.venueTypes;
+              this.certificateIdentifier.venueNames = data.venueNames;
+              console.log('Venue types:', this.certificateIdentifier.venueTypes);
+              console.log('Venue names:', this.certificateIdentifier.venueNames);
           } else {
               console.error('Error:', data.error);
           }
@@ -657,12 +659,12 @@ export default {
     },
 
     async reserveIdentifier() {
-      if (this.venueType === 'default' || this.venueName === 'default') {
+      if (this.certificateIdentifier.venueType === 'default' || this.certificateIdentifier.venueName === 'default') {
         alert('Please select both a Venue Type and a Venue Name.');
         return;
       }
 
-      console.log(this.venueType + ', ' + this.venueName);
+      console.log(this.certificateIdentifier.venueType + ', ' + this.certificateIdentifier.venueName);
 
       let codecheckApiUrl = pkp.context.apiBaseUrl.replace(/\/api\/v1\/?$/, '');
       codecheckApiUrl += '/codecheck_api';
@@ -675,15 +677,15 @@ export default {
               'X-Csrf-Token': pkp.currentUser.csrfToken,
               },
               body: JSON.stringify({
-                venueType: this.venueType,
-                venueName: this.venueName,
+                venueType: this.certificateIdentifier.venueType,
+                venueName: this.certificateIdentifier.venueName,
               }),
           });
           const data = await response.json();
 
           if (data.success) {
               this.metadata.identifier = data.identifier;
-              this.issueUrl = data.issueUrl;
+              this.certificateIdentifier.issueUrl = data.issueUrl;
               this.$emit('update', this.metadata.identifier);
               alert(`New identifier reserved: ${data.identifier}`);
               console.log('New identifier reserved: ', data.identifier, data.issueUrl);
@@ -695,10 +697,52 @@ export default {
       }
     },
 
-    removeIdentifier() {
-      if (confirm('Are you sure you want to remove this identifier?')) {
+    removeIdentifier(close) {
+      this.metadata.identifier = '';
+      this.certificateIdentifier.issueUrl = '';
+      this.$emit('update', this.metadata.identifier);
+
+      close();
+    },
+
+    showRemoveIdentifierModal() {
+      if (!this.canUsePkpModal()) {
+        this.fallbackCertificateIdentifierModal();
+        return;
+      }
+
+      const { useModal } = pkp.modules.useModal;
+      const { openDialog } = useModal();
+
+      openDialog({
+        title: "Remove Certificate Identifier",
+        message: `
+          <div class="modal-form">
+            <div class="modal-field">
+              <label for="repo-url" class="modal-label">Are you sure you want to remove this identifier?</label>
+            </div>
+          </div>
+        `,
+        actions: [
+          {
+            label: "No",
+            callback: (close) => close()
+          },
+          {
+            label: "Yes",
+            isPrimary: true,
+            callback: (close) => {
+              this.removeIdentifier(close);
+            }
+          }
+        ]
+      });
+    },
+
+    fallbackCertificateIdentifierModal() {
+      if(confirm('Are you sure you want to remove this identifier?')) {
         this.metadata.identifier = '';
-        this.issueUrl = '';
+        this.certificateIdentifier.issueUrl = '';
         this.$emit('update', this.metadata.identifier);
       }
     },

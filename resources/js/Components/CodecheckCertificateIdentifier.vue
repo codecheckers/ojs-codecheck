@@ -30,6 +30,16 @@
             </select>
         </div>
 
+        <div>
+            <span>Type</span>
+            <span>{{ venueType }}</span>
+        </div>
+
+        <div>
+            <span>Name</span>
+            <span>{{ venueName }}</span>
+        </div>
+
         <div v-if="issueUrl" class="certificate-identifier-link-wrapper">
             <a :href="issueUrl" target="_blank">
                 View GitHub Issue
