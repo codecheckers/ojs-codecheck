@@ -1,334 +1,424 @@
 <template>
   <div class="codecheck-metadata-form">
-    <!-- Header Section -->
-    <div class="codecheck-header">
-      <div class="header-content">
-        <h2 class="workflow-title">WORKFLOW: REVIEW (CODECHECK)</h2>
-        <div class="version-selector">
-          <label class="version-label">CODECHECK config version</label>
-          <select v-model="selectedVersion" class="version-select">
-            <option value="latest">latest</option>
-            <option value="1.0">v1.0</option>
-          </select>
-        </div>
-      </div>
+    <div v-if="loading" class="loading-state">
+      <span class="pkpSpinner"></span>
+      <p>{{ t('common.loading') }}</p>
     </div>
 
-    <!-- Publication Type -->
-    <div class="publication-section">
-      <div class="radio-options">
-        <label class="radio-option">
-          <input type="radio" v-model="publicationType" value="doi" name="publication-type" />
-          <span class="radio-label">check-published with a DOI (e.g., Zenodo)</span>
-        </label>
-        <label class="radio-option">
-          <input type="radio" v-model="publicationType" value="separate" name="publication-type" />
-          <span class="radio-label">check-published in separate section of the journal</span>
-        </label>
-      </div>
+    <div v-else-if="error" class="error-state">
+      <p>{{ error }}</p>
+      <button class="pkpButton" @click="loadData">{{ t('common.retry') }}</button>
     </div>
 
-    <!-- Manifest Section -->
-    <div class="form-section">
-      <div class="section-header">
-        <h3 class="section-title">Manifest <span class="required">*</span></h3>
-        <div style="position: relative; display: inline-block;">
-          <button class="pkpButton codecheck-btn" @click="triggerFileUpload">+ File</button>
-          <input 
-            type="file" 
-            :id="fileInputId"
-            @change="handleFileUpload" 
-            multiple 
-            style="position: absolute; left: -9999px; opacity: 0;"
-            accept=".pdf,.csv,.txt,.yml,.yaml,.json,.zip"
-          >
+    <div v-else-if="dataLoaded">
+      <div class="codecheck-header">
+        <div class="header-content">
+          <h2 class="workflow-title">{{ t('plugins.generic.codecheck.workflow.title') }}</h2>
+          <div class="version-selector">
+            <label class="version-label">{{ t('plugins.generic.codecheck.configVersion') }}</label>
+            <select v-model="metadata.configVersion" class="version-select">
+              <option value="latest">latest</option>
+              <option value="1.0">1.0</option>
+            </select>
+          </div>
         </div>
       </div>
-      <p class="section-description">
-        The output files and their descriptions created by the editorial workflow and considered in the CODECHECK
-      </p>
-      
-      <table class="pkpTable manifest-table" v-if="uploadedFiles.length > 0">
-        <thead>
-          <tr>
-            <th width="20"></th>
-            <th>Output File</th>
-            <th>Description</th>
-            <th width="80"></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(file, index) in uploadedFiles" :key="file.id" class="manifest-row">
-            <td>
-              <input type="checkbox" v-model="file.checked" class="file-checkbox" />
-            </td>
-            <td>
-              <div class="file-info">
-                <span class="file-name">{{ file.name }}</span>
-                <span class="file-size">({{ formatFileSize(file.size) }})</span>
-              </div>
-            </td>
-            <td>
-              <input
-                type="text"
-                v-model="file.description"
-                class="pkpFormField__input"
-                placeholder="Some example description of this output file"
-              />
-            </td>
-            <td>
-              <button class="pkpButton codecheck-btn pkpButton--isWarnable codecheck-btn-warning" @click="removeUploadedFile(index)">×</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <div v-else class="empty-state">
-        No files uploaded yet. Click "+ File" to upload output files.
-      </div>
-    </div>
 
-    <!-- Paper Metadata -->
-    <div class="form-section">
-      <h3 class="section-title">Paper Metadata <span class="required">*</span></h3>
-      
-      <!-- Title -->
-      <div class="field-group full-width">
-        <label class="field-label">Title</label>
-        <input
-          type="text"
-          v-model="metadata.title"
-          class="pkpFormField__input full-width-input"
-          required
-        />
-      </div>
-
-      <!-- Authors -->
-      <div class="field-group full-width">
-        <div class="field-header">
-          <label class="field-label">Authors</label>
-          <button class="pkpButton codecheck-btn" @click="showAuthorModal">+ Author</button>
+      <div class="publication-section">
+        <div class="radio-options">
+          <label class="radio-option">
+            <input type="radio" v-model="metadata.publicationType" value="doi" name="publication-type" />
+            <span class="radio-label">{{ t('plugins.generic.codecheck.publishWithDOI') }}</span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" v-model="metadata.publicationType" value="separate" name="publication-type" />
+            <span class="radio-label">{{ t('plugins.generic.codecheck.publishSeparate') }}</span>
+          </label>
         </div>
+      </div>
+
+      <div class="form-section read-only-section">
+        <h3 class="section-title">{{ t('plugins.generic.codecheck.paperMetadata.title') }}</h3>
         
-        <div v-if="metadata.authors.length > 0" class="items-list">
-          <div v-for="(author, index) in metadata.authors" :key="index" class="list-item">
-            <div class="item-content">
-              <div class="item-name">{{ author.name }}</div>
-              <div class="item-orcid">{{ author.orcid }}</div>
+        <div class="info-grid">
+          <div class="info-item">
+            <label class="info-label">{{ t('common.title') }}:</label>
+            <div class="info-value">{{ submissionData.title || t('common.notAvailable') }}</div>
+          </div>
+
+          <div class="info-item">
+            <label class="info-label">{{ t('plugins.generic.codecheck.paperMetadata.authors') }}:</label>
+            <div class="info-value">
+              <template v-if="submissionData.authors && submissionData.authors.length > 0">
+                <div v-for="(author, index) in submissionData.authors" :key="'author-' + index" class="author-item">
+                  {{ author.name || t('common.unknown') }}
+                  <span v-if="author.orcid" class="orcid-badge">{{ author.orcid }}</span>
+                </div>
+              </template>
+              <em v-else>{{ t('plugins.generic.codecheck.paperMetadata.noAuthors') }}</em>
             </div>
-            <button class="pkpButton codecheck-btn pkpButton--isWarnable codecheck-btn-warning" @click="removeAuthor(index)">×</button>
+          </div>
+
+          <div class="info-item" v-if="submissionData.doi">
+            <label class="info-label">{{ t('metadata.property.displayName.doi') }}:</label>
+            <div class="info-value">
+              <a :href="'https://doi.org/' + submissionData.doi" target="_blank">
+                {{ submissionData.doi }}
+              </a>
+            </div>
+          </div>
+
+          <div class="info-item" v-if="submissionData.codeRepository">
+            <label class="info-label">{{ t('plugins.generic.codecheck.codeRepository') }}:</label>
+            <div class="info-value">
+              <a :href="submissionData.codeRepository" target="_blank">
+                {{ submissionData.codeRepository }}
+              </a>
+            </div>
+          </div>
+
+          <div class="info-item" v-if="submissionData.dataRepository">
+            <label class="info-label">{{ t('plugins.generic.codecheck.dataRepository') }}:</label>
+            <div class="info-value">
+              <a :href="submissionData.dataRepository" target="_blank">
+                {{ submissionData.dataRepository }}
+              </a>
+            </div>
+          </div>
+
+          <div class="info-item" v-if="submissionData.manifestFiles">
+            <label class="info-label">{{ t('plugins.generic.codecheck.manifestFiles.label') }}:</label>
+            <div class="info-value">
+              <pre class="manifest-preview">{{ submissionData.manifestFiles }}</pre>
+            </div>
           </div>
         </div>
-        <div v-else class="empty-state">
-          No authors added yet
-        </div>
       </div>
 
-      <!-- Reference -->
-      <div class="field-group full-width">
-        <label class="field-label">Reference (e.g. the DOI of the preprint)</label>
-        <input
-          type="text"
-          v-model="metadata.reference"
-          class="pkpFormField__input full-width-input"
-          placeholder="https://doi.org/preprint_1"
-        />
-      </div>
+      <div class="form-section">
+        <h3 class="section-title">{{ t('plugins.generic.codecheck.details.title') }}</h3>
+        <p class="section-description">{{ t('plugins.generic.codecheck.workflow.description') }}</p>
 
-      <!-- Source -->
-      <div class="field-group full-width">
-        <label class="field-label">Source of the checked material</label>
-        <input
-          type="text"
-          v-model="metadata.source"
-          class="pkpFormField__input full-width-input"
-          placeholder="https://download.url/dataset/123456/v2"
-        />
-      </div>
-    </div>
-
-    <!-- CODECHECKers -->
-    <div class="form-section">
-      <div class="section-header">
-        <h3 class="section-title">CODECHECKers <span class="required">*</span></h3>
-        <button class="pkpButton codecheck-btn" @click="showCodecheckerModal">+ CODECHECKer</button>
-      </div>
-      
-      <div v-if="metadata.codecheckers.length > 0" class="items-list">
-        <div v-for="(checker, index) in metadata.codecheckers" :key="index" class="list-item">
-          <div class="item-content">
-            <div class="item-name">{{ checker.name }}</div>
-            <div class="item-orcid">{{ checker.orcid }}</div>
+        <div class="field-group">
+          <div class="field-header">
+            <label class="field-label">{{ t('plugins.generic.codecheck.manifest.title') }} <span class="required">*</span></label>
+            <button type="button" class="pkpButton btn-add" @click="triggerFileUpload">{{ t('plugins.generic.codecheck.manifestFiles.addFile') }}</button>
+            <input 
+              type="file" 
+              ref="fileInput"
+              @change="handleFileUpload" 
+              multiple 
+              style="position: absolute; left: -9999px; opacity: 0;"
+              accept=".pdf,.csv,.txt,.yml,.yaml,.json,.zip,.png,.jpg"
+            />
           </div>
-          <button class="pkpButton codecheck-btn pkpButton--isWarnable codecheck-btn-warning" @click="removeCodechecker(index)">×</button>
+          <p class="field-description">{{ t('plugins.generic.codecheck.manifest.description') }}</p>
+          
+          <table class="pkpTable manifest-table" v-if="metadata.manifest && metadata.manifest.length > 0">
+            <thead>
+              <tr>
+                <th width="20"></th>
+                <th>{{ t('plugins.generic.codecheck.manifest.addFile') }}</th>
+                <th>{{ t('common.comment') }}</th>
+                <th width="80"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(file, index) in metadata.manifest" :key="'manifest-' + index" class="manifest-row">
+                <td>
+                  <input type="checkbox" v-model="file.checked" class="file-checkbox" />
+                </td>
+                <td>
+                  <div class="file-info">
+                    <span class="file-name">{{ file.file }}</span>
+                    <span class="file-size" v-if="file.size">({{ formatFileSize(file.size) }})</span>
+                  </div>
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    v-model="file.comment"
+                    class="pkpFormField__input"
+                    :placeholder="t('plugins.generic.codecheck.manifestFiles.commentPlaceholder')"
+                  />
+                </td>
+                <td>
+                  <button 
+                    type="button"
+                    class="pkpButton codecheck-btn pkpButton--isWarnable" 
+                    @click="removeManifestFile(index)"
+                  >×</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div v-else class="empty-state">
+            {{ t('plugins.generic.codecheck.manifest.emptyState') }}
+          </div>
+        </div>
+
+        <div class="field-group">
+          <div class="field-header">
+            <label class="field-label">{{ t('plugins.generic.codecheck.repositories.title') }}</label>
+            <button type="button" class="pkpButton btn-add" @click="addRepository">{{ t('plugins.generic.codecheck.repositories.add') }}</button>
+          </div>
+          <p class="field-description">{{ t('plugins.generic.codecheck.repositories.description') }}</p>
+          
+          <div v-if="repositories.length > 0" class="repository-list">
+            <div v-for="(repo, index) in repositories" :key="'repo-' + index" class="repository-item">
+              <input
+                type="url"
+                v-model="repositories[index]"
+                class="pkpFormField__input"
+                :placeholder="t('plugins.generic.codecheck.repository.placeholder')"
+              />
+              <button 
+                type="button"
+                class="pkpButton codecheck-btn pkpButton--isWarnable" 
+                @click="removeRepository(index)"
+              >×</button>
+            </div>
+          </div>
+          <div v-else class="empty-state">
+            No repositories added yet
+          </div>
+        </div>
+
+        <div class="field-group">
+          <div class="field-header">
+            <label class="field-label">{{ t('plugins.generic.codecheck.codecheckers.title') }} <span class="required">*</span></label>
+            <button type="button" class="pkpButton btn-add" @click="showCodecheckerModal">{{ t('plugins.generic.codecheck.codecheckers.add') }}</button>
+          </div>
+          
+          <div v-if="metadata.codecheckers && metadata.codecheckers.length > 0" class="items-list">
+            <div v-for="(checker, index) in metadata.codecheckers" :key="'checker-' + index" class="list-item">
+              <div class="item-content">
+                <div class="item-name">{{ checker.name }}</div>
+                <div class="item-orcid" v-if="checker.orcid">ORCID: {{ checker.orcid }}</div>
+              </div>
+              <button 
+                type="button"
+                class="pkpButton codecheck-btn pkpButton--isWarnable" 
+                @click="removeCodechecker(index)"
+              >×</button>
+            </div>
+          </div>
+          <div v-else class="empty-state">
+            {{ t('plugins.generic.codecheck.codecheckers.emptyState') }}
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">{{ t('plugins.generic.codecheck.completionTime.label') }}</label>
+          <input
+            type="datetime-local"
+            v-model="metadata.checkTime"
+            class="pkpFormField__input full-width"
+          />
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">{{ t('plugins.generic.codecheck.certificate.summary') }} <span class="required">*</span></label>
+          <p class="field-description">{{ t('plugins.generic.codecheck.certificate.summaryDescription') }}</p>
+          <textarea
+            v-model="metadata.summary"
+            class="pkpFormField__input pkpFormField__input--textarea full-width"
+            rows="6"
+            :placeholder="t('plugins.generic.codecheck.certificate.summaryPlaceholder')"
+          ></textarea>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">{{ t('plugins.generic.codecheck.certificate.reportUrl') }}</label>
+          <p class="field-description">{{ t('plugins.generic.codecheck.certificate.reportUrlDescription') }}</p>
+          <input
+            type="url"
+            v-model="metadata.reportUrl"
+            class="pkpFormField__input full-width"
+            placeholder="https://zenodo.org/record/12345"
+          />
         </div>
       </div>
-      <div v-else class="empty-state">
-        No CODECHECKers added yet
-      </div>
-    </div>
 
-    <!-- Certificate -->
-    <div class="form-section">
-      <h3 class="section-title full-width-title">
-        CODECHECK certificate: where is it stored (e.g. the DOI) or upload new certificate 
-        <span class="required">*</span>
-      </h3>
-      
-      <div class="field-group full-width">
-        <div class="certificate-input-group">
+      <div class="form-section identifier-section">
+        <h3 class="section-title">{{ t('plugins.generic.codecheck.identifier.title') }} <span class="required">*</span></h3>
+        
+        <div class="field-group">
           <input
             type="text"
-            v-model="metadata.certificateUrl"
-            class="pkpFormField__input full-width-input"
-            placeholder="https://doi.org/10.5281/zenodo.3624056"
+            v-model="metadata.certificate"
+            class="pkpFormField__input full-width"
+            :placeholder="t('plugins.generic.codecheck.identifier.label')"
           />
-          <button class="pkpButton codecheck-btn" @click="uploadCertificate">Upload Certificate</button>
+        </div>
+        
+        <div class="identifier-actions">
+          <button type="button" class="pkpButton codecheck-btn" @click="saveIdentifier">{{ t('plugins.generic.codecheck.identifier.save') }}</button>
+          <button type="button" class="pkpButton codecheck-btn" @click="reserveIdentifier">{{ t('plugins.generic.codecheck.identifier.reserve') }}</button>
+          <button type="button" class="pkpButton codecheck-btn pkpButton--isWarnable" @click="removeIdentifier">{{ t('plugins.generic.codecheck.identifier.remove') }}</button>
         </div>
       </div>
 
-      <div class="field-group full-width">
-        <label class="field-label">Summary of the CODECHECK</label>
-        <textarea
-          v-model="metadata.summary"
-          class="pkpFormField__input pkpFormField__input--textarea full-width-input"
-          rows="4"
-          placeholder="The check was straightforward as all material was provided and documented well, but computations took about 3 hours to run."
-        ></textarea>
-      </div>
-    </div>
-
-    <!-- Repositories -->
-    <div class="form-section">
-      <div class="section-header">
-        <h3 class="section-title">Repositories</h3>
-        <button class="pkpButton codecheck-btn" @click="showRepositoryModal">+ Repository</button>
-      </div>
-      
-      <div v-if="metadata.repositories.length > 0" class="repository-list">
-        <div v-for="(repo, index) in metadata.repositories" :key="index" class="repository-item">
-          <a :href="repo" target="_blank" class="repository-link">{{ repo }}</a>
-          <button class="pkpButton codecheck-btn pkpButton--isWarnable codecheck-btn-warning" @click="removeRepository(index)">×</button>
+      <div class="form-footer">
+        <div class="footer-actions">
+          <button 
+            type="button"
+            class="pkpButton codecheck-btn" 
+            @click="previewYaml"
+            :disabled="!canPreview"
+          >
+            {{ t('plugins.generic.codecheck.previewYaml') }}
+          </button>
+          <button 
+            type="button"
+            class="pkpButton codecheck-btn pkpButton--isPrimary" 
+            @click="saveMetadata"
+            :disabled="saving"
+          >
+            {{ saving ? t('common.saving') : t('common.save') }}
+          </button>
+        </div>
+        <div v-if="saveMessage" class="save-message" :class="saveMessageType">
+          {{ saveMessage }}
         </div>
       </div>
-      <div v-else class="empty-state">
-        No repositories added yet
-      </div>
-    </div>
-
-    <!-- Completion Time -->
-    <div class="form-section">
-      <label class="field-label full-width-label">Time the CODECHECK was completed</label>
-      <input
-        type="datetime-local"
-        v-model="metadata.completionTime"
-        class="pkpFormField__input full-width-input"
-      />
-    </div>
-
-    <!-- Identifier -->
-    <div class="form-section">
-      <h3 class="section-title full-width-title">
-        Identifier: ID of the CODECHECK certificate 
-        <span class="required">*</span>
-      </h3>
-      
-      <div class="field-group full-width">
-        <input
-          type="text"
-          v-model="metadata.identifier"
-          class="pkpFormField__input full-width-input"
-          placeholder="ID of the CODECHECK certificate"
-          required
-        />
-      </div>
-      
-      <div class="identifier-actions">
-        <button class="pkpButton codecheck-btn" @click="saveIdentifier">Save Identifier</button>
-        <button class="pkpButton codecheck-btn" @click="reserveIdentifier">Reserve Identifier</button>
-        <button class="pkpButton codecheck-btn pkpButton--isWarnable codecheck-btn-warning" @click="removeIdentifier">Remove Identifier</button>
-      </div>
-    </div>
-
-    <!-- Footer -->
-    <div class="form-footer">
-      <button class="pkpButton codecheck-btn pkpButton--isPrimary preview-button codecheck-btn-primary" @click="previewYaml">
-        Preview CODECHECK metadata file
-      </button>
     </div>
   </div>
 </template>
 
 <script>
+const { useLocalize } = pkp.modules.useLocalize;
+
 export default {
   name: 'CodecheckMetadataForm',
   props: {
-    submission: { type: Object, required: true },
-    canEdit: { type: Boolean, default: true }
+    submission: {
+      type: Object,
+      required: true
+    },
+    canEdit: {
+      type: Boolean,
+      default: true
+    }
+  },
+  setup() {
+    const { t } = useLocalize();
+    return { t };
   },
   data() {
     return {
-      selectedVersion: 'latest',
-      publicationType: 'doi',
-      uploadedFiles: [],
-      metadata: {
+      loading: true,
+      saving: false,
+      dataLoaded: false,
+      error: null,
+      saveMessage: '',
+      saveMessageType: '',
+      repositories: [],
+      submissionData: {
+        id: null,
         title: '',
         authors: [],
-        reference: '',
-        source: '',
-        codecheckers: [],
-        certificateUrl: '',
-        summary: '',
-        repositories: [],
-        completionTime: '',
-        identifier: ''
+        doi: '',
+        codeRepository: '',
+        dataRepository: '',
+        manifestFiles: '',
+        dataAvailabilityStatement: ''
       },
-      fileCounter: 0,
-      fileInputId: 'codecheck-file-input-' + Math.random().toString(36).substr(2, 9)
+      metadata: {
+        configVersion: 'latest',
+        publicationType: 'doi',
+        manifest: [],
+        repository: '',
+        codecheckers: [],
+        certificate: '',
+        checkTime: '',
+        summary: '',
+        reportUrl: ''
+      }
+    }
+  },
+  computed: {
+    canPreview() {
+      return this.metadata.manifest.length > 0 && 
+             this.metadata.codecheckers.length > 0 &&
+             this.metadata.certificate;
     }
   },
   mounted() {
-    this.loadSubmissionData();
+    this.loadData();
   },
   methods: {
-    loadSubmissionData() {
-      const submission = this.submission;
+    async loadData() {
+      this.loading = true;
+      this.error = null;
+      this.dataLoaded = false;
       
-      if (submission && submission.publications && submission.publications[0]) {
-        this.metadata.title = this.localizeSubmission(
-          submission.publications[0].fullTitle,
-          submission.locale
-        );
-        
-        if (submission.publications[0].authors) {
-          this.metadata.authors = submission.publications[0].authors.map(author => ({
-            name: `${author.givenName} ${author.familyName}`.trim(),
-            orcid: author.orcid ? `ORCID: ${author.orcid}` : ''
-          }));
+      try {
+        if (!this.submission || !this.submission.id) {
+          throw new Error('Invalid submission object');
         }
-      }
-    },
 
-    localizeSubmission(value, locale) {
-      if (typeof value === 'object' && value[locale]) {
-        return value[locale];
+        const submissionId = this.submission.id;
+        const pathParts = window.location.pathname.split('/');
+        const contextName = pathParts[3];
+        const apiUrl = `${window.location.origin}/ojs/index.php/${contextName}/codecheck/metadata?submissionId=${submissionId}`;
+        
+        const response = await fetch(apiUrl, {
+          headers: {
+            'X-Csrf-Token': pkp.currentUser.csrfToken
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        
+        this.submissionData = {
+          id: data.submission?.id || submissionId,
+          title: data.submission?.title || '',
+          authors: Array.isArray(data.submission?.authors) ? data.submission.authors : [],
+          doi: data.submission?.doi || '',
+          codeRepository: data.submission?.codeRepository || '',
+          dataRepository: data.submission?.dataRepository || '',
+          manifestFiles: data.submission?.manifestFiles || '',
+          dataAvailabilityStatement: data.submission?.dataAvailabilityStatement || ''
+        };
+        
+        if (data.codecheck && typeof data.codecheck === 'object') {
+          this.metadata = {
+            configVersion: data.codecheck.configVersion || data.codecheck.config_version || 'latest',
+            publicationType: data.codecheck.publicationType || data.codecheck.publication_type || 'doi',
+            manifest: Array.isArray(data.codecheck.manifest) ? data.codecheck.manifest : 
+                      (typeof data.codecheck.manifest === 'string' ? JSON.parse(data.codecheck.manifest) : []),
+            repository: data.codecheck.repository || '',
+            codecheckers: Array.isArray(data.codecheck.codecheckers) ? data.codecheck.codecheckers : 
+                          (typeof data.codecheck.codecheckers === 'string' ? JSON.parse(data.codecheck.codecheckers) : []),
+            certificate: data.codecheck.certificate || '',
+            checkTime: data.codecheck.checkTime || data.codecheck.check_time ? 
+                      this.formatDateTimeLocal(data.codecheck.checkTime || data.codecheck.check_time) : '',
+            summary: data.codecheck.summary || '',
+            reportUrl: data.codecheck.reportUrl || data.codecheck.report_url || ''
+          };
+          
+          if (data.codecheck.repository) {
+            this.repositories = data.codecheck.repository.split(',').map(r => r.trim()).filter(r => r);
+          }
+        }
+        
+        this.dataLoaded = true;
+        
+      } catch (error) {
+        console.error('Load error:', error);
+        this.error = this.t('plugins.generic.codecheck.loadError') + ': ' + error.message;
+      } finally {
+        this.loading = false;
       }
-      return value || '';
     },
 
     triggerFileUpload() {
-      const fileInput = document.getElementById(this.fileInputId);
-      if (fileInput) {
-        fileInput.click();
-      } else {
-        console.error('File input not found with ID:', this.fileInputId);
-        const form = document.querySelector('.codecheck-metadata-form');
-        if (form) {
-          const fallbackInput = form.querySelector('input[type="file"]');
-          if (fallbackInput) {
-            fallbackInput.click();
-          }
-        }
-      }
+      this.$refs.fileInput.click();
     },
 
     handleFileUpload(event) {
@@ -336,22 +426,14 @@ export default {
       if (!files || files.length === 0) return;
       
       for (let i = 0; i < files.length; i++) {
-        this.uploadedFiles.push({
-          id: this.fileCounter++,
-          file: files[i],
-          name: files[i].name,
+        this.metadata.manifest.push({
+          file: files[i].name,
           size: files[i].size,
-          description: '',
+          comment: '',
           checked: false
         });
       }
       event.target.value = '';
-    },
-
-    removeUploadedFile(index) {
-      if (confirm('Are you sure you want to remove this file?')) {
-        this.uploadedFiles.splice(index, 1);
-      }
     },
 
     formatFileSize(bytes) {
@@ -362,280 +444,337 @@ export default {
       return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     },
 
-    showAuthorModal() {
-      if (!this.canUsePkpModal()) {
-        this.fallbackAuthorModal();
-        return;
-      }
-
-      const { useModal } = pkp.modules.useModal;
-      const { openDialog } = useModal();
-
-      openDialog({
-        title: "Add Author",
-        message: `
-          <div class="modal-form">
-            <div class="modal-field">
-              <label for="author-name" class="modal-label">Name *</label>
-              <input type="text" id="author-name" class="modal-input" placeholder="Enter author name" />
-            </div>
-            <div class="modal-field">
-              <label for="author-orcid" class="modal-label">ORCID</label>
-              <input type="text" id="author-orcid" class="modal-input" placeholder="0000-0000-0000-0000" />
-            </div>
-          </div>
-        `,
-        actions: [
-          {
-            label: "Cancel",
-            callback: (close) => close()
-          },
-          {
-            label: "Add Author",
-            isPrimary: true,
-            callback: (close) => {
-              this.addAuthorFromModal(close);
-            }
-          }
-        ]
-      });
-    },
-
-    addAuthorFromModal(close) {
-      const nameInput = document.getElementById('author-name');
-      const orcidInput = document.getElementById('author-orcid');
-      
-      const name = nameInput?.value || '';
-      const orcid = orcidInput?.value || '';
-      
-      if (name.trim()) {
-        this.metadata.authors.push({
-          name: name.trim(),
-          orcid: orcid ? `ORCID: ${orcid}` : ''
-        });
-      }
-      close();
-    },
-
-    fallbackAuthorModal() {
-      const name = prompt('Enter author name:');
-      if (name && name.trim()) {
-        const orcid = prompt('Enter ORCID (optional):');
-        this.metadata.authors.push({
-          name: name.trim(),
-          orcid: orcid ? `ORCID: ${orcid}` : ''
-        });
+    removeManifestFile(index) {
+      if (confirm(this.t('plugins.generic.codecheck.manifest.removeConfirm'))) {
+        this.metadata.manifest.splice(index, 1);
       }
     },
 
-    removeAuthor(index) {
-      if (confirm('Are you sure you want to remove this author?')) {
-        this.metadata.authors.splice(index, 1);
+    addRepository() {
+      this.repositories.push('');
+    },
+
+    removeRepository(index) {
+      if (confirm(this.t('plugins.generic.codecheck.repositories.removeConfirm'))) {
+        this.repositories.splice(index, 1);
       }
     },
 
     showCodecheckerModal() {
-      if (!this.canUsePkpModal()) {
-        this.fallbackCodecheckerModal();
-        return;
+      if (this.canUsePkpModal()) {
+        this.showPkpCodecheckerModal();
+      } else {
+        this.showFallbackCodecheckerModal();
       }
+    },
 
+    canUsePkpModal() {
+      return typeof pkp !== 'undefined' && pkp.modules && pkp.modules.useModal;
+    },
+
+    showPkpCodecheckerModal() {
       const { useModal } = pkp.modules.useModal;
       const { openDialog } = useModal();
 
+      const modalHtml = '<div class="modal-form">' +
+        '<div class="modal-field">' +
+        '<label for="checker-name" class="modal-label">' + this.t('plugins.generic.codecheck.codecheckers.enterName') + '</label>' +
+        '<input type="text" id="checker-name" class="modal-input" placeholder="' + this.t('plugins.generic.codecheck.codecheckers.enterName') + '" />' +
+        '</div>' +
+        '<div class="modal-field">' +
+        '<label for="checker-orcid" class="modal-label">' + this.t('plugins.generic.codecheck.codecheckers.enterOrcid') + '</label>' +
+        '<input type="text" id="checker-orcid" class="modal-input" placeholder="0000-0000-0000-0000" />' +
+        '</div>' +
+        '</div>';
+
       openDialog({
-        title: "Add CODECHECKer",
-        message: `
-          <div class="modal-form">
-            <div class="modal-field">
-              <label for="checker-name" class="modal-label">Name *</label>
-              <input type="text" id="checker-name" class="modal-input" placeholder="Enter CODECHECKer name" />
-            </div>
-            <div class="modal-field">
-              <label for="checker-orcid" class="modal-label">ORCID</label>
-              <input type="text" id="checker-orcid" class="modal-input" placeholder="0000-0000-0000-0000" />
-            </div>
-          </div>
-        `,
+        title: this.t('plugins.generic.codecheck.codecheckers.add'),
+        message: modalHtml,
         actions: [
           {
-            label: "Cancel",
+            label: this.t('plugins.generic.codecheck.modal.cancel'),
             callback: (close) => close()
           },
           {
-            label: "Add CODECHECKer",
+            label: this.t('plugins.generic.codecheck.modal.add'),
             isPrimary: true,
             callback: (close) => {
-              this.addCodecheckerFromModal(close);
+              const nameInput = document.getElementById('checker-name');
+              const orcidInput = document.getElementById('checker-orcid');
+              
+              const name = nameInput?.value || '';
+              const orcid = orcidInput?.value || '';
+              
+              if (name.trim()) {
+                this.metadata.codecheckers.push({
+                  name: name.trim(),
+                  orcid: orcid.trim()
+                });
+              }
+              close();
             }
           }
         ]
       });
     },
 
-    addCodecheckerFromModal(close) {
-      const nameInput = document.getElementById('checker-name');
-      const orcidInput = document.getElementById('checker-orcid');
-      
-      const name = nameInput?.value || '';
-      const orcid = orcidInput?.value || '';
-      
-      if (name.trim()) {
-        this.metadata.codecheckers.push({
-          name: name.trim(),
-          orcid: orcid ? `ORCID: ${orcid}` : ''
-        });
-      }
-      close();
-    },
-
-    fallbackCodecheckerModal() {
-      const name = prompt('Enter CODECHECKer name:');
+    showFallbackCodecheckerModal() {
+      const name = prompt(this.t('plugins.generic.codecheck.codecheckers.enterName'));
       if (name && name.trim()) {
-        const orcid = prompt('Enter ORCID (optional):');
+        const orcid = prompt(this.t('plugins.generic.codecheck.codecheckers.enterOrcid'));
         this.metadata.codecheckers.push({
           name: name.trim(),
-          orcid: orcid ? `ORCID: ${orcid}` : ''
+          orcid: orcid ? orcid.trim() : ''
         });
       }
     },
 
     removeCodechecker(index) {
-      if (confirm('Are you sure you want to remove this CODECHECKer?')) {
+      if (confirm(this.t('plugins.generic.codecheck.codecheckers.removeConfirm'))) {
         this.metadata.codecheckers.splice(index, 1);
       }
     },
 
-    showRepositoryModal() {
-      if (!this.canUsePkpModal()) {
-        this.fallbackRepositoryModal();
+    saveIdentifier() {
+      if (this.metadata.certificate) {
+        alert(this.t('plugins.generic.codecheck.identifier.saved', { identifier: this.metadata.certificate }));
+      } else {
+        alert(this.t('plugins.generic.codecheck.identifier.enterFirst'));
+      }
+    },
+
+    reserveIdentifier() {
+      const year = new Date().getFullYear();
+      const number = String(Math.floor(Math.random() * 9999)).padStart(4, '0');
+      this.metadata.certificate = `CODECHECK-${year}-${number}`;
+      alert(this.t('plugins.generic.codecheck.identifier.reserved', { identifier: this.metadata.certificate }));
+    },
+
+    removeIdentifier() {
+      if (confirm(this.t('plugins.generic.codecheck.identifier.removeConfirm'))) {
+        this.metadata.certificate = '';
+      }
+    },
+
+    async saveMetadata() {
+      if (!this.validateForm()) {
         return;
       }
 
+      this.saving = true;
+      this.saveMessage = '';
+
+      try {
+        const dataToSave = {
+          config_version: this.metadata.configVersion,
+          publication_type: this.metadata.publicationType,
+          manifest: this.metadata.manifest,
+          repository: this.repositories.join(', '),
+          codecheckers: this.metadata.codecheckers,
+          certificate: this.metadata.certificate,
+          check_time: this.metadata.checkTime,
+          summary: this.metadata.summary,
+          report_url: this.metadata.reportUrl
+        };
+
+        console.log('Saving CODECHECK data:', dataToSave);
+
+        const submissionId = this.submission.id;
+        const pathParts = window.location.pathname.split('/');
+        const contextName = pathParts[3];
+        const apiUrl = `${window.location.origin}/ojs/index.php/${contextName}/codecheck/metadata?submissionId=${submissionId}`;
+        
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Csrf-Token': pkp.currentUser.csrfToken
+          },
+          body: JSON.stringify(dataToSave)
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to save');
+        }
+
+        this.showMessage(this.t('plugins.generic.codecheck.savedSuccessfully'), 'success');
+      } catch (error) {
+        console.error('Save error:', error);
+        this.showMessage(this.t('plugins.generic.codecheck.saveFailed'), 'error');
+      } finally {
+        this.saving = false;
+      }
+    },
+
+    async previewYaml() {
+      try {
+        const yamlContent = this.generateYamlContent();
+        
+        if (this.canUsePkpModal()) {
+          this.showYamlModal(yamlContent);
+        } else {
+          this.showYamlFallback(yamlContent);
+        }
+        
+      } catch (error) {
+        this.showMessage(this.t('plugins.generic.codecheck.yamlPreviewFailed'), 'error');
+      }
+    },
+
+    generateYamlContent() {
+      const yaml = [];
+      
+      yaml.push('---');
+      yaml.push('version: https://codecheck.org.uk/spec/config/' + this.metadata.configVersion + '/');
+      yaml.push('paper:');
+      yaml.push('  title: "' + (this.submissionData.title || 'Untitled') + '"');
+      yaml.push('  authors:');
+      
+      if (this.submissionData.authors && this.submissionData.authors.length > 0) {
+        this.submissionData.authors.forEach(author => {
+          yaml.push('    - name: ' + author.name);
+          if (author.orcid) {
+            yaml.push('      ORCID: ' + author.orcid);
+          }
+        });
+      }
+      
+      if (this.submissionData.doi) {
+        yaml.push('  reference: https://doi.org/' + this.submissionData.doi);
+      }
+      
+      yaml.push('manifest:');
+      if (this.metadata.manifest && this.metadata.manifest.length > 0) {
+        this.metadata.manifest.forEach(file => {
+          yaml.push('  - file: ' + file.file);
+          if (file.comment) {
+            yaml.push('    comment: "' + file.comment + '"');
+          }
+        });
+      }
+      
+      yaml.push('codechecker:');
+      if (this.metadata.codecheckers && this.metadata.codecheckers.length > 0) {
+        this.metadata.codecheckers.forEach(checker => {
+          yaml.push('  - name: ' + checker.name);
+          if (checker.orcid) {
+            yaml.push('    ORCID: ' + checker.orcid);
+          }
+        });
+      }
+      
+      if (this.metadata.summary) {
+        yaml.push('summary: >');
+        const summaryLines = this.metadata.summary.split('\n');
+        summaryLines.forEach(line => {
+          yaml.push('  ' + line);
+        });
+      }
+      
+      if (this.repositories.length > 0) {
+        yaml.push('repository: ' + this.repositories[0]);
+      }
+      
+      if (this.metadata.checkTime) {
+        yaml.push('check_time: "' + this.metadata.checkTime + '"');
+      }
+      
+      if (this.metadata.certificate) {
+        yaml.push('certificate: ' + this.metadata.certificate);
+      }
+      
+      if (this.metadata.reportUrl) {
+        yaml.push('report: ' + this.metadata.reportUrl);
+      }
+      
+      return yaml.join('\n');
+    },
+
+    showYamlModal(yamlContent) {
       const { useModal } = pkp.modules.useModal;
       const { openDialog } = useModal();
 
+      const downloadFunc = 'downloadCodecheckYaml_' + Date.now();
+      window[downloadFunc] = function() {
+        const blob = new Blob([yamlContent], { type: 'text/yaml' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'codecheck.yml';
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+
+      const modalHtml = '<div class="yaml-modal-container">' +
+        '<pre class="yaml-preview-content">' + this.escapeHtml(yamlContent) + '</pre>' +
+        '</div>';
+
       openDialog({
-        title: "Add Repository",
-        message: `
-          <div class="modal-form">
-            <div class="modal-field">
-              <label for="repo-url" class="modal-label">Repository URL *</label>
-              <input type="url" id="repo-url" class="modal-input" placeholder="https://github.com/codecheckers/example-workflow" />
-            </div>
-          </div>
-        `,
+        title: this.t('plugins.generic.codecheck.yaml.previewTitle'),
+        message: modalHtml,
         actions: [
           {
-            label: "Cancel",
-            callback: (close) => close()
-          },
-          {
-            label: "Add Repository",
+            label: this.t('plugins.generic.codecheck.yaml.download'),
             isPrimary: true,
             callback: (close) => {
-              this.addRepositoryFromModal(close);
+              window[downloadFunc]();
+              delete window[downloadFunc];
+              close();
+            }
+          },
+          {
+            label: this.t('plugins.generic.codecheck.yaml.close'),
+            callback: (close) => {
+              delete window[downloadFunc];
+              close();
             }
           }
         ]
       });
     },
 
-    addRepositoryFromModal(close) {
-      const urlInput = document.getElementById('repo-url');
-      const url = urlInput?.value || '';
+    showYamlFallback(yamlContent) {
+      const win = window.open('', '_blank');
+      const escapedYaml = this.escapeHtml(yamlContent);
+      const yamlJson = JSON.stringify(yamlContent);
       
-      if (url.trim()) {
-        this.metadata.repositories.push(url.trim());
-      }
-      close();
-    },
-
-    fallbackRepositoryModal() {
-      const url = prompt('Enter repository URL:');
-      if (url && url.trim()) {
-        this.metadata.repositories.push(url.trim());
-      }
-    },
-
-    removeRepository(index) {
-      if (confirm('Are you sure you want to remove this repository?')) {
-        this.metadata.repositories.splice(index, 1);
-      }
-    },
-
-    uploadCertificate() {
-      alert('Certificate upload functionality will be implemented here.');
-    },
-
-    saveIdentifier() {
-      if (this.metadata.identifier) {
-        alert(`Identifier "${this.metadata.identifier}" saved successfully!`);
-      } else {
-        alert('Please enter an identifier first.');
-      }
-    },
-
-    reserveIdentifier() {
-      const newId = `CODECHECK-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9999)).padStart(4, '0')}`;
-      this.metadata.identifier = newId;
-      alert(`New identifier reserved: ${newId}`);
-    },
-
-    removeIdentifier() {
-      if (confirm('Are you sure you want to remove this identifier?')) {
-        this.metadata.identifier = '';
-      }
-    },
-
-    previewYaml() {
-      const yamlContent = this.generateYaml();
+      const html = '<!DOCTYPE html>' +
+        '<html>' +
+        '<head>' +
+        '<title>CODECHECK Metadata Preview</title>' +
+        '<style>' +
+        'body { font-family: "Courier New", monospace; padding: 20px; background: #f5f5f5; }' +
+        '.container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }' +
+        'h2 { color: #007ab2; margin-top: 0; }' +
+        'pre { background: #2d2d2d; color: #f8f8f2; padding: 20px; border-radius: 4px; overflow-x: auto; line-height: 1.6; }' +
+        '.actions { margin-top: 20px; display: flex; gap: 10px; }' +
+        'button { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; }' +
+        '.download-btn { background: #007ab2; color: white; }' +
+        '.download-btn:hover { background: #005a87; }' +
+        '.close-btn { background: #dc3545; color: white; }' +
+        '.close-btn:hover { background: #c82333; }' +
+        '</style>' +
+        '</head>' +
+        '<body>' +
+        '<div class="container">' +
+        '<h2>📄 CODECHECK Metadata Preview</h2>' +
+        '<pre>' + escapedYaml + '</pre>' +
+        '</div>' +
+        '<script>' +
+        'function downloadYaml() {' +
+        '  const blob = new Blob([' + yamlJson + '], { type: "text/yaml" });' +
+        '  const url = URL.createObjectURL(blob);' +
+        '  const a = document.createElement("a");' +
+        '  a.href = url;' +
+        '  a.download = "codecheck.yml";' +
+        '  a.click();' +
+        '  URL.revokeObjectURL(url);' +
+        '}' +
+  '<\\/script>' +
+  '</body>' +
+  '</html>';
       
-      if (!this.canUsePkpModal()) {
-        this.openYamlInNewWindow(yamlContent);
-        return;
-      }
-
-      const { useModal } = pkp.modules.useModal;
-      const { openDialog } = useModal();
-
-      openDialog({
-        title: "CODECHECK Metadata Preview",
-        message: `
-          <div class="yaml-preview-container">
-            <pre class="yaml-content">${this.escapeHtml(yamlContent)}</pre>
-          </div>
-        `,
-        size: 'large',
-        actions: [
-          {
-            label: "Close",
-            callback: (close) => close()
-          }
-        ]
-      });
-    },
-
-    openYamlInNewWindow(yamlContent) {
-      const newWindow = window.open('', '_blank');
-      newWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>CODECHECK Metadata Preview</title>
-            <style>
-              body { font-family: monospace; padding: 20px; background: #f5f5f5; }
-              pre { background: white; padding: 20px; border-radius: 5px; border: 1px solid #ddd; }
-            </style>
-          </head>
-          <body>
-            <h2>CODECHECK Metadata Preview</h2>
-            <pre>${this.escapeHtml(yamlContent)}</pre>
-            <button onclick="window.print()">Print</button>
-            <button onclick="window.close()">Close</button>
-          </body>
-        </html>
-      `);
+      win.document.write(html);
     },
 
     escapeHtml(text) {
@@ -644,132 +783,94 @@ export default {
       return div.innerHTML;
     },
 
-    generateYaml() {
-      let yaml = `version: ${this.selectedVersion}
-publication_type: ${this.publicationType}
-
-manifest:
-`;
-
-      this.uploadedFiles.forEach(file => {
-        if (file.name) {
-          yaml += `  - file: "${file.name}"\n`;
-          yaml += `    description: "${file.description || ''}"\n`;
-          yaml += `    checked: ${file.checked}\n`;
-        }
-      });
-
-      yaml += `\npaper:
-  title: "${this.metadata.title || 'CHECK-PUB'}"
-  authors:
-`;
-
-      this.metadata.authors.forEach(author => {
-        yaml += `    - name: "${author.name}"\n`;
-        if (author.orcid) {
-          yaml += `      orcid: "${author.orcid}"\n`;
-        }
-      });
-
-      yaml += `  reference: "${this.metadata.reference || ''}"\n`;
-      yaml += `  source: "${this.metadata.source || ''}"\n`;
-
-      yaml += `\ncodecheckers:
-`;
-
-      this.metadata.codecheckers.forEach(checker => {
-        yaml += `  - name: "${checker.name}"\n`;
-        if (checker.orcid) {
-          yaml += `    orcid: "${checker.orcid}"\n`;
-        }
-      });
-
-      yaml += `\ncertificate:
-  url: "${this.metadata.certificateUrl || ''}"
-  summary: "${this.metadata.summary || 'The check was straightforward as all material was provided and documented well, but computations took about 3 hours to run.'}"
-
-repositories:
-`;
-
-      this.metadata.repositories.forEach(repo => {
-        if (repo) {
-          yaml += `  - "${repo}"\n`;
-        }
-      });
-
-      yaml += `\ncompletion_time: "${this.metadata.completionTime || '2019-01-01T13:00:00'}"\n`;
-      yaml += `identifier: "${this.metadata.identifier || ''}"\n`;
-
-      return yaml;
+    validateForm() {
+      if (this.metadata.manifest.length === 0) {
+        this.showMessage(this.t('plugins.generic.codecheck.validation.manifestRequired'), 'error');
+        return false;
+      }
+      if (this.metadata.codecheckers.length === 0) {
+        this.showMessage(this.t('plugins.generic.codecheck.validation.codecheckersRequired'), 'error');
+        return false;
+      }
+      if (!this.metadata.certificate) {
+        this.showMessage(this.t('plugins.generic.codecheck.validation.certificateRequired'), 'error');
+        return false;
+      }
+      if (!this.metadata.summary) {
+        this.showMessage(this.t('plugins.generic.codecheck.validation.summaryRequired'), 'error');
+        return false;
+      }
+      return true;
     },
 
-    canUsePkpModal() {
-      return typeof pkp !== 'undefined' && pkp.modules && pkp.modules.useModal;
+    showMessage(message, type) {
+      this.saveMessage = message;
+      this.saveMessageType = type;
+      setTimeout(() => {
+        this.saveMessage = '';
+      }, 5000);
+    },
+
+    formatDateTimeLocal(timestamp) {
+      const date = new Date(timestamp);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return year + '-' + month + '-' + day + 'T' + hours + ':' + minutes;
     }
   }
 }
 </script>
 
 <style>
-/* Global styles that will work in modal */
 .codecheck-metadata-form {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: #fff;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.codecheck-header {
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid #ddd;
   background: #fff;
 }
 
-.header-content {
+.codecheck-metadata-form .loading-state {
+  text-align: center;
+  padding: 3rem;
+}
+
+.codecheck-metadata-form .header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.workflow-title {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: #333;
-}
-
-.version-selector {
+.codecheck-metadata-form .version-selector {
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-.version-label {
+.codecheck-metadata-form .version-label {
   font-size: 13px;
   color: #666;
 }
 
-.version-select {
+.codecheck-metadata-form .version-select {
   padding: 0.25rem 0.5rem;
   border: 1px solid #ccc;
   border-radius: 3px;
   font-size: 13px;
 }
 
-.publication-section {
+.codecheck-metadata-form .publication-section {
   padding: 1rem 1.5rem;
   background: #f5f5f5;
   border-bottom: 1px solid #ddd;
 }
 
-.radio-options {
+.codecheck-metadata-form .radio-options {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.radio-option {
+.codecheck-metadata-form .radio-option {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -777,270 +878,358 @@ repositories:
   font-size: 14px;
 }
 
-.radio-label {
+.codecheck-metadata-form .radio-label {
   color: #333;
 }
 
-.form-section {
+.codecheck-metadata-form .identifier-section {
+  background: #fff;
+}
+
+.codecheck-metadata-form .identifier-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.codecheck-metadata-form .codecheck-header {
   padding: 1.5rem;
+  border-bottom: 2px solid #007ab2;
+  background: #f8f9fa;
+}
+
+.codecheck-metadata-form .workflow-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #007ab2;
+  text-transform: uppercase;
+}
+
+.codecheck-metadata-form .form-section {
+  padding: 2rem 1.5rem;
   border-bottom: 1px solid #e5e5e5;
 }
 
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.5rem;
+.codecheck-metadata-form .read-only-section {
+  background: #f8f9fa;
 }
 
-.section-title {
-  margin: 0;
-  font-size: 15px;
+.codecheck-metadata-form .section-title {
+  margin: 0 0 0.5rem 0;
+  font-size: 18px;
   font-weight: 600;
   color: #333;
 }
 
-.full-width-title {
-  width: 100%;
-}
-
-.required {
-  color: #d9534f;
-}
-
-.section-description {
-  margin: 0 0 1rem 0;
-  font-size: 13px;
+.codecheck-metadata-form .section-description {
+  margin: 0 0 1.5rem 0;
+  font-size: 14px;
   color: #666;
   font-style: italic;
 }
 
-.manifest-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 1rem;
-}
-
-.manifest-table th,
-.manifest-table td {
-  padding: 0.75rem;
-  text-align: left;
-  border-bottom: 1px solid #dee2e6;
-}
-
-.manifest-table th {
-  background: #f8f9fa;
-  font-weight: 600;
-  font-size: 14px;
-}
-
-.manifest-row {
-  border-bottom: 1px solid #dee2e6;
-}
-
-.file-checkbox {
-  margin: 0;
-}
-
-.file-info {
+.codecheck-metadata-form .info-grid {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 1.5rem;
 }
 
-.file-name {
+.codecheck-metadata-form .info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.codecheck-metadata-form .info-label {
   font-weight: 600;
   font-size: 14px;
+  color: #555;
 }
 
-.file-size {
-  font-size: 12px;
-  color: #6c757d;
+.codecheck-metadata-form .info-value {
+  font-size: 14px;
+  color: #333;
+  padding: 0.75rem;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
 }
 
-.field-group {
-  margin-bottom: 1.5rem;
+.codecheck-metadata-form .info-value a {
+  color: #007ab2;
+  text-decoration: none;
 }
 
-.full-width {
-  width: 100%;
+.codecheck-metadata-form .info-value a:hover {
+  text-decoration: underline;
 }
 
-.field-header {
+.codecheck-metadata-form .author-item {
+  border-bottom: 1px solid #eee;
+}
+
+.codecheck-metadata-form .author-item:last-child {
+  border-bottom: none;
+}
+
+.codecheck-metadata-form .orcid-badge {
+  margin-left: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  background: #a6ce39;
+  color: white;
+  font-size: 11px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+.codecheck-metadata-form .manifest-preview {
+  margin: 0;
+  white-space: pre-wrap;
+  font-family: monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.codecheck-metadata-form .field-group {
+  margin-bottom: 2rem;
+}
+
+.codecheck-metadata-form .field-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 0.75rem;
 }
 
-.field-label {
-  font-size: 14px;
+.codecheck-metadata-form .field-label {
+  font-size: 15px;
   font-weight: 600;
   color: #333;
   display: block;
   margin-bottom: 0.5rem;
 }
 
-.full-width-label {
-  width: 100%;
+.codecheck-metadata-form .field-description {
+  margin: 0 0 0.75rem 0;
+  font-size: 13px;
+  color: #666;
 }
 
-.full-width-input {
+.codecheck-metadata-form .required {
+  color: #d9534f;
+}
+
+.codecheck-metadata-form .full-width {
   width: 100%;
   box-sizing: border-box;
 }
 
-.items-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.list-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem;
-  background: #f8f9fa;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
-}
-
-.item-content {
-  flex: 1;
-}
-
-.item-name {
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 0.25rem;
-}
-
-.item-orcid {
-  font-size: 12px;
-  color: #6c757d;
-}
-
-.empty-state {
-  padding: 1rem;
-  text-align: center;
-  color: #6c757d;
-  font-style: italic;
-  background: #f8f9fa;
-  border-radius: 4px;
-}
-
-.certificate-input-group {
-  display: flex;
-  gap: 0.75rem;
-  align-items: flex-end;
-}
-
-.certificate-input-group input {
-  flex: 1;
-}
-
-.repository-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.repository-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem;
-  background: #f8f9fa;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
-}
-
-.repository-link {
-  color: #007ab2;
-  text-decoration: none;
-  font-size: 14px;
-  word-break: break-all;
-}
-
-.repository-link:hover {
-  text-decoration: underline;
-  color: #005a87;
-}
-
-.identifier-actions {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.form-footer {
-  padding: 1.5rem;
-  background: #f8f9fa;
-  text-align: right;
-}
-
-.preview-button {
-  min-width: 220px;
-  font-weight: 600;
-}
-
-/* PKP Button styles */
-.codecheck-btn {
-  display: inline-block;
-  padding: 0.1rem 1rem;
-  border: 1px solid #007ab2;
-  border-radius: 3px;
-  background: #007ab2;
-  color: white;
-  text-decoration: none;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.codecheck-btn:hover {
-  background: #005a87;
-  border-color: #005a87;
-}
-
-.codecheck-btn-primary {
-  background: #007ab2;
-  border-color: #007ab2;
-}
-
-.codecheck-btn-warning {
-  background: #d9534f;
-  border-color: #d9534f;
-}
-
-.codecheck-btn-warning:hover {
-  background: #c9302c;
-  border-color: #c9302c;
-}
-
-/* Form field styles */
-.pkpFormField__input {
-  padding: 0.5rem;
+.codecheck-metadata-form .pkpFormField__input {
+  padding: 0.5rem 0.75rem;
   border: 1px solid #ccc;
   border-radius: 3px;
   font-size: 14px;
   box-sizing: border-box;
+  width: 100%;
 }
 
-.pkpFormField__input--textarea {
-  min-height: 100px;
-  resize: vertical;
-  font-family: inherit;
-}
-
-.pkpFormField__input:focus {
+.codecheck-metadata-form .pkpFormField__input:focus {
   outline: none;
   border-color: #007ab2;
   box-shadow: 0 0 0 2px rgba(0, 122, 178, 0.2);
 }
 
-/* Modal form styles */
+.codecheck-metadata-form .pkpFormField__input--textarea {
+  min-height: 100px;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.6;
+}
+
+.codecheck-metadata-form .pkpTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.codecheck-metadata-form .pkpTable th,
+.codecheck-metadata-form .pkpTable td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.codecheck-metadata-form .pkpTable th {
+  background: #f8f9fa;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.codecheck-metadata-form .manifest-row {
+  border-bottom: 1px solid #dee2e6;
+}
+
+.codecheck-metadata-form .file-checkbox {
+  margin: 0;
+}
+
+.codecheck-metadata-form .file-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.codecheck-metadata-form .file-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.codecheck-metadata-form .file-size {
+  font-size: 12px;
+  color: #6c757d;
+}
+
+.codecheck-metadata-form .items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.codecheck-metadata-form .list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+}
+
+.codecheck-metadata-form .item-content {
+  flex: 1;
+}
+
+.codecheck-metadata-form .item-name {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.codecheck-metadata-form .item-orcid {
+  font-size: 13px;
+  color: #6c757d;
+}
+
+.codecheck-metadata-form .empty-state {
+  padding: 2rem;
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+  background: #f8f9fa;
+  border: 2px dashed #dee2e6;
+  border-radius: 4px;
+}
+
+.codecheck-metadata-form .repository-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.codecheck-metadata-form .repository-item {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.codecheck-metadata-form .repository-item input {
+  flex: 1;
+}
+
+.codecheck-metadata-form .form-footer {
+  padding: 1.5rem;
+  background: #f8f9fa;
+  border-top: 2px solid #ddd;
+}
+
+.codecheck-metadata-form .footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.codecheck-metadata-form .save-message {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  border-radius: 4px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.codecheck-metadata-form .save-message.success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.codecheck-metadata-form .save-message.error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.codecheck-metadata-form .codecheck-btn {
+  display: inline-block;
+  padding: .4375rem .75rem;
+  border: 1px solid #007ab2;
+  border-radius: 3px;
+  line-height: 1.25rem;
+  background: #007ab2;
+  color: white;
+  text-decoration: none;
+  font-size: .875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.codecheck-metadata-form .codecheck-btn:hover:not(:disabled) {
+  background: #005a87;
+  border-color: #005a87;
+}
+
+.codecheck-metadata-form .codecheck-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.codecheck-metadata-form .pkpButton--isPrimary {
+  background: #007ab2;
+  border-color: #007ab2;
+}
+
+.codecheck-metadata-form .pkpButton--isWarnable {
+  background: #dc3545;
+  border-color: #dc3545;
+}
+
+.codecheck-metadata-form .pkpButton--isWarnable:hover:not(:disabled) {
+  background: #c82333;
+  border-color: #c82333;
+}
+
+.codecheck-metadata-form .error-state {
+  padding: 2rem;
+  text-align: center;
+  color: #721c24;
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  margin: 2rem;
+}
+
 .modal-form {
   padding: 1rem 0;
 }
@@ -1071,21 +1260,81 @@ repositories:
   box-shadow: 0 0 0 2px rgba(0, 122, 178, 0.2);
 }
 
-/* YAML Preview styles */
-.yaml-preview-container {
-  max-height: 500px;
-  overflow-y: auto;
-  background: #f8f9fa;
+.yaml-modal-container {
+  max-width: 100%;
   padding: 1rem;
-  border-radius: 4px;
 }
 
-.yaml-content {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 12px;
-  line-height: 1.4;
+.yaml-preview-content {
+  background: #f5f7f9;
+  color: #2c3e50;
+  padding: 20px;
+  border-radius: 4px;
+  overflow-x: auto;
+  max-height: 500px;
+  line-height: 1.6;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Courier New', monospace;
+  font-size: 13px;
   margin: 0;
-  white-space: pre-wrap;
-  word-wrap: break-word;
+  white-space: pre;
+  border: 1px solid #e1e4e8;
+}
+
+.yaml-modal-actions {
+  margin-top: 15px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.yaml-download-btn {
+  background: #007ab2;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.yaml-download-btn:hover {
+  background: #005a87;
+}
+
+.btn-remove {
+  background: #dc3545;
+  color: white;
+  border: none;
+  font-size: 1.2rem;
+  font-weight: 600;
+  padding: .3rem .75rem;
+  border-radius: 4px;
+  line-height: 1.60rem;
+  cursor: pointer;
+  min-width: 40px;
+}
+
+.btn-add {
+  background: #006798;
+  color: white;
+  border: none;
+  font-size: .875rem;
+  font-weight: 600;
+  padding: .4375rem .75rem;
+  border-radius: 4px;
+  line-height: 1.25rem;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.btn-remove:hover {
+  background: #c82333;
+}
+
+.btn-add:hover {
+  background: #005580;
 }
 </style>
