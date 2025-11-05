@@ -144,7 +144,7 @@ msgid "plugins.generic.codecheck.codecheckers.title"
 msgstr "CODECHECKers"
 
 msgid "plugins.generic.codecheck.codecheckers.add"
-msgstr "CODECHECKer"
+msgstr "+ CODECHECKer"
 
 msgid "plugins.generic.codecheck.certificate.title"
 msgstr "CODECHECK Certificate"
@@ -168,7 +168,7 @@ msgid "plugins.generic.codecheck.repositories.title"
 msgstr "Repositories"
 
 msgid "plugins.generic.codecheck.repositories.add"
-msgstr "Repository"
+msgstr "+ Repository"
 
 msgid "plugins.generic.codecheck.completionTime.title"
 msgstr "Time the CODECHECK was completed"
@@ -177,10 +177,10 @@ msgid "plugins.generic.codecheck.completionTime.label"
 msgstr "Completion Time"
 
 msgid "plugins.generic.codecheck.identifier.title"
-msgstr "Identifier"
+msgstr "Certificate Identifier: CODECHECK Certificate ID, Venue Type and Venue Name"
 
 msgid "plugins.generic.codecheck.identifier.label"
-msgstr "ID of the CODECHECK certificate"
+msgstr "ID of the CODECHECK certificate - e.g.: 2025-001"
 
 msgid "plugins.generic.codecheck.identifier.save"
 msgstr "Save Identifier"
@@ -229,3 +229,144 @@ msgstr "View Full CODECHECK Metadata"
 
 msgid "plugins.generic.codecheck.notOptedIn"
 msgstr "This submission has not opted in for CODECHECK"
+
+msgid "plugins.generic.codecheck.workflow.label"
+msgstr "CODECHECK"
+
+msgid "plugins.generic.codecheck.codecheckStatus"
+msgstr "CODECHECK Status"
+
+msgid "plugins.generic.codecheck.markAsOutput"
+msgstr "Mark as CODECHECK Output"
+
+msgid "plugins.generic.codecheck.markAsOutputTitle"
+msgstr "Mark as CODECHECK Output"
+
+msgid "plugins.generic.codecheck.markAsOutputConfirm"
+msgstr "Do you want to mark \"{$fileName}\" as a CODECHECK output file?"
+
+msgid "plugins.generic.codecheck.status.marked"
+msgstr "Marked"
+
+msgid "plugins.generic.codecheck.status.notMarked"
+msgstr "Not Marked"
+
+msgid "plugins.generic.codecheck.paperMetadata.readOnlyNotice"
+msgstr "This information comes from the original submission and cannot be edited here."
+
+msgid "plugins.generic.codecheck.paperMetadata.noAuthors"
+msgstr "No authors found"
+
+msgid "plugins.generic.codecheck.workflow.description"
+msgstr "Complete the following fields to document the CODECHECK process."
+
+msgid "plugins.generic.codecheck.manifest.emptyState"
+msgstr "No manifest files added yet. Click \"+ Add File\" to add files."
+
+msgid "plugins.generic.codecheck.manifest.removeConfirm"
+msgstr "Remove this file from the manifest?"
+
+msgid "plugins.generic.codecheck.repositories.description"
+msgstr "URL of the forked/archived repository used for the CODECHECK."
+
+msgid "plugins.generic.codecheck.codecheckers.emptyState"
+msgstr "No codecheckers added yet"
+
+msgid "plugins.generic.codecheck.codecheckers.enterName"
+msgstr "Enter codechecker name:"
+
+msgid "plugins.generic.codecheck.codecheckers.enterOrcid"
+msgstr "Enter ORCID (optional):"
+
+msgid "plugins.generic.codecheck.codecheckers.removeConfirm"
+msgstr "Remove this codechecker?"
+
+msgid "plugins.generic.codecheck.certificate.generateId"
+msgstr "Generate ID"
+
+msgid "plugins.generic.codecheck.certificate.summaryDescription"
+msgstr "Describe the CODECHECK process and any notable findings."
+
+msgid "plugins.generic.codecheck.certificate.summaryPlaceholder"
+msgstr "Successfully reproduced all main figures..."
+
+msgid "plugins.generic.codecheck.certificate.reportUrl"
+msgstr "Report URL"
+
+msgid "plugins.generic.codecheck.certificate.reportUrlDescription"
+msgstr "Link to the published CODECHECK report (e.g., Zenodo)."
+
+msgid "plugins.generic.codecheck.identifier.saved"
+msgstr "Identifier \"{$identifier}\" saved!"
+
+msgid "plugins.generic.codecheck.identifier.enterFirst"
+msgstr "Please enter an identifier first."
+
+msgid "plugins.generic.codecheck.identifier.reserved"
+msgstr "New identifier reserved: {$identifier}"
+
+msgid "plugins.generic.codecheck.loadError"
+msgstr "Failed to load CODECHECK data"
+
+msgid "plugins.generic.codecheck.yamlPreview"
+msgstr "YAML Preview"
+
+msgid "plugins.generic.codecheck.yamlPreviewFailed"
+msgstr "Failed to generate preview"
+
+msgid "plugins.generic.codecheck.validation.manifestRequired"
+msgstr "Please add at least one manifest file"
+
+msgid "plugins.generic.codecheck.validation.codecheckersRequired"
+msgstr "Please add at least one codechecker"
+
+msgid "plugins.generic.codecheck.validation.certificateRequired"
+msgstr "Please provide a certificate ID"
+
+msgid "plugins.generic.codecheck.validation.summaryRequired"
+msgstr "Please provide a summary"
+
+msgid "plugins.generic.codecheck.repositories.emptyState"
+msgstr "No repositories added yet"
+
+msgid "plugins.generic.codecheck.repositories.removeConfirm"
+msgstr "Remove this repository?"
+
+msgid "plugins.generic.codecheck.manifestFiles.removeConfirm"
+msgstr "Remove this file from the manifest?"
+
+msgid "plugins.generic.codecheck.yaml.download"
+msgstr "Download"
+
+msgid "plugins.generic.codecheck.yaml.close"
+msgstr "Close"
+
+msgid "plugins.generic.codecheck.yaml.previewTitle"
+msgstr "CODECHECK Metadata Preview (codecheck.yml)"
+
+msgid "plugins.generic.codecheck.modal.cancel"
+msgstr "Cancel"
+
+msgid "plugins.generic.codecheck.modal.add"
+msgstr "Add"
+
+msgid "plugins.generic.codecheck.review.configVersion"
+msgstr "Config Version"
+
+msgid "plugins.generic.codecheck.review.publicationType"
+msgstr "Publication Type"
+
+msgid "plugins.generic.codecheck.review.publicationType.doi"
+msgstr "DOI (e.g., Zenodo)"
+
+msgid "plugins.generic.codecheck.review.publicationType.separate"
+msgstr "Separate Journal Section"
+
+msgid "plugins.generic.codecheck.review.manifestFiles"
+msgstr "Manifest Files"
+
+msgid "plugins.generic.codecheck.review.codecheckers"
+msgstr "Codecheckers"
+
+msgid "plugins.generic.codecheck.review.reportUrl"
+msgstr "Report URL"
