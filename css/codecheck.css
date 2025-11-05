@@ -1,279 +1,75 @@
 /* CODECHECK Plugin Styles */
-.codecheck-metadata-form {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: #fff;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.codecheck-header {
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid #ddd;
-  background: #fff;
-}
-
-.header-content {
+.codecheck-metadata-form .header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.workflow-title {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: #333;
-}
-
-.version-selector {
+.codecheck-metadata-form .version-selector {
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-.version-label {
-  font-size: 13px;
-  color: #666;
-}
-
-.version-select {
-  padding: 0.25rem 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 3px;
-  font-size: 13px;
-}
-
-.publication-section {
+.codecheck-metadata-form .publication-section {
   padding: 1rem 1.5rem;
   background: #f5f5f5;
   border-bottom: 1px solid #ddd;
 }
 
-.radio-options {
+.codecheck-metadata-form .radio-options {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.radio-option {
+.codecheck-metadata-form .radio-option {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   cursor: pointer;
-  font-size: 14px;
 }
 
-.radio-label {
-  color: #333;
+.codecheck-metadata-form .identifier-section {
+  background: #fff;
 }
 
-.form-section {
-  padding: 1.5rem;
-  border-bottom: 1px solid #e5e5e5;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.5rem;
-}
-
-.section-title {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 600;
-  color: #333;
-}
-
-.required {
-  color: #d9534f;
-}
-
-.section-description {
-  margin: 0 0 1rem 0;
-  font-size: 13px;
-  color: #666;
-  font-style: italic;
-}
-
-.manifest-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 1rem;
-}
-
-.manifest-table th,
-.manifest-table td {
-  padding: 0.75rem;
-  text-align: left;
-  border-bottom: 1px solid #dee2e6;
-}
-
-.manifest-table th {
-  background: #f8f9fa;
-  font-weight: 600;
-  font-size: 14px;
-}
-
-.manifest-row {
-  border-bottom: 1px solid #dee2e6;
-}
-
-.file-checkbox {
-  margin: 0;
-}
-
-.field-group {
-  margin-bottom: 1.5rem;
-}
-
-.field-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.75rem;
-}
-
-.field-label {
-  font-size: 14px;
-  font-weight: 600;
-  color: #333;
-  display: block;
-  margin-bottom: 0.5rem;
-}
-
-.items-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.list-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem;
-  background: #f8f9fa;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
-}
-
-.item-content {
-  flex: 1;
-}
-
-.item-name {
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 0.25rem;
-}
-
-.item-orcid {
-  font-size: 12px;
-  color: #6c757d;
-}
-
-.empty-state {
-  padding: 1rem;
-  text-align: center;
-  color: #6c757d;
-  font-style: italic;
-  background: #f8f9fa;
-  border-radius: 4px;
-}
-
-.certificate-input-group {
-  display: flex;
-  gap: 0.75rem;
-  align-items: flex-end;
-}
-
-.certificate-input-group input {
-  flex: 1;
-}
-
-.repository-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.repository-item {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.repository-item input {
-  flex: 1;
-}
-
-.identifier-actions {
+.codecheck-metadata-form .identifier-actions {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+  margin-top: 1rem;
 }
 
-.form-footer {
-  padding: 1.5rem;
-  background: #f8f9fa;
-  text-align: right;
+.codecheck-metadata-form .info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
-/* PKP Button styles */
-.pkButton {
-  display: inline-block;
-  padding: 0.5rem 1rem;
-  border: 1px solid #007ab2;
-  border-radius: 3px;
-  background: #007ab2;
+.codecheck-metadata-form .info-value {
+  padding: 0.75rem;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.codecheck-metadata-form .orcid-badge {
+  margin-left: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  background: #a6ce39;
   color: white;
-  text-decoration: none;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.pkButton:hover {
-  background: #005a87;
-  border-color: #005a87;
-}
-
-.pkButton--isPrimary {
-  background: #007ab2;
-  border-color: #007ab2;
-}
-
-.pkButton--isWarnable {
-  background: #d9534f;
-  border-color: #d9534f;
-}
-
-.pkButton--isWarnable:hover {
-  background: #c9302c;
-  border-color: #c9302c;
-}
-
-/* Form field styles */
-.pkFormField__input {
-  width: 100%;
-  padding: 0.5rem;
-  border: 1px solid #ccc;
+  font-size: 11px;
   border-radius: 3px;
-  font-size: 14px;
-  box-sizing: border-box;
+  font-weight: 600;
 }
 
-.pkFormField__input--textarea {
-  min-height: 100px;
-  resize: vertical;
-  font-family: inherit;
+.codecheck-metadata-form .certificate-input-group {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
 }
 
-.pkFormField__input:focus {
-  outline: none;
-  border-color: #007ab2;
-  box-shadow: 0 0 0 2px rgba(0, 122, 178, 0.2);
+.codecheck-metadata-form .certificate-input-group input {
+  flex: 1;
 }

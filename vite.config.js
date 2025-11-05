@@ -1,9 +1,13 @@
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import path from 'path';
+import i18nExtractKeys from './i18nExtractKeys.vite.js';
 
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [
+    i18nExtractKeys(),
+    vue()
+  ],
   define: {
     'process.env': {},
     '__VUE_OPTIONS_API__': true,
@@ -20,10 +24,11 @@ export default defineConfig({
       fileName: () => 'build.iife.js',
     },
     rollupOptions: {
-      external: ['pkp'],
+      external: ['pkp', 'vue'],
       output: {
         globals: {
           pkp: 'pkp',
+          vue: 'pkp.modules.vue',
         },
         assetFileNames: 'build.css',
       },
