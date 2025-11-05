@@ -6,32 +6,65 @@
       <div class="info-section">
         <h4>{{ t("plugins.generic.codecheck.status") }}</h4>
         <span class="status-badge" :class="statusClass">
-          {{ getStatus() }}
+          {{ getStatusText() }}
         </span>
       </div>
-      
-      <div class="info-section" v-if="hasMetadata">
-        <h4>{{ t("plugins.generic.codecheck.identifier.label") }}</h4>
-        <p>{{ metadata.identifier || t("plugins.generic.codecheck.notYetAssigned") }}</p>
+
+      <div class="info-section" v-if="hasMetadata && metadata.configVersion">
+        <h4>{{ t("plugins.generic.codecheck.review.configVersion") }}</h4>
+        <p>{{ metadata.configVersion }}</p>
+      </div>
+
+      <div class="info-section" v-if="hasMetadata && metadata.publicationType">
+        <h4>{{ t("plugins.generic.codecheck.review.publicationType") }}</h4>
+        <p>{{ metadata.publicationType === 'doi' 
+              ? t("plugins.generic.codecheck.review.publicationType.doi") 
+              : t("plugins.generic.codecheck.review.publicationType.separate") }}</p>
       </div>
       
-      <div class="info-section" v-if="repositories.length > 0">
-        <h4>{{ t("plugins.generic.codecheck.repositories.title") }}</h4>
+      <div class="info-section" v-if="hasMetadata && metadata.certificate">
+        <h4>{{ t("plugins.generic.codecheck.identifier.label") }}</h4>
+        <p>{{ metadata.certificate }}</p>
+      </div>
+
+      <div class="info-section" v-if="hasMetadata && metadata.manifest && metadata.manifest.length > 0">
+        <h4>{{ t("plugins.generic.codecheck.review.manifestFiles") }}</h4>
         <ul>
-          <li v-for="(repo, index) in repositories" :key="index">
-            <a :href="repo" target="_blank">{{ repo }}</a>
+          <li v-for="(file, index) in metadata.manifest" :key="index">
+            <strong>{{ file.file }}</strong>
+            <span v-if="file.comment"> - {{ file.comment }}</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="info-section" v-if="hasMetadata && metadata.codecheckers && metadata.codecheckers.length > 0">
+        <h4>{{ t("plugins.generic.codecheck.review.codecheckers") }}</h4>
+        <ul>
+          <li v-for="(checker, index) in metadata.codecheckers" :key="index">
+            {{ checker.name }}
+            <span v-if="checker.orcid" class="orcid-badge">{{ checker.orcid }}</span>
           </li>
         </ul>
       </div>
       
-      <div class="info-section" v-if="hasMetadata && metadata.completionTime">
+      <div class="info-section" v-if="hasMetadata && metadata.repository">
+        <h4>{{ t("plugins.generic.codecheck.repositories.title") }}</h4>
+        <a :href="metadata.repository" target="_blank">{{ metadata.repository }}</a>
+      </div>
+      
+      <div class="info-section" v-if="hasMetadata && metadata.checkTime">
         <h4>{{ t("plugins.generic.codecheck.completionTime.label") }}</h4>
-        <p>{{ formatDate(metadata.completionTime) }}</p>
+        <p>{{ formatDate(metadata.checkTime) }}</p>
       </div>
       
       <div class="info-section" v-if="hasMetadata && metadata.summary">
         <h4>{{ t("plugins.generic.codecheck.certificate.summary") }}</h4>
         <p>{{ metadata.summary }}</p>
+      </div>
+
+      <div class="info-section" v-if="hasMetadata && metadata.reportUrl">
+        <h4>{{ t("plugins.generic.codecheck.review.reportUrl") }}</h4>
+        <a :href="metadata.reportUrl" target="_blank">{{ metadata.reportUrl }}</a>
       </div>
       
       <div class="actions">
@@ -63,6 +96,7 @@ const metadata = computed(() => {
       try {
         return JSON.parse(props.submission.codecheckMetadata);
       } catch (e) {
+        console.error('Failed to parse codecheck metadata:', e);
         return {};
       }
     }
@@ -75,49 +109,52 @@ const hasMetadata = computed(() => {
   return Object.keys(metadata.value).length > 0;
 });
 
-const repositories = computed(() => {
-  if (metadata.value.repositories) {
-    return metadata.value.repositories;
+function getStatus() {
+  if (metadata.value.certificate && metadata.value.checkTime) {
+    return 'complete';
+  } else if (hasMetadata.value) {
+    return 'in-progress';
   }
-  
-  const repos = [];
-  if (props.submission.codeRepository) {
-    repos.push(...props.submission.codeRepository.split('\n').filter(r => r.trim()));
-  }
-  if (props.submission.dataRepository) {
-    repos.push(...props.submission.dataRepository.split('\n').filter(r => r.trim()));
-  }
-  return repos;
-});
+  return 'pending';
+}
 
 const statusClass = computed(() => {
-  if (metadata.value.identifier && metadata.value.completionTime) {
-    return 'status-complete';
-  } else if (hasMetadata.value) {
-    return 'status-in-progress';
+  const status = getStatus();
+  switch (status) {
+    case 'complete':
+      return 'status-complete';
+    case 'in-progress':
+      return 'status-in-progress';
+    case 'pending':
+    default:
+      return 'status-pending';
   }
-  return 'status-pending';
 });
 
-function getStatus() {
-  if (metadata.value.identifier && metadata.value.completionTime) {
-    return t("plugins.generic.codecheck.status.complete");
-  } else if (hasMetadata.value) {
-    return t("plugins.generic.codecheck.status.inProgress");
+function getStatusText() {
+  const status = getStatus();
+  switch (status) {
+    case 'complete':
+      return t("plugins.generic.codecheck.status.complete");
+    case 'in-progress':
+      return t("plugins.generic.codecheck.status.inProgress");
+    case 'pending':
+    default:
+      return t("plugins.generic.codecheck.status.pending");
   }
-  return t("plugins.generic.codecheck.status.pending");
 }
 
 function formatDate(dateString) {
   if (!dateString) return '';
-  const date = new Date(dateString);
+  let date = new Date(dateString);
   return date.toLocaleString();
 }
 
 function viewFullMetadata() {
   const workflowStore = pkp.registry.getPiniaStore("workflow");
   workflowStore.selectedMenuState = {
-    primaryMenuItem: 'codecheck'
+    primaryMenuItem: 'workflow',
+    stageId: 999
   };
 }
 </script>
@@ -189,6 +226,16 @@ function viewFullMetadata() {
 .status-pending {
   background: var(--color-background-light);
   color: var(--text-color-secondary);
+}
+
+.orcid-badge {
+  margin-left: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  background: #a6ce39;
+  color: white;
+  font-size: 11px;
+  border-radius: 3px;
+  font-weight: 600;
 }
 
 .actions {
