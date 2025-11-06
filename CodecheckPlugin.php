@@ -68,6 +68,18 @@ class CodecheckPlugin extends GenericPlugin
                         header('Content-Type: application/json');
                         echo json_encode($result);
                         exit;
+                    } elseif ($op === 'upload') {
+                        // NEW: Handle file upload
+                        error_log("[CODECHECK Plugin] Handling file upload");
+                        $result = $metadataHandler->uploadFile($request, $submissionId);
+                        header('Content-Type: application/json');
+                        echo json_encode($result);
+                        exit;
+                    } elseif ($op === 'download') {
+                        // NEW: Handle file download
+                        error_log("[CODECHECK Plugin] Handling file download");
+                        $metadataHandler->downloadFile($request, $submissionId);
+                        exit;
                     } elseif ($op === 'yaml') {
                         error_log("[CODECHECK Plugin] Handling YAML generation");
                         $result = $metadataHandler->generateYaml($request, $submissionId);
