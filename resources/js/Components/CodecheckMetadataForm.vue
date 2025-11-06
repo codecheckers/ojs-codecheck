@@ -367,8 +367,6 @@ export default {
         }
 
         const submissionId = this.submission.id;
-        const pathParts = window.location.pathname.split('/');
-        const contextName = pathParts[3];
         let codecheckApiUrl = pkp.context.apiBaseUrl.replace(/\/api\/v1\/?$/, '');
         codecheckApiUrl += '/codecheck';
         const apiUrl = `${codecheckApiUrl}/metadata?submissionId=${submissionId}`;
@@ -471,9 +469,9 @@ export default {
       formData.append('file', file);
       formData.append('submissionId', this.submission.id);
       
-      const pathParts = window.location.pathname.split('/');
-      const contextName = pathParts[3];
-      const uploadUrl = `${window.location.origin}/ojs/index.php/${contextName}/codecheck/upload`;
+      let codecheckApiUrl = pkp.context.apiBaseUrl.replace(/\/api\/v1\/?$/, '');
+      codecheckApiUrl += '/codecheck';
+      const uploadUrl = `${codecheckApiUrl}/upload`;
       
       const response = await fetch(uploadUrl, {
         method: 'POST',
@@ -496,9 +494,9 @@ export default {
         return;
       }
       
-      const pathParts = window.location.pathname.split('/');
-      const contextName = pathParts[3];
-      const downloadUrl = `${window.location.origin}/ojs/index.php/${contextName}/codecheck/download?file=${encodeURIComponent(filePath)}`;
+      let codecheckApiUrl = pkp.context.apiBaseUrl.replace(/\/api\/v1\/?$/, '');
+      codecheckApiUrl += '/codecheck';
+      const downloadUrl = `${codecheckApiUrl}/download?file=${encodeURIComponent(filePath)}`;
       
       window.open(downloadUrl, '_blank');
     },
