@@ -13,7 +13,6 @@
     <div v-else-if="dataLoaded">
       <div class="codecheck-header">
         <div class="header-content">
-          <h2 class="workflow-title">{{ t('plugins.generic.codecheck.workflow.title') }}</h2>
           <div class="version-selector">
             <label class="version-label">{{ t('plugins.generic.codecheck.configVersion') }}</label>
             <select v-model="metadata.configVersion" class="version-select">
@@ -95,7 +94,7 @@
         </div>
       </div>
 
-      <div class="form-section">
+      <div class="form-section form-details">
         <h3 class="section-title">{{ t('plugins.generic.codecheck.details.title') }}</h3>
         <p class="section-description">{{ t('plugins.generic.codecheck.workflow.description') }}</p>
 
@@ -112,14 +111,14 @@
               accept=".pdf,.csv,.txt,.yml,.yaml,.json,.zip,.png,.jpg"
             />
           </div>
-          <p class="field-description">{{ t('plugins.generic.codecheck.manifest.description') }}</p>
+          <p class="field-description">{{ t('plugins.generic.codecheck.manifest.subtitle') }}</p>
           
           <table class="pkpTable manifest-table" v-if="metadata.manifest && metadata.manifest.length > 0">
             <thead>
               <tr>
                 <th width="20"></th>
-                <th>{{ t('plugins.generic.codecheck.manifest.addFile') }}</th>
-                <th>{{ t('common.comment') }}</th>
+                <th>{{ t('plugins.generic.codecheck.manifest.outputFile') }}</th>
+                <th>{{ t('plugins.generic.codecheck.manifest.description') }}</th>
                 <th width="80"></th>
               </tr>
             </thead>
@@ -145,7 +144,7 @@
                 <td>
                   <button 
                     type="button"
-                    class="pkpButton codecheck-btn pkpButton--isWarnable" 
+                    class="pkpButton codecheck-btn pkpButton--close" 
                     @click="removeManifestFile(index)"
                   >×</button>
                 </td>
@@ -174,7 +173,7 @@
               />
               <button 
                 type="button"
-                class="pkpButton codecheck-btn pkpButton--isWarnable" 
+                class="pkpButton codecheck-btn pkpButton--close" 
                 @click="removeRepository(index)"
               >×</button>
             </div>
@@ -190,7 +189,7 @@
             <button type="button" class="pkpButton btn-add" @click="showCodecheckerModal">{{ t('plugins.generic.codecheck.codecheckers.add') }}</button>
           </div>
           
-          <div v-if="metadata.codecheckers && metadata.codecheckers.length > 0" class="items-list">
+          <div v-if="metadata.codecheckers && metadata.codecheckers.length > 0" class="items-list codecheckers-list">
             <div v-for="(checker, index) in metadata.codecheckers" :key="'checker-' + index" class="list-item">
               <div class="item-content">
                 <div class="item-name">{{ checker.name }}</div>
@@ -198,7 +197,7 @@
               </div>
               <button 
                 type="button"
-                class="pkpButton codecheck-btn pkpButton--isWarnable" 
+                class="pkpButton codecheck-btn pkpButton--close" 
                 @click="removeCodechecker(index)"
               >×</button>
             </div>
@@ -206,15 +205,6 @@
           <div v-else class="empty-state">
             {{ t('plugins.generic.codecheck.codecheckers.emptyState') }}
           </div>
-        </div>
-
-        <div class="field-group">
-          <label class="field-label">{{ t('plugins.generic.codecheck.completionTime.label') }}</label>
-          <input
-            type="datetime-local"
-            v-model="metadata.checkTime"
-            class="pkpFormField__input full-width"
-          />
         </div>
 
         <div class="field-group">
@@ -236,6 +226,15 @@
             v-model="metadata.reportUrl"
             class="pkpFormField__input full-width"
             placeholder="https://zenodo.org/record/12345"
+          />
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">{{ t('plugins.generic.codecheck.completionTime.label') }}</label>
+          <input
+            type="datetime-local"
+            v-model="metadata.checkTime"
+            class="pkpFormField__input full-width"
           />
         </div>
       </div>
@@ -488,7 +487,7 @@ export default {
         '</div>';
 
       openDialog({
-        title: this.t('plugins.generic.codecheck.codecheckers.add'),
+        title: this.t('plugins.generic.codecheck.codecheckers.addCodechecker'),
         message: modalHtml,
         actions: [
           {
@@ -860,8 +859,10 @@ export default {
 
 .codecheck-metadata-form .publication-section {
   padding: 1rem 1.5rem;
-  background: #f5f5f5;
-  border-bottom: 1px solid #ddd;
+}
+
+.codecheck-metadata-form .form-section.read-only-section {
+    border: 2px solid #ccc;
 }
 
 .codecheck-metadata-form .radio-options {
@@ -884,6 +885,7 @@ export default {
 
 .codecheck-metadata-form .identifier-section {
   background: #fff;
+  padding: 1rem 1.5rem 1rem 0;
 }
 
 .codecheck-metadata-form .identifier-actions {
@@ -894,9 +896,8 @@ export default {
 }
 
 .codecheck-metadata-form .codecheck-header {
-  padding: 1.5rem;
-  border-bottom: 2px solid #007ab2;
-  background: #f8f9fa;
+  padding: 0.5rem 1.5rem 1.5rem 0rem;
+  border-bottom: 2px solid #ccc;
 }
 
 .codecheck-metadata-form .workflow-title {
@@ -912,8 +913,9 @@ export default {
   border-bottom: 1px solid #e5e5e5;
 }
 
-.codecheck-metadata-form .read-only-section {
-  background: #f8f9fa;
+.codecheck-metadata-form .form-section.form-details {
+    border: 2px solid #ccc;
+    margin: 1.5rem 0;
 }
 
 .codecheck-metadata-form .section-title {
@@ -951,7 +953,7 @@ export default {
 .codecheck-metadata-form .info-value {
   font-size: 14px;
   color: #333;
-  padding: 0.75rem;
+  padding: 0.5rem 0.75rem;
   background: white;
   border: 1px solid #ddd;
   border-radius: 4px;
@@ -996,11 +998,15 @@ export default {
   margin-bottom: 2rem;
 }
 
+.codecheck-metadata-form .form-details .field-group {
+    border: 2px solid #ccc;
+    padding: 1.5rem 1.5rem;
+}
+
 .codecheck-metadata-form .field-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.75rem;
 }
 
 .codecheck-metadata-form .field-label {
@@ -1096,24 +1102,28 @@ export default {
   flex-direction: column;
   gap: 0.75rem;
 }
+.codecheck-metadata-form .codecheckers-list {
+  margin-top: 1rem;
+}
 
 .codecheck-metadata-form .list-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem;
-  background: #f8f9fa;
+  padding: 0.2rem 1rem;
   border: 1px solid #dee2e6;
   border-radius: 4px;
 }
 
 .codecheck-metadata-form .item-content {
   flex: 1;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
 }
 
 .codecheck-metadata-form .item-name {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 400;
   margin-bottom: 0.25rem;
 }
 
@@ -1150,7 +1160,6 @@ export default {
 
 .codecheck-metadata-form .form-footer {
   padding: 1.5rem;
-  background: #f8f9fa;
   border-top: 2px solid #ddd;
 }
 
@@ -1219,7 +1228,17 @@ export default {
   background: #c82333;
   border-color: #c82333;
 }
-
+.codecheck-metadata-form .pkpButton--close {
+  background: #c8233300;
+  border-color: #c8233300;
+  font-size: 1.3rem;
+  color: #676767;
+}
+.codecheck-metadata-form .pkpButton--close:hover:not(:disabled) {
+  background: #c8233300;
+  border-color: #c8233300;
+  color: #c82333;
+}
 .codecheck-metadata-form .error-state {
   padding: 2rem;
   text-align: center;
@@ -1327,7 +1346,6 @@ export default {
   border-radius: 4px;
   line-height: 1.25rem;
   cursor: pointer;
-  margin-top: 10px;
 }
 
 .btn-remove:hover {
