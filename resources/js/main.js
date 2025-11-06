@@ -33,6 +33,7 @@ pkp.registry.storeExtend("workflow", (piniaContext) => {
           label: t('plugins.generic.codecheck.workflow.label'),
           state: { 
             primaryMenuItem: 'workflow',
+            title: t('plugins.generic.codecheck.workflow.title'),
             stageId: 999
           }
         };
