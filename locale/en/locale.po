@@ -96,7 +96,7 @@ msgid "plugins.generic.codecheck.review.willBeCodechecked"
 msgstr "This submission will be codechecked"
 
 msgid "plugins.generic.codecheck.workflow.title"
-msgstr "CODECHECK Metadata"
+msgstr "CODECHECK"
 
 msgid "plugins.generic.codecheck.configVersion"
 msgstr "CODECHECK config version"
@@ -110,7 +110,7 @@ msgstr "Check published in separate section of the journal"
 msgid "plugins.generic.codecheck.manifest.title"
 msgstr "Manifest"
 
-msgid "plugins.generic.codecheck.manifest.description"
+msgid "plugins.generic.codecheck.manifest.subtitle"
 msgstr "The output files and their descriptions created by the editorial workflow and considered in the CODECHECK"
 
 msgid "plugins.generic.codecheck.manifest.outputFile"
@@ -118,9 +118,6 @@ msgstr "Output File"
 
 msgid "plugins.generic.codecheck.manifest.description"
 msgstr "Description"
-
-msgid "plugins.generic.codecheck.manifest.addFile"
-msgstr "File"
 
 msgid "plugins.generic.codecheck.paperMetadata.title"
 msgstr "Paper Metadata"
@@ -145,6 +142,9 @@ msgstr "CODECHECKers"
 
 msgid "plugins.generic.codecheck.codecheckers.add"
 msgstr "+ CODECHECKer"
+
+msgid "plugins.generic.codecheck.codecheckers.addCodechecker"
+msgstr "Add CODECHECKer"
 
 msgid "plugins.generic.codecheck.certificate.title"
 msgstr "CODECHECK Certificate"
@@ -174,7 +174,7 @@ msgid "plugins.generic.codecheck.completionTime.title"
 msgstr "Time the CODECHECK was completed"
 
 msgid "plugins.generic.codecheck.completionTime.label"
-msgstr "Completion Time"
+msgstr "Time the CODECHECK was completed"
 
 msgid "plugins.generic.codecheck.identifier.title"
 msgstr "Identifier"
