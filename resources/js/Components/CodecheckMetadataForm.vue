@@ -129,7 +129,16 @@
                 </td>
                 <td>
                   <div class="file-info">
-                    <span class="file-name">{{ file.file }}</span>
+                    <a 
+                      href="#" 
+                      @click.prevent="downloadFile(file.filePath, file.file)"
+                      class="file-name file-link"
+                      v-if="file.filePath"
+                      :title="t('plugins.generic.codecheck.downloadFile')"
+                    >
+                      {{ file.file }}
+                    </a>
+                    <span v-else class="file-name">{{ file.file }}</span>
                     <span class="file-size" v-if="file.size">({{ formatFileSize(file.size) }})</span>
                   </div>
                 </td>
@@ -179,7 +188,7 @@
             </div>
           </div>
           <div v-else class="empty-state">
-            No repositories added yet
+            {{ t('plugins.generic.codecheck.repositories.emptyState') }}
           </div>
         </div>
 
@@ -420,19 +429,76 @@ export default {
       this.$refs.fileInput.click();
     },
 
-    handleFileUpload(event) {
+    async handleFileUpload(event) {
       const files = event.target.files;
       if (!files || files.length === 0) return;
       
+      this.saving = true;
+      this.saveMessage = this.t('plugins.generic.codecheck.uploadingFiles');
+      
       for (let i = 0; i < files.length; i++) {
-        this.metadata.manifest.push({
-          file: files[i].name,
-          size: files[i].size,
-          comment: '',
-          checked: false
-        });
+        const file = files[i];
+        
+        try {
+          const result = await this.uploadFile(file);
+          
+          if (result.success) {
+            this.metadata.manifest.push({
+              file: result.filename,
+              size: result.size,
+              filePath: result.filePath,
+              comment: '',
+              checked: false
+            });
+          } else {
+            this.showMessage('Failed to upload: ' + file.name, 'error');
+          }
+        } catch (error) {
+          console.error('Upload error:', error);
+          this.showMessage('Failed to upload: ' + file.name, 'error');
+        }
       }
+      
       event.target.value = '';
+      this.saving = false;
+      this.saveMessage = '';
+    },
+
+    async uploadFile(file) {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('submissionId', this.submission.id);
+      
+      const pathParts = window.location.pathname.split('/');
+      const contextName = pathParts[3];
+      const uploadUrl = `${window.location.origin}/ojs/index.php/${contextName}/codecheck/upload`;
+      
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: {
+          'X-Csrf-Token': pkp.currentUser.csrfToken
+        },
+        body: formData
+      });
+      
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+      
+      return await response.json();
+    },
+
+    downloadFile(filePath, fileName) {
+      if (!filePath) {
+        alert('File path not available');
+        return;
+      }
+      
+      const pathParts = window.location.pathname.split('/');
+      const contextName = pathParts[3];
+      const downloadUrl = `${window.location.origin}/ojs/index.php/${contextName}/codecheck/download?file=${encodeURIComponent(filePath)}`;
+      
+      window.open(downloadUrl, '_blank');
     },
 
     formatFileSize(bytes) {
@@ -1249,7 +1315,7 @@ export default {
   margin: 2rem;
 }
 
-.modal-form {
+.codecheck-metadata-form .modal-form {
   padding: 1rem 0;
 }
 
@@ -1323,7 +1389,7 @@ export default {
   background: #005a87;
 }
 
-.btn-remove {
+.codecheck-metadata-form .btn-remove {
   background: #dc3545;
   color: white;
   border: none;
@@ -1336,7 +1402,7 @@ export default {
   min-width: 40px;
 }
 
-.btn-add {
+.codecheck-metadata-form .btn-add {
   background: #006798;
   color: white;
   border: none;
@@ -1354,5 +1420,18 @@ export default {
 
 .btn-add:hover {
   background: #005580;
+}
+
+.codecheck-metadata-form .file-link {
+  color: #007ab2;
+  text-decoration: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.codecheck-metadata-form .file-link:hover {
+  text-decoration: underline;
+  color: #005a87;
 }
 </style>
