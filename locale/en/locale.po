@@ -96,7 +96,7 @@ msgid "plugins.generic.codecheck.review.willBeCodechecked"
 msgstr "This submission will be codechecked"
 
 msgid "plugins.generic.codecheck.workflow.title"
-msgstr "CODECHECK"
+msgstr "WORKFLOW: CODECHECK"
 
 msgid "plugins.generic.codecheck.configVersion"
 msgstr "CODECHECK config version"
