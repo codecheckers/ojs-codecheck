@@ -223,43 +223,6 @@ function mountCodecheckVueComponents() {
       textarea.dispatchEvent(new Event('input', { bubbles: true }));
     });
   }
-
-  // Mount Certificate Identifier Component to the Submission Form
-  const certificateIdentifierContainer = document.querySelector('textarea[name="retrieveReserveCertificateIdentifier"]')?.parentElement;
-  if (certificateIdentifierContainer) {
-      const textarea = certificateIdentifierContainer.querySelector('textarea');
-      const vueDiv = document.createElement('div');
-      certificateIdentifierContainer.insertBefore(vueDiv, textarea);
-      textarea.style.display = 'none';
-
-      createApp(CodecheckCertificateIdentifier, {
-          name: 'retrieveReserveCertificateIdentifier',
-          label: 'Certificate Identifier',
-          description: 'CODECHECK Certificate ID, Venue Type and Venue Name',
-          value: textarea.value,
-      }).mount(vueDiv);
-
-      vueDiv.addEventListener('update', (e) => {
-          textarea.value = e.detail;
-          textarea.dispatchEvent(new Event('input', { bubbles: true }));
-      });
-  }
-
-  // Mount CODECHECK Metadata Form Component in the editorial Workflow
-  /*const metadataFormContainer = document.querySelector('#codecheck-metadata-container');
-  if (metadataFormContainer) {
-    const input = metadataFormContainer.querySelector('div');
-    const vueDiv = document.createElement('div');
-    metadataFormContainer.insertBefore(vueDiv, input);
-    input.style.display = 'none';
-
-    createApp(CodecheckMetadataForm, {
-      name: 'metadataForm',
-      label: 'Metadata Form',
-      description: 'Form with CODECHECK Metadata',
-      value: '' // or initial value from textarea if you have one
-    }).mount(vueDiv);
-  }*/
 }
 
 const CodecheckFileStatus = {
