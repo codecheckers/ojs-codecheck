@@ -249,7 +249,13 @@
 
         <div class="field-group">
           <label class="field-label">{{ t('plugins.generic.codecheck.identifier.title') }} <span class="required">*</span></label>
-          <p class="field-description">{{ t('plugins.generic.codecheck.identifier.description') }}</p>
+          <p class="field-description">
+            {{ t('plugins.generic.codecheck.identifier.description') }}
+            <span v-if="certificateIdentifier.issueUrl"> - </span>
+            <a v-if="certificateIdentifier.issueUrl" :href="certificateIdentifier.issueUrl" target="_blank">
+              View GitHub Issue
+            </a>
+          </p>
           <div class="certificate-identifier-section">
             <div class="certificate-identifier-input-wrapper">
                 <input
@@ -279,12 +285,6 @@
                     {{ name }}
                     </option>
                 </select>
-            </div>
-
-            <div v-if="certificateIdentifier.issueUrl" class="certificate-identifier-link-wrapper">
-                <a :href="certificateIdentifier.issueUrl" target="_blank">
-                    View GitHub Issue
-                </a>
             </div>
 
             <div class="identifier-actions" id="certificate-identifier-button-wrapper">
