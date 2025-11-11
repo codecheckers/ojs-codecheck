@@ -7,22 +7,21 @@ use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CodecheckRe
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CertificateIdentifier;
 
 // get the certificate ID from the issue description
-function getRawIdentifier(string $title): string
+function getRawIdentifier(string $title): ?string
 {
-    $title = strtolower($title); // convert whole title to lowercase
+    // convert whole title to lowercase
+    $title = strtolower($title);
 
-    //$title = "Arabsheibani, Winter, Tomko | 2025-026/2025-029";
+    $rawIdentifier = null;
 
     if (strpos($title, '|') !== false) {
-        // find the last "|"
-        $seperator = strrpos($title, '|');
-        // move one position forwards (so we get character after '|')
-        $seperator++;
+        // split the title into sub-strings at separator letter: '|'
+        // store those sub-strings in the $matches array
+        preg_match('/[^|]+$/', $title, $matches);
 
-        // Find where the next line break occurs after "certificate"
-        $rawIdentifier = substr($title, $seperator);
-        // remove white spaces
-        $rawIdentifier = preg_replace('/[\s]+/', '', $rawIdentifier);
+        // $matches[0] is the last sub-string so here the Certificate Identifier
+        // when no '|' would exist then it would be the whole string -> but this case is excluded because of the if statement in line 17
+        $rawIdentifier = preg_replace('/[\s]+/', '', $matches[0] ?? '');
     }
 
     return $rawIdentifier;
@@ -50,6 +49,12 @@ class CertificateIdentifierList
             // raw identifier (can still have ranges of identifiers);
             $rawIdentifier = getRawIdentifier($issue['title']);
             
+            // check if the identifier is empty (either empty string or null) and not set
+            // -> if so skip this identifier and move onto the next issue
+            if(empty($rawIdentifier)) {
+                continue;
+            }
+
             // append to all identifiers in new Register
             $newCertificateIdentifierList->appendToCertificateIdList($rawIdentifier);
         }
