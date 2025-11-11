@@ -1,6 +1,9 @@
 <?php
 namespace APP\plugins\generic\codecheck\controllers;
 
+use APP\plugins\generic\codecheck\classes\Exceptions\ApiCreateException;
+use APP\plugins\generic\codecheck\classes\Exceptions\ApiFetchException;
+use APP\plugins\generic\codecheck\classes\Exceptions\NoMatchingIssuesFoundException;
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CodecheckVenueTypes;
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CodecheckVenueNames;
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CodecheckRegisterGithubIssuesApiParser;
@@ -55,8 +58,21 @@ class CodecheckAPIHandler
 
     public function getVenueData(): void
     {
-        $codecheckVenueTypes = new CodecheckVenueTypes();
-        $codecheckVenueNames = new CodecheckVenueNames();
+        try {
+            $codecheckVenueTypes = new CodecheckVenueTypes();
+        } catch (ApiFetchException $e) {
+            $this->returnApiError(400, "Bad Request", $e->getMessage());
+            exit();
+            return;
+        }
+
+        try {
+            $codecheckVenueNames = new CodecheckVenueNames();
+        } catch (ApiFetchException $e) {
+            $this->returnApiError(400, "Bad Request", $e->getMessage());
+            exit();
+            return;
+        }
 
         $result = [
             'success' => true,
@@ -74,7 +90,15 @@ class CodecheckAPIHandler
         $apiParser = new CodecheckRegisterGithubIssuesApiParser();
 
         // CODECHECK Register with list of all identifiers in range
-        $certificateIdentifierList = CertificateIdentifierList::fromApi($apiParser);
+        try {
+            $certificateIdentifierList = CertificateIdentifierList::fromApi($apiParser);
+        } catch (ApiFetchException $ae) {
+            $this->returnApiError(400, "Bad Request", $ae->getMessage());
+            return;
+        } catch (NoMatchingIssuesFoundException $me) {
+            $this->returnApiError(400, "Bad Request", $me->getMessage());
+            return;
+        }
 
         // print Certificate Identifier list
         $certificateIdentifierList->sortDesc();
@@ -89,7 +113,14 @@ class CodecheckAPIHandler
         $codecheckVenue->setVenueName($venueName);
 
         // Add the new issue to the CODECHECK GtiHub Register
-        $issueGithubUrl = $apiParser->addIssue($new_identifier, $codecheckVenue->getVenueType(), $codecheckVenue->getVenueName(), $authorString);
+        try {
+            $issueGithubUrl = $apiParser->addIssue($new_identifier, $codecheckVenue->getVenueType(), $codecheckVenue->getVenueName(), $authorString);
+        } catch (ApiCreateException $e) {
+            // return an error result
+            $this->returnApiError(400, "Bad Request", $e->getMessage());
+            exit();
+            return;
+        }
 
         // return a success result
         $result = [

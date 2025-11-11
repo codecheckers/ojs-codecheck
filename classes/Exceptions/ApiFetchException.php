@@ -1,6 +1,6 @@
 <?php
 
-namespace APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers;
+namespace APP\plugins\generic\codecheck\classes\Exceptions;
 
 class ApiFetchException extends \Exception
 {

@@ -4,6 +4,7 @@ namespace APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers;
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\UniqueArray;
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CodecheckRegisterGithubIssuesApiParser;
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CodecheckVenueTypes;
+use APP\plugins\generic\codecheck\classes\Exceptions\ApiFetchException;
 
 class CodecheckVenueNames
 {
@@ -17,7 +18,14 @@ class CodecheckVenueNames
         $apiCaller = new CodecheckRegisterGithubIssuesApiParser();
 
         // fetch CODECHECK Certificate GitHub Labels
-        $apiCaller->fetchLabels();
+        try {
+            $apiCaller->fetchLabels();
+        } catch (ApiFetchException $e) {
+            // TODO: Implement that the user gets notified, that the fetching of the Labels didn't work
+            error_log($e);
+            throw $e;
+            return;
+        }
         // get Labels from API Caller
         $labels = $apiCaller->getLabels();
 

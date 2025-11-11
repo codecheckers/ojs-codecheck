@@ -8,7 +8,9 @@ use Github\Client;
 use Dotenv\Dotenv;
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\UniqueArray;
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CertificateIdentifier;
-use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\Exceptions\NoMatchingIssuesFoundException;
+use APP\plugins\generic\codecheck\classes\Exceptions\NoMatchingIssuesFoundException;
+use APP\plugins\generic\codecheck\classes\Exceptions\ApiFetchException;
+use APP\plugins\generic\codecheck\classes\Exceptions\ApiCreateException;
 
 // Load .env variables
 $dotenv = Dotenv::createImmutable(__DIR__ . '/../../');
@@ -34,14 +36,18 @@ class CodecheckRegisterGithubIssuesApiParser
         $fetchedMatchingIssue = false;
 
         do {
-            $allissues = $this->client->api('issue')->all('codecheckers', 'register', [
-                'state'     => 'all',          // 'open', 'closed', or 'all'
-                'labels'    => 'id assigned',  // label
-                'sort'      => 'updated',
-                'direction' => 'desc',
-                'per_page'  => $issuesToFetchPerPage, // issues that will be fetched per page
-                'page'      => $issuePage,
-            ]);
+            try {
+                $allissues = $this->client->api('issue')->all('codecheckers', 'register', [
+                    'state'     => 'all',          // 'open', 'closed', or 'all'
+                    'labels'    => 'id assigned',  // label
+                    'sort'      => 'updated',
+                    'direction' => 'desc',
+                    'per_page'  => $issuesToFetchPerPage, // issues that will be fetched per page
+                    'page'      => $issuePage,
+                ]);
+            } catch (\Throwable $e) {
+                throw new ApiFetchException("Failed fetching the GitHub Issues\n" . $e->getMessage());
+            }
 
             // stop looping if no more issues exist and we haven't yet found a matching issue
             if (empty($allissues) && empty($this->issue)) {
@@ -61,7 +67,12 @@ class CodecheckRegisterGithubIssuesApiParser
 
     public function fetchLabels(): void
     {
-        $fetchedLabels = $this->client->api('issue')->labels()->all('codecheckers', 'register');
+        try {
+            $fetchedLabels = $this->client->api('issue')->labels()->all('codecheckers', 'register');
+        } catch (\Throwable $e) {
+            throw new ApiFetchException("Failed fetching the GitHub Issue Labels for the Venue Names\n" . $e->getMessage());
+        }
+        
         foreach($fetchedLabels as $label) {
             $this->labels->add($label["name"]);
         }
@@ -96,15 +107,19 @@ class CodecheckRegisterGithubIssuesApiParser
         $labelStrings[] = $codecheckVenueType;
         $labelStrings[] = $codecheckVenueName;
 
-        $issue = $this->client->api('issue')->create(
-            $repositoryOwner,
-            $repositoryName,
-            [
-                'title' => $issueTitle,
-                'body'  => $issueBody,
-                'labels' => $labelStrings
-            ]
-        );
+        try {
+            $issue = $this->client->api('issue')->create(
+                $repositoryOwner,
+                $repositoryName,
+                [
+                    'title' => $issueTitle,
+                    'body'  => $issueBody,
+                    'labels' => $labelStrings
+                ]
+            );
+        } catch (\Throwable $e) {
+            throw new ApiCreateException("Error while adding the new GitHub issue with the new Certificate Identifier\n" . $e->getMessage());
+        }
 
         return $issue['html_url'];
     }
