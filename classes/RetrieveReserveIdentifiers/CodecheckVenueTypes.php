@@ -1,6 +1,7 @@
 <?php
 namespace APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers;
 
+use APP\plugins\generic\codecheck\classes\Exceptions\ApiFetchException;
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\UniqueArray;
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\JsonApiCaller;
 
@@ -15,7 +16,14 @@ class CodecheckVenueTypes
         // Intialize API caller
         $jsonApiCaller = new JsonApiCaller("https://codecheck.org.uk/register/venues/index.json");
         // fetch CODECHECK Type data
-        $jsonApiCaller->fetch();
+        try {
+            $jsonApiCaller->fetch();
+        } catch (ApiFetchException $e) {
+            // TODO: Implement that the user gets notified, that the fetching of the Labels didn't work
+            error_log($e);
+            throw $e;
+            return;
+        }
         // get json Data from API Caller
         $data = $jsonApiCaller->getData();
 

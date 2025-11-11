@@ -2,6 +2,8 @@
 
 namespace APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers;
 
+use APP\plugins\generic\codecheck\classes\Exceptions\ApiFetchException;
+use APP\plugins\generic\codecheck\classes\Exceptions\NoMatchingIssuesFoundException;
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\UniqueArray;
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CodecheckRegisterGithubIssuesApiParser;
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CertificateIdentifier;
@@ -43,7 +45,17 @@ class CertificateIdentifierList
         $newCertificateIdentifierList = new CertificateIdentifierList();
 
         // fetch API
-        $apiParser->fetchIssues();
+        try {
+            $apiParser->fetchIssues();
+        } catch (ApiFetchException $ae) {
+            throw $ae;
+            error_log($ae);
+            return $newCertificateIdentifierList;
+        } catch (NoMatchingIssuesFoundException $me) {
+            throw $me;
+            error_log($me);
+            return $newCertificateIdentifierList;
+        }
 
         foreach ($apiParser->getIssues() as $issue) {
             // raw identifier (can still have ranges of identifiers);

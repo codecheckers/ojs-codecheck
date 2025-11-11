@@ -2,7 +2,7 @@
 
 namespace APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers;
 
-use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\Exceptions\ApiFetchException;
+use APP\plugins\generic\codecheck\classes\Exceptions\ApiFetchException;
 
 class JsonApiCaller
 {
@@ -21,7 +21,7 @@ class JsonApiCaller
 
         // throw error if no data was fetched from API
         if ($response === FALSE) {
-            throw new ApiFetchException("Error fetching the API data");
+            throw new ApiFetchException("Error fetching the Codecheck API data");
         }
 
         // Decode JSON into PHP array
