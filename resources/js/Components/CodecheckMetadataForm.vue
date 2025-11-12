@@ -875,12 +875,11 @@ export default {
     },
 
     async getVenueData() {
-      let codecheckApiUrl = pkp.context.apiBaseUrl.replace(/\/api\/v1\/?$/, '');
-      codecheckApiUrl += '/codecheck_api';
+      let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
 
       try {
-          const response = await fetch(`${codecheckApiUrl}/getVenueData`, {
-              method: 'POST',
+          const response = await fetch(`${apiUrl}/getVenueData`, {
+              method: 'GET',
               headers: {
               'Content-Type': 'application/json',
               'X-Csrf-Token': pkp.currentUser.csrfToken,
@@ -914,11 +913,10 @@ export default {
 
       console.log(authorString);
 
-      let codecheckApiUrl = pkp.context.apiBaseUrl.replace(/\/api\/v1\/?$/, '');
-      codecheckApiUrl += '/codecheck_api';
+      let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
 
       try {
-          const response = await fetch(`${codecheckApiUrl}/reserveIdentifier`, {
+          const response = await fetch(`${apiUrl}/reserveIdentifier`, {
               method: 'POST',
               headers: {
               'Content-Type': 'application/json',

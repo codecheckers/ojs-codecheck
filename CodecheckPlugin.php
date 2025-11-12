@@ -126,17 +126,16 @@ class CodecheckPlugin extends GenericPlugin
             return;
         }
 
-        if (str_contains($request->getRequestPath(), 'api/v1/test')) {
-            $handler = new CodecheckApiHandler(new PKPSubmissionController());
-            $handler->testGet();
+        if (str_contains($request->getRequestPath(), 'api/v1/codecheck')) {
+            $apiHandler = new CodecheckApiHandler(new PKPSubmissionController(), $request, $args);
             error_log("Yes! " . $request->getRequestPath() . "\n");
         }
 
-        if (!isset($handler)) {
+        if (!isset($apiHandler)) {
             return;
         }
 
-        $router->setHandler($handler);
+        $router->setHandler($apiHandler);
         error_log("We made it here");
         exit;
     }
