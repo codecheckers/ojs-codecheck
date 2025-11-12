@@ -12,12 +12,13 @@ use PKP\plugins\Hook;
 use PKP\components\forms\FieldOptions;
 use PKP\core\PKPBaseController;
 use PKP\handler\APIHandler;
-use APP\plugins\generic\codecheck\controllers\CodecheckAPIHandler;
 use Illuminate\Http\Request as IlluminateRequest;
 use Illuminate\Http\Response;
 use Illuminate\Http\JsonResponse;
 use PKP\security\Role;
 use APP\facades\Repo;
+use APP\plugins\generic\codecheck\api\v1\CodecheckApiHandler;
+use PKP\API\v1\submissions\PKPSubmissionController;
 
 class CodecheckPlugin extends GenericPlugin
 {
@@ -39,7 +40,7 @@ class CodecheckPlugin extends GenericPlugin
 
             Hook::add('Submission::validate', $this->saveWizardFieldsFromRequest(...));
             // Add hook for Ajax API calls
-            Hook::add('LoadHandler', [$this, 'setupAPIHandler']);
+            Hook::add('Dispatcher::dispatch', [$this, 'setupAPIHandler']);
             // Add hook for the Template Manager
             Hook::add('TemplateManager::display', $this->callbackTemplateManagerDisplay(...));
             
@@ -98,7 +99,7 @@ class CodecheckPlugin extends GenericPlugin
         return $success;
     }
 
-    public function setupAPIHandler($hookName, $params)
+    /*public function setupAPIHandler($hookName, $params)
     {
         $route = $params[0];
         $apiRoute = $params[1];
@@ -112,6 +113,32 @@ class CodecheckPlugin extends GenericPlugin
         }
 
         return false;
+    }*/
+    
+    public function setupAPIHandler(string $hookName, array $args): void
+    {
+        $request = $args[0];
+        $router = $request->getRouter();
+
+        error_log("We are in the dispatcher Hook");
+
+        if (!($router instanceof \PKP\core\APIRouter)) {
+            return;
+        }
+
+        if (str_contains($request->getRequestPath(), 'api/v1/test')) {
+            $handler = new CodecheckApiHandler(new PKPSubmissionController());
+            $handler->testGet();
+            error_log("Yes! " . $request->getRequestPath() . "\n");
+        }
+
+        if (!isset($handler)) {
+            return;
+        }
+
+        $router->setHandler($handler);
+        error_log("We made it here");
+        exit;
     }
 
     private function addAssets(): void
