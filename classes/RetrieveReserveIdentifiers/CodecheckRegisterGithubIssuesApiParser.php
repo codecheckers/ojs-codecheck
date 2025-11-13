@@ -37,7 +37,7 @@ class CodecheckRegisterGithubIssuesApiParser
 
         do {
             try {
-                $allissues = $this->client->api('issue')->all('codecheckers', 'register', [
+                $allissues = $this->client->api('issue')->all('codecheckers', 'testing-dev-register', [
                     'state'     => 'all',          // 'open', 'closed', or 'all'
                     'labels'    => 'id assigned',  // label
                     'sort'      => 'updated',
@@ -68,7 +68,7 @@ class CodecheckRegisterGithubIssuesApiParser
     public function fetchLabels(): void
     {
         try {
-            $fetchedLabels = $this->client->api('issue')->labels()->all('codecheckers', 'register');
+            $fetchedLabels = $this->client->api('issue')->labels()->all('codecheckers', 'testing-dev-register');
         } catch (\Throwable $e) {
             throw new ApiFetchException("Failed fetching the GitHub Issue Labels for the Venue Names\n" . $e->getMessage());
         }

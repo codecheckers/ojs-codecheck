@@ -419,11 +419,12 @@ export default {
         }
 
         const submissionId = this.submission.id;
-        let codecheckApiUrl = pkp.context.apiBaseUrl.replace(/\/api\/v1\/?$/, '');
-        codecheckApiUrl += '/codecheck';
-        const apiUrl = `${codecheckApiUrl}/metadata?submissionId=${submissionId}`;
+        let apiUrl = pkp.context.apiBaseUrl;
+        apiUrl += 'codecheck';
+        apiUrl = `${apiUrl}/metadata?submissionId=${submissionId}`;
         
         const response = await fetch(apiUrl, {
+          method: 'GET',
           headers: {
             'X-Csrf-Token': pkp.currentUser.csrfToken
           }
@@ -521,9 +522,9 @@ export default {
       formData.append('file', file);
       formData.append('submissionId', this.submission.id);
       
-      let codecheckApiUrl = pkp.context.apiBaseUrl.replace(/\/api\/v1\/?$/, '');
-      codecheckApiUrl += '/codecheck';
-      const uploadUrl = `${codecheckApiUrl}/upload`;
+      let apiUrl = pkp.context.apiBaseUrl;
+      apiUrl += 'codecheck';
+      const uploadUrl = `${apiUrl}/upload`;
       
       const response = await fetch(uploadUrl, {
         method: 'POST',
@@ -546,9 +547,9 @@ export default {
         return;
       }
       
-      let codecheckApiUrl = pkp.context.apiBaseUrl.replace(/\/api\/v1\/?$/, '');
-      codecheckApiUrl += '/codecheck';
-      const downloadUrl = `${codecheckApiUrl}/download?file=${encodeURIComponent(filePath)}`;
+      let apiUrl = pkp.context.apiBaseUrl;
+      apiUrl += 'codecheck';
+      const downloadUrl = `${apiUrl}/download?file=${encodeURIComponent(filePath)}`;
       
       window.open(downloadUrl, '_blank');
     },
@@ -676,10 +677,9 @@ export default {
         console.log('Saving CODECHECK data:', dataToSave);
 
         const submissionId = this.submission.id;
-        let codecheckApiUrl = pkp.context.apiBaseUrl.replace(/\/api\/v1\/?$/, '');
-        codecheckApiUrl += '/codecheck';
-
-        const apiUrl = `${codecheckApiUrl}/metadata?submissionId=${submissionId}`;
+        let apiUrl = pkp.context.apiBaseUrl;
+        apiUrl += 'codecheck';
+        apiUrl = `${apiUrl}/metadata?submissionId=${submissionId}`;
         
         const response = await fetch(apiUrl, {
           method: 'POST',

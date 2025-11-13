@@ -2,256 +2,37 @@
 
 namespace APP\plugins\generic\codecheck\classes\Workflow;
 
-use APP\core\Application;
-use APP\facades\Repo;
-use APP\plugins\generic\codecheck\CodecheckPlugin;
-use Illuminate\Support\Facades\DB;
+use APP\core\Request;
 
 class CodecheckMetadataHandler
 {
-    private CodecheckPlugin $plugin;
+    private mixed $submissionId;
 
-    public function __construct(CodecheckPlugin $plugin)
+    /**
+     * `CodecheckMetadataHandler`
+     * @param \APP\core\Request $request The API Request
+     */
+    public function __construct(Request $request)
     {
-        $this->plugin = $plugin;
-    }
-
-    public function getMetadata($request, $submissionId): array
-    {
-        error_log("[CODECHECK Metadata] getMetadata called for submission: $submissionId");
-        
-        $submission = Repo::submission()->get($submissionId);
-        
-        if (!$submission) {
-            return ['error' => 'Submission not found'];
-        }
-
-        $publication = $submission->getCurrentPublication();
-        
-        $metadata = DB::table('codecheck_metadata')
-            ->where('submission_id', $submissionId)
-            ->first();
-
-        $response = [
-            'submissionId' => $submissionId,
-            'submission' => [
-                'id' => $submission->getId(),
-                'title' => $publication ? $publication->getLocalizedTitle() : '',
-                'authors' => $this->getAuthors($publication),
-                'doi' => $publication ? $publication->getStoredPubId('doi') : null,
-                'codeRepository' => $submission->getData('codeRepository'),
-                'dataRepository' => $submission->getData('dataRepository'),
-                'manifestFiles' => $submission->getData('manifestFiles'),
-                'dataAvailabilityStatement' => $submission->getData('dataAvailabilityStatement'),
-            ],
-            'codecheck' => $metadata ? [
-                'configVersion' => $metadata->config_version ?? 'latest',
-                'publicationType' => $metadata->publication_type ?? 'doi',
-                'manifest' => json_decode($metadata->manifest ?? '[]', true),
-                'repository' => $metadata->repository,
-                'codecheckers' => json_decode($metadata->codecheckers ?? '[]', true),
-                'certificate' => $metadata->certificate,
-                'checkTime' => $metadata->check_time,
-                'summary' => $metadata->summary,
-                'reportUrl' => $metadata->report_url,
-            ] : null
-        ];
-
-        error_log("[CODECHECK Metadata] Response: " . json_encode($response));
-        
-        return $response;
-    }
-
-    public function saveMetadata($request, $submissionId): array
-    {
-        error_log("[CODECHECK Metadata] saveMetadata called for submission: $submissionId");
-        
-        $submission = Repo::submission()->get($submissionId);
-        
-        if (!$submission) {
-            return ['success' => false, 'error' => 'Submission not found'];
-        }
-
-        $jsonData = file_get_contents('php://input');
-        $data = json_decode($jsonData, true);
-        
-        error_log("[CODECHECK Metadata] Received data: " . $jsonData);
-
-        $nullIfEmpty = function($value) {
-            return (is_string($value) && trim($value) === '') ? null : $value;
-        };
-        
-        $metadataData = [
-            'submission_id' => $submissionId,
-            'config_version' => $data['config_version'] ?? 'latest',
-            'publication_type' => $data['publication_type'] ?? 'doi',
-            'manifest' => json_encode($data['manifest'] ?? []),
-            'repository' => $nullIfEmpty($data['repository'] ?? null),
-            'codecheckers' => json_encode($data['codecheckers'] ?? []),
-            'certificate' => $nullIfEmpty($data['certificate'] ?? null),
-            'check_time' => $nullIfEmpty($data['check_time'] ?? null),
-            'summary' => $nullIfEmpty($data['summary'] ?? null),    
-            'report_url' => $nullIfEmpty($data['report_url'] ?? null),
-            'updated_at' => date('Y-m-d H:i:s'),
-        ];
-
-        $exists = DB::table('codecheck_metadata')
-            ->where('submission_id', $submissionId)
-            ->exists();
-
-        if ($exists) {
-            DB::table('codecheck_metadata')
-                ->where('submission_id', $submissionId)
-                ->update($metadataData);
-            error_log("[CODECHECK Metadata] Updated existing record");
-        } else {
-            $metadataData['created_at'] = date('Y-m-d H:i:s');
-            DB::table('codecheck_metadata')->insert($metadataData);
-            error_log("[CODECHECK Metadata] Created new record");
-        }
-
-        return [
-            'success' => true,
-            'message' => 'CODECHECK metadata saved successfully'
-        ];
+        $this->submissionId = $request->getUserVar('submissionId');
     }
 
     /**
-     * Upload file for manifest
+     * Get the submission ID
+     * @return mixed Returns the Submission ID for the Request that was passed in the constructor
      */
-    public function uploadFile($request, $submissionId): array
+    public function getSubmissionId(): mixed
     {
-        error_log("[CODECHECK] Upload file for submission: $submissionId");
-        
-        $submission = Repo::submission()->get($submissionId);
-        
-        if (!$submission) {
-            http_response_code(400);
-            return ['success' => false, 'error' => 'Submission not found'];
-        }
-
-        if (!isset($_FILES['file'])) {
-            http_response_code(400);
-            return ['success' => false, 'error' => 'No file uploaded'];
-        }
-
-        $file = $_FILES['file'];
-        
-        // Validate file
-        if ($file['error'] !== UPLOAD_ERR_OK) {
-            http_response_code(400);
-            return ['success' => false, 'error' => 'Upload error: ' . $file['error']];
-        }
-
-        // Create directory for codecheck files
-        $context = $request->getContext();
-        $basePath = \PKP\core\Core::getBaseDir();
-        $uploadDir = $basePath . '/files/journals/' . $context->getId() . '/codecheck/' . $submissionId;
-        
-        if (!file_exists($uploadDir)) {
-            if (!mkdir($uploadDir, 0755, true)) {
-                http_response_code(500);
-                return ['success' => false, 'error' => 'Failed to create directory'];
-            }
-        }
-
-        // Generate safe filename
-        $originalName = basename($file['name']);
-        $filename = preg_replace('/[^a-zA-Z0-9._-]/', '_', $originalName);
-        $filename = time() . '_' . $filename; // Add timestamp to avoid conflicts
-        $filepath = $uploadDir . '/' . $filename;
-        
-        // Move uploaded file
-        if (!move_uploaded_file($file['tmp_name'], $filepath)) {
-            http_response_code(500);
-            return ['success' => false, 'error' => 'Failed to save file'];
-        }
-
-        error_log("[CODECHECK] File saved: $filepath");
-
-        // Return relative path for storage
-        $relativePath = 'files/journals/' . $context->getId() . '/codecheck/' . $submissionId . '/' . $filename;
-
-        return [
-            'success' => true,
-            'filePath' => $relativePath,
-            'filename' => $originalName,
-            'size' => $file['size']
-        ];
+        return $this->submissionId;
     }
 
     /**
-     * Download file from manifest
+     * Build the Yaml file from the publication and metadata contents
+     * @param mixed $publication The publication data
+     * @param mixed $metadata The metadata information from the Database
+     * @return string The fully generated Yaml as a string
      */
-    public function downloadFile($request, $submissionId): void
-    {
-        $filePath = $request->getUserVar('file');
-        
-        if (!$filePath) {
-            http_response_code(400);
-            header('Content-Type: application/json');
-            echo json_encode(['error' => 'No file specified']);
-            exit;
-        }
-
-        $basePath = \PKP\core\Core::getBaseDir();
-        $fullPath = $basePath . '/' . $filePath;
-        
-        error_log("[CODECHECK] Download request: $fullPath");
-        
-        // Security: ensure file is in codecheck directory
-        if (strpos($filePath, 'codecheck') === false || !file_exists($fullPath)) {
-            http_response_code(404);
-            header('Content-Type: application/json');
-            echo json_encode(['error' => 'File not found']);
-            exit;
-        }
-
-        // Get original filename (remove timestamp prefix)
-        $filename = basename($fullPath);
-        $filename = preg_replace('/^\d+_/', '', $filename); // Remove timestamp
-        
-        // Set headers for download
-        header('Content-Type: application/octet-stream');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
-        header('Content-Length: ' . filesize($fullPath));
-        header('Cache-Control: must-revalidate');
-        header('Pragma: public');
-        
-        // Output file
-        readfile($fullPath);
-        exit;
-    }
-
-    public function generateYaml($request, $submissionId): array
-    {
-        error_log("[CODECHECK Metadata] generateYaml called for submission: $submissionId");
-        
-        $submission = Repo::submission()->get($submissionId);
-        
-        if (!$submission) {
-            return ['error' => 'Submission not found'];
-        }
-
-        $publication = $submission->getCurrentPublication();
-        
-        $metadata = DB::table('codecheck_metadata')
-            ->where('submission_id', $submissionId)
-            ->first();
-
-        if (!$metadata) {
-            return ['error' => 'No CODECHECK metadata found'];
-        }
-
-        $yaml = $this->buildYaml($publication, $metadata);
-
-        return [
-            'yaml' => $yaml,
-            'filename' => 'codecheck.yml'
-        ];
-    }
-
-    private function buildYaml($publication, $metadata): string
+    public function buildYaml($publication, $metadata): string
     {
         $manifest = json_decode($metadata->manifest ?? '[]', true);
         $codecheckers = json_decode($metadata->codecheckers ?? '[]', true);
@@ -314,7 +95,12 @@ class CodecheckMetadataHandler
         return $yaml;
     }
 
-    private function getAuthors($publication): array
+    /**
+     * Get the Authors for a specific publication
+     * @param mixed $publication The publication data
+     * @return array The Authors with Name and ORCID (if isset) in an Array
+     */
+    public function getAuthors($publication): array
     {
         if (!$publication) {
             return [];
@@ -330,8 +116,13 @@ class CodecheckMetadataHandler
         return $authors;
     }
 
-    private function escapeYaml(string $text): string
+    /**
+     * Escape Yaml Content
+     * @param string $content The Yaml Content to be escaped
+     * @return string The Escaped Yaml Content
+     */
+    private function escapeYaml(string $content): string
     {
-        return str_replace('"', '\\"', $text);
+        return str_replace('"', '\\"', $content);
     }
 }
