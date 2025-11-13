@@ -2,10 +2,6 @@
 
 namespace APP\plugins\generic\codecheck\api\v1;
 
-use PKP\core\PKPBaseController;
-use PKP\handler\APIHandler;
-use PKP\security\authorization\ContextAccessPolicy;
-use PKP\security\authorization\UserRolesRequiredPolicy;
 use PKP\security\Role;
 use APP\plugins\generic\codecheck\api\v1\JsonResponse;
 use APP\core\Request;
@@ -19,18 +15,25 @@ use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CodecheckRe
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CertificateIdentifierList;
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CertificateIdentifier;
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CodecheckVenue;
+use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
 
-class CodecheckApiHandler extends APIHandler
+use APP\facades\Repo;
+use Illuminate\Support\Facades\DB;
+
+class CodecheckApiHandler
 {
     private JsonResponse $response;
     private array $roles;
     private array $endpoints;
     private string $route;
     private Request $request;
+    private CodecheckMetadataHandler $codecheckMetadataHandler;
 
-    public function __construct(PKPBaseController $controller, Request $request, array &$args)
+    public function __construct(Request $request, array &$args)
     {
         $this->response = new JsonResponse();
+
+        $this->codecheckMetadataHandler = new CodecheckMetadataHandler($request);
 
         $this->roles = [
             Role::ROLE_ID_MANAGER,
@@ -46,11 +49,36 @@ class CodecheckApiHandler extends APIHandler
                     'handler' => [$this, 'getVenueData'],
                     'roles' => $this->roles,
                 ],
+                [
+                    'route' => 'metadata',
+                    'handler' => [$this, 'getMetadata'],
+                    'roles' => $this->roles,
+                ],
+                [
+                    'route' => 'download',
+                    'handler' => [$this, 'downloadFile'],
+                    'roles' => $this->roles,
+                ],
+                [
+                    'route' => 'yaml',
+                    'handler' => [$this, 'generateYaml'],
+                    'roles' => $this->roles,
+                ],
             ],
             'POST' => [
                 [
                     'route' => 'reserveIdentifier',
                     'handler' => [$this, 'reserveIdentifier'],
+                    'roles' => $this->roles,
+                ],
+                [
+                    'route' => 'metadata',
+                    'handler' => [$this, 'saveMetadata'],
+                    'roles' => $this->roles,
+                ],
+                [
+                    'route' => 'upload',
+                    'handler' => [$this, 'uploadFile'],
                     'roles' => $this->roles,
                 ],
             ],
@@ -63,17 +91,13 @@ class CodecheckApiHandler extends APIHandler
         $this->route = $this->getRouteFromRequest();
 
         $this->serveRequest();
-
-        parent::__construct($controller);
     }
 
     public function authorize($request, &$args, $roleAssignments)
     {
-        $this->addPolicy(new UserRolesRequiredPolicy($request), true);
+        /*$this->addPolicy(new UserRolesRequiredPolicy($request), true);
 
-        $this->addPolicy(new ContextAccessPolicy($request, $roleAssignments));
-
-        return parent::authorize($request, $args, $roleAssignments);
+        $this->addPolicy(new ContextAccessPolicy($request, $roleAssignments));*/
     }
 
     private function getRouteFromRequest(): ?string
@@ -197,5 +221,285 @@ class CodecheckApiHandler extends APIHandler
             ], 400);
             return;
         }
+    }
+
+    public function getMetadata(): void
+    {
+        // get submissionId
+        $submissionId = $this->codecheckMetadataHandler->getSubmissionId();
+
+        error_log("[CODECHECK Api] getMetadata called for submission: $submissionId");
+        
+        $submission = Repo::submission()->get($submissionId);
+        
+        if (!$submission) {
+            $this->response->response([
+                'success' => false,
+                'error' => 'Submission not found'
+            ], 404);
+            return;
+        }
+
+        $publication = $submission->getCurrentPublication();
+        
+        $metadata = DB::table('codecheck_metadata')
+            ->where('submission_id', $submissionId)
+            ->first();
+
+        $response = [
+            'submissionId' => $submissionId,
+            'submission' => [
+                'id' => $submission->getId(),
+                'title' => $publication ? $publication->getLocalizedTitle() : '',
+                'authors' => $this->codecheckMetadataHandler->getAuthors($publication),
+                'doi' => $publication ? $publication->getStoredPubId('doi') : null,
+                'codeRepository' => $submission->getData('codeRepository'),
+                'dataRepository' => $submission->getData('dataRepository'),
+                'manifestFiles' => $submission->getData('manifestFiles'),
+                'dataAvailabilityStatement' => $submission->getData('dataAvailabilityStatement'),
+            ],
+            'codecheck' => $metadata ? [
+                'configVersion' => $metadata->config_version ?? 'latest',
+                'publicationType' => $metadata->publication_type ?? 'doi',
+                'manifest' => json_decode($metadata->manifest ?? '[]', true),
+                'repository' => $metadata->repository,
+                'codecheckers' => json_decode($metadata->codecheckers ?? '[]', true),
+                'certificate' => $metadata->certificate,
+                'checkTime' => $metadata->check_time,
+                'summary' => $metadata->summary,
+                'reportUrl' => $metadata->report_url,
+            ] : null
+        ];
+
+        error_log("[CODECHECK Api] Response: " . json_encode($response));
+        
+        $this->response->response($response, 200);
+    }
+
+    public function saveMetadata(): void
+    {
+        // get submissionId
+        $submissionId = $this->codecheckMetadataHandler->getSubmissionId();
+
+        error_log("[CODECHECK Api] saveMetadata called for submission: $submissionId");
+        
+        $submission = Repo::submission()->get($submissionId);
+        
+        if (!$submission) {
+            $this->response->response([
+                'success' => false,
+                'error' => 'Submission not found'
+            ], 404);
+            return;
+        }
+
+        $jsonData = file_get_contents('php://input');
+        $data = json_decode($jsonData, true);
+        
+        error_log("[CODECHECK Api] Received data: " . $jsonData);
+
+        $nullIfEmpty = function($value) {
+            return (is_string($value) && trim($value) === '') ? null : $value;
+        };
+        
+        $metadataData = [
+            'submission_id' => $submissionId,
+            'config_version' => $data['config_version'] ?? 'latest',
+            'publication_type' => $data['publication_type'] ?? 'doi',
+            'manifest' => json_encode($data['manifest'] ?? []),
+            'repository' => $nullIfEmpty($data['repository'] ?? null),
+            'codecheckers' => json_encode($data['codecheckers'] ?? []),
+            'certificate' => $nullIfEmpty($data['certificate'] ?? null),
+            'check_time' => $nullIfEmpty($data['check_time'] ?? null),
+            'summary' => $nullIfEmpty($data['summary'] ?? null),    
+            'report_url' => $nullIfEmpty($data['report_url'] ?? null),
+            'updated_at' => date('Y-m-d H:i:s'),
+        ];
+
+        $exists = DB::table('codecheck_metadata')
+            ->where('submission_id', $submissionId)
+            ->exists();
+
+        if ($exists) {
+            DB::table('codecheck_metadata')
+                ->where('submission_id', $submissionId)
+                ->update($metadataData);
+            error_log("[CODECHECK Api] Updated existing record");
+        } else {
+            $metadataData['created_at'] = date('Y-m-d H:i:s');
+            DB::table('codecheck_metadata')->insert($metadataData);
+            error_log("[CODECHECK Metadata] Created new record");
+        }
+
+        $this->response->response([
+            'success' => true,
+            'message' => 'CODECHECK metadata saved successfully'
+        ], 200);
+    }
+
+    /**
+     * Upload file for manifest
+     */
+    public function uploadFile(): void
+    {
+        // get submissionId
+        $submissionId = $this->codecheckMetadataHandler->getSubmissionId();
+
+        error_log("[CODECHECK] Upload file for submission: $submissionId");
+        
+        $submission = Repo::submission()->get($submissionId);
+        
+        if (!$submission) {
+            $this->response->response([
+                'success' => false,
+                'error' => 'Submission not found'
+            ], 400);
+            return;
+        }
+
+        if (!isset($_FILES['file'])) {
+            $this->response->response([
+                'success' => false,
+                'error' => 'No file uploaded'
+            ], 400);
+            return;
+        }
+
+        $file = $_FILES['file'];
+        
+        // Validate file
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+            $this->response->response([
+                'success' => false,
+                'error' => 'Upload error: ' . $file['error']
+            ], 400);
+            return;
+        }
+
+        // Create directory for codecheck files
+        $context = $this->request->getContext();
+        $basePath = \PKP\core\Core::getBaseDir();
+        $uploadDir = $basePath . '/files/journals/' . $context->getId() . '/codecheck/' . $submissionId;
+        
+        if (!file_exists($uploadDir)) {
+            if (!mkdir($uploadDir, 0755, true)) {
+                $this->response->response([
+                    'success' => false,
+                    'error' => 'Failed to create directory'
+                ], 500);
+                return;
+            }
+        }
+
+        // Generate safe filename
+        $originalName = basename($file['name']);
+        $filename = preg_replace('/[^a-zA-Z0-9._-]/', '_', $originalName);
+        $filename = time() . '_' . $filename; // Add timestamp to avoid conflicts
+        $filepath = $uploadDir . '/' . $filename;
+        
+        // Move uploaded file
+        if (!move_uploaded_file($file['tmp_name'], $filepath)) {
+            $this->response->response([
+                'success' => false,
+                'error' => 'Failed to save file'
+            ], 500);
+            return;
+        }
+
+        error_log("[CODECHECK] File saved: $filepath");
+
+        // Return relative path for storage
+        $relativePath = 'files/journals/' . $context->getId() . '/codecheck/' . $submissionId . '/' . $filename;
+
+        $this->response->response([
+            'success' => true,
+            'filePath' => $relativePath,
+            'filename' => $originalName,
+            'size' => $file['size']
+        ], 200);
+    }
+
+    /**
+     * Download file from manifest
+     */
+    public function downloadFile(): void
+    {
+        $filePath = $this->request->getUserVar('file');
+        
+        if (!$filePath) {
+            $this->response->response([
+                'success' => false,
+                'error' => 'No file specified'
+            ], 400);
+            return;
+        }
+
+        $basePath = \PKP\core\Core::getBaseDir();
+        $fullPath = $basePath . '/' . $filePath;
+        
+        error_log("[CODECHECK] Download request: $fullPath");
+        
+        // Security: ensure file is in codecheck directory
+        if (strpos($filePath, 'codecheck') === false || !file_exists($fullPath)) {
+            $this->response->response([
+                'success' => false,
+                'error' => 'File not found'
+            ], 404);
+            return;
+        }
+
+        // Get original filename (remove timestamp prefix)
+        $filename = basename($fullPath);
+        $filename = preg_replace('/^\d+_/', '', $filename); // Remove timestamp
+        
+        // Set headers for download
+        header('Content-Type: application/octet-stream');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Content-Length: ' . filesize($fullPath));
+        header('Cache-Control: must-revalidate');
+        header('Pragma: public');
+        
+        // Output file
+        readfile($fullPath);
+        exit;
+    }
+
+    public function generateYaml(): void
+    {
+        $submissionId = $this->codecheckMetadataHandler->getSubmissionId();
+
+        error_log("[CODECHECK Metadata] generateYaml called for submission: $submissionId");
+        
+        $submission = Repo::submission()->get($submissionId);
+        
+        if (!$submission) {
+            $this->response->response([
+                'success' => false,
+                'error' => 'Submission not found'
+            ], 404);
+            return;
+        }
+
+        $publication = $submission->getCurrentPublication();
+        
+        $metadata = DB::table('codecheck_metadata')
+            ->where('submission_id', $submissionId)
+            ->first();
+
+        if (!$metadata) {
+            $this->response->response([
+                'success' => false,
+                'error' => 'No CODECHECK metadata found'
+            ], 404);
+            return;
+        }
+
+        $yaml = $this->codecheckMetadataHandler->buildYaml($publication, $metadata);
+
+        $this->response->response([
+            'success' => false,
+            'yaml' => $yaml,
+            'filename' => 'codecheck.yml'
+        ], 200);
     }
 }

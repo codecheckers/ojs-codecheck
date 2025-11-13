@@ -43,57 +43,6 @@ class CodecheckPlugin extends GenericPlugin
             Hook::add('Dispatcher::dispatch', [$this, 'setupAPIHandler']);
             // Add hook for the Template Manager
             Hook::add('TemplateManager::display', $this->callbackTemplateManagerDisplay(...));
-            
-            $metadataHandler = new CodecheckMetadataHandler($this);
-            Hook::add('LoadHandler', function($hookName, $args) use ($metadataHandler) {
-                $page = $args[0];
-                $op = $args[1];
-                
-                error_log("[CODECHECK Plugin] LoadHandler: page=$page, op=$op");
-                
-                if ($page === 'codecheck') {
-                    $request = Application::get()->getRequest();
-                    $submissionId = $request->getUserVar('submissionId');
-                    
-                    error_log("[CODECHECK Plugin] Matched codecheck page, submissionId=$submissionId");
-                    
-                    if ($op === 'metadata' && $request->isGet()) {
-                        error_log("[CODECHECK Plugin] Handling GET metadata");
-                        $result = $metadataHandler->getMetadata($request, $submissionId);
-                        header('Content-Type: application/json');
-                        echo json_encode($result);
-                        exit;
-                    } elseif ($op === 'metadata' && $request->isPost()) {
-                        error_log("[CODECHECK Plugin] Handling POST metadata");
-                        $result = $metadataHandler->saveMetadata($request, $submissionId);
-                        header('Content-Type: application/json');
-                        echo json_encode($result);
-                        exit;
-                    } elseif ($op === 'upload') {
-                        // NEW: Handle file upload
-                        error_log("[CODECHECK Plugin] Handling file upload");
-                        $result = $metadataHandler->uploadFile($request, $submissionId);
-                        header('Content-Type: application/json');
-                        echo json_encode($result);
-                        exit;
-                    } elseif ($op === 'download') {
-                        // NEW: Handle file download
-                        error_log("[CODECHECK Plugin] Handling file download");
-                        $metadataHandler->downloadFile($request, $submissionId);
-                        exit;
-                    } elseif ($op === 'yaml') {
-                        error_log("[CODECHECK Plugin] Handling YAML generation");
-                        $result = $metadataHandler->generateYaml($request, $submissionId);
-                        header('Content-Type: application/json');
-                        echo json_encode($result);
-                        exit;
-                    }
-                    
-                    error_log("[CODECHECK Plugin] No matching operation for: $op");
-                }
-                
-                return false;
-            });
         }
 
         return $success;
@@ -120,15 +69,14 @@ class CodecheckPlugin extends GenericPlugin
         $request = $args[0];
         $router = $request->getRouter();
 
-        error_log("We are in the dispatcher Hook");
-
         if (!($router instanceof \PKP\core\APIRouter)) {
             return;
         }
 
         if (str_contains($request->getRequestPath(), 'api/v1/codecheck')) {
-            $apiHandler = new CodecheckApiHandler(new PKPSubmissionController(), $request, $args);
-            error_log("Yes! " . $request->getRequestPath() . "\n");
+            error_log("[CODECHECK Plugin] Instanciating the CODECHECK APIHandler");
+            $apiHandler = new CodecheckApiHandler($request, $args);
+            error_log("[CODECHECK Plugin] API request: " . $request->getRequestPath() . "\n");
         }
 
         if (!isset($apiHandler)) {
@@ -136,7 +84,6 @@ class CodecheckPlugin extends GenericPlugin
         }
 
         $router->setHandler($apiHandler);
-        error_log("We made it here");
         exit;
     }
 
