@@ -84,9 +84,9 @@ class CodecheckApiHandler
             ],
         ];
 
-        $this->authorize($request, $args, $this->roles);
-
         $this->request = $request;
+
+        $this->authorize();
 
         // Get the API Route that was called from the request
         $this->route = $this->getRouteFromRequest();
@@ -94,21 +94,30 @@ class CodecheckApiHandler
         $this->serveRequest();
     }
 
-    public function authorize($request, &$args, $roleAssignments)
+    public function authorize()
     {
         // Check if the CSRF Token is present and valid
         $csrfInHeader = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? null;
 
-        if(!($csrfInHeader && $csrfInHeader === $request->getSession()->token())) {
+        if(!($csrfInHeader && $csrfInHeader === $this->request->getSession()->token())) {
             $this->response->response([
                 'success'   => false,
                 'error'     => 'No or wrong CSRF Token'
             ], 400);
             return;
         }
-        /*$this->addPolicy(new UserRolesRequiredPolicy($request), true);
 
-        $this->addPolicy(new ContextAccessPolicy($request, $roleAssignments));*/
+        // Check if the user that accesses this resource has at least one valid Role and if user exists
+        $user = $this->request->getUser() ?? null;
+        $contextId = $this->request->getContext()->getId();
+
+        if(!($user && $user->hasRole($this->roles, $contextId))) {
+            $this->response->response([
+                'success'   => false,
+                'error'     => "User has no assigned Role or doesn't have the right roles assigned to access this resource"
+            ], 400);
+            return;
+        }
     }
 
     private function getRouteFromRequest(): ?string
