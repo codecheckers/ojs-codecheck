@@ -84,17 +84,28 @@ class CodecheckApiHandler
             ],
         ];
 
-        $this->request = $request;
-
         $this->authorize($request, $args, $this->roles);
 
-        $this->route = $this->getRouteFromRequest();
+        $this->request = $request;
 
+        // Get the API Route that was called from the request
+        $this->route = $this->getRouteFromRequest();
+        // Serve the Request
         $this->serveRequest();
     }
 
     public function authorize($request, &$args, $roleAssignments)
     {
+        // Check if the CSRF Token is present and valid
+        $csrfInHeader = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? null;
+
+        if(!($csrfInHeader && $csrfInHeader === $request->getSession()->token())) {
+            $this->response->response([
+                'success'   => false,
+                'error'     => 'No or wrong CSRF Token'
+            ], 400);
+            return;
+        }
         /*$this->addPolicy(new UserRolesRequiredPolicy($request), true);
 
         $this->addPolicy(new ContextAccessPolicy($request, $roleAssignments));*/
@@ -366,6 +377,8 @@ class CodecheckApiHandler
         }
 
         $file = $_FILES['file'];
+
+        error_log("[CODECHECK Api] File: " . $file['name']);
         
         // Validate file
         if ($file['error'] !== UPLOAD_ERR_OK) {
@@ -378,6 +391,7 @@ class CodecheckApiHandler
 
         // Create directory for codecheck files
         $context = $this->request->getContext();
+        error_log("[CODECHECK Api] Request Context ID: " . $context->getId());
         $basePath = \PKP\core\Core::getBaseDir();
         $uploadDir = $basePath . '/files/journals/' . $context->getId() . '/codecheck/' . $submissionId;
         
