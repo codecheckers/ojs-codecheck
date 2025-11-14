@@ -80,7 +80,6 @@ class CodecheckMetadataHandler
         $nullIfEmpty = function($value) {
             return (is_string($value) && trim($value) === '') ? null : $value;
         };
-        
         $metadataData = [
             'submission_id' => $submissionId,
             'config_version' => $data['config_version'] ?? 'latest',
@@ -114,113 +113,6 @@ class CodecheckMetadataHandler
             'success' => true,
             'message' => 'CODECHECK metadata saved successfully'
         ];
-    }
-
-    /**
-     * Upload file for manifest
-     */
-    public function uploadFile($request, $submissionId): array
-    {
-        error_log("[CODECHECK] Upload file for submission: $submissionId");
-        
-        $submission = Repo::submission()->get($submissionId);
-        
-        if (!$submission) {
-            http_response_code(400);
-            return ['success' => false, 'error' => 'Submission not found'];
-        }
-
-        if (!isset($_FILES['file'])) {
-            http_response_code(400);
-            return ['success' => false, 'error' => 'No file uploaded'];
-        }
-
-        $file = $_FILES['file'];
-        
-        // Validate file
-        if ($file['error'] !== UPLOAD_ERR_OK) {
-            http_response_code(400);
-            return ['success' => false, 'error' => 'Upload error: ' . $file['error']];
-        }
-
-        // Create directory for codecheck files
-        $context = $request->getContext();
-        $basePath = \PKP\core\Core::getBaseDir();
-        $uploadDir = $basePath . '/files/journals/' . $context->getId() . '/codecheck/' . $submissionId;
-        
-        if (!file_exists($uploadDir)) {
-            if (!mkdir($uploadDir, 0755, true)) {
-                http_response_code(500);
-                return ['success' => false, 'error' => 'Failed to create directory'];
-            }
-        }
-
-        // Generate safe filename
-        $originalName = basename($file['name']);
-        $filename = preg_replace('/[^a-zA-Z0-9._-]/', '_', $originalName);
-        $filename = time() . '_' . $filename; // Add timestamp to avoid conflicts
-        $filepath = $uploadDir . '/' . $filename;
-        
-        // Move uploaded file
-        if (!move_uploaded_file($file['tmp_name'], $filepath)) {
-            http_response_code(500);
-            return ['success' => false, 'error' => 'Failed to save file'];
-        }
-
-        error_log("[CODECHECK] File saved: $filepath");
-
-        // Return relative path for storage
-        $relativePath = 'files/journals/' . $context->getId() . '/codecheck/' . $submissionId . '/' . $filename;
-
-        return [
-            'success' => true,
-            'filePath' => $relativePath,
-            'filename' => $originalName,
-            'size' => $file['size']
-        ];
-    }
-
-    /**
-     * Download file from manifest
-     */
-    public function downloadFile($request, $submissionId): void
-    {
-        $filePath = $request->getUserVar('file');
-        
-        if (!$filePath) {
-            http_response_code(400);
-            header('Content-Type: application/json');
-            echo json_encode(['error' => 'No file specified']);
-            exit;
-        }
-
-        $basePath = \PKP\core\Core::getBaseDir();
-        $fullPath = $basePath . '/' . $filePath;
-        
-        error_log("[CODECHECK] Download request: $fullPath");
-        
-        // Security: ensure file is in codecheck directory
-        if (strpos($filePath, 'codecheck') === false || !file_exists($fullPath)) {
-            http_response_code(404);
-            header('Content-Type: application/json');
-            echo json_encode(['error' => 'File not found']);
-            exit;
-        }
-
-        // Get original filename (remove timestamp prefix)
-        $filename = basename($fullPath);
-        $filename = preg_replace('/^\d+_/', '', $filename); // Remove timestamp
-        
-        // Set headers for download
-        header('Content-Type: application/octet-stream');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
-        header('Content-Length: ' . filesize($fullPath));
-        header('Cache-Control: must-revalidate');
-        header('Pragma: public');
-        
-        // Output file
-        readfile($fullPath);
-        exit;
     }
 
     public function generateYaml($request, $submissionId): array
