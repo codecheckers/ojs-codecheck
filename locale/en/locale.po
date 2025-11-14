@@ -370,3 +370,9 @@ msgstr "Codecheckers"
 
 msgid "plugins.generic.codecheck.review.reportUrl"
 msgstr "Report URL"
+
+msgid "plugins.generic.codecheck.paperMetadata.readonlyDescription"
+msgstr "These fields are automatically populated from the submission and cannot be edited here."
+
+msgid "plugins.generic.codecheck.paperMetadata.fieldReadonly"
+msgstr "This field is read-only"

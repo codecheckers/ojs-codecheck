@@ -38,18 +38,19 @@
 
       <div class="form-section read-only-section">
         <h3 class="section-title">{{ t('plugins.generic.codecheck.paperMetadata.title') }}</h3>
-        
+        <p class="readonly-description">{{ t('plugins.generic.codecheck.paperMetadata.readonlyDescription') }}</p>
+
         <div class="info-grid">
           <div class="info-item">
             <label class="info-label">{{ t('common.title') }}:</label>
-            <div class="info-value">{{ submissionData.title || t('common.notAvailable') }}</div>
+            <div class="info-value" :title="t('plugins.generic.codecheck.paperMetadata.fieldReadonly')">{{ submissionData.title || t('common.notAvailable') }}</div>
           </div>
 
           <div class="info-item">
             <label class="info-label">{{ t('plugins.generic.codecheck.paperMetadata.authors') }}:</label>
             <div class="info-value">
               <template v-if="submissionData.authors && submissionData.authors.length > 0">
-                <div v-for="(author, index) in submissionData.authors" :key="'author-' + index" class="author-item">
+              <div v-for="(author, index) in submissionData.authors" :key="'author-' + index" class="author-item" :title="t('plugins.generic.codecheck.paperMetadata.fieldReadonly')">
                   {{ author.name || t('common.unknown') }}
                   <span v-if="author.orcid" class="orcid-badge">{{ author.orcid }}</span>
                 </div>
@@ -862,7 +863,18 @@ export default {
 }
 
 .codecheck-metadata-form .form-section.read-only-section {
-    border: 2px solid #ccc;
+  background: #f8f9fa;
+  border: 2px solid #ccc;
+}
+
+.codecheck-metadata-form .readonly-description {
+  margin: 0.5rem 0 1.5rem 0;
+  padding: .35rem .75rem;
+  background: #fff3cd;
+  border-left: 4px solid #ffc107;
+  font-size: 13px;
+  color: #856404;
+  border-radius: 3px;
 }
 
 .codecheck-metadata-form .radio-options {
