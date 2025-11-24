@@ -104,6 +104,32 @@ This plugin follows the CODECHECK brand guidelines and integrates with OJS desig
 1. **View certificates**: Explore CODECHECK certificates on published articles
 2. **Access materials**: Links to computational materials and repositories
 
+## CODECHECK Status System
+
+The plugin tracks CODECHECK progress through a status system displayed in the review workflow.
+
+### Status Levels
+
+| Status | Badge Color | Criteria | Description |
+|--------|------------|----------|-------------|
+| **Pending** | Gray | No metadata exists | CODECHECK process has not started |
+| **In Progress** | Yellow/Warning | Metadata exists but incomplete | Codechecker is working on verification |
+| **Complete** | Green/Success | Certificate ID and check time both present | CODECHECK verification is finished |
+
+### Status Implementation
+
+The status is determined in `CodecheckReviewDisplay.vue` using the following logic:
+```javascript
+function getStatus() {
+  if (metadata.value.certificate && metadata.value.checkTime) {
+    return 'complete';
+  } else if (hasMetadata.value) {
+    return 'in-progress';
+  }
+  return 'pending';
+}
+```
+
 ## Development
 
 ### Requirements

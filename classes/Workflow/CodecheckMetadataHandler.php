@@ -6,6 +6,7 @@ use APP\core\Application;
 use APP\facades\Repo;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\Yaml\Yaml;
 
 class CodecheckMetadataHandler
 {
@@ -45,15 +46,17 @@ class CodecheckMetadataHandler
                 'dataAvailabilityStatement' => $submission->getData('dataAvailabilityStatement'),
             ],
             'codecheck' => $metadata ? [
-                'configVersion' => $metadata->config_version ?? 'latest',
+                'version' => $metadata->version ?? 'latest',
                 'publicationType' => $metadata->publication_type ?? 'doi',
                 'manifest' => json_decode($metadata->manifest ?? '[]', true),
                 'repository' => $metadata->repository,
                 'codecheckers' => json_decode($metadata->codecheckers ?? '[]', true),
+                'source' => $metadata->source,
                 'certificate' => $metadata->certificate,
-                'checkTime' => $metadata->check_time,
+                'check_time' => $metadata->check_time,
                 'summary' => $metadata->summary,
-                'reportUrl' => $metadata->report_url,
+                'report' => $metadata->report,
+                'additionalContent' => $metadata->additional_content,
             ] : null
         ];
 
@@ -82,15 +85,17 @@ class CodecheckMetadataHandler
         };
         $metadataData = [
             'submission_id' => $submissionId,
-            'config_version' => $data['config_version'] ?? 'latest',
+            'version' => $data['version'] ?? 'latest',
             'publication_type' => $data['publication_type'] ?? 'doi',
             'manifest' => json_encode($data['manifest'] ?? []),
             'repository' => $nullIfEmpty($data['repository'] ?? null),
+            'source' => $nullIfEmpty($data['source'] ?? null),
             'codecheckers' => json_encode($data['codecheckers'] ?? []),
             'certificate' => $nullIfEmpty($data['certificate'] ?? null),
             'check_time' => $nullIfEmpty($data['check_time'] ?? null),
             'summary' => $nullIfEmpty($data['summary'] ?? null),    
-            'report_url' => $nullIfEmpty($data['report_url'] ?? null),
+            'report' => $nullIfEmpty($data['report'] ?? null),
+            'additional_content' => $nullIfEmpty($data['additional_content'] ?? null),
             'updated_at' => date('Y-m-d H:i:s'),
         ];
 
@@ -143,64 +148,101 @@ class CodecheckMetadataHandler
         ];
     }
 
-    private function buildYaml($publication, $metadata): string
+private function buildYaml($publication, $metadata): string
     {
         $manifest = json_decode($metadata->manifest ?? '[]', true);
         $codecheckers = json_decode($metadata->codecheckers ?? '[]', true);
 
-        $yaml = "---\n";
-        $yaml .= "version: https://codecheck.org.uk/spec/config/1.0/\n";
-        $yaml .= "paper:\n";
-        $yaml .= "  title: \"" . $this->escapeYaml($publication->getLocalizedTitle()) . "\"\n";
-        $yaml .= "  authors:\n";
+        // Build YAML data structure
+        $data = [
+            'version' => 'https://codecheck.org.uk/spec/config/1.0/'
+        ];
 
-        foreach ($publication->getData('authors') as $author) {
-            $yaml .= "    - name: " . $this->escapeYaml($author->getFullName()) . "\n";
-            if ($author->getOrcid()) {
-                $yaml .= "      ORCID: " . $author->getOrcid() . "\n";
-            }
+        // Add source if present
+        if ($metadata->source) {
+            $data['source'] = $metadata->source;
         }
+
+        // Paper section
+        $authors = [];
+        foreach ($publication->getData('authors') as $author) {
+            $locale = $author->getDefaultLocale();
+            $givenName = $author->getGivenName($locale) ?? '';
+            $familyName = $author->getFamilyName($locale) ?? '';
+            $fullName = trim($givenName . ' ' . $familyName);
+            
+            $authorData = ['name' => $fullName];
+            if ($author->getOrcid()) {
+                $authorData['ORCID'] = $author->getOrcid();
+            }
+            $authors[] = $authorData;
+        }
+
+        $paperData = [
+            'title' => $publication->getLocalizedTitle(),
+            'authors' => $authors
+        ];
 
         $doi = $publication->getStoredPubId('doi');
         if ($doi) {
-            $yaml .= "  reference: https://doi.org/" . $doi . "\n";
+            $paperData['reference'] = 'https://doi.org/' . $doi;
         }
 
-        $yaml .= "manifest:\n";
+        $data['paper'] = $paperData;
+
+        // Manifest section
+        $manifestData = [];
         foreach ($manifest as $file) {
-            $yaml .= "  - file: " . $this->escapeYaml($file['file'] ?? '') . "\n";
-            $yaml .= "    comment: \"" . $this->escapeYaml($file['comment'] ?? '') . "\"\n";
+            $fileData = ['file' => $file['file'] ?? ''];
+            if (!empty($file['comment'])) {
+                $fileData['comment'] = $file['comment'];
+            }
+            $manifestData[] = $fileData;
         }
+        $data['manifest'] = $manifestData;
 
-        $yaml .= "codechecker:\n";
+        // Codechecker section
+        $codecheckerData = [];
         foreach ($codecheckers as $checker) {
-            $yaml .= "  - name: " . $this->escapeYaml($checker['name'] ?? '') . "\n";
+            $checkerData = ['name' => $checker['name'] ?? ''];
             if (!empty($checker['orcid'])) {
-                $yaml .= "    ORCID: " . $checker['orcid'] . "\n";
+                $checkerData['ORCID'] = $checker['orcid'];
             }
+            $codecheckerData[] = $checkerData;
         }
+        $data['codechecker'] = $codecheckerData;
 
+        // Summary
         if ($metadata->summary) {
-            $yaml .= "summary: >\n";
-            foreach (explode("\n", $metadata->summary) as $line) {
-                $yaml .= "  " . $line . "\n";
-            }
+            $data['summary'] = $metadata->summary;
         }
 
+        // Repository
         if ($metadata->repository) {
-            $yaml .= "repository: " . $metadata->repository . "\n";
+            $data['repository'] = $metadata->repository;
         }
 
+        // Check time
         if ($metadata->check_time) {
-            $yaml .= "check_time: \"" . $metadata->check_time . "\"\n";
+            $data['check_time'] = $metadata->check_time;
         }
 
+        // Certificate
         if ($metadata->certificate) {
-            $yaml .= "certificate: " . $metadata->certificate . "\n";
+            $data['certificate'] = $metadata->certificate;
         }
 
-        if ($metadata->report_url) {
-            $yaml .= "report: " . $metadata->report_url . "\n";
+        // Report
+        if ($metadata->report) {
+            $data['report'] = $metadata->report;
+        }
+
+        // Generate YAML
+        $yaml = Yaml::dump($data, 4, 2);
+
+        // Add custom additional content at the end if present
+        if ($metadata->additional_content) {
+            $yaml .= "\n" . trim($metadata->additional_content) . "\n";
         }
 
         return $yaml;
@@ -214,16 +256,17 @@ class CodecheckMetadataHandler
         
         $authors = [];
         foreach ($publication->getData('authors') as $author) {
+            $locale = $author->getDefaultLocale();
+            $givenName = $author->getGivenName($locale) ?? '';
+            $familyName = $author->getFamilyName($locale) ?? '';
+            $fullName = trim($givenName . ' ' . $familyName);
+
             $authors[] = [
-                'name' => $author->getFullName(),
+                'name' => $fullName,    
                 'orcid' => $author->getOrcid()
             ];
         }
         return $authors;
     }
 
-    private function escapeYaml(string $text): string
-    {
-        return str_replace('"', '\\"', $text);
-    }
 }
