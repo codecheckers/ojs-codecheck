@@ -14,8 +14,8 @@
       <div class="codecheck-header">
         <div class="header-content">
           <div class="version-selector">
-            <label class="version-label">{{ t('plugins.generic.codecheck.configVersion') }}</label>
-            <select v-model="metadata.configVersion" class="version-select">
+            <label class="version-label">{{ t('plugins.generic.codecheck.version') }}</label>
+            <select v-model="metadata.version" class="version-select">
               <option value="latest">latest</option>
               <option value="1.0">1.0</option>
             </select>
@@ -26,12 +26,8 @@
       <div class="publication-section">
         <div class="radio-options">
           <label class="radio-option">
-            <input type="radio" v-model="metadata.publicationType" value="doi" name="publication-type" />
+            <input type="radio" v-model="metadata.publicationType" value="doi" name="publication-type" checked />
             <span class="radio-label">{{ t('plugins.generic.codecheck.publishWithDOI') }}</span>
-          </label>
-          <label class="radio-option">
-            <input type="radio" v-model="metadata.publicationType" value="separate" name="publication-type" />
-            <span class="radio-label">{{ t('plugins.generic.codecheck.publishSeparate') }}</span>
           </label>
         </div>
       </div>
@@ -145,7 +141,7 @@
                 <td>
                   <button 
                     type="button"
-                    class="pkpButton codecheck-btn pkpButton--close" 
+                    class="pkpButton pkpButton--close" 
                     @click="removeManifestFile(index)"
                   >×</button>
                 </td>
@@ -185,6 +181,17 @@
         </div>
 
         <div class="field-group">
+          <label class="field-label">{{ t('plugins.generic.codecheck.source.label') }}</label>
+          <p class="field-description">{{ t('plugins.generic.codecheck.source.description') }}</p>
+          <textarea
+            v-model="metadata.source"
+            class="pkpFormField__input pkpFormField__input--textarea full-width"
+            rows="3"
+            :placeholder="t('plugins.generic.codecheck.source.placeholder')"
+          ></textarea>
+        </div>
+
+        <div class="field-group">
           <div class="field-header">
             <label class="field-label">{{ t('plugins.generic.codecheck.codecheckers.title') }} <span class="required">*</span></label>
             <button type="button" class="pkpButton btn-add" @click="showCodecheckerModal">{{ t('plugins.generic.codecheck.codecheckers.add') }}</button>
@@ -220,11 +227,11 @@
         </div>
 
         <div class="field-group">
-          <label class="field-label">{{ t('plugins.generic.codecheck.certificate.reportUrl') }}</label>
-          <p class="field-description">{{ t('plugins.generic.codecheck.certificate.reportUrlDescription') }}</p>
+          <label class="field-label">{{ t('plugins.generic.codecheck.certificate.report') }}</label>
+          <p class="field-description">{{ t('plugins.generic.codecheck.certificate.reportDescription') }}</p>
           <input
             type="url"
-            v-model="metadata.reportUrl"
+            v-model="metadata.report"
             class="pkpFormField__input full-width"
             placeholder="https://zenodo.org/record/12345"
           />
@@ -234,9 +241,19 @@
           <label class="field-label">{{ t('plugins.generic.codecheck.completionTime.label') }}</label>
           <input
             type="datetime-local"
-            v-model="metadata.checkTime"
+            v-model="metadata.check_time"
             class="pkpFormField__input full-width"
           />
+        </div>
+        <div class="field-group">
+          <label class="field-label">{{ t('plugins.generic.codecheck.additionalContent.label') }}</label>
+          <p class="field-description">{{ t('plugins.generic.codecheck.additionalContent.description') }}</p>
+          <textarea
+            v-model="metadata.additionalContent"
+            class="pkpFormField__input pkpFormField__input--textarea full-width"
+            rows="8"
+            :placeholder="t('plugins.generic.codecheck.additionalContent.placeholder')"
+          ></textarea>
         </div>
       </div>
 
@@ -325,15 +342,17 @@ export default {
         dataAvailabilityStatement: ''
       },
       metadata: {
-        configVersion: 'latest',
+        version: 'latest',
         publicationType: 'doi',
         manifest: [],
         repository: '',
+        source: '',
         codecheckers: [],
         certificate: '',
-        checkTime: '',
+        check_time: '',
         summary: '',
-        reportUrl: ''
+        report: '',
+        additionalContent: ''
       }
     }
   },
@@ -388,18 +407,20 @@ export default {
         
         if (data.codecheck && typeof data.codecheck === 'object') {
           this.metadata = {
-            configVersion: data.codecheck.configVersion || data.codecheck.config_version || 'latest',
+            version: data.codecheck.version || data.codecheck.version || 'latest',
             publicationType: data.codecheck.publicationType || data.codecheck.publication_type || 'doi',
             manifest: Array.isArray(data.codecheck.manifest) ? data.codecheck.manifest : 
                       (typeof data.codecheck.manifest === 'string' ? JSON.parse(data.codecheck.manifest) : []),
             repository: data.codecheck.repository || '',
+            source: data.codecheck.source || '',
             codecheckers: Array.isArray(data.codecheck.codecheckers) ? data.codecheck.codecheckers : 
                           (typeof data.codecheck.codecheckers === 'string' ? JSON.parse(data.codecheck.codecheckers) : []),
             certificate: data.codecheck.certificate || '',
-            checkTime: data.codecheck.checkTime || data.codecheck.check_time ? 
-                      this.formatDateTimeLocal(data.codecheck.checkTime || data.codecheck.check_time) : '',
+            check_time: data.codecheck.check_time || data.codecheck.check_time ? 
+                      this.formatDateTimeLocal(data.codecheck.check_time || data.codecheck.check_time) : '',
             summary: data.codecheck.summary || '',
-            reportUrl: data.codecheck.reportUrl || data.codecheck.report_url || ''
+            report: data.codecheck.report || data.codecheck.report || '',
+            additionalContent: data.codecheck.additionalContent || data.codecheck.additional_content || ''
           };
           
           if (data.codecheck.repository) {
@@ -566,15 +587,17 @@ export default {
 
       try {
         const dataToSave = {
-          config_version: this.metadata.configVersion,
+          version: this.metadata.version,
           publication_type: this.metadata.publicationType,
           manifest: this.metadata.manifest,
           repository: this.repositories.join(', '),
+          source: this.metadata.source,
           codecheckers: this.metadata.codecheckers,
           certificate: this.metadata.certificate,
-          check_time: this.metadata.checkTime,
+          check_time: this.metadata.check_time,
           summary: this.metadata.summary,
-          report_url: this.metadata.reportUrl
+          report: this.metadata.report,
+          additional_content: this.metadata.additionalContent
         };
 
         console.log('Saving CODECHECK data:', dataToSave);
@@ -625,7 +648,10 @@ export default {
       const yaml = [];
       
       yaml.push('---');
-      yaml.push('version: https://codecheck.org.uk/spec/config/' + this.metadata.configVersion + '/');
+      yaml.push('version: https://codecheck.org.uk/spec/config/' + this.metadata.version + '/');
+      if (this.metadata.source) {
+        yaml.push('source: "' + this.metadata.source + '"');
+      }
       yaml.push('paper:');
       yaml.push('  title: "' + (this.submissionData.title || 'Untitled') + '"');
       yaml.push('  authors:');
@@ -675,16 +701,21 @@ export default {
         yaml.push('repository: ' + this.repositories[0]);
       }
       
-      if (this.metadata.checkTime) {
-        yaml.push('check_time: "' + this.metadata.checkTime + '"');
+      if (this.metadata.check_time) {
+        yaml.push('check_time: "' + this.metadata.check_time + '"');
       }
       
       if (this.metadata.certificate) {
         yaml.push('certificate: ' + this.metadata.certificate);
       }
       
-      if (this.metadata.reportUrl) {
-        yaml.push('report: ' + this.metadata.reportUrl);
+      if (this.metadata.report) {
+        yaml.push('report: ' + this.metadata.report);
+      }
+
+      if (this.metadata.additionalContent) {
+        yaml.push('');
+        yaml.push(this.metadata.additionalContent.trim());
       }
       
       return yaml.join('\n');
@@ -1244,7 +1275,7 @@ export default {
   background: #c8233300;
   border-color: #c8233300;
   font-size: 1.3rem;
-  color: #676767;
+  color: #67676773;
 }
 .codecheck-metadata-form .pkpButton--close:hover:not(:disabled) {
   background: #c8233300;
