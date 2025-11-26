@@ -23,12 +23,18 @@ class CodecheckRegisterGithubIssuesApiParser
     private UniqueArray $labels;
     private $client;
 
+    /**
+     * Initializes a new CODECHECK GitHub Register Api Parser (initialize the GitHub Client and a new unique Array)
+     */
     function __construct()
     {
         $this->client = new Client();
         $this->labels = new UniqueArray();
     }
 
+    /**
+     * Fetches all Issues from the CODECHECK GitHub Register
+     */
     public function fetchIssues(): void
     {
         $issuePage = 1;
@@ -65,6 +71,9 @@ class CodecheckRegisterGithubIssuesApiParser
         } while (!$fetchedMatchingIssue);
     }
 
+    /**
+     * Fetches a Issue Labels from the CODECHECK GitHub Register
+     */
     public function fetchLabels(): void
     {
         try {
@@ -124,11 +133,21 @@ class CodecheckRegisterGithubIssuesApiParser
         return $issue['html_url'];
     }
 
+    /**
+     * Gets all fetched CODECHECK GtiHub Register Issues
+     * 
+     * @return array Returns an array of all CODECHECK GtiHub Register Issues
+     */
     public function getIssues(): array
     {
         return $this->issues;
     }
 
+    /**
+     * Gets all fetched CODECHECK GtiHub Register Issue Labels
+     * 
+     * @return UniqueArray Returns a `UniqueArray` of all CODECHECK GtiHub Register Issue Labels
+     */
     public function getLabels(): UniqueArray
     {
         return $this->labels;

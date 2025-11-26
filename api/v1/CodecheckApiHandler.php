@@ -29,7 +29,13 @@ class CodecheckApiHandler
     private Request $request;
     private CodecheckMetadataHandler $codecheckMetadataHandler;
 
-    public function __construct(Request $request, array &$args)
+    /**
+     * Initialize the Codecheck APIHandler class
+     * 
+     * @param Request $request API Request
+     * @return void
+     */
+    public function __construct(Request $request)
     {
         $this->response = new JsonResponse();
 
@@ -94,6 +100,11 @@ class CodecheckApiHandler
         $this->serveRequest();
     }
 
+    /**
+     * Authorize the API connection
+     * 
+     * @return void
+     */
     public function authorize()
     {
         // Check if the CSRF Token is present and valid
@@ -120,6 +131,11 @@ class CodecheckApiHandler
         }
     }
 
+    /**
+     * Gets the route from the entire API Request
+     * 
+     * @return ?string If Request is correct, this returns the route and else it returns `null`
+     */
     private function getRouteFromRequest(): ?string
     {
         if (preg_match('#api/v1/codecheck/(.*)#', $this->request->getRequestPath(), $matches)) {
@@ -129,6 +145,11 @@ class CodecheckApiHandler
         }
     }
 
+    /**
+     * Serves the API request -> calls the function based on the called endpoint in the route
+     * 
+     * @return void
+     */
     private function serveRequest(): void
     {
         // get the request Method like POST or GET
@@ -144,6 +165,11 @@ class CodecheckApiHandler
         }
     }
 
+    /**
+     * Gets Venue Types and Venue Names
+     * 
+     * @return void
+     */
     private function getVenueData(): void
     {   
         try {
@@ -174,6 +200,11 @@ class CodecheckApiHandler
         ], 200);
     }
 
+    /**
+     * This reserves a new Identifier
+     * 
+     * @return void
+     */
     public function reserveIdentifier(): void
     {
         $postParams = json_decode(file_get_contents('php://input'), true);
@@ -243,6 +274,11 @@ class CodecheckApiHandler
         }
     }
 
+    /**
+     * This function gets all the Codecheck Metadata
+     * 
+     * @return void
+     */
     public function getMetadata(): void
     {
         // get submissionId
@@ -296,6 +332,11 @@ class CodecheckApiHandler
         $this->response->response($response, 200);
     }
 
+    /**
+     * This function saves all the CODECHECK Metadata to the Database
+     * 
+     * @return void
+     */
     public function saveMetadata(): void
     {
         // get submissionId
@@ -358,7 +399,9 @@ class CodecheckApiHandler
     }
 
     /**
-     * Upload file for manifest
+     * Upload a file for the CODECHECK manifest
+     * 
+     * @return void
      */
     public function uploadFile(): void
     {
@@ -443,7 +486,9 @@ class CodecheckApiHandler
     }
 
     /**
-     * Download file from manifest
+     * Download a file from the CODECHECK manifest
+     * 
+     * @return void
      */
     public function downloadFile(): void
     {
@@ -487,6 +532,11 @@ class CodecheckApiHandler
         exit;
     }
 
+    /**
+     * This function generates the Yaml file based on the CODECHECK Metadata
+     * 
+     * @return void
+     */
     public function generateYaml(): void
     {
         $submissionId = $this->codecheckMetadataHandler->getSubmissionId();

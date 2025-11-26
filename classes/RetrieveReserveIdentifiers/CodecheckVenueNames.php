@@ -10,6 +10,9 @@ class CodecheckVenueNames
 {
     private UniqueArray $uniqueArray;
 
+    /**
+     * Initializes a new List of all CODECHECK Venue Names
+     */
     function __construct()
     {
         // Initialize unique Array
@@ -44,6 +47,11 @@ class CodecheckVenueNames
         }
     }
 
+    /**
+     * Gets the List of all CODECHECK Venue Names
+     * 
+     * @return UniqueArray Returns all CODECHECK Venue Names inside a `UniqueArray`
+     */
     public function get(): UniqueArray
     {
         return $this->uniqueArray;
