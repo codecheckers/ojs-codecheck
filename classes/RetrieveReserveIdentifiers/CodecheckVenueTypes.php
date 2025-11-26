@@ -9,6 +9,9 @@ class CodecheckVenueTypes
 {
     private UniqueArray $uniqueArray;
 
+    /**
+     * Initializes a new List of all CODECHECK Venue Types
+     */
     function __construct()
     {
         // Initialize unique Array
@@ -35,6 +38,11 @@ class CodecheckVenueTypes
         }
     }
 
+    /**
+     * Gets the List of all CODECHECK Venue Types
+     * 
+     * @return UniqueArray Returns all CODECHECK Venue Types inside a `UniqueArray`
+     */
     public function get(): UniqueArray
     {
         return $this->uniqueArray;

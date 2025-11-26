@@ -8,37 +8,26 @@ use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\UniqueArray
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CodecheckRegisterGithubIssuesApiParser;
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CertificateIdentifier;
 
-// get the certificate ID from the issue description
-function getRawIdentifier(string $title): ?string
-{
-    // convert whole title to lowercase
-    $title = strtolower($title);
-
-    $rawIdentifier = null;
-
-    if (strpos($title, '|') !== false) {
-        // split the title into sub-strings at separator letter: '|'
-        // store those sub-strings in the $matches array
-        preg_match('/[^|]+$/', $title, $matches);
-
-        // $matches[0] is the last sub-string so here the Certificate Identifier
-        // when no '|' would exist then it would be the whole string -> but this case is excluded because of the if statement in line 17
-        $rawIdentifier = preg_replace('/[\s]+/', '', $matches[0] ?? '');
-    }
-
-    return $rawIdentifier;
-}
-
 class CertificateIdentifierList
 {
     private UniqueArray $uniqueArray;
 
+    /**
+     * This initializes a new Certificate Identifier List with a new `UniqueArray`
+     * 
+     * @return void
+     */
     function __construct()
     {
         $this->uniqueArray = new UniqueArray();   
     }
 
-    // Factory Method to create a new CertificateIdentifierList from a GitHub API fetch
+    /**
+     * Factory Method to create a new CertificateIdentifierList from a GitHub API fetch
+     * 
+     * @param CodecheckRegisterGithubIssuesApiParser $apiParser The APIParser for the GitHub Issues
+     * @return CertificateIdentifierList Returns a new List containing all fetched Certificate Identifiers from GitHub
+     */
     static function fromApi(
         CodecheckRegisterGithubIssuesApiParser $apiParser
     ): CertificateIdentifierList {
@@ -59,7 +48,7 @@ class CertificateIdentifierList
 
         foreach ($apiParser->getIssues() as $issue) {
             // raw identifier (can still have ranges of identifiers);
-            $rawIdentifier = getRawIdentifier($issue['title']);
+            $rawIdentifier = CertificateIdentifierList::getRawIdentifier($issue['title']);
             
             // check if the identifier is empty (either empty string or null) and not set
             // -> if so skip this identifier and move onto the next issue
@@ -75,6 +64,38 @@ class CertificateIdentifierList
         return $newCertificateIdentifierList;
     }
 
+    /**
+     * Get the Certificate Identifier from the GitHub Issue Title
+     * 
+     * @param string $title The Title of the GitHub Issue
+     * @return ?string Either it returns a new Certificate identifier raw string (if the title matches the required form), or it returns null otherwise
+     */
+    public static function getRawIdentifier(string $title): ?string
+    {
+        // convert whole title to lowercase
+        $title = strtolower($title);
+
+        $rawIdentifier = null;
+
+        if (strpos($title, '|') !== false) {
+            // split the title into sub-strings at separator letter: '|'
+            // store those sub-strings in the $matches array
+            preg_match('/[^|]+$/', $title, $matches);
+
+            // $matches[0] is the last sub-string so here the Certificate Identifier
+            // when no '|' would exist then it would be the whole string -> but this case is excluded because of the if statement in line 17
+            $rawIdentifier = preg_replace('/[\s]+/', '', $matches[0] ?? '');
+        }
+
+        return $rawIdentifier;
+    }
+
+    /**
+     * Appends a raw Identifier to the list of Certificate Identifiers
+     * 
+     * @param string $rawidentifier The raw Identifier to be appended
+     * @return void
+     */
     public function appendToCertificateIdList(string $rawIdentifier): void
     {
         // list of certificate identifiers in range
@@ -109,7 +130,9 @@ class CertificateIdentifierList
         }
     }
 
-    // sort ascending Certificate Identifiers
+    /**
+     * Sorts the Certificate Identifier List ascending
+     */
     public function sortAsc(): void
     {
         $this->uniqueArray->sort(function($a, $b) {
@@ -122,6 +145,9 @@ class CertificateIdentifierList
         });
     }
 
+    /**
+     * Sorts the Certificate Identifier List descending
+     */
     public function sortDesc(): void
     {
         $this->uniqueArray->sort(function($a, $b) {
@@ -134,12 +160,21 @@ class CertificateIdentifierList
         });
     }
 
+    /**
+     * Returns the count of all Certificate Identifiers that are inside the Certificate Identifier List
+     * 
+     * @return int The count of all Certificate Identifiers
+     */
     public function getNumberOfIdentifiers(): int
     {
         return $this->uniqueArray->count();
     }
 
-    // return the latest identifier
+    /**
+     * Get the latest/ newest Certificate Identifier
+     * 
+     * @return CertificateIdentifier Returns the newest Certificate Identifier
+     */
     public function getNewestIdentifier(): CertificateIdentifier
     {
         $this->sortDesc();
@@ -147,6 +182,11 @@ class CertificateIdentifierList
         return $this->uniqueArray->at(0);
     }
 
+    /**
+     * Converts the Certificate Identifier List to a string that is good for print debugging
+     * 
+     * @return string The List of the Certificate Identifiers as a string
+     */
     public function toStr(): string
     {
         $return_str = "Certificate Identifiers:\n";
