@@ -85,6 +85,12 @@ class CertificateIdentifierList
             // $matches[0] is the last sub-string so here the Certificate Identifier
             // when no '|' would exist then it would be the whole string -> but this case is excluded because of the if statement in line 17
             $rawIdentifier = preg_replace('/[\s]+/', '', $matches[0] ?? '');
+        
+            // Check if the $rawIdentifier has the form 'year-number' or 'year-number/year-number'
+            // If it has another form like 'year-number - year-number' it will be set back to null
+            if (!preg_match('/^\d{4}-\d+(?:\/\d{4}-\d+)?$/', $rawIdentifier)) {
+                $rawIdentifier = null;
+            }
         }
 
         return $rawIdentifier;
