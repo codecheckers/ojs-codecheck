@@ -135,7 +135,9 @@ class CodecheckPlugin extends GenericPlugin
                 'options' => [
                     [
                         'value' => 1, 
-                        'label' => __('plugins.generic.codecheck.optIn.description') . ' <a href="https://codecheck.org.uk/" target="_blank">CODECHECK</a>'
+                        'label' => __('plugins.generic.codecheck.optIn.description', [
+                            'codecheckLink' => '<a href="https://codecheck.org.uk/" target="_blank">CODECHECK</a>'
+                        ])
                     ]
                 ],
                 'value' => false,

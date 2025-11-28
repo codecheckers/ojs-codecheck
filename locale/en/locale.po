@@ -18,7 +18,7 @@ msgid "plugins.generic.codecheck.description"
 msgstr "Integrates CODECHECK code execution verification into the OJS submission and peer review workflow"
 
 msgid "plugins.generic.codecheck.optIn.description"
-msgstr "Yes, I want my paper to be codechecked. See:"
+msgstr "Yes, I want my paper to be codechecked. See: {$codecheckLink}"
 
 msgid "plugins.generic.codecheck.submission.label"
 msgstr "CODECHECK Information"
