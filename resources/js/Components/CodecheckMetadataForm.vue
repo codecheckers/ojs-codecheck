@@ -380,7 +380,8 @@ export default {
         const submissionId = this.submission.id;
         const pathParts = window.location.pathname.split('/');
         const contextName = pathParts[3];
-        const apiUrl = `${window.location.origin}/ojs/index.php/${contextName}/codecheck/metadata?submissionId=${submissionId}`;
+        let apiBaseUrl = pkp.context.apiBaseUrl;
+        const apiUrl = `${apiBaseUrl}/codecheck/metadata?submissionId=${submissionId}`;
         
         const response = await fetch(apiUrl, {
           headers: {
