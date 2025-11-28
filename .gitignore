@@ -30,3 +30,6 @@
 # macOS
 .DS_Store
 *.pem
+
+# dependencies
+node_modules/

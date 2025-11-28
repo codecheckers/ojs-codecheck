@@ -1,14 +1,4 @@
 <?php
-/**
- * @file CodecheckSchemaMigration.php
- *
- * Copyright (c) 2025 CODECHECK Initiative
- * Distributed under the GNU GPL v3. For full terms see the file docs/COPYING.
- *
- * @class CodecheckSchemaMigration
- * @brief Describe database table structures for CODECHECK plugin.
- */
-
 namespace APP\plugins\generic\codecheck\classes\migration;
 
 use Illuminate\Database\Migrations\Migration;
@@ -17,93 +7,81 @@ use Illuminate\Support\Facades\Schema;
 
 class CodecheckSchemaMigration extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         try {
             if (Schema::hasTable('codecheck_metadata')) {
-                error_log("CODECHECK MIGRATION: Table already exists, skipping creation");
-                return;
+                error_log("CODECHECK: Table exists, cleaning up old structure");
+                Schema::dropIfExists('codecheck_metadata');
+                error_log("CODECHECK: Dropped old table");
             }
             
-            // Create the metadata table
             Schema::create('codecheck_metadata', function (Blueprint $table) {
                 $table->bigInteger('submission_id')->primary();
-                $table->boolean('opt_in')->default(false);
-                $table->string('code_repository', 500)->nullable();
-                $table->string('data_repository', 500)->nullable();
-                $table->text('dependencies')->nullable();
-                $table->text('execution_instructions')->nullable();
-                // Certificate fields
-                $table->string('certificate_doi', 255)->nullable();
-                $table->string('certificate_url', 500)->nullable();
-                $table->string('codechecker_names', 1000)->nullable();
-                $table->string('check_status', 50)->nullable();
-                $table->timestamp('certificate_date')->nullable();
-                // Timestamps
-                $table->timestamp('created_at')->nullable();
-                $table->timestamp('updated_at')->nullable();
+                $table->string('version', 50)->default('latest');
+                $table->string('publication_type', 50)->default('doi');
+                $table->text('manifest')->nullable();
+                $table->string('repository', 500)->nullable();
+                $table->text('source')->nullable();
+                $table->text('codecheckers')->nullable();
+                $table->string('certificate', 100)->nullable();
+                $table->timestamp('check_time')->nullable();
+                $table->text('summary')->nullable();
+                $table->string('report', 500)->nullable();
+                $table->text('additional_content')->nullable();
+                $table->timestamps();
                 $table->index('submission_id');
             });
             
-            // Create CODECHECK genres for all contexts
+            // Create genres for new installations
             $this->createCodecheckGenres();
             
-        } catch (Exception $e) {
-            error_log("CODECHECK MIGRATION ERROR: " . $e->getMessage());
+            error_log("CODECHECK: Table created successfully");
+            
+        } catch (\Exception $e) {
+            error_log("CODECHECK Migration Error: " . $e->getMessage());
             throw $e;
         }
     }
 
     private function createCodecheckGenres(): void
     {
-        $contextDao = \APP\core\Application::getContextDAO();
-        $genreDao = \PKP\submission\DAO::getDAO('GenreDAO');
-        
-        $contexts = $contextDao->getAll();
-        while ($context = $contexts->next()) {
-            // Create CODECHECK README genre
-            $readmeGenre = $genreDao->newDataObject();
-            $readmeGenre->setContextId($context->getId());
-            $readmeGenre->setName('CODECHECK README', 'en');
-            $readmeGenre->setDesignation('codecheck_readme');
-            $readmeGenre->setCategory(GENRE_CATEGORY_SUPPLEMENTARY);
-            $readmeGenre->setSupplementary(true);
-            $readmeGenre->setRequired(false);
-            $readmeGenre->setSortOrder(100);
-            $genreDao->insertObject($readmeGenre);
+        try {
+            $contextDao = \APP\core\Application::getContextDAO();
+            $genreDao = \PKP\db\DAORegistry::getDAO('GenreDAO');
             
-            // Create codecheck.yml genre
-            $ymlGenre = $genreDao->newDataObject();
-            $ymlGenre->setContextId($context->getId());
-            $ymlGenre->setName('codecheck.yml', 'en');
-            $ymlGenre->setDesignation('codecheck_yml');
-            $ymlGenre->setCategory(GENRE_CATEGORY_SUPPLEMENTARY);
-            $ymlGenre->setSupplementary(true);
-            $ymlGenre->setRequired(false);
-            $ymlGenre->setSortOrder(101);
-            $genreDao->insertObject($ymlGenre);
-            
-            // Create LICENSE genre
-            $licenseGenre = $genreDao->newDataObject();
-            $licenseGenre->setContextId($context->getId());
-            $licenseGenre->setName('CODECHECK LICENSE', 'en');
-            $licenseGenre->setDesignation('codecheck_license');
-            $licenseGenre->setCategory(GENRE_CATEGORY_SUPPLEMENTARY);
-            $licenseGenre->setSupplementary(true);
-            $licenseGenre->setRequired(false);
-            $licenseGenre->setSortOrder(102);
-            $genreDao->insertObject($licenseGenre);
+            $contexts = $contextDao->getAll();
+            while ($context = $contexts->next()) {
+                // Check if genre already exists to avoid duplicates
+                $existingGenres = $genreDao->getByContextId($context->getId());
+                $ymlExists = false;
+                
+                while ($genre = $existingGenres->next()) {
+                    if ($genre->getLocalizedName() === 'codecheck.yml') {
+                        $ymlExists = true;
+                        break;
+                    }
+                }
+                
+                if (!$ymlExists) {
+                    $ymlGenre = $genreDao->newDataObject();
+                    $ymlGenre->setContextId($context->getId());
+                    $ymlGenre->setName('codecheck.yml', 'en');
+                    $ymlGenre->setCategory(GENRE_CATEGORY_SUPPLEMENTARY);
+                    $ymlGenre->setSupplementary(true);
+                    $ymlGenre->setRequired(false);
+                    $ymlGenre->setSequence(101);
+                    $genreDao->insertObject($ymlGenre);
+                    error_log("CODECHECK: Created codecheck.yml genre for context " . $context->getId());
+                }
+            }
+        } catch (\Exception $e) {
+            error_log("CODECHECK: Genre creation error (non-critical): " . $e->getMessage());
         }
     }
 
-    /**
-     * Reverse the migration.
-     */
     public function down(): void
     {
-        Schema::drop('codecheck_metadata');
+        Schema::dropIfExists('codecheck_metadata');
     }
 }
