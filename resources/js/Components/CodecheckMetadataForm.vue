@@ -378,10 +378,9 @@ export default {
         }
 
         const submissionId = this.submission.id;
-        const pathParts = window.location.pathname.split('/');
-        const contextName = pathParts[3];
-        let apiBaseUrl = pkp.context.apiBaseUrl;
-        const apiUrl = `${apiBaseUrl}/codecheck/metadata?submissionId=${submissionId}`;
+        let codecheckApiUrl = pkp.context.apiBaseUrl.replace(/\/api\/v1\/?$/, '');
+        codecheckApiUrl += '/codecheck';
+        const apiUrl = `${codecheckApiUrl}/metadata?submissionId=${submissionId}`;
         
         const response = await fetch(apiUrl, {
           headers: {
@@ -604,9 +603,9 @@ export default {
         console.log('Saving CODECHECK data:', dataToSave);
 
         const submissionId = this.submission.id;
-        const pathParts = window.location.pathname.split('/');
-        const contextName = pathParts[3];
-        const apiUrl = `${window.location.origin}/ojs/index.php/${contextName}/codecheck/metadata?submissionId=${submissionId}`;
+        let codecheckApiUrl = pkp.context.apiBaseUrl.replace(/\/api\/v1\/?$/, '');
+        codecheckApiUrl += '/codecheck';
+        const apiUrl = `${codecheckApiUrl}/metadata?submissionId=${submissionId}`;
         
         const response = await fetch(apiUrl, {
           method: 'POST',
