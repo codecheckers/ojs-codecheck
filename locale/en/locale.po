@@ -7,73 +7,57 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2025-12-01T16:21:26+00:00\n"
-"PO-Revision-Date: 2025-12-01T16:21:26+00:00\n"
-"Language: \n"
+"POT-Creation-Date: 2025-01-30T00:00:00+00:00\n"
+"PO-Revision-Date: 2025-01-30T00:00:00+00:00\n"
+"Language: en\n"
 
 msgid "plugins.generic.codecheck.displayName"
 msgstr "CODECHECK"
 
 msgid "plugins.generic.codecheck.description"
-msgstr "Integrates CODECHECK code execution verification into the OJS peer review workflow"
-
-msgid "plugins.generic.codecheck.settings.title"
-msgstr "CODECHECK Settings"
-
-msgid "plugins.generic.codecheck.settings.description"
-msgstr "Configure CODECHECK integration settings for this journal"
-
-# Future settings - add as placeholders for now
-msgid "plugins.generic.codecheck.settings.enableCodecheck"
-msgstr "Enable CODECHECK for this journal"
-
-msgid "plugins.generic.codecheck.settings.enableCodecheck.description"
-msgstr "Allow editors to assign codecheckers to submissions"
-
-msgid "plugins.generic.codecheck.title"
-msgstr "CODECHECK"
+msgstr "Integrates CODECHECK code execution verification into the OJS submission and peer review workflow"
 
 msgid "plugins.generic.codecheck.optIn.description"
-msgstr "Yes, I want my paper to be codechecked. See:"
+msgstr "Yes, I want my paper to be codechecked. See: {$codecheckLink}"
 
-msgid "plugins.generic.codecheck.details.title"
-msgstr "CODECHECK Details"
+msgid "plugins.generic.codecheck.submission.label"
+msgstr "CODECHECK Information"
+
+msgid "plugins.generic.codecheck.submission.description"
+msgstr "Please provide information about your code and data repositories."
 
 msgid "plugins.generic.codecheck.codeRepository"
-msgstr "Code Repository URL"
+msgstr "Code Repository URLs"
 
 msgid "plugins.generic.codecheck.codeRepository.description"
-msgstr "Link to your code repository (GitHub, GitLab, etc.)"
+msgstr "Link(s) to your code repository (GitHub, GitLab, etc.)"
 
 msgid "plugins.generic.codecheck.dataRepository"
-msgstr "Data Repository URL"
+msgstr "Data Repository URLs"
 
 msgid "plugins.generic.codecheck.dataRepository.description"
-msgstr "Link to your data repository (Zenodo, OSF, etc.) - optional"
+msgstr "Link(s) to your data repository (Zenodo, OSF, etc.) - optional"
 
-msgid "plugins.generic.codecheck.dependencies"
-msgstr "Software Dependencies"
+msgid "plugins.generic.codecheck.manifestFiles.label"
+msgstr "Expected Output Files"
 
-msgid "plugins.generic.codecheck.dependencies.description"
-msgstr "List all software dependencies and versions"
+msgid "plugins.generic.codecheck.manifestFiles.description"
+msgstr "List the main figures, tables, and results your code should produce."
 
-msgid "plugins.generic.codecheck.executionInstructions"
-msgstr "Execution Instructions"
+msgid "plugins.generic.codecheck.dataAvailability"
+msgstr "Data and Software Availability"
 
-msgid "plugins.generic.codecheck.executionInstructions.description"
-msgstr "Step-by-step instructions to reproduce your analysis"
+msgid "plugins.generic.codecheck.dataAvailability.description"
+msgstr "Copy from your manuscript's data availability section"
 
-msgid "plugins.generic.codecheck.preview"
-msgstr "Preview codecheck.yml"
+msgid "plugins.generic.codecheck.dataAvailability.placeholder"
+msgstr "Describe how your data and code are available..."
 
-msgid "plugins.generic.codecheck.certificate.landingPage.title"
-msgstr "Link to the certificate landing page with all related information"
+msgid "plugins.generic.codecheck.review.title"
+msgstr "CODECHECK Information"
 
-msgid "plugins.generic.codecheck.certificate.document.title"
-msgstr "Link to the actual certificate document"
+msgid "plugins.generic.codecheck.notOptedIn"
+msgstr "CODECHECK was not selected for this submission."
 
-msgid "plugins.generic.codecheck.status.inProgress"
-msgstr "In Progress"
-
-msgid "plugins.generic.codecheck.status.verificationInProgress"
-msgstr "Computational reproducibility verification in progress."
+msgid "plugins.generic.codecheck.codecheckStatus"
+msgstr "CODECHECK Status"
