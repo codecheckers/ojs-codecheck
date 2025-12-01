@@ -14,7 +14,7 @@
       <div class="codecheck-header">
         <div class="header-content">
           <div class="version-selector">
-            <label class="version-label">{{ t('plugins.generic.codecheck.version') }}</label>
+            <label class="version-label">{{ t('plugins.generic.codecheck.configVersion') }}</label>
             <select v-model="metadata.version" class="version-select">
               <option value="latest">latest</option>
               <option value="1.0">1.0</option>
@@ -304,6 +304,7 @@
 </template>
 
 <script>
+import yaml from 'js-yaml';
 const { useLocalize } = pkp.modules.useLocalize;
 
 export default {
@@ -645,82 +646,102 @@ export default {
     },
 
     generateYamlContent() {
-      const yaml = [];
-      
-      yaml.push('---');
-      yaml.push('version: https://codecheck.org.uk/spec/config/' + this.metadata.version + '/');
+      // Build the data structure
+      const data = {
+        version: `https://codecheck.org.uk/spec/config/${this.metadata.version}/`
+      };
+
+      // Add source if present
       if (this.metadata.source) {
-        yaml.push('source: "' + this.metadata.source + '"');
+        data.source = this.metadata.source;
       }
-      yaml.push('paper:');
-      yaml.push('  title: "' + (this.submissionData.title || 'Untitled') + '"');
-      yaml.push('  authors:');
-      
+
+      // Paper section
+      const authors = [];
       if (this.submissionData.authors && this.submissionData.authors.length > 0) {
         this.submissionData.authors.forEach(author => {
-          yaml.push('    - name: ' + author.name);
+          const authorData = { name: author.name };
           if (author.orcid) {
-            yaml.push('      ORCID: ' + author.orcid);
+            authorData.ORCID = author.orcid;
           }
+          authors.push(authorData);
         });
       }
-      
+
+      data.paper = {
+        title: this.submissionData.title || 'Untitled',
+        authors: authors
+      };
+
       if (this.submissionData.doi) {
-        yaml.push('  reference: https://doi.org/' + this.submissionData.doi);
+        data.paper.reference = `https://doi.org/${this.submissionData.doi}`;
       }
-      
-      yaml.push('manifest:');
+
+      // Manifest section
+      const manifestData = [];
       if (this.metadata.manifest && this.metadata.manifest.length > 0) {
         this.metadata.manifest.forEach(file => {
-          yaml.push('  - file: ' + file.file);
+          const fileData = { file: file.file };
           if (file.comment) {
-            yaml.push('    comment: "' + file.comment + '"');
+            fileData.comment = file.comment;
           }
+          manifestData.push(fileData);
         });
       }
-      
-      yaml.push('codechecker:');
+      data.manifest = manifestData;
+
+      // Codechecker section
+      const codecheckerData = [];
       if (this.metadata.codecheckers && this.metadata.codecheckers.length > 0) {
         this.metadata.codecheckers.forEach(checker => {
-          yaml.push('  - name: ' + checker.name);
+          const checkerData = { name: checker.name };
           if (checker.orcid) {
-            yaml.push('    ORCID: ' + checker.orcid);
+            checkerData.ORCID = checker.orcid;
           }
+          codecheckerData.push(checkerData);
         });
       }
-      
+      data.codechecker = codecheckerData;
+
+      // Summary
       if (this.metadata.summary) {
-        yaml.push('summary: >');
-        const summaryLines = this.metadata.summary.split('\n');
-        summaryLines.forEach(line => {
-          yaml.push('  ' + line);
-        });
+        data.summary = this.metadata.summary;
       }
-      
+
+      // Repository
       if (this.repositories.length > 0) {
-        yaml.push('repository: ' + this.repositories[0]);
+        data.repository = this.repositories[0];
       }
-      
+
+      // Check time
       if (this.metadata.check_time) {
-        yaml.push('check_time: "' + this.metadata.check_time + '"');
+        data.check_time = this.metadata.check_time;
       }
-      
+
+      // Certificate
       if (this.metadata.certificate) {
-        yaml.push('certificate: ' + this.metadata.certificate);
+        data.certificate = this.metadata.certificate;
       }
-      
+
+      // Report
       if (this.metadata.report) {
-        yaml.push('report: ' + this.metadata.report);
+        data.report = this.metadata.report;
       }
 
+      // Generate YAML
+      let yamlContent = '---\n' + yaml.dump(data, {
+        indent: 2,
+        lineWidth: -1, 
+        noRefs: true
+      });
+
+      // Add custom additional content at the end if present
       if (this.metadata.additionalContent) {
-        yaml.push('');
-        yaml.push(this.metadata.additionalContent.trim());
+        yamlContent += '\n' + this.metadata.additionalContent.trim() + '\n';
       }
-      
-      return yaml.join('\n');
-    },
 
+      return yamlContent;
+    },
     showYamlModal(yamlContent) {
       const { useModal } = pkp.modules.useModal;
       const { openDialog } = useModal();

@@ -12,5 +12,8 @@
     "@vitejs/plugin-vue": "^5.0.0",
     "vite": "^5.0.0",
     "vue": "^3.4.0"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.1"
   }
 }
