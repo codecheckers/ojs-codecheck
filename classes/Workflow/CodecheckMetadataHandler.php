@@ -238,7 +238,7 @@ private function buildYaml($publication, $metadata): string
         }
 
         // Generate YAML
-        $yaml = Yaml::dump($data, 4, 2);
+        $yaml = "---\n" . Yaml::dump($data, 4, 2);
 
         // Add custom additional content at the end if present
         if ($metadata->additional_content) {
