@@ -18,15 +18,17 @@ class CodecheckSchemaMigration extends Migration
             
             Schema::create('codecheck_metadata', function (Blueprint $table) {
                 $table->bigInteger('submission_id')->primary();
-                $table->string('config_version', 50)->default('latest');
+                $table->string('version', 50)->default('latest');
                 $table->string('publication_type', 50)->default('doi');
                 $table->text('manifest')->nullable();
                 $table->string('repository', 500)->nullable();
+                $table->text('source')->nullable();
                 $table->text('codecheckers')->nullable();
                 $table->string('certificate', 100)->nullable();
                 $table->timestamp('check_time')->nullable();
                 $table->text('summary')->nullable();
-                $table->string('report_url', 500)->nullable();
+                $table->string('report', 500)->nullable();
+                $table->text('additional_content')->nullable();
                 $table->timestamps();
                 $table->index('submission_id');
             });
@@ -75,7 +77,6 @@ class CodecheckSchemaMigration extends Migration
             }
         } catch (\Exception $e) {
             error_log("CODECHECK: Genre creation error (non-critical): " . $e->getMessage());
-            // Don't throw - genres are nice to have but not critical
         }
     }
 

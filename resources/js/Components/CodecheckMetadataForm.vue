@@ -15,7 +15,7 @@
         <div class="header-content">
           <div class="version-selector">
             <label class="version-label">{{ t('plugins.generic.codecheck.configVersion') }}</label>
-            <select v-model="metadata.configVersion" class="version-select">
+            <select v-model="metadata.version" class="version-select">
               <option value="latest">latest</option>
               <option value="1.0">1.0</option>
             </select>
@@ -26,30 +26,27 @@
       <div class="publication-section">
         <div class="radio-options">
           <label class="radio-option">
-            <input type="radio" v-model="metadata.publicationType" value="doi" name="publication-type" />
+            <input type="radio" v-model="metadata.publicationType" value="doi" name="publication-type" checked />
             <span class="radio-label">{{ t('plugins.generic.codecheck.publishWithDOI') }}</span>
-          </label>
-          <label class="radio-option">
-            <input type="radio" v-model="metadata.publicationType" value="separate" name="publication-type" />
-            <span class="radio-label">{{ t('plugins.generic.codecheck.publishSeparate') }}</span>
           </label>
         </div>
       </div>
 
       <div class="form-section read-only-section">
         <h3 class="section-title">{{ t('plugins.generic.codecheck.paperMetadata.title') }}</h3>
-        
+        <p class="readonly-description">{{ t('plugins.generic.codecheck.paperMetadata.readonlyDescription') }}</p>
+
         <div class="info-grid">
           <div class="info-item">
             <label class="info-label">{{ t('common.title') }}:</label>
-            <div class="info-value">{{ submissionData.title || t('common.notAvailable') }}</div>
+            <div class="info-value" :title="t('plugins.generic.codecheck.paperMetadata.fieldReadonly')">{{ submissionData.title || t('common.notAvailable') }}</div>
           </div>
 
           <div class="info-item">
             <label class="info-label">{{ t('plugins.generic.codecheck.paperMetadata.authors') }}:</label>
             <div class="info-value">
               <template v-if="submissionData.authors && submissionData.authors.length > 0">
-                <div v-for="(author, index) in submissionData.authors" :key="'author-' + index" class="author-item">
+              <div v-for="(author, index) in submissionData.authors" :key="'author-' + index" class="author-item" :title="t('plugins.generic.codecheck.paperMetadata.fieldReadonly')">
                   {{ author.name || t('common.unknown') }}
                   <span v-if="author.orcid" class="orcid-badge">{{ author.orcid }}</span>
                 </div>
@@ -129,16 +126,7 @@
                 </td>
                 <td>
                   <div class="file-info">
-                    <a 
-                      href="#" 
-                      @click.prevent="downloadFile(file.filePath, file.file)"
-                      class="file-name file-link"
-                      v-if="file.filePath"
-                      :title="t('plugins.generic.codecheck.downloadFile')"
-                    >
-                      {{ file.file }}
-                    </a>
-                    <span v-else class="file-name">{{ file.file }}</span>
+                    <span class="file-name">{{ file.file }}</span>
                     <span class="file-size" v-if="file.size">({{ formatFileSize(file.size) }})</span>
                   </div>
                 </td>
@@ -153,7 +141,7 @@
                 <td>
                   <button 
                     type="button"
-                    class="pkpButton codecheck-btn pkpButton--close" 
+                    class="pkpButton pkpButton--close" 
                     @click="removeManifestFile(index)"
                   >×</button>
                 </td>
@@ -188,8 +176,19 @@
             </div>
           </div>
           <div v-else class="empty-state">
-            {{ t('plugins.generic.codecheck.repositories.emptyState') }}
+            No repositories added yet
           </div>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">{{ t('plugins.generic.codecheck.source.label') }}</label>
+          <p class="field-description">{{ t('plugins.generic.codecheck.source.description') }}</p>
+          <textarea
+            v-model="metadata.source"
+            class="pkpFormField__input pkpFormField__input--textarea full-width"
+            rows="3"
+            :placeholder="t('plugins.generic.codecheck.source.placeholder')"
+          ></textarea>
         </div>
 
         <div class="field-group">
@@ -228,11 +227,11 @@
         </div>
 
         <div class="field-group">
-          <label class="field-label">{{ t('plugins.generic.codecheck.certificate.reportUrl') }}</label>
-          <p class="field-description">{{ t('plugins.generic.codecheck.certificate.reportUrlDescription') }}</p>
+          <label class="field-label">{{ t('plugins.generic.codecheck.certificate.report') }}</label>
+          <p class="field-description">{{ t('plugins.generic.codecheck.certificate.reportDescription') }}</p>
           <input
             type="url"
-            v-model="metadata.reportUrl"
+            v-model="metadata.report"
             class="pkpFormField__input full-width"
             placeholder="https://zenodo.org/record/12345"
           />
@@ -242,9 +241,20 @@
           <label class="field-label">{{ t('plugins.generic.codecheck.completionTime.label') }}</label>
           <input
             type="datetime-local"
-            v-model="metadata.checkTime"
+            v-model="metadata.check_time"
             class="pkpFormField__input full-width"
           />
+        </div>
+        
+        <div class="field-group">
+          <label class="field-label">{{ t('plugins.generic.codecheck.additionalContent.label') }}</label>
+          <p class="field-description">{{ t('plugins.generic.codecheck.additionalContent.description') }}</p>
+          <textarea
+            v-model="metadata.additionalContent"
+            class="pkpFormField__input pkpFormField__input--textarea full-width"
+            rows="8"
+            :placeholder="t('plugins.generic.codecheck.additionalContent.placeholder')"
+          ></textarea>
         </div>
 
         <div class="field-group">
@@ -337,6 +347,7 @@
 </template>
 
 <script>
+import yaml from 'js-yaml';
 const { useLocalize } = pkp.modules.useLocalize;
 
 export default {
@@ -380,15 +391,17 @@ export default {
         issueUrl: '',
       },
       metadata: {
-        configVersion: 'latest',
+        version: 'latest',
         publicationType: 'doi',
         manifest: [],
         repository: '',
+        source: '',
         codecheckers: [],
         certificate: '',
-        checkTime: '',
+        check_time: '',
         summary: '',
-        reportUrl: ''
+        report: '',
+        additionalContent: ''
       }
     }
   },
@@ -449,18 +462,20 @@ export default {
         
         if (data.codecheck && typeof data.codecheck === 'object') {
           this.metadata = {
-            configVersion: data.codecheck.configVersion || data.codecheck.config_version || 'latest',
+            version: data.codecheck.version || data.codecheck.version || 'latest',
             publicationType: data.codecheck.publicationType || data.codecheck.publication_type || 'doi',
             manifest: Array.isArray(data.codecheck.manifest) ? data.codecheck.manifest : 
                       (typeof data.codecheck.manifest === 'string' ? JSON.parse(data.codecheck.manifest) : []),
             repository: data.codecheck.repository || '',
+            source: data.codecheck.source || '',
             codecheckers: Array.isArray(data.codecheck.codecheckers) ? data.codecheck.codecheckers : 
                           (typeof data.codecheck.codecheckers === 'string' ? JSON.parse(data.codecheck.codecheckers) : []),
             certificate: data.codecheck.certificate || '',
-            checkTime: data.codecheck.checkTime || data.codecheck.check_time ? 
-                      this.formatDateTimeLocal(data.codecheck.checkTime || data.codecheck.check_time) : '',
+            check_time: data.codecheck.check_time || data.codecheck.check_time ? 
+                      this.formatDateTimeLocal(data.codecheck.check_time || data.codecheck.check_time) : '',
             summary: data.codecheck.summary || '',
-            reportUrl: data.codecheck.reportUrl || data.codecheck.report_url || ''
+            report: data.codecheck.report || data.codecheck.report || '',
+            additionalContent: data.codecheck.additionalContent || data.codecheck.additional_content || ''
           };
           
           if (data.codecheck.repository) {
@@ -482,76 +497,19 @@ export default {
       this.$refs.fileInput.click();
     },
 
-    async handleFileUpload(event) {
+    handleFileUpload(event) {
       const files = event.target.files;
       if (!files || files.length === 0) return;
       
-      this.saving = true;
-      this.saveMessage = this.t('plugins.generic.codecheck.uploadingFiles');
-      
       for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        
-        try {
-          const result = await this.uploadFile(file);
-          
-          if (result.success) {
-            this.metadata.manifest.push({
-              file: result.filename,
-              size: result.size,
-              filePath: result.filePath,
-              comment: '',
-              checked: false
-            });
-          } else {
-            this.showMessage('Failed to upload: ' + file.name, 'error');
-          }
-        } catch (error) {
-          console.error('Upload error:', error);
-          this.showMessage('Failed to upload: ' + file.name, 'error');
-        }
+        this.metadata.manifest.push({
+          file: files[i].name,
+          size: files[i].size,
+          comment: '',
+          checked: false
+        });
       }
-      
       event.target.value = '';
-      this.saving = false;
-      this.saveMessage = '';
-    },
-
-    async uploadFile(file) {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('submissionId', this.submission.id);
-      
-      let apiUrl = pkp.context.apiBaseUrl;
-      apiUrl += 'codecheck';
-      const uploadUrl = `${apiUrl}/upload`;
-      
-      const response = await fetch(uploadUrl, {
-        method: 'POST',
-        headers: {
-          'X-Csrf-Token': pkp.currentUser.csrfToken
-        },
-        body: formData
-      });
-      
-      if (!response.ok) {
-        throw new Error('Upload failed');
-      }
-      
-      return await response.json();
-    },
-
-    downloadFile(filePath, fileName) {
-      if (!filePath) {
-        alert('File path not available');
-        return;
-      }
-      
-      let apiUrl = pkp.context.apiBaseUrl;
-      apiUrl += 'codecheck';
-      const downloadUrl = `${apiUrl}/download?file=${encodeURIComponent(filePath)}`;
-      
-      window.open(downloadUrl, '_blank');
     },
 
     formatFileSize(bytes) {
@@ -663,15 +621,17 @@ export default {
 
       try {
         const dataToSave = {
-          config_version: this.metadata.configVersion,
+          version: this.metadata.version,
           publication_type: this.metadata.publicationType,
           manifest: this.metadata.manifest,
           repository: this.repositories.join(', '),
+          source: this.metadata.source,
           codecheckers: this.metadata.codecheckers,
           certificate: this.metadata.certificate,
-          check_time: this.metadata.checkTime,
+          check_time: this.metadata.check_time,
           summary: this.metadata.summary,
-          report_url: this.metadata.reportUrl
+          report: this.metadata.report,
+          additional_content: this.metadata.additionalContent
         };
 
         console.log('Saving CODECHECK data:', dataToSave);
@@ -719,74 +679,102 @@ export default {
     },
 
     generateYamlContent() {
-      const yaml = [];
-      
-      yaml.push('---');
-      yaml.push('version: https://codecheck.org.uk/spec/config/' + this.metadata.configVersion + '/');
-      yaml.push('paper:');
-      yaml.push('  title: "' + (this.submissionData.title || 'Untitled') + '"');
-      yaml.push('  authors:');
-      
+      // Build the data structure
+      const data = {
+        version: `https://codecheck.org.uk/spec/config/${this.metadata.version}/`
+      };
+
+      // Add source if present
+      if (this.metadata.source) {
+        data.source = this.metadata.source;
+      }
+
+      // Paper section
+      const authors = [];
       if (this.submissionData.authors && this.submissionData.authors.length > 0) {
         this.submissionData.authors.forEach(author => {
-          yaml.push('    - name: ' + author.name);
+          const authorData = { name: author.name };
           if (author.orcid) {
-            yaml.push('      ORCID: ' + author.orcid);
+            authorData.ORCID = author.orcid;
           }
+          authors.push(authorData);
         });
       }
-      
+
+      data.paper = {
+        title: this.submissionData.title || 'Untitled',
+        authors: authors
+      };
+
       if (this.submissionData.doi) {
-        yaml.push('  reference: https://doi.org/' + this.submissionData.doi);
+        data.paper.reference = `https://doi.org/${this.submissionData.doi}`;
       }
-      
-      yaml.push('manifest:');
+
+      // Manifest section
+      const manifestData = [];
       if (this.metadata.manifest && this.metadata.manifest.length > 0) {
         this.metadata.manifest.forEach(file => {
-          yaml.push('  - file: ' + file.file);
+          const fileData = { file: file.file };
           if (file.comment) {
-            yaml.push('    comment: "' + file.comment + '"');
+            fileData.comment = file.comment;
           }
+          manifestData.push(fileData);
         });
       }
-      
-      yaml.push('codechecker:');
+      data.manifest = manifestData;
+
+      // Codechecker section
+      const codecheckerData = [];
       if (this.metadata.codecheckers && this.metadata.codecheckers.length > 0) {
         this.metadata.codecheckers.forEach(checker => {
-          yaml.push('  - name: ' + checker.name);
+          const checkerData = { name: checker.name };
           if (checker.orcid) {
-            yaml.push('    ORCID: ' + checker.orcid);
+            checkerData.ORCID = checker.orcid;
           }
+          codecheckerData.push(checkerData);
         });
       }
-      
-      if (this.metadata.summary) {
-        yaml.push('summary: >');
-        const summaryLines = this.metadata.summary.split('\n');
-        summaryLines.forEach(line => {
-          yaml.push('  ' + line);
-        });
-      }
-      
-      if (this.repositories.length > 0) {
-        yaml.push('repository: ' + this.repositories[0]);
-      }
-      
-      if (this.metadata.checkTime) {
-        yaml.push('check_time: "' + this.metadata.checkTime + '"');
-      }
-      
-      if (this.metadata.certificate) {
-        yaml.push('certificate: ' + this.metadata.certificate);
-      }
-      
-      if (this.metadata.reportUrl) {
-        yaml.push('report: ' + this.metadata.reportUrl);
-      }
-      
-      return yaml.join('\n');
-    },
+      data.codechecker = codecheckerData;
 
+      // Summary
+      if (this.metadata.summary) {
+        data.summary = this.metadata.summary;
+      }
+
+      // Repository
+      if (this.repositories.length > 0) {
+        data.repository = this.repositories[0];
+      }
+
+      // Check time
+      if (this.metadata.check_time) {
+        data.check_time = this.metadata.check_time;
+      }
+
+      // Certificate
+      if (this.metadata.certificate) {
+        data.certificate = this.metadata.certificate;
+      }
+
+      // Report
+      if (this.metadata.report) {
+        data.report = this.metadata.report;
+      }
+
+      // Generate YAML
+      let yamlContent = '---\n' + yaml.dump(data, {
+        indent: 2,
+        lineWidth: -1, 
+        noRefs: true
+      });
+
+      // Add custom additional content at the end if present
+      if (this.metadata.additionalContent) {
+        yamlContent += '\n' + this.metadata.additionalContent.trim() + '\n';
+      }
+
+      return yamlContent;
+    },
     showYamlModal(yamlContent) {
       const { useModal } = pkp.modules.useModal;
       const { openDialog } = useModal();
@@ -1089,7 +1077,18 @@ export default {
 }
 
 .codecheck-metadata-form .form-section.read-only-section {
-    border: 2px solid #ccc;
+  background: #f8f9fa;
+  border: 2px solid #ccc;
+}
+
+.codecheck-metadata-form .readonly-description {
+  margin: 0.5rem 0 1.5rem 0;
+  padding: .35rem .75rem;
+  background: #fff3cd;
+  border-left: 4px solid #ffc107;
+  font-size: 13px;
+  color: #856404;
+  border-radius: 3px;
 }
 
 .codecheck-metadata-form .radio-options {
@@ -1459,7 +1458,7 @@ export default {
   background: #c8233300;
   border-color: #c8233300;
   font-size: 1.3rem;
-  color: #676767;
+  color: #67676773;
 }
 .codecheck-metadata-form .pkpButton--close:hover:not(:disabled) {
   background: #c8233300;
@@ -1476,7 +1475,7 @@ export default {
   margin: 2rem;
 }
 
-.codecheck-metadata-form .modal-form {
+.modal-form {
   padding: 1rem 0;
 }
 
@@ -1550,7 +1549,7 @@ export default {
   background: #005a87;
 }
 
-.codecheck-metadata-form .btn-remove {
+.btn-remove {
   background: #dc3545;
   color: white;
   border: none;
@@ -1563,7 +1562,7 @@ export default {
   min-width: 40px;
 }
 
-.codecheck-metadata-form .btn-add {
+.btn-add {
   background: #006798;
   color: white;
   border: none;

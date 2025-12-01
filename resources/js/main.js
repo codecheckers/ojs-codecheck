@@ -3,12 +3,10 @@ import CodecheckManifestFiles from "./Components/CodecheckManifestFiles.vue";
 import CodecheckRepositoryList from "./Components/CodecheckRepositoryList.vue";
 import CodecheckReviewDisplay from "./Components/CodecheckReviewDisplay.vue";
 import CodecheckMetadataForm from "./Components/CodecheckMetadataForm.vue";
-import CodecheckMetadataFormWrapper from "./Components/CodecheckMetadataFormWrapper.vue";
 import CodecheckCertificateIdentifier from "./Components/CodecheckCertificateIdentifier.vue";
 
 pkp.registry.registerComponent("CodecheckReviewDisplay", CodecheckReviewDisplay);
 pkp.registry.registerComponent("CodecheckMetadataForm", CodecheckMetadataForm);
-pkp.registry.registerComponent("CodecheckMetadataFormWrapper", CodecheckMetadataFormWrapper);
 pkp.registry.registerComponent("CodecheckManifestFiles", CodecheckManifestFiles);
 pkp.registry.registerComponent("CodecheckRepositoryList", CodecheckRepositoryList);
 pkp.registry.registerComponent("CodecheckCertificateIdentifier", CodecheckCertificateIdentifier);
@@ -65,7 +63,7 @@ pkp.registry.storeExtend("workflow", (piniaContext) => {
       return [
         {
           title: "WORKFLOW: CODECHECK",
-          component: "CodecheckMetadataFormWrapper",
+          component: "CodecheckMetadataForm",
           props: { 
             submission: submission,
             canEdit: true
@@ -171,8 +169,8 @@ function mountCodecheckVueComponents() {
     
     createApp(CodecheckManifestFiles, {
       name: 'manifestFiles',
-      label: 'Expected Output Files',
-      description: 'List the main figures, tables, and results',
+      label: t('plugins.generic.codecheck.manifestFiles.label'),
+      description: t('plugins.generic.codecheck.manifestFiles.description'),
       value: textarea.value,
       isRequired: true,
     }).mount(vueDiv);
@@ -193,8 +191,8 @@ function mountCodecheckVueComponents() {
     
     createApp(CodecheckRepositoryList, {
       name: 'codeRepository',
-      label: 'Code Repository URL(s)',
-      description: 'Link(s) to your code repository(ies)',
+      label: t('plugins.generic.codecheck.codeRepository'),
+      description: t('plugins.generic.codecheck.codeRepository.description'),
       value: textarea.value,
     }).mount(vueDiv);
     
@@ -213,8 +211,8 @@ function mountCodecheckVueComponents() {
     
     createApp(CodecheckRepositoryList, {
       name: 'dataRepository',
-      label: 'Data Repository URL(s)',
-      description: 'Link(s) to your data repository(ies)',
+      label: t('plugins.generic.codecheck.dataRepository'),
+      description: t('plugins.generic.codecheck.dataRepository.description'),
       value: textarea.value,
     }).mount(vueDiv);
     
