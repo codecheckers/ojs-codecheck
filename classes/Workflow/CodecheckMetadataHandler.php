@@ -2,7 +2,10 @@
 
 namespace APP\plugins\generic\codecheck\classes\Workflow;
 
-use APP\core\Request;
+use \APP\core\Request;
+use APP\facades\Repo;
+use Illuminate\Support\Facades\DB;
+use Symfony\Component\Yaml\Yaml;
 
 class CodecheckMetadataHandler
 {
@@ -26,70 +29,101 @@ class CodecheckMetadataHandler
         return $this->submissionId;
     }
 
-    /**
-     * Build the Yaml file from the publication and metadata contents
-     * @param mixed $publication The publication data
-     * @param mixed $metadata The metadata information from the Database
-     * @return string The fully generated Yaml as a string
-     */
     public function buildYaml($publication, $metadata): string
     {
         $manifest = json_decode($metadata->manifest ?? '[]', true);
         $codecheckers = json_decode($metadata->codecheckers ?? '[]', true);
 
-        $yaml = "---\n";
-        $yaml .= "version: https://codecheck.org.uk/spec/config/1.0/\n";
-        $yaml .= "paper:\n";
-        $yaml .= "  title: \"" . $this->escapeYaml($publication->getLocalizedTitle()) . "\"\n";
-        $yaml .= "  authors:\n";
+        // Build YAML data structure
+        $data = [
+            'version' => 'https://codecheck.org.uk/spec/config/1.0/'
+        ];
 
-        foreach ($publication->getData('authors') as $author) {
-            $yaml .= "    - name: " . $this->escapeYaml($author->getFullName()) . "\n";
-            if ($author->getOrcid()) {
-                $yaml .= "      ORCID: " . $author->getOrcid() . "\n";
-            }
+        // Add source if present
+        if ($metadata->source) {
+            $data['source'] = $metadata->source;
         }
+
+        // Paper section
+        $authors = [];
+        foreach ($publication->getData('authors') as $author) {
+            $locale = $author->getDefaultLocale();
+            $givenName = $author->getGivenName($locale) ?? '';
+            $familyName = $author->getFamilyName($locale) ?? '';
+            $fullName = trim($givenName . ' ' . $familyName);
+            
+            $authorData = ['name' => $fullName];
+            if ($author->getOrcid()) {
+                $authorData['ORCID'] = $author->getOrcid();
+            }
+            $authors[] = $authorData;
+        }
+
+        $paperData = [
+            'title' => $publication->getLocalizedTitle(),
+            'authors' => $authors
+        ];
 
         $doi = $publication->getStoredPubId('doi');
         if ($doi) {
-            $yaml .= "  reference: https://doi.org/" . $doi . "\n";
+            $paperData['reference'] = 'https://doi.org/' . $doi;
         }
 
-        $yaml .= "manifest:\n";
+        $data['paper'] = $paperData;
+
+        // Manifest section
+        $manifestData = [];
         foreach ($manifest as $file) {
-            $yaml .= "  - file: " . $this->escapeYaml($file['file'] ?? '') . "\n";
-            $yaml .= "    comment: \"" . $this->escapeYaml($file['comment'] ?? '') . "\"\n";
+            $fileData = ['file' => $file['file'] ?? ''];
+            if (!empty($file['comment'])) {
+                $fileData['comment'] = $file['comment'];
+            }
+            $manifestData[] = $fileData;
         }
+        $data['manifest'] = $manifestData;
 
-        $yaml .= "codechecker:\n";
+        // Codechecker section
+        $codecheckerData = [];
         foreach ($codecheckers as $checker) {
-            $yaml .= "  - name: " . $this->escapeYaml($checker['name'] ?? '') . "\n";
+            $checkerData = ['name' => $checker['name'] ?? ''];
             if (!empty($checker['orcid'])) {
-                $yaml .= "    ORCID: " . $checker['orcid'] . "\n";
+                $checkerData['ORCID'] = $checker['orcid'];
             }
+            $codecheckerData[] = $checkerData;
         }
+        $data['codechecker'] = $codecheckerData;
 
+        // Summary
         if ($metadata->summary) {
-            $yaml .= "summary: >\n";
-            foreach (explode("\n", $metadata->summary) as $line) {
-                $yaml .= "  " . $line . "\n";
-            }
+            $data['summary'] = $metadata->summary;
         }
 
+        // Repository
         if ($metadata->repository) {
-            $yaml .= "repository: " . $metadata->repository . "\n";
+            $data['repository'] = $metadata->repository;
         }
 
+        // Check time
         if ($metadata->check_time) {
-            $yaml .= "check_time: \"" . $metadata->check_time . "\"\n";
+            $data['check_time'] = $metadata->check_time;
         }
 
+        // Certificate
         if ($metadata->certificate) {
-            $yaml .= "certificate: " . $metadata->certificate . "\n";
+            $data['certificate'] = $metadata->certificate;
         }
 
-        if ($metadata->report_url) {
-            $yaml .= "report: " . $metadata->report_url . "\n";
+        // Report
+        if ($metadata->report) {
+            $data['report'] = $metadata->report;
+        }
+
+        // Generate YAML
+        $yaml = "---\n" . Yaml::dump($data, 4, 2);
+
+        // Add custom additional content at the end if present
+        if ($metadata->additional_content) {
+            $yaml .= "\n" . trim($metadata->additional_content) . "\n";
         }
 
         return $yaml;
@@ -108,21 +142,16 @@ class CodecheckMetadataHandler
         
         $authors = [];
         foreach ($publication->getData('authors') as $author) {
+            $locale = $author->getDefaultLocale();
+            $givenName = $author->getGivenName($locale) ?? '';
+            $familyName = $author->getFamilyName($locale) ?? '';
+            $fullName = trim($givenName . ' ' . $familyName);
+
             $authors[] = [
-                'name' => $author->getFullName(),
+                'name' => $fullName,    
                 'orcid' => $author->getOrcid()
             ];
         }
         return $authors;
-    }
-
-    /**
-     * Escape Yaml Content
-     * @param string $content The Yaml Content to be escaped
-     * @return string The Escaped Yaml Content
-     */
-    private function escapeYaml(string $content): string
-    {
-        return str_replace('"', '\\"', $content);
     }
 }

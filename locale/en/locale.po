@@ -104,9 +104,6 @@ msgstr "CODECHECK config version"
 msgid "plugins.generic.codecheck.publishWithDOI"
 msgstr "Check published with a DOI (e.g., Zenodo)"
 
-msgid "plugins.generic.codecheck.publishSeparate"
-msgstr "Check published in separate section of the journal"
-
 msgid "plugins.generic.codecheck.manifest.title"
 msgstr "Manifest"
 
@@ -293,10 +290,10 @@ msgstr "Describe the CODECHECK process and any notable findings."
 msgid "plugins.generic.codecheck.certificate.summaryPlaceholder"
 msgstr "Successfully reproduced all main figures..."
 
-msgid "plugins.generic.codecheck.certificate.reportUrl"
+msgid "plugins.generic.codecheck.certificate.report"
 msgstr "Report URL"
 
-msgid "plugins.generic.codecheck.certificate.reportUrlDescription"
+msgid "plugins.generic.codecheck.certificate.reportDescription"
 msgstr "Link to the published CODECHECK report (e.g., Zenodo)."
 
 msgid "plugins.generic.codecheck.identifier.saved"
@@ -371,5 +368,32 @@ msgstr "Manifest Files"
 msgid "plugins.generic.codecheck.review.codecheckers"
 msgstr "Codecheckers"
 
-msgid "plugins.generic.codecheck.review.reportUrl"
+msgid "plugins.generic.codecheck.review.report"
 msgstr "Report URL"
+
+msgid "plugins.generic.codecheck.paperMetadata.readonlyDescription"
+msgstr "These fields are automatically populated from the submission and cannot be edited here."
+
+msgid "plugins.generic.codecheck.paperMetadata.fieldReadonly"
+msgstr "This field is read-only"
+
+msgid "plugins.generic.codecheck.manifestFiles.description"
+msgstr "List the main figures, tables, and results"
+
+msgid "plugins.generic.codecheck.source.label"
+msgstr "Source"
+
+msgid "plugins.generic.codecheck.source.description"
+msgstr "Description or URL of the source material (use when material comes from multiple sources)"
+
+msgid "plugins.generic.codecheck.source.placeholder"
+msgstr "e.g., Code from GitHub, data from Zenodo and OSF"
+
+msgid "plugins.generic.codecheck.additionalContent.label"
+msgstr "Additional YAML Content (Optional)"
+
+msgid "plugins.generic.codecheck.additionalContent.description"
+msgstr "Add custom YAML fields for specific use cases. This content will be appended at the end of the generated YAML file. For advanced users only."
+
+msgid "plugins.generic.codecheck.additionalContent.placeholder"
+msgstr "Example:\npublishing_inc_identifier: 12345\npublishing_inc_handler: Ed Editor\n\nTheBestRepository:\n  recordId: 1a2b3c\n  checksum: abc123..."

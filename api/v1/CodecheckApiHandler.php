@@ -315,15 +315,17 @@ class CodecheckApiHandler
                 'dataAvailabilityStatement' => $submission->getData('dataAvailabilityStatement'),
             ],
             'codecheck' => $metadata ? [
-                'configVersion' => $metadata->config_version ?? 'latest',
+                'version' => $metadata->version ?? 'latest',
                 'publicationType' => $metadata->publication_type ?? 'doi',
                 'manifest' => json_decode($metadata->manifest ?? '[]', true),
                 'repository' => $metadata->repository,
                 'codecheckers' => json_decode($metadata->codecheckers ?? '[]', true),
+                'source' => $metadata->source,
                 'certificate' => $metadata->certificate,
-                'checkTime' => $metadata->check_time,
+                'check_time' => $metadata->check_time,
                 'summary' => $metadata->summary,
-                'reportUrl' => $metadata->report_url,
+                'report' => $metadata->report,
+                'additionalContent' => $metadata->additional_content,
             ] : null
         ];
 
@@ -365,15 +367,17 @@ class CodecheckApiHandler
         
         $metadataData = [
             'submission_id' => $submissionId,
-            'config_version' => $data['config_version'] ?? 'latest',
+            'version' => $data['version'] ?? 'latest',
             'publication_type' => $data['publication_type'] ?? 'doi',
             'manifest' => json_encode($data['manifest'] ?? []),
             'repository' => $nullIfEmpty($data['repository'] ?? null),
+            'source' => $nullIfEmpty($data['source'] ?? null),
             'codecheckers' => json_encode($data['codecheckers'] ?? []),
             'certificate' => $nullIfEmpty($data['certificate'] ?? null),
             'check_time' => $nullIfEmpty($data['check_time'] ?? null),
             'summary' => $nullIfEmpty($data['summary'] ?? null),    
-            'report_url' => $nullIfEmpty($data['report_url'] ?? null),
+            'report' => $nullIfEmpty($data['report'] ?? null),
+            'additional_content' => $nullIfEmpty($data['additional_content'] ?? null),
             'updated_at' => date('Y-m-d H:i:s'),
         ];
 
