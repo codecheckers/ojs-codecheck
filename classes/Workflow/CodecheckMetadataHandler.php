@@ -324,10 +324,12 @@ class CodecheckMetadataHandler
                     $githubUrlParts['ref']
                 );
 
+                $metadata = Yaml::parse(base64_decode($file['content']));
+
                 return [
                     'success' => true,
                     'repository' => $repository,
-                    'metadata' => base64_decode($file['content']),
+                    'metadata' => $metadata,
                 ];
             }
         }
