@@ -520,6 +520,29 @@ export default {
 
           if (data.success) {
               console.log('Success:', data.repository);
+              this.submissionData = {
+                id: this.submissionData.id,
+                title: data.metadata?.paper.title ?? this.submissionData.title,
+                authors: data.metadata?.paper.authors ?? this.submissionData.authors,
+                doi: data.metadata?.paper.doi ?? this.submissionData.doi,
+                codeRepository: this.submissionData.codeRepository,
+                dataRepository: this.submissionData.dataRepository,
+                manifestFiles: data.metadata?.manifest ?? this.submissionData.manifestFiles,
+                dataAvailabilityStatement: this.submissionData.dataAvailabilityStatement,
+              };
+              this.metadata = {
+                version: data.metadata?.version.replace(/^https:\/\/codecheck\.org\.uk\/spec\/config\/|\/$/g, '') ?? this.metadata.version,
+                publicationType: data.metadata?.publicationType ?? this.metadata.publicationType,
+                manifest: data.metadata?.manifest ?? this.metadata.manifest,
+                repository: this.metadata.repository,
+                source: data.metadata?.source ?? this.metadata.source,
+                codecheckers: data.metadata?.codechecker ?? this.metadata.codecheckers,
+                certificate: data.metadata?.certificate ?? this.metadata.certificate,
+                check_time: this.formatDateTimeLocal(data.metadata?.check_time) ?? this.metadata.check_time,
+                summary: data.metadata?.summary ?? this.metadata.summary,
+                report: data.metadata?.report ?? this.metadata.report,
+                additionalContent: data.metadata?.additionalContent ?? this.metadata.additionalContent,
+              };
           } else {
               console.error('Error:', data.error);
           }
