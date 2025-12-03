@@ -11,6 +11,7 @@ use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifie
 use APP\plugins\generic\codecheck\classes\Exceptions\NoMatchingIssuesFoundException;
 use APP\plugins\generic\codecheck\classes\Exceptions\ApiFetchException;
 use APP\plugins\generic\codecheck\classes\Exceptions\ApiCreateException;
+use APP\plugins\generic\codecheck\classes\Exceptions\GithubUrlParseException;
 
 // Load .env variables
 $dotenv = Dotenv::createImmutable(__DIR__ . '/../../');
@@ -40,6 +41,39 @@ class CodecheckGithubRegisterApiClient
         $this->githubRegisterRepository = $githubRegisterRepository;
         $this->submissionID = $submissionID;
         $this->journalName = $journal?->getLocalizedName() ?? 'Unknown Journal';
+    }
+
+    /**
+     * Parses a GitHub Url and returns owner, repository, branch and a specified path (if a path was specified)
+     * @param string $url The GitHub Url
+     * @return array The GitHub Url data (owner, repository, branch and a specified path)
+     */
+    public static function parseGithubUrl(string $url): array
+    {
+        // Case 1: Blob URL (folder or file)
+        $patternBlob = '#^https://github\.com/([^/]+)/([^/]+)/blob/([^/]+)/(.*)$#';
+        if (preg_match($patternBlob, $url, $m)) {
+            return [
+                'owner' => $m[1],
+                'repo'  => $m[2],
+                'ref'   => $m[3],
+                'path'  => rtrim($m[4], '/'),
+            ];
+        }
+
+        // Case 2: Repo root URL
+        // e.g. https://github.com/codecheckers/certificate-2025-029
+        $patternRepo = '#^https://github\.com/([^/]+)/([^/]+)/?#';
+        if (preg_match($patternRepo, $url, $m)) {
+            return [
+                'owner' => $m[1],
+                'repo'  => $m[2],
+                'ref'   => 'main',   // default branch guess
+                'path'  => '',       // repo root
+            ];
+        }
+
+        throw new GithubUrlParseException("Unsupported GitHub URL format: $url");
     }
 
     /**

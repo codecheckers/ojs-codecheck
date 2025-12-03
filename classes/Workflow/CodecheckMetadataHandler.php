@@ -2,14 +2,20 @@
 
 namespace APP\plugins\generic\codecheck\classes\Workflow;
 
+require __DIR__ . '/../../vendor/autoload.php';
+
 use APP\core\Application;
 use APP\facades\Repo;
 use Illuminate\Support\Facades\DB;
+use \APP\core\Request;
+use Github\Client;
 use Symfony\Component\Yaml\Yaml;
+use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CodecheckRegisterGithubIssuesApiParser;
 
 class CodecheckMetadataHandler
 {
     private mixed $submissionId;
+    private Client $client;
 
     /**
      * `CodecheckMetadataHandler`
@@ -17,6 +23,7 @@ class CodecheckMetadataHandler
      */
     public function __construct(\APP\core\Request $request)
     {
+        $this->client = new Client();
         $this->submissionId = $request->getUserVar('submissionId');
     }
 
@@ -268,5 +275,66 @@ class CodecheckMetadataHandler
             ];
         }
         return $authors;
+    }
+
+    /**
+     * Import the codecheck metadata from an existing `codecheck.yml` from the CODECHECK GitHub Repository
+     * @param string $repository The GitHub Repository
+     * @return array The Metadata from the Repositories `codecheck.yml`
+     */
+    public function importMetadataFromGitHub(string $repository): array
+    {
+        $githubUrlParts = CodecheckRegisterGithubIssuesApiParser::parseGithubUrl($repository);
+        $filename = 'codecheck.yml';
+
+        // AUTO-DETECT DEFAULT BRANCH if path is root
+        if ($githubUrlParts['path'] === '') {
+            try {
+                $repoData = $this->client->api('repo')->show($githubUrlParts['owner'], $githubUrlParts['repo']);
+                $githubUrlParts['ref'] = $repoData['default_branch'];
+            } catch (Exception $e) {
+                // fallback stays 'main'
+            }
+        }
+
+        // Retrieve folder contents
+        try {
+            $contents = $this->client->api('repo')->contents()->show(
+                $githubUrlParts['owner'],
+                $githubUrlParts['repo'],
+                $githubUrlParts['path'],
+                $githubUrlParts['ref']
+            );
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'repository' => $repository,
+            ];
+        }
+
+        // Find codecheck.yml
+        foreach ($contents as $item) {
+            if ($item['type'] === 'file' && $item['name'] === $filename) {
+
+                // Fetch the raw content of the codecheck.yml file
+                $file = $this->client->api('repo')->contents()->show(
+                    $githubUrlParts['owner'],
+                    $githubUrlParts['repo'],
+                    $item['path'],
+                    $githubUrlParts['ref']
+                );
+
+                return [
+                    'success' => true,
+                    'repository' => $repository,
+                    'metadata' => base64_decode($file['content']),
+                ];
+            }
+        }
+
+        return [
+            'success' => false,
+            'repository' => $repository,
+        ];
     }
 }

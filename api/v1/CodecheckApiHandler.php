@@ -304,6 +304,15 @@ class CodecheckApiHandler
                 'success' => true,
                 'repository' => $repository,
             ], 200);
+        } elseif (preg_match('#^https://github\.com/codecheckers/#', $repository)) {
+            $metadata = $this->codecheckMetadataHandler->importMetadataFromGitHub($repository);
+            
+            $response_code = 200;
+            if(!$metadata['success']) {
+                $response_code = 400;
+            }
+
+            $this->response->response($metadata, $response_code);
         } else {
             $this->response->response([
                 'success' => false,
