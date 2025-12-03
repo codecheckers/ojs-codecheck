@@ -339,4 +339,30 @@ class CodecheckMetadataHandler
             'repository' => $repository,
         ];
     }
+
+    /**
+     * Import the codecheck metadata from an existing `codecheck.yml` from the CODECHECK Zenodo Repository
+     * @param string $repository The Zenodo Repository
+     * @return array The Metadata from the Repositories `codecheck.yml`
+     */
+    public function importMetadataFromZenodo(string $repository): array
+    {
+        $filename = 'codecheck.yml';
+        $pathToCodecheckYaml = $repository . '/files/' . $filename . '?download=1';
+
+        $curl_handle = curl_init($pathToCodecheckYaml);
+        curl_setopt($curl_handle, CURLOPT_RETURNTRANSFER, true);
+        // follow redirects
+        curl_setopt($curl_handle, CURLOPT_FOLLOWLOCATION, true);
+
+        $yamlContent = curl_exec($curl_handle);
+
+        $metadata = Yaml::parse($yamlContent);
+
+        return [
+            'success' => true,
+            'repository' => $repository,
+            'metadata' => $metadata,
+        ];
+    }
 }

@@ -299,14 +299,21 @@ class CodecheckApiHandler
         $postParams = json_decode(file_get_contents('php://input'), true);
         $repository = $postParams["repository"];
 
-        if (preg_match('/^https:\/\/zenodo\.org\/records\/\d{8}$/', $repository)) {
-            $this->response->response([
-                'success' => true,
-                'repository' => $repository,
-            ], 200);
+        if (preg_match('#^https://zenodo\.org/records/\d{8}/?$#', $repository)) {
+            // Remove trailing / if it exists
+            $repository = rtrim($repository, '/');
+            $metadata = $this->codecheckMetadataHandler->importMetadataFromZenodo($repository);
+
+            $response_code = 200;
+            if(!$metadata['success']) {
+                $response_code = 400;
+            }
+
+            $this->response->response($metadata, $response_code);
+
         } elseif (preg_match('#^https://github\.com/codecheckers/#', $repository)) {
             $metadata = $this->codecheckMetadataHandler->importMetadataFromGitHub($repository);
-            
+
             $response_code = 200;
             if(!$metadata['success']) {
                 $response_code = 400;
