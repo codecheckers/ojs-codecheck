@@ -155,7 +155,14 @@
 
         <div class="field-group">
           <div class="field-header">
-            <label class="field-label">{{ t('plugins.generic.codecheck.repositories.title') }}</label>
+            <div class="field-label">{{ t('plugins.generic.codecheck.repositories.title') }} 
+              <button
+                class="info-button"
+                @click="showRepositoryInfoModal()"
+              >
+                ℹ️
+              </button>
+            </div>
             <button type="button" class="pkpButton btn-add" @click="addRepository">{{ t('plugins.generic.codecheck.repositories.add') }}</button>
           </div>
           <p class="field-description">{{ t('plugins.generic.codecheck.repositories.description') }}</p>
@@ -594,16 +601,56 @@ export default {
       }
     },
 
+    canUsePkpModal() {
+      return typeof pkp !== 'undefined' && pkp.modules && pkp.modules.useModal;
+    },
+
+    showRepositoryInfoModal() {
+      if (this.canUsePkpModal()) {
+        this.showPkpRepositoryModal();
+      } else {
+        this.showFallbackRepositoryModal();
+      }
+    },
+
+    showPkpRepositoryModal() {
+      const { useModal } = pkp.modules.useModal;
+      const { openDialog } = useModal();
+
+      const modalHtml = '<div class="modal-form">' +
+        '<div class="modal-field">' +
+        '<label class="modal-label">' + this.t('plugins.generic.codecheck.repositories.infoTextOne') + '</label><br>' +
+        '<label class="modal-label">' + this.t('plugins.generic.codecheck.repositories.infoTextTwo') + '</label><br>' +
+        '<label class="modal-label">' + this.t('plugins.generic.codecheck.repositories.infoTextThree') + '<a>' + this.t('plugins.generic.codecheck.repositories.infoTextLinkToAllowedRepositories') + '</a>' + '</label>' +
+        '</div>'
+        '</div>';
+
+      openDialog({
+        title: this.t('plugins.generic.codecheck.repositories.infoTitle'),
+        message: modalHtml,
+        actions: [
+          {
+            label: this.t('plugins.generic.codecheck.modal.close'),
+            callback: (close) => close()
+          },
+        ]
+      });
+    },
+
+    showFallbackRepositoryModal() {
+      prompt(
+        this.t('plugins.generic.codecheck.repositories.infoTextOne') +
+        this.t('plugins.generic.codecheck.repositories.infoTextTwo') +
+        '<a>' + this.t('plugins.generic.codecheck.repositories.infoTextLinkToAllowedRepositories') + '</a>'
+      );
+    },
+
     showCodecheckerModal() {
       if (this.canUsePkpModal()) {
         this.showPkpCodecheckerModal();
       } else {
         this.showFallbackCodecheckerModal();
       }
-    },
-
-    canUsePkpModal() {
-      return typeof pkp !== 'undefined' && pkp.modules && pkp.modules.useModal;
     },
 
     showPkpCodecheckerModal() {
@@ -1748,5 +1795,9 @@ a {
 .codecheck-metadata-form .file-link:hover {
   text-decoration: underline;
   color: #005a87;
+}
+
+.info-button {
+  cursor: pointer;
 }
 </style>

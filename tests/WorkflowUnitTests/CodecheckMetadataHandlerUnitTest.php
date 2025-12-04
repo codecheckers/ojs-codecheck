@@ -4,6 +4,7 @@ namespace APP\plugins\generic\codecheck\tests\WorkflowUnitTests;
 
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
 use PKP\tests\PKPTestCase;
+use APP\core\Request;
 
 class CodecheckMetadataHandlerUnitTest extends PKPTestCase
 {
