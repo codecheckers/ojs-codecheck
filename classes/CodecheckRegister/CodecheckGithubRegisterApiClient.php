@@ -77,39 +77,6 @@ class CodecheckGithubRegisterApiClient
     }
 
     /**
-     * Parses a GitHub Url and returns owner, repository, branch and a specified path (if a path was specified)
-     * @param string $url The GitHub Url
-     * @return array The GitHub Url data (owner, repository, branch and a specified path)
-     */
-    public static function parseGithubUrl(string $url): array
-    {
-        // Case 1: Blob URL (folder or file)
-        $patternBlob = '#^https://github\.com/([^/]+)/([^/]+)/blob/([^/]+)/(.*)$#';
-        if (preg_match($patternBlob, $url, $matches)) {
-            return [
-                'owner' => $matches[1],
-                'repo'  => $matches[2],
-                'ref'   => $matches[3],
-                'path'  => rtrim($matches[4], '/'),
-            ];
-        }
-
-        // Case 2: Repo root URL
-        // e.g. https://github.com/codecheckers/certificate-2025-029
-        $patternRepo = '#^https://github\.com/([^/]+)/([^/]+)/?#';
-        if (preg_match($patternRepo, $url, $matches)) {
-            return [
-                'owner' => $matches[1],
-                'repo'  => $matches[2],
-                'ref'   => 'main',   // default branch guess
-                'path'  => '',       // repo root
-            ];
-        }
-
-        throw new GithubUrlParseException("Unsupported GitHub URL format: $url");
-    }
-
-    /**
      * Fetches all Issues from the CODECHECK GitHub Register
      */
     public function fetchIssues(): void
