@@ -335,6 +335,19 @@ class CodecheckApiHandler
             }
 
             $this->response->response($metadata, $response_code);
+        } elseif (preg_match('#^https://gitlab\.com/cdchck/community-codechecks/([^/]+)/?$#', $repository))
+        // Check if the Repository is a GitLab Repository
+        {
+            // Remove trailing / if it exists
+            $repository = rtrim($repository, '/');
+            $metadata = $this->codecheckMetadataHandler->importMetadataFromGitLab($repository);
+
+            $response_code = 200;
+            if(!$metadata['success']) {
+                $response_code = 400;
+            }
+
+            $this->response->response($metadata, $response_code);
         } else {
             $this->response->response([
                 'success' => false,

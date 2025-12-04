@@ -402,6 +402,19 @@ class CodecheckMetadataHandler
     }
 
     /**
+     * Import the codecheck metadata from an existing `codecheck.yml` from the CODECHECK GitLab Repository
+     * @param string $repository The GitLab Repository
+     * @return array The Metadata from the Repositories `codecheck.yml`
+     */
+    public function importMetadataFromGitLab(string $repository): array
+    {
+        $filename = 'codecheck.yml';
+        $pathToCodecheckYaml = $repository . '/-/raw/main/' . $filename . '?ref_type=heads&inline=false';
+
+        return $this->readYamlContent($pathToCodecheckYaml, $repository);
+    }
+
+    /**
      * Read the yaml data and return an API response array with the content of the yaml file
      * @param string $pathToYamlContent The exact path to the download of the yaml file
      * @param string $repository The exact path to the code repository
