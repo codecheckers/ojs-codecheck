@@ -621,7 +621,7 @@ export default {
         '<div class="modal-field">' +
         '<label class="modal-label">' + this.t('plugins.generic.codecheck.repositories.infoTextOne') + '</label><br>' +
         '<label class="modal-label">' + this.t('plugins.generic.codecheck.repositories.infoTextTwo') + '</label><br>' +
-        '<label class="modal-label">' + this.t('plugins.generic.codecheck.repositories.infoTextThree') + '<a>' + this.t('plugins.generic.codecheck.repositories.infoTextLinkToAllowedRepositories') + '</a>' + '</label>' +
+        '<label class="modal-label">' + this.t('plugins.generic.codecheck.repositories.infoTextThree') + '<a href="' + this.t('plugins.generic.codecheck.repositories.infoTextLinkToAllowedRepositories') + '">' + this.t('plugins.generic.codecheck.repositories.infoTextLinkToAllowedRepositories') + '</a>' + '</label>' +
         '</div>'
         '</div>';
 
@@ -641,7 +641,10 @@ export default {
       prompt(
         this.t('plugins.generic.codecheck.repositories.infoTextOne') +
         this.t('plugins.generic.codecheck.repositories.infoTextTwo') +
-        '<a>' + this.t('plugins.generic.codecheck.repositories.infoTextLinkToAllowedRepositories') + '</a>'
+        this.t('plugins.generic.codecheck.repositories.infoTextThree') +
+        '<a href="' + this.t('plugins.generic.codecheck.repositories.infoTextLinkToAllowedRepositories') + '">' +
+          this.t('plugins.generic.codecheck.repositories.infoTextLinkToAllowedRepositories') +
+        '</a>'
       );
     },
 
