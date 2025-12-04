@@ -352,7 +352,7 @@ class CodecheckApiHandler
             $this->response->response([
                 'success' => false,
                 'repository' => $repository,
-                'error' => "The repository (" . $repository . ") isn't of the required format: https://zenodo.org/records/{8 digit identifier}",
+                'error' => "The repository (" . $repository . ") isn't of the required format.",
             ], 400);
         }
     }

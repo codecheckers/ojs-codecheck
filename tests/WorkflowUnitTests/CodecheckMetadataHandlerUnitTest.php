@@ -89,14 +89,21 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
 
         $request = new Request();
 
-        $this->codecheckMetadataHandler = new CodecheckMetadataHandler($request, $client);
+        $this->handler = new CodecheckMetadataHandler($request);
 
         $owner = 'codecheckers';
         $repo = 'testing-dev-register';
         $repositoryUrl = 'https://github.com/' . $owner . '/' . $repo . '/';
-        $actualMetadataReturnArray = $this->codecheckMetadataHandler->importMetadataFromGitHub($repositoryUrl);
+        $actualMetadataReturnArray = $this->handler->importMetadataFromGitHub($repositoryUrl);
         $this->assertTrue($actualMetadataReturnArray["success"]);
         $this->assertEquals($actualMetadataReturnArray["repository"], $repositoryUrl);
         $this->assertEquals($actualMetadataReturnArray["metadata"], ["test" => "yaml"]);
+    }
+
+    public function testImportMetadataFromZenodo()
+    {
+        $repository = 'https://zenodo.org/records/14900193';
+        $actualMetadataReturnArray = $this->handler->importMetadataFromZenodo($repository);
+        $this->assertCount(3, $actualMetadataReturnArray);
     }
 }
