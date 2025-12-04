@@ -47,4 +47,56 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $this->assertIsArray($result);
         $this->assertEmpty($result);
     }
+
+    public function testImportMetadataFromGithub()
+    {
+        /** mock contents API */
+        $contentsApi = $this->createMock(\Github\Api\Repository\Contents::class);
+        $contentsApi->method('show')
+            ->willReturnOnConsecutiveCalls(
+                // 1st call: folder contents
+                [
+                    [
+                        'type' => 'file',
+                        'name' => 'codecheck.yml',
+                        'path' => 'codecheck.yml'
+                    ]
+                ],
+
+                // 2nd call: file contents
+                [
+                    'content' => base64_encode("test: yaml")
+                ]
+            );
+
+        /** mock Repo API */
+        $repoApi = $this->createMock(\Github\Api\Repo::class);
+
+        // mock show() for default branch
+        $repoApi->method('show')
+            ->willReturn(['default_branch' => 'root']);
+
+        // mock contents()
+        $repoApi->method('contents')
+            ->willReturn($contentsApi);
+
+        /** mock GitHub client */
+        $client = $this->createMock(\Github\Client::class);
+
+        // client->api('repo') must return Github\Api\Repo because of return types
+        $client->method('api')->willReturn($repoApi);
+
+
+        $request = new Request();
+
+        $this->codecheckMetadataHandler = new CodecheckMetadataHandler($request, $client);
+
+        $owner = 'codecheckers';
+        $repo = 'testing-dev-register';
+        $repositoryUrl = 'https://github.com/' . $owner . '/' . $repo . '/';
+        $actualMetadataReturnArray = $this->codecheckMetadataHandler->importMetadataFromGitHub($repositoryUrl);
+        $this->assertTrue($actualMetadataReturnArray["success"]);
+        $this->assertEquals($actualMetadataReturnArray["repository"], $repositoryUrl);
+        $this->assertEquals($actualMetadataReturnArray["metadata"], ["test" => "yaml"]);
+    }
 }
