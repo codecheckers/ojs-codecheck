@@ -85,22 +85,22 @@ class CodecheckGithubRegisterApiClient
     {
         // Case 1: Blob URL (folder or file)
         $patternBlob = '#^https://github\.com/([^/]+)/([^/]+)/blob/([^/]+)/(.*)$#';
-        if (preg_match($patternBlob, $url, $m)) {
+        if (preg_match($patternBlob, $url, $matches)) {
             return [
-                'owner' => $m[1],
-                'repo'  => $m[2],
-                'ref'   => $m[3],
-                'path'  => rtrim($m[4], '/'),
+                'owner' => $matches[1],
+                'repo'  => $matches[2],
+                'ref'   => $matches[3],
+                'path'  => rtrim($matches[4], '/'),
             ];
         }
 
         // Case 2: Repo root URL
         // e.g. https://github.com/codecheckers/certificate-2025-029
         $patternRepo = '#^https://github\.com/([^/]+)/([^/]+)/?#';
-        if (preg_match($patternRepo, $url, $m)) {
+        if (preg_match($patternRepo, $url, $matches)) {
             return [
-                'owner' => $m[1],
-                'repo'  => $m[2],
+                'owner' => $matches[1],
+                'repo'  => $matches[2],
                 'ref'   => 'main',   // default branch guess
                 'path'  => '',       // repo root
             ];
