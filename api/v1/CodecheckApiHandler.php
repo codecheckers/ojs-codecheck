@@ -299,6 +299,7 @@ class CodecheckApiHandler
         $postParams = json_decode(file_get_contents('php://input'), true);
         $repository = $postParams["repository"];
 
+        // Check if the repository is a Zenodo Repository
         if (preg_match('#^https://zenodo\.org/records/\d{8}/?$#', $repository)) {
             // Remove trailing / if it exists
             $repository = rtrim($repository, '/');
@@ -311,12 +312,26 @@ class CodecheckApiHandler
 
             $this->response->response($metadata, $response_code);
 
-        } elseif (preg_match('#^https://github\.com/codecheckers/#', $repository)) {
+        } elseif (preg_match('#^https://github\.com/codecheckers/#', $repository))
+        // Check if the Repository is a GitHub Repository
+        {
             $metadata = $this->codecheckMetadataHandler->importMetadataFromGitHub($repository);
 
             $response_code = 200;
             if(!$metadata['success']) {
                 $response_code = 400;
+            }
+
+            $this->response->response($metadata, $response_code);
+        } elseif (preg_match('#^https://osf\.io/([A-Za-z0-9]{5})/?$#', $repository, $matches))
+        // Check if the Repository is an OSF Repository
+        {
+            $osf_node_id = $matches[1];
+            $metadata = $this->codecheckMetadataHandler->importMetadataFromOSF($osf_node_id);
+
+            $response_code = 200;
+            if(!$metadata['success']) {
+                $response_code = 404;
             }
 
             $this->response->response($metadata, $response_code);

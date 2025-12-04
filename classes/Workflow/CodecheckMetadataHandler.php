@@ -350,7 +350,66 @@ class CodecheckMetadataHandler
         $filename = 'codecheck.yml';
         $pathToCodecheckYaml = $repository . '/files/' . $filename . '?download=1';
 
-        $curl_handle = curl_init($pathToCodecheckYaml);
+        return $this->readYamlContent($pathToCodecheckYaml, $repository);
+    }
+
+    /**
+     * Import the codecheck metadata from an existing `codecheck.yml` from the CODECHECK OSF Repository
+     * @param string $osf_node_id The node_id of the OSF Repository for the OSF API
+     * @return array The Metadata from the Repositories `codecheck.yml`
+     */
+    public function importMetadataFromOSF(string $osf_node_id): array
+    {
+        $filename = 'codecheck.yml';
+        
+        $apiUrl = "https://api.osf.io/v2/nodes/" . $osf_node_id . "/files/osfstorage/";
+
+        // Fetch file data from the OSF Repository
+        $curl_handle = curl_init($apiUrl);
+        curl_setopt($curl_handle, CURLOPT_RETURNTRANSFER, true);
+
+        $api_response = curl_exec($curl_handle);
+        curl_close($curl_handle);
+
+        $data = json_decode($api_response, true);
+
+        if (!$data || !isset($data['data'])) {
+            die("Invalid OSF API response\n");
+        }
+
+        // Search for the codecheck.yml and get the guid of the codecheck.yml
+        $guid = null;
+
+        foreach ($data['data'] as $item) {
+            $attributes = $item['attributes'];
+
+            if (isset($attributes['name']) && $attributes['name'] === $filename) {
+                $guid = $attributes['guid'];   // This is the OSF file GUID
+                break;
+            }
+        }
+
+        if ($guid) {
+            $pathToCodecheckYaml = 'https://osf.io/download/' . $guid . '/';
+            $repository = 'https://osf.io/' . $osf_node_id . '/';
+            return $this->readYamlContent($pathToCodecheckYaml, $repository);
+        } else {
+            return [
+                'success' => false,
+                'error' => 'codecheck.yml not found',
+            ];
+        }
+    }
+
+    /**
+     * Read the yaml data and return an API response array with the content of the yaml file
+     * @param string $pathToYamlContent The exact path to the download of the yaml file
+     * @param string $repository The exact path to the code repository
+     * @return array The API Response Array with the repository and the yaml content array
+     */
+    private function readYamlContent(string $pathToYamlContent, string $repository): array
+    {
+        $curl_handle = curl_init($pathToYamlContent);
         curl_setopt($curl_handle, CURLOPT_RETURNTRANSFER, true);
         // follow redirects
         curl_setopt($curl_handle, CURLOPT_FOLLOWLOCATION, true);
