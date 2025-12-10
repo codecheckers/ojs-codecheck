@@ -607,13 +607,13 @@ export default {
 
     showRepositoryInfoModal() {
       if (this.canUsePkpModal()) {
-        this.showPkpRepositoryModal();
+        this.showPkpRepositoryInfoModal();
       } else {
-        this.showFallbackRepositoryModal();
+        this.showFallbackRepositoryInfoModal();
       }
     },
 
-    showPkpRepositoryModal() {
+    showPkpRepositoryInfoModal() {
       const { useModal } = pkp.modules.useModal;
       const { openDialog } = useModal();
 
@@ -621,7 +621,13 @@ export default {
         '<div class="modal-field">' +
         '<label class="modal-label">' + this.t('plugins.generic.codecheck.repositories.infoTextOne') + '</label><br>' +
         '<label class="modal-label">' + this.t('plugins.generic.codecheck.repositories.infoTextTwo') + '</label><br>' +
-        '<label class="modal-label">' + this.t('plugins.generic.codecheck.repositories.infoTextThree') + '<a href="' + this.t('plugins.generic.codecheck.repositories.infoTextLinkToAllowedRepositories') + '">' + this.t('plugins.generic.codecheck.repositories.infoTextLinkToAllowedRepositories') + '</a>' + '</label>' +
+        '<label class="modal-label text-bold text-pink">' + this.t('plugins.generic.codecheck.repositories.infoTextNote') + '</label><br>' +
+        '<label class="modal-label">' +
+          this.t('plugins.generic.codecheck.repositories.infoTextMoreInformation') +
+          '<a href="' + this.t('plugins.generic.codecheck.repositories.infoTextLinkToAllowedRepositories') + '">'
+            + this.t('plugins.generic.codecheck.repositories.infoTextLinkToAllowedRepositories') +
+          '</a>' +
+        '</label>' +
         '</div>'
         '</div>';
 
@@ -637,11 +643,12 @@ export default {
       });
     },
 
-    showFallbackRepositoryModal() {
+    showFallbackRepositoryInfoModal() {
       prompt(
         this.t('plugins.generic.codecheck.repositories.infoTextOne') +
         this.t('plugins.generic.codecheck.repositories.infoTextTwo') +
-        this.t('plugins.generic.codecheck.repositories.infoTextThree') +
+        this.t('plugins.generic.codecheck.repositories.infoTextNote') +
+        this.t('plugins.generic.codecheck.repositories.infoTextMoreInformation') +
         '<a href="' + this.t('plugins.generic.codecheck.repositories.infoTextLinkToAllowedRepositories') + '">' +
           this.t('plugins.generic.codecheck.repositories.infoTextLinkToAllowedRepositories') +
         '</a>'
@@ -1144,6 +1151,14 @@ export default {
 </script>
 
 <style>
+.text-bold {
+  font-weight: bold !important;
+}
+
+.text-pink {
+  color: #d9534f !important;
+}
+
 .codecheck-metadata-form {
   background: #fff;
 }
