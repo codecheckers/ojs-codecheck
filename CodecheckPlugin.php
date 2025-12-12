@@ -102,7 +102,6 @@ class CodecheckPlugin extends GenericPlugin
             
             // Workflow state
             Hook::add('TemplateManager::display', $this->callbackTemplateManagerDisplay(...));
-        }
 
         return $success;
     }
