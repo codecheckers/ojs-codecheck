@@ -7,6 +7,8 @@ use APP\plugins\generic\codecheck\classes\FrontEnd\ArticleDetails;
 use APP\plugins\generic\codecheck\classes\Settings\Actions;
 use APP\plugins\generic\codecheck\classes\migration\CodecheckSchemaMigration;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
+use APP\plugins\generic\codecheck\classes\Submission\Schema;
+use APP\plugins\generic\codecheck\classes\Submission\SubmissionWizardHandler;
 use PKP\plugins\GenericPlugin;
 use PKP\plugins\Hook;
 use PKP\components\forms\FieldOptions;
@@ -70,6 +72,36 @@ class CodecheckPlugin extends GenericPlugin
                 
                 return false;
             });
+        }
+
+            // Opt-in checkbox on submission start
+            Hook::add('Schema::get::submission', $this->addOptInToSchema(...));
+            Hook::add('Form::config::before', $this->addOptInCheckbox(...));
+            Hook::add('Submission::edit', $this->saveOptIn(...));
+            
+            // Wizard fields schema
+            $codecheckSchema = new Schema();
+            Hook::add('Schema::get::publication', function($hookName, $args) use ($codecheckSchema) {
+                return $codecheckSchema->addToSchemaPublication($hookName, $args);
+            });
+
+            // Wizard template handlers
+            $codecheckWizard = new SubmissionWizardHandler($this);
+            Hook::add('TemplateManager::display', function($hookName, $params) use ($codecheckWizard) {
+                return $codecheckWizard->addToSubmissionWizardSteps($hookName, $params);
+            });
+            Hook::add('Template::SubmissionWizard::Section', function($hookName, $params) use ($codecheckWizard) {
+                return $codecheckWizard->addToSubmissionWizardTemplate($hookName, $params);
+            });
+            Hook::add('Template::SubmissionWizard::Section::Review', function($hookName, $params) use ($codecheckWizard) {
+                return $codecheckWizard->addToSubmissionWizardReviewTemplate($hookName, $params);
+            });
+            
+            // Save wizard fields on validation
+            Hook::add('Submission::validate', $this->saveWizardFieldsFromRequest(...));
+            
+            // Workflow state
+            Hook::add('TemplateManager::display', $this->callbackTemplateManagerDisplay(...));
         }
 
         return $success;
@@ -152,7 +184,9 @@ class CodecheckPlugin extends GenericPlugin
                 'options' => [
                     [
                         'value' => 1, 
-                        'label' => __('plugins.generic.codecheck.optIn.description') . ' <a href="https://codecheck.org.uk/" target="_blank">CODECHECK</a>'
+                        'label' => __('plugins.generic.codecheck.optIn.description', [
+                            'codecheckLink' => '<a href="https://codecheck.org.uk/" target="_blank">CODECHECK</a>'
+                        ])
                     ]
                 ],
                 'value' => false,

@@ -112,7 +112,6 @@ class CodecheckSubmission
      */
     public function hasAssignedChecker(): bool
     {
-        // TODO: Implement actual logic to check if checker is assigned
         return false;
     }
 

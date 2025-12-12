@@ -71,4 +71,101 @@
 
 .codecheck-metadata-form .certificate-input-group input {
   flex: 1;
+
+/* Data Availability textarea */
+textarea[name="dataAvailabilityStatement"] {
+    min-height: 100px !important;
+    width: 100% !important;
+}
+
+/* Repository rows (Vue component) */
+.repository-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+  align-items: center;
+}
+
+/* Manifest file rows (Vue component) */
+.manifest-file-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+  align-items: center;
+}
+
+/* Form inputs in Vue components */
+.form-control {
+  flex: 1;
+  padding: .4375rem .75rem;
+  line-height: 1.25rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: #007ab2;
+  box-shadow: 0 0 0 2px rgba(0, 122, 178, 0.2);
+}
+
+.form-control.is-invalid {
+  border-color: #d00a0a !important;
+}
+
+/* Remove button in Vue components */
+.btn-remove {
+  background: #dc3545;
+  color: white;
+  border: none;
+  font-size: .875rem;
+  font-weight: 600;
+  padding: .4375rem .75rem;
+  border-radius: 4px;
+  line-height: 1.25rem;
+  cursor: pointer;
+}
+
+.btn-remove:hover {
+  background: #c82333;
+}
+
+/* Add button in Vue components */
+.btn-add {
+  background: #006798;
+  color: white;
+  border: none;
+  font-size: .875rem;
+  font-weight: 600;
+  padding: .4375rem .75rem;
+  border-radius: 4px;
+  line-height: 1.25rem;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.btn-add:hover {
+  background: #005580;
+}
+
+/* Validation errors (used in Vue components) */
+.pkpFormField__error {
+  color: #d00a0a;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Wizard section header (used in template) */
+.codecheck-wizard-section .label {
+  font-weight: 600;
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.codecheck-wizard-section .description {
+  margin-bottom: 1.5rem;
+  color: #666;
 }

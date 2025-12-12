@@ -7,9 +7,9 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2025-12-01T16:21:26+00:00\n"
-"PO-Revision-Date: 2025-12-01T16:21:26+00:00\n"
-"Language: \n"
+"POT-Creation-Date: 2025-01-30T00:00:00+00:00\n"
+"PO-Revision-Date: 2025-01-30T00:00:00+00:00\n"
+"Language: en\n"
 
 msgid "plugins.generic.codecheck.displayName"
 msgstr "CODECHECK"
@@ -33,40 +33,37 @@ msgid "plugins.generic.codecheck.title"
 msgstr "CODECHECK"
 
 msgid "plugins.generic.codecheck.optIn.description"
-msgstr "Yes, I want my paper to be codechecked. See:"
+msgstr "Yes, I want my paper to be codechecked. See: {$codecheckLink}"
 
-msgid "plugins.generic.codecheck.details.title"
-msgstr "CODECHECK Details"
+msgid "plugins.generic.codecheck.submission.label"
+msgstr "CODECHECK Information"
+
+msgid "plugins.generic.codecheck.submission.description"
+msgstr "Please provide information about your code and data repositories."
 
 msgid "plugins.generic.codecheck.codeRepository"
-msgstr "Code Repository URL"
+msgstr "Code Repository URLs"
 
 msgid "plugins.generic.codecheck.codeRepository.description"
-msgstr "Link to your code repository (GitHub, GitLab, etc.)"
+msgstr "Link(s) to your code repository (GitHub, GitLab, etc.)"
 
 msgid "plugins.generic.codecheck.dataRepository"
-msgstr "Data Repository URL"
+msgstr "Data Repository URLs"
 
 msgid "plugins.generic.codecheck.dataRepository.description"
-msgstr "Link to your data repository (Zenodo, OSF, etc.) - optional"
-
-msgid "plugins.generic.codecheck.dependencies"
-msgstr "Software Dependencies"
-
-msgid "plugins.generic.codecheck.dependencies.description"
-msgstr "List all software dependencies and versions"
-
-msgid "plugins.generic.codecheck.executionInstructions"
-msgstr "Execution Instructions"
-
-msgid "plugins.generic.codecheck.executionInstructions.description"
-msgstr "Step-by-step instructions to reproduce your analysis"
-
-msgid "plugins.generic.codecheck.preview"
-msgstr "Preview codecheck.yml"
+msgstr "Link(s) to your data repository (Zenodo, OSF, etc.) - optional"
 
 msgid "plugins.generic.codecheck.manifestFiles.label"
 msgstr "Expected Output Files"
+
+msgid "plugins.generic.codecheck.manifestFiles.description"
+msgstr "List the main figures, tables, and results your code should produce."
+
+msgid "plugins.generic.codecheck.dataAvailability"
+msgstr "Data and Software Availability"
+
+msgid "plugins.generic.codecheck.dataAvailability.description"
+msgstr "Copy from your manuscript's data availability section"
 
 msgid "plugins.generic.codecheck.manifestFiles.filenamePlaceholder"
 msgstr "Filename (e.g., figures/figure1.png)"
@@ -82,12 +79,6 @@ msgstr "Repository URL (e.g., https://github.com/username/repo)"
 
 msgid "plugins.generic.codecheck.repository.add"
 msgstr "+ Add Repository"
-
-msgid "plugins.generic.codecheck.dataAvailability"
-msgstr "Data and Software Availability"
-
-msgid "plugins.generic.codecheck.review.title"
-msgstr "CODECHECK Information"
 
 msgid "plugins.generic.codecheck.review.status"
 msgstr "Status"
@@ -211,9 +202,11 @@ msgstr "Status"
 
 msgid "plugins.generic.codecheck.status.complete"
 msgstr "Complete"
+msgid "plugins.generic.codecheck.dataAvailability.placeholder"
+msgstr "Describe how your data and code are available..."
 
-msgid "plugins.generic.codecheck.status.inProgress"
-msgstr "In Progress"
+msgid "plugins.generic.codecheck.review.title"
+msgstr "CODECHECK Information"
 
 msgid "plugins.generic.codecheck.status.pending"
 msgstr "Pending"
@@ -373,9 +366,6 @@ msgstr "These fields are automatically populated from the submission and cannot 
 
 msgid "plugins.generic.codecheck.paperMetadata.fieldReadonly"
 msgstr "This field is read-only"
-
-msgid "plugins.generic.codecheck.manifestFiles.description"
-msgstr "List the main figures, tables, and results"
 
 msgid "plugins.generic.codecheck.source.label"
 msgstr "Source"
