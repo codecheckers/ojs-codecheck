@@ -6,6 +6,7 @@ use APP\template\TemplateManager;
 use APP\plugins\generic\codecheck\classes\FrontEnd\ArticleDetails;
 use APP\plugins\generic\codecheck\classes\Settings\Actions;
 use APP\plugins\generic\codecheck\classes\migration\CodecheckSchemaMigration;
+use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
 use APP\plugins\generic\codecheck\classes\Submission\Schema;
 use APP\plugins\generic\codecheck\classes\Submission\SubmissionWizardHandler;
 use PKP\plugins\GenericPlugin;
@@ -24,6 +25,54 @@ class CodecheckPlugin extends GenericPlugin
 
             $articleDetails = new ArticleDetails($this);
             Hook::add('Templates::Article::Details', $articleDetails->addCodecheckInfo(...));
+
+            Hook::add('Schema::get::submission', $this->addOptInToSchema(...));
+            Hook::add('Form::config::before', $this->addOptInCheckbox(...));
+            Hook::add('Submission::edit', $this->saveOptIn(...));
+
+            Hook::add('Submission::validate', $this->saveWizardFieldsFromRequest(...));
+            
+            Hook::add('TemplateManager::display', $this->callbackTemplateManagerDisplay(...));
+            
+            $metadataHandler = new CodecheckMetadataHandler($this);
+            Hook::add('LoadHandler', function($hookName, $args) use ($metadataHandler) {
+                $page = $args[0];
+                $op = $args[1];
+                
+                error_log("[CODECHECK Plugin] LoadHandler: page=$page, op=$op");
+                
+                if ($page === 'codecheck') {
+                    $request = Application::get()->getRequest();
+                    $submissionId = $request->getUserVar('submissionId');
+                    
+                    error_log("[CODECHECK Plugin] Matched codecheck page, submissionId=$submissionId");
+                    
+                    if ($op === 'metadata' && $request->isGet()) {
+                        error_log("[CODECHECK Plugin] Handling GET metadata");
+                        $result = $metadataHandler->getMetadata($request, $submissionId);
+                        header('Content-Type: application/json');
+                        echo json_encode($result);
+                        exit;
+                    } elseif ($op === 'metadata' && $request->isPost()) {
+                        error_log("[CODECHECK Plugin] Handling POST metadata");
+                        $result = $metadataHandler->saveMetadata($request, $submissionId);
+                        header('Content-Type: application/json');
+                        echo json_encode($result);
+                        exit;
+                    } elseif ($op === 'yaml') {
+                        error_log("[CODECHECK Plugin] Handling YAML generation");
+                        $result = $metadataHandler->generateYaml($request, $submissionId);
+                        header('Content-Type: application/json');
+                        echo json_encode($result);
+                        exit;
+                    }
+                    
+                    error_log("[CODECHECK Plugin] No matching operation for: $op");
+                }
+                
+                return false;
+            });
+        }
 
             // Opt-in checkbox on submission start
             Hook::add('Schema::get::submission', $this->addOptInToSchema(...));

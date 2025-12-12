@@ -15,7 +15,22 @@ msgid "plugins.generic.codecheck.displayName"
 msgstr "CODECHECK"
 
 msgid "plugins.generic.codecheck.description"
-msgstr "Integrates CODECHECK code execution verification into the OJS submission and peer review workflow"
+msgstr "Integrates CODECHECK code execution verification into the OJS peer review workflow"
+
+msgid "plugins.generic.codecheck.settings.title"
+msgstr "CODECHECK Settings"
+
+msgid "plugins.generic.codecheck.settings.description"
+msgstr "Configure CODECHECK integration settings for this journal"
+
+msgid "plugins.generic.codecheck.settings.enableCodecheck"
+msgstr "Enable CODECHECK for this journal"
+
+msgid "plugins.generic.codecheck.settings.enableCodecheck.description"
+msgstr "Allow editors to assign codecheckers to submissions"
+
+msgid "plugins.generic.codecheck.title"
+msgstr "CODECHECK"
 
 msgid "plugins.generic.codecheck.optIn.description"
 msgstr "Yes, I want my paper to be codechecked. See: {$codecheckLink}"
@@ -50,14 +65,322 @@ msgstr "Data and Software Availability"
 msgid "plugins.generic.codecheck.dataAvailability.description"
 msgstr "Copy from your manuscript's data availability section"
 
+msgid "plugins.generic.codecheck.manifestFiles.filenamePlaceholder"
+msgstr "Filename (e.g., figures/figure1.png)"
+
+msgid "plugins.generic.codecheck.manifestFiles.commentPlaceholder"
+msgstr "Comment (e.g., Main result visualization)"
+
+msgid "plugins.generic.codecheck.manifestFiles.addFile"
+msgstr "+ Add File"
+
+msgid "plugins.generic.codecheck.repository.placeholder"
+msgstr "Repository URL (e.g., https://github.com/username/repo)"
+
+msgid "plugins.generic.codecheck.repository.add"
+msgstr "+ Add Repository"
+
+msgid "plugins.generic.codecheck.review.status"
+msgstr "Status"
+
+msgid "plugins.generic.codecheck.review.willBeCodechecked"
+msgstr "This submission will be codechecked"
+
+msgid "plugins.generic.codecheck.workflow.title"
+msgstr "CODECHECK"
+
+msgid "plugins.generic.codecheck.configVersion"
+msgstr "CODECHECK config version"
+
+msgid "plugins.generic.codecheck.publishWithDOI"
+msgstr "Check published with a DOI (e.g., Zenodo)"
+
+msgid "plugins.generic.codecheck.manifest.title"
+msgstr "Manifest"
+
+msgid "plugins.generic.codecheck.manifest.subtitle"
+msgstr "The output files and their descriptions created by the editorial workflow and considered in the CODECHECK"
+
+msgid "plugins.generic.codecheck.manifest.outputFile"
+msgstr "Output File"
+
+msgid "plugins.generic.codecheck.manifest.description"
+msgstr "Description"
+
+msgid "plugins.generic.codecheck.paperMetadata.title"
+msgstr "Paper Metadata"
+
+msgid "plugins.generic.codecheck.paperMetadata.authors"
+msgstr "Authors"
+
+msgid "plugins.generic.codecheck.paperMetadata.addAuthor"
+msgstr "Author"
+
+msgid "plugins.generic.codecheck.paperMetadata.reference"
+msgstr "Reference (e.g. the DOI of the preprint)"
+
+msgid "plugins.generic.codecheck.paperMetadata.referenceHelp"
+msgstr "Enter the DOI or URL of the preprint"
+
+msgid "plugins.generic.codecheck.paperMetadata.source"
+msgstr "Source of the checked material"
+
+msgid "plugins.generic.codecheck.codecheckers.title"
+msgstr "CODECHECKers"
+
+msgid "plugins.generic.codecheck.codecheckers.add"
+msgstr "+ CODECHECKer"
+
+msgid "plugins.generic.codecheck.codecheckers.addCodechecker"
+msgstr "Add CODECHECKer"
+
+msgid "plugins.generic.codecheck.certificate.title"
+msgstr "CODECHECK Certificate"
+
+msgid "plugins.generic.codecheck.certificate.location"
+msgstr "CODECHECK certificate: where is it stored (e.g. the DOI) or upload new certificate"
+
+msgid "plugins.generic.codecheck.certificate.locationHelp"
+msgstr "Enter the DOI or URL where the certificate is stored"
+
+msgid "plugins.generic.codecheck.certificate.upload"
+msgstr "Upload Certificate"
+
+msgid "plugins.generic.codecheck.certificate.uploadButton"
+msgstr "Upload Certificate"
+
+msgid "plugins.generic.codecheck.certificate.summary"
+msgstr "Summary of the CODECHECK"
+
+msgid "plugins.generic.codecheck.repositories.title"
+msgstr "Repositories"
+
+msgid "plugins.generic.codecheck.repositories.add"
+msgstr "+ Repository"
+
+msgid "plugins.generic.codecheck.completionTime.title"
+msgstr "Time the CODECHECK was completed"
+
+msgid "plugins.generic.codecheck.completionTime.label"
+msgstr "Time the CODECHECK was completed"
+
+msgid "plugins.generic.codecheck.identifier.title"
+msgstr "Identifier"
+
+msgid "plugins.generic.codecheck.identifier.label"
+msgstr "ID of the CODECHECK certificate"
+
+msgid "plugins.generic.codecheck.identifier.save"
+msgstr "Save Identifier"
+
+msgid "plugins.generic.codecheck.identifier.reserve"
+msgstr "Reserve Identifier"
+
+msgid "plugins.generic.codecheck.identifier.remove"
+msgstr "Remove Identifier"
+
+msgid "plugins.generic.codecheck.identifier.reserveConfirm"
+msgstr "Do you want to reserve a new identifier for this CODECHECK?"
+
+msgid "plugins.generic.codecheck.identifier.removeConfirm"
+msgstr "Are you sure you want to remove this identifier?"
+
+msgid "plugins.generic.codecheck.previewYaml"
+msgstr "Preview CODECHECK metadata file"
+
+msgid "plugins.generic.codecheck.savedSuccessfully"
+msgstr "CODECHECK metadata saved successfully"
+
+msgid "plugins.generic.codecheck.saveFailed"
+msgstr "Failed to save CODECHECK metadata. Please try again."
+
+msgid "plugins.generic.codecheck.reviewTitle"
+msgstr "CODECHECK Information"
+
+msgid "plugins.generic.codecheck.status"
+msgstr "Status"
+
+msgid "plugins.generic.codecheck.status.complete"
+msgstr "Complete"
 msgid "plugins.generic.codecheck.dataAvailability.placeholder"
 msgstr "Describe how your data and code are available..."
 
 msgid "plugins.generic.codecheck.review.title"
 msgstr "CODECHECK Information"
 
+msgid "plugins.generic.codecheck.status.pending"
+msgstr "Pending"
+
+msgid "plugins.generic.codecheck.notYetAssigned"
+msgstr "Not yet assigned"
+
+msgid "plugins.generic.codecheck.viewFullMetadata"
+msgstr "View Full CODECHECK Metadata"
+
 msgid "plugins.generic.codecheck.notOptedIn"
-msgstr "CODECHECK was not selected for this submission."
+msgstr "This submission has not opted in for CODECHECK"
+
+msgid "plugins.generic.codecheck.workflow.label"
+msgstr "CODECHECK"
 
 msgid "plugins.generic.codecheck.codecheckStatus"
 msgstr "CODECHECK Status"
+
+msgid "plugins.generic.codecheck.markAsOutput"
+msgstr "Mark as CODECHECK Output"
+
+msgid "plugins.generic.codecheck.markAsOutputTitle"
+msgstr "Mark as CODECHECK Output"
+
+msgid "plugins.generic.codecheck.markAsOutputConfirm"
+msgstr "Do you want to mark \"{$fileName}\" as a CODECHECK output file?"
+
+msgid "plugins.generic.codecheck.status.marked"
+msgstr "Marked"
+
+msgid "plugins.generic.codecheck.status.notMarked"
+msgstr "Not Marked"
+
+msgid "plugins.generic.codecheck.paperMetadata.readOnlyNotice"
+msgstr "This information comes from the original submission and cannot be edited here."
+
+msgid "plugins.generic.codecheck.paperMetadata.noAuthors"
+msgstr "No authors found"
+
+msgid "plugins.generic.codecheck.workflow.description"
+msgstr "Complete the following fields to document the CODECHECK process."
+
+msgid "plugins.generic.codecheck.manifest.emptyState"
+msgstr "No manifest files added yet. Click \"+ Add File\" to add files."
+
+msgid "plugins.generic.codecheck.manifest.removeConfirm"
+msgstr "Remove this file from the manifest?"
+
+msgid "plugins.generic.codecheck.repositories.description"
+msgstr "URL of the forked/archived repository used for the CODECHECK."
+
+msgid "plugins.generic.codecheck.codecheckers.emptyState"
+msgstr "No codecheckers added yet"
+
+msgid "plugins.generic.codecheck.codecheckers.enterName"
+msgstr "Enter codechecker name:"
+
+msgid "plugins.generic.codecheck.codecheckers.enterOrcid"
+msgstr "Enter ORCID (optional):"
+
+msgid "plugins.generic.codecheck.codecheckers.removeConfirm"
+msgstr "Remove this codechecker?"
+
+msgid "plugins.generic.codecheck.certificate.generateId"
+msgstr "Generate ID"
+
+msgid "plugins.generic.codecheck.certificate.summaryDescription"
+msgstr "Describe the CODECHECK process and any notable findings."
+
+msgid "plugins.generic.codecheck.certificate.summaryPlaceholder"
+msgstr "Successfully reproduced all main figures..."
+
+msgid "plugins.generic.codecheck.certificate.report"
+msgstr "Report URL"
+
+msgid "plugins.generic.codecheck.certificate.reportDescription"
+msgstr "Link to the published CODECHECK report (e.g., Zenodo)."
+
+msgid "plugins.generic.codecheck.identifier.saved"
+msgstr "Identifier \"{$identifier}\" saved!"
+
+msgid "plugins.generic.codecheck.identifier.enterFirst"
+msgstr "Please enter an identifier first."
+
+msgid "plugins.generic.codecheck.identifier.reserved"
+msgstr "New identifier reserved: {$identifier}"
+
+msgid "plugins.generic.codecheck.loadError"
+msgstr "Failed to load CODECHECK data"
+
+msgid "plugins.generic.codecheck.yamlPreview"
+msgstr "YAML Preview"
+
+msgid "plugins.generic.codecheck.yamlPreviewFailed"
+msgstr "Failed to generate preview"
+
+msgid "plugins.generic.codecheck.validation.manifestRequired"
+msgstr "Please add at least one manifest file"
+
+msgid "plugins.generic.codecheck.validation.codecheckersRequired"
+msgstr "Please add at least one codechecker"
+
+msgid "plugins.generic.codecheck.validation.certificateRequired"
+msgstr "Please provide a certificate ID"
+
+msgid "plugins.generic.codecheck.validation.summaryRequired"
+msgstr "Please provide a summary"
+
+msgid "plugins.generic.codecheck.repositories.emptyState"
+msgstr "No repositories added yet"
+
+msgid "plugins.generic.codecheck.repositories.removeConfirm"
+msgstr "Remove this repository?"
+
+msgid "plugins.generic.codecheck.manifestFiles.removeConfirm"
+msgstr "Remove this file from the manifest?"
+
+msgid "plugins.generic.codecheck.yaml.download"
+msgstr "Download"
+
+msgid "plugins.generic.codecheck.yaml.close"
+msgstr "Close"
+
+msgid "plugins.generic.codecheck.yaml.previewTitle"
+msgstr "CODECHECK Metadata Preview (codecheck.yml)"
+
+msgid "plugins.generic.codecheck.modal.cancel"
+msgstr "Cancel"
+
+msgid "plugins.generic.codecheck.modal.add"
+msgstr "Add"
+
+msgid "plugins.generic.codecheck.review.configVersion"
+msgstr "Config Version"
+
+msgid "plugins.generic.codecheck.review.publicationType"
+msgstr "Publication Type"
+
+msgid "plugins.generic.codecheck.review.publicationType.doi"
+msgstr "DOI (e.g., Zenodo)"
+
+msgid "plugins.generic.codecheck.review.publicationType.separate"
+msgstr "Separate Journal Section"
+
+msgid "plugins.generic.codecheck.review.manifestFiles"
+msgstr "Manifest Files"
+
+msgid "plugins.generic.codecheck.review.codecheckers"
+msgstr "Codecheckers"
+
+msgid "plugins.generic.codecheck.review.report"
+msgstr "Report URL"
+
+msgid "plugins.generic.codecheck.paperMetadata.readonlyDescription"
+msgstr "These fields are automatically populated from the submission and cannot be edited here."
+
+msgid "plugins.generic.codecheck.paperMetadata.fieldReadonly"
+msgstr "This field is read-only"
+
+msgid "plugins.generic.codecheck.source.label"
+msgstr "Source"
+
+msgid "plugins.generic.codecheck.source.description"
+msgstr "Description or URL of the source material (use when material comes from multiple sources)"
+
+msgid "plugins.generic.codecheck.source.placeholder"
+msgstr "e.g., Code from GitHub, data from Zenodo and OSF"
+
+msgid "plugins.generic.codecheck.additionalContent.label"
+msgstr "Additional YAML Content (Optional)"
+
+msgid "plugins.generic.codecheck.additionalContent.description"
+msgstr "Add custom YAML fields for specific use cases. This content will be appended at the end of the generated YAML file. For advanced users only."
+
+msgid "plugins.generic.codecheck.additionalContent.placeholder"
+msgstr "Example:\npublishing_inc_identifier: 12345\npublishing_inc_handler: Ed Editor\n\nTheBestRepository:\n  recordId: 1a2b3c\n  checksum: abc123..."

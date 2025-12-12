@@ -1,4 +1,76 @@
 /* CODECHECK Plugin Styles */
+.codecheck-metadata-form .header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.codecheck-metadata-form .version-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.codecheck-metadata-form .publication-section {
+  padding: 1rem 1.5rem 1rem 0;
+}
+
+.codecheck-metadata-form .radio-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.codecheck-metadata-form .radio-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.codecheck-metadata-form .identifier-section {
+  background: #fff;
+  padding: 1rem 1.5rem 1rem 0;
+}
+
+.codecheck-metadata-form .identifier-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.codecheck-metadata-form .info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.codecheck-metadata-form .info-value {
+  padding: 0.5rem 0.75rem;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.codecheck-metadata-form .orcid-badge {
+  margin-left: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  background: #a6ce39;
+  color: white;
+  font-size: 11px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+.codecheck-metadata-form .certificate-input-group {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.codecheck-metadata-form .certificate-input-group input {
+  flex: 1;
 
 /* Data Availability textarea */
 textarea[name="dataAvailabilityStatement"] {
