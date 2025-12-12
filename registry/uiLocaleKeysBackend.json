@@ -31,6 +31,8 @@
   "plugins.generic.codecheck.configVersion",
   "plugins.generic.codecheck.dataRepository",
   "plugins.generic.codecheck.dataRepository.description",
+  "plugins.generic.codecheck.dataSoftwareAvail",
+  "plugins.generic.codecheck.dataSoftwareAvail.description",
   "plugins.generic.codecheck.details.title",
   "plugins.generic.codecheck.identifier.description",
   "plugins.generic.codecheck.identifier.label",

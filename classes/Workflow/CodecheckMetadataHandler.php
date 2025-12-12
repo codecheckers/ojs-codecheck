@@ -3,8 +3,6 @@
 namespace APP\plugins\generic\codecheck\classes\Workflow;
 
 use \APP\core\Request;
-use APP\facades\Repo;
-use Illuminate\Support\Facades\DB;
 use Symfony\Component\Yaml\Yaml;
 
 class CodecheckMetadataHandler

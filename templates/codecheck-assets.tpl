@@ -102,7 +102,6 @@ document.addEventListener('DOMContentLoaded', function() {
      * Handle certificate verification
      */
     function verifyCertificate(certificateId) {
-        // TODO: Implement certificate verification logic
         console.log('Verifying certificate:', certificateId);
         
         // Future: Make AJAX call to verify certificate
