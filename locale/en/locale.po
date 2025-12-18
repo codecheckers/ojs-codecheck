@@ -239,6 +239,12 @@ msgstr "Are you sure you want to remove this identifier?"
 msgid "plugins.generic.codecheck.previewYaml"
 msgstr "Preview CODECHECK metadata file"
 
+msgid "plugins.generic.codecheck.yaml.valid"
+msgstr "CODECHECK metadata creates a structurally valid codecheck.yml file"
+
+msgid "plugins.generic.codecheck.yaml.invalid"
+msgstr "Failed to validate the YAML structure of the created codecheck.yml file"
+
 msgid "plugins.generic.codecheck.savedSuccessfully"
 msgstr "CODECHECK metadata saved successfully"
 
