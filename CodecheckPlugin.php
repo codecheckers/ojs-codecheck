@@ -72,12 +72,6 @@ class CodecheckPlugin extends GenericPlugin
                 
                 return false;
             });
-        }
-
-            // Opt-in checkbox on submission start
-            Hook::add('Schema::get::submission', $this->addOptInToSchema(...));
-            Hook::add('Form::config::before', $this->addOptInCheckbox(...));
-            Hook::add('Submission::edit', $this->saveOptIn(...));
             
             // Wizard fields schema
             $codecheckSchema = new Schema();
@@ -97,11 +91,6 @@ class CodecheckPlugin extends GenericPlugin
                 return $codecheckWizard->addToSubmissionWizardReviewTemplate($hookName, $params);
             });
             
-            // Save wizard fields on validation
-            Hook::add('Submission::validate', $this->saveWizardFieldsFromRequest(...));
-            
-            // Workflow state
-            Hook::add('TemplateManager::display', $this->callbackTemplateManagerDisplay(...));
         }
 
         return $success;
