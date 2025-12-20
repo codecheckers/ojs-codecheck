@@ -1116,7 +1116,7 @@ export default {
             return true;
         } else {
             console.error('Structural Validation error:', data.error);
-            this.showMessage(this.t('plugins.generic.codecheck.yaml.invalid'), 'error');
+            this.showMessage(`${this.t('plugins.generic.codecheck.yaml.invalid')}${data.error}`, 'error');
             return false;
         }
       } catch (error) {
