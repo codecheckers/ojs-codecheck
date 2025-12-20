@@ -12,15 +12,8 @@ use APP\plugins\generic\codecheck\classes\Submission\SubmissionWizardHandler;
 use PKP\plugins\GenericPlugin;
 use PKP\plugins\Hook;
 use PKP\components\forms\FieldOptions;
-use PKP\core\PKPBaseController;
-use PKP\handler\APIHandler;
-use Illuminate\Http\Request as IlluminateRequest;
-use Illuminate\Http\Response;
-use Illuminate\Http\JsonResponse;
-use PKP\security\Role;
 use APP\facades\Repo;
 use APP\plugins\generic\codecheck\api\v1\CodecheckApiHandler;
-use PKP\API\v1\submissions\PKPSubmissionController;
 
 class CodecheckPlugin extends GenericPlugin
 {
@@ -36,17 +29,16 @@ class CodecheckPlugin extends GenericPlugin
             $articleDetails = new ArticleDetails($this);
             Hook::add('Templates::Article::Details', $articleDetails->addCodecheckInfo(...));
 
+            // Opt-in checkbox on submission start
+            Hook::add('Schema::get::submission', $this->addOptInToSchema(...));
+            Hook::add('Form::config::before', $this->addOptInCheckbox(...));
+            Hook::add('Submission::edit', $this->saveOptIn(...));
+
             Hook::add('Submission::validate', $this->saveWizardFieldsFromRequest(...));
             // Add hook for Ajax API calls
             Hook::add('Dispatcher::dispatch', [$this, 'setupAPIHandler']);
             // Add hook for the Template Manager
             Hook::add('TemplateManager::display', $this->callbackTemplateManagerDisplay(...));
-        }
-
-            // Opt-in checkbox on submission start
-            Hook::add('Schema::get::submission', $this->addOptInToSchema(...));
-            Hook::add('Form::config::before', $this->addOptInCheckbox(...));
-            Hook::add('Submission::edit', $this->saveOptIn(...));
             
             // Wizard fields schema
             $codecheckSchema = new Schema();
@@ -66,11 +58,7 @@ class CodecheckPlugin extends GenericPlugin
                 return $codecheckWizard->addToSubmissionWizardReviewTemplate($hookName, $params);
             });
             
-            // Save wizard fields on validation
-            Hook::add('Submission::validate', $this->saveWizardFieldsFromRequest(...));
-            
-            // Workflow state
-            Hook::add('TemplateManager::display', $this->callbackTemplateManagerDisplay(...));
+        }
 
         return $success;
     }
