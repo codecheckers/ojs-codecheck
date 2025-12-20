@@ -26,6 +26,9 @@ msgstr "Request failed"
 msgid "plugins.generic.codecheck.displayName"
 msgstr "CODECHECK"
 
+msgid "plugins.generic.codecheck.error"
+msgstr "Error"
+
 msgid "plugins.generic.codecheck.description"
 msgstr "Integrates CODECHECK code execution verification into the OJS peer review workflow"
 
@@ -243,7 +246,7 @@ msgid "plugins.generic.codecheck.yaml.valid"
 msgstr "CODECHECK metadata creates a structurally valid codecheck.yml file"
 
 msgid "plugins.generic.codecheck.yaml.invalid"
-msgstr "CODECHECK metadata creates a structurally invalid codecheck.yml file. Error: "
+msgstr "CODECHECK metadata creates a structurally invalid codecheck.yml file."
 
 msgid "plugins.generic.codecheck.savedSuccessfully"
 msgstr "CODECHECK metadata saved successfully"

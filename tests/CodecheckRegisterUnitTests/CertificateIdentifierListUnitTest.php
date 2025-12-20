@@ -10,7 +10,7 @@ use APP\plugins\generic\codecheck\classes\Exceptions\NoMatchingIssuesFoundExcept
 use PKP\tests\PKPTestCase;
 
 /**
- * @file APP/plugins/generic/codecheck/tests/unittests/CertificateIdentifierListUnitTests.php
+ * @file APP/plugins/generic/codecheck/tests/RetrieveReserveIdentifiersUnitTests/CertificateIdentifierListUnitTest.php
  *
  * @class CertificateIdentifierListUnitTest
  *

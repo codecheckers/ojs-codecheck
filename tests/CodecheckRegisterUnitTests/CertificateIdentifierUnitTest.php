@@ -8,7 +8,7 @@ use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifie
 use PKP\tests\PKPTestCase;
 
 /**
- * @file APP/plugins/generic/codecheck/tests/unittests/CertificateIdentifierUnitTests.php
+ * @file APP/plugins/generic/codecheck/tests/RetrieveReserveIdentifiersUnitTests/CertificateIdentifierUnitTest.php
  *
  * @class CertificateIdentifierUnitTest
  *

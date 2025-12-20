@@ -542,13 +542,6 @@ class CodecheckApiHandler
         $postParams = json_decode(file_get_contents('php://input'), true);
         $yamlContent = $postParams["yaml"];
 
-        // invalid YAML content for testing purposes
-        $yamlContent = "
-            metadata
-               metadata.field:
-                    codechecker: John Doe
-        ";
-
         error_log("[CODECHECK Api Handler] YAML structure will be validated now.");
 
         $yamlValidator = new CodecheckYamlValidator($yamlContent);

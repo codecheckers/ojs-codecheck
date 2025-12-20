@@ -6,7 +6,7 @@ use APP\plugins\generic\codecheck\classes\DataStructures\UniqueArray;
 use PKP\tests\PKPTestCase;
 
 /**
- * @file APP/plugins/generic/codecheck/tests/unittests/UniqueArrayUnitTests.php
+ * @file APP/plugins/generic/codecheck/tests/RetrieveReserveIdentifiersUnitTests/UniqueArrayUnitTest.php
  *
  * @class UniqueArrayUnitTest
  *

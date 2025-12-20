@@ -11,6 +11,13 @@ use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitExce
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
 use CurlHandle;
 
+/**
+ * @file APP/plugins/generic/codecheck/tests/WorkflowUnitTests/CodecheckMetadataHandlerUnitTest.php
+ *
+ * @class CodecheckMetadataHandlerUnitTest
+ *
+ * @brief Tests for the CodecheckMetadataHandler class
+ */
 class CodecheckMetadataHandlerUnitTest extends PKPTestCase
 {
     private CodecheckMetadataHandler $handler;
