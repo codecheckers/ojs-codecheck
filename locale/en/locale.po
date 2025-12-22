@@ -182,6 +182,15 @@ msgstr "CODECHECK Certificate ID, Venue Type and Venue Name"
 msgid "plugins.generic.codecheck.identifier.label"
 msgstr "ID of the CODECHECK certificate - e.g.: 2025-001"
 
+msgid "plugins.generic.codecheck.identifier.venue.type"
+msgstr "Venue Type"
+
+msgid "plugins.generic.codecheck.identifier.venue.name"
+msgstr "Venue Name"
+
+msgid "plugins.generic.codecheck.identifier.viewGithubIssue"
+msgstr "View GitHub Issue"
+
 msgid "plugins.generic.codecheck.identifier.save"
 msgstr "Save Identifier"
 

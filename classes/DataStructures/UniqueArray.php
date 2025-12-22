@@ -1,5 +1,5 @@
 <?php
-namespace APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers;
+namespace APP\plugins\generic\codecheck\classes\DataStructures;
 
 class UniqueArray
 {

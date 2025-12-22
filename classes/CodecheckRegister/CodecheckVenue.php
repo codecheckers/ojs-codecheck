@@ -1,11 +1,23 @@
 <?php
 
-namespace APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers;
+namespace APP\plugins\generic\codecheck\classes\CodecheckRegister;
 
 class CodecheckVenue
 {
     private $venueName;
     private $venueType;
+
+    /**
+     * The Venue of the Codecheck
+     * 
+     * @param string $venueType The new Venue Type to be set
+     * @param string $venueName The new Venue Name to be set
+     */
+    public function __construct(string $venueType, string $venueName)
+    {
+        $this->setVenueType($venueType);
+        $this->setVenueName($venueName);
+    }
 
     /**
      * Sets the name of the CODECHECK Venue

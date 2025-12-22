@@ -1,9 +1,9 @@
 <?php
-namespace APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers;
+namespace APP\plugins\generic\codecheck\classes\CodecheckRegister;
 
-use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\UniqueArray;
-use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CodecheckRegisterGithubIssuesApiParser;
-use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CodecheckVenueTypes;
+use APP\plugins\generic\codecheck\classes\DataStructures\UniqueArray;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckRegisterGithubIssuesApiParser;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckVenueTypes;
 use APP\plugins\generic\codecheck\classes\Exceptions\ApiFetchException;
 
 class CodecheckVenueNames

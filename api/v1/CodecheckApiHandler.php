@@ -51,7 +51,7 @@ class CodecheckApiHandler
         $this->endpoints = [
             'GET' => [
                 [
-                    'route' => 'getVenueData',
+                    'route' => 'venue',
                     'handler' => [$this, 'getVenueData'],
                     'roles' => $this->roles,
                 ],
@@ -73,7 +73,7 @@ class CodecheckApiHandler
             ],
             'POST' => [
                 [
-                    'route' => 'reserveIdentifier',
+                    'route' => 'identifier',
                     'handler' => [$this, 'reserveIdentifier'],
                     'roles' => $this->roles,
                 ],
@@ -158,7 +158,7 @@ class CodecheckApiHandler
         error_log("Method: " . $method);
 
         foreach ($this->endpoints[$method] as $endpoint) {
-            if($endpoint['route'] == $this->route) {
+            if($this->route == $endpoint['route']) {
                 call_user_func($endpoint['handler']);
                 return;
             }
@@ -215,7 +215,7 @@ class CodecheckApiHandler
         // check if they are of type string (If not return success false over the API)
         if(is_string($venueType) && is_string($venueName) && is_string($authorString)) {
             // CODECHECK GitHub Issue Register API parser
-            $apiParser = new CodecheckRegisterGithubIssuesApiParser();
+            $apiParser = new CodecheckRegisterGithubIssuesApiParser('testing-dev-register');
 
             // CODECHECK Register with list of all identifiers in range
             try {
@@ -241,10 +241,7 @@ class CodecheckApiHandler
             $new_identifier = CertificateIdentifier::newUniqueIdentifier($certificateIdentifierList);
 
             // create the CODECHECK Venue with the selected type and name
-            $codecheckVenue = new CodecheckVenue();
-
-            $codecheckVenue->setVenueType($venueType);
-            $codecheckVenue->setVenueName($venueName);
+            $codecheckVenue = new CodecheckVenue($venueType, $venueName);
 
             // Add the new issue to the CODECHECK GtiHub Register
             try {
@@ -284,7 +281,7 @@ class CodecheckApiHandler
         // get submissionId
         $submissionId = $this->codecheckMetadataHandler->getSubmissionId();
 
-        error_log("[CODECHECK Api] getMetadata called for submission: $submissionId");
+        error_log("[CODECHECK API] getMetadata called for submission: $submissionId");
         
         $submission = Repo::submission()->get($submissionId);
         
@@ -329,7 +326,7 @@ class CodecheckApiHandler
             ] : null
         ];
 
-        error_log("[CODECHECK Api] Response: " . json_encode($response));
+        error_log("[CODECHECK API] Response: " . json_encode($response));
         
         $this->response->response($response, 200);
     }
@@ -344,7 +341,7 @@ class CodecheckApiHandler
         // get submissionId
         $submissionId = $this->codecheckMetadataHandler->getSubmissionId();
 
-        error_log("[CODECHECK Api] saveMetadata called for submission: $submissionId");
+        error_log("[CODECHECK API] saveMetadata called for submission: $submissionId");
         
         $submission = Repo::submission()->get($submissionId);
         
@@ -359,7 +356,7 @@ class CodecheckApiHandler
         $jsonData = file_get_contents('php://input');
         $data = json_decode($jsonData, true);
         
-        error_log("[CODECHECK Api] Received data: " . $jsonData);
+        error_log("[CODECHECK API] Received data: " . $jsonData);
 
         $nullIfEmpty = function($value) {
             return (is_string($value) && trim($value) === '') ? null : $value;
@@ -389,7 +386,7 @@ class CodecheckApiHandler
             DB::table('codecheck_metadata')
                 ->where('submission_id', $submissionId)
                 ->update($metadataData);
-            error_log("[CODECHECK Api] Updated existing record");
+            error_log("[CODECHECK API] Updated existing record");
         } else {
             $metadataData['created_at'] = date('Y-m-d H:i:s');
             DB::table('codecheck_metadata')->insert($metadataData);
@@ -398,7 +395,9 @@ class CodecheckApiHandler
 
         $this->response->response([
             'success' => true,
-            'message' => 'CODECHECK metadata saved successfully'
+            'message' => 'CODECHECK metadata saved successfully',
+            'submissionID' => $submissionId,
+            'certificate' => $metadataData['certificate'],
         ], 200);
     }
 
@@ -419,7 +418,8 @@ class CodecheckApiHandler
         if (!$submission) {
             $this->response->response([
                 'success' => false,
-                'error' => 'Submission not found'
+                'error' => 'Submission not found',
+                'subimssionID' => $submissionId,
             ], 400);
             return;
         }
@@ -434,7 +434,7 @@ class CodecheckApiHandler
 
         $file = $_FILES['file'];
 
-        error_log("[CODECHECK Api] File: " . $file['name']);
+        error_log("[CODECHECK API] File: " . $file['name']);
         
         // Validate file
         if ($file['error'] !== UPLOAD_ERR_OK) {
@@ -447,7 +447,7 @@ class CodecheckApiHandler
 
         // Create directory for codecheck files
         $context = $this->request->getContext();
-        error_log("[CODECHECK Api] Request Context ID: " . $context->getId());
+        error_log("[CODECHECK API] Request Context ID: " . $context->getId());
         $basePath = \PKP\core\Core::getBaseDir();
         $uploadDir = $basePath . '/files/journals/' . $context->getId() . '/codecheck/' . $submissionId;
         
@@ -552,7 +552,8 @@ class CodecheckApiHandler
         if (!$submission) {
             $this->response->response([
                 'success' => false,
-                'error' => 'Submission not found'
+                'error' => 'Submission not found',
+                'subimssionID' => $submissionId,
             ], 404);
             return;
         }
@@ -566,7 +567,8 @@ class CodecheckApiHandler
         if (!$metadata) {
             $this->response->response([
                 'success' => false,
-                'error' => 'No CODECHECK metadata found'
+                'error' => 'No CODECHECK metadata found',
+                'subimssionID' => $submissionId,
             ], 404);
             return;
         }

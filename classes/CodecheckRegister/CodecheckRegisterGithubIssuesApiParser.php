@@ -1,13 +1,13 @@
 <?php
 
-namespace APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers;
+namespace APP\plugins\generic\codecheck\classes\CodecheckRegister;
 
 require __DIR__ . '/../../vendor/autoload.php';
 
 use Github\Client;
 use Dotenv\Dotenv;
-use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\UniqueArray;
-use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CertificateIdentifier;
+use APP\plugins\generic\codecheck\classes\DataStructures\UniqueArray;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifier;
 use APP\plugins\generic\codecheck\classes\Exceptions\NoMatchingIssuesFoundException;
 use APP\plugins\generic\codecheck\classes\Exceptions\ApiFetchException;
 use APP\plugins\generic\codecheck\classes\Exceptions\ApiCreateException;
@@ -22,14 +22,18 @@ class CodecheckRegisterGithubIssuesApiParser
     private $issues = [];
     private UniqueArray $labels;
     private $client;
+    private string $githubRegisterRepository;
 
     /**
      * Initializes a new CODECHECK GitHub Register Api Parser (initialize the GitHub Client and a new unique Array)
+     * 
+     * @param string $githubRegisterRepository The Repository of the GitHub Register
      */
-    function __construct()
+    function __construct(string $githubRegisterRepository)
     {
         $this->client = new Client();
         $this->labels = new UniqueArray();
+        $this->githubRegisterRepository = $githubRegisterRepository;
     }
 
     /**
@@ -43,7 +47,7 @@ class CodecheckRegisterGithubIssuesApiParser
 
         do {
             try {
-                $allissues = $this->client->api('issue')->all('codecheckers', 'testing-dev-register', [
+                $allissues = $this->client->api('issue')->all('codecheckers', $this->githubRegisterRepository, [
                     'state'     => 'all',          // 'open', 'closed', or 'all'
                     'labels'    => 'id assigned',  // label
                     'sort'      => 'updated',
@@ -77,7 +81,7 @@ class CodecheckRegisterGithubIssuesApiParser
     public function fetchLabels(): void
     {
         try {
-            $fetchedLabels = $this->client->api('issue')->labels()->all('codecheckers', 'testing-dev-register');
+            $fetchedLabels = $this->client->api('issue')->labels()->all('codecheckers', $this->githubRegisterRepository);
         } catch (\Throwable $e) {
             throw new ApiFetchException("Failed fetching the GitHub Issue Labels for the Venue Names\n" . $e->getMessage());
         }

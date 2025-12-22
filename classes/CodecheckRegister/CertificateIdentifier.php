@@ -1,8 +1,8 @@
 <?php
 
-namespace APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers;
+namespace APP\plugins\generic\codecheck\classes\CodecheckRegister;
 
-use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CertificateIdentifierList;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifierList;
 
 class CertificateIdentifier
 {

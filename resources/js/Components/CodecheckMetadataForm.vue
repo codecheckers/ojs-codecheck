@@ -263,7 +263,7 @@
             {{ t('plugins.generic.codecheck.identifier.description') }}
             <span v-if="certificateIdentifier.issueUrl"> - </span>
             <a v-if="certificateIdentifier.issueUrl" :href="certificateIdentifier.issueUrl" target="_blank">
-              View GitHub Issue
+              {{ t('plugins.generic.codecheck.identifier.viewGithubIssue') }}
             </a>
           </p>
           <div class="certificate-identifier-section">
@@ -280,7 +280,7 @@
                     class="certificate-identifier-select certificate-identifier-venue-types"
                     :disabled="isIdentifierReserved"
                 >
-                    <option disabled value="default" selected>Venue Type</option>
+                    <option disabled value="default" selected>{{ t('plugins.generic.codecheck.identifier.venue.type') }}</option>
                     <option v-for="type in certificateIdentifier.venueTypes" :key="type" :value="type">
                     {{ type }}
                     </option>
@@ -290,7 +290,7 @@
                     class="certificate-identifier-select certificate-identifier-venue-names"
                     :disabled="isIdentifierReserved"
                 >
-                    <option disabled value="default" selected>Venue Name</option>
+                    <option disabled value="default" selected>{{ t('plugins.generic.codecheck.identifier.venue.name') }}</option>
                     <option v-for="name in certificateIdentifier.venueNames" :key="name" :value="name">
                     {{ name }}
                     </option>
@@ -866,7 +866,7 @@ export default {
       let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
 
       try {
-          const response = await fetch(`${apiUrl}/getVenueData`, {
+          const response = await fetch(`${apiUrl}/venue`, {
               method: 'GET',
               headers: {
               'Content-Type': 'application/json',
@@ -904,7 +904,7 @@ export default {
       let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
 
       try {
-          const response = await fetch(`${apiUrl}/reserveIdentifier`, {
+          const response = await fetch(`${apiUrl}/identifier`, {
               method: 'POST',
               headers: {
               'Content-Type': 'application/json',
