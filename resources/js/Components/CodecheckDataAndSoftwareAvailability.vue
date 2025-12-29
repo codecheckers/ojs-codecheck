@@ -1,9 +1,10 @@
 <template>
   <div class="codecheck-data-and-software-availability">
     <textarea
+      ref="textarea"
       :value="dataSoftwareAvail"
       @input="onInput"
-      placeholder="Describe how your data and code are available..."
+      :placeholder="t('plugins.generic.codecheck.dataSoftwareAvailability.description')"
       class="form-control"
     >
     </textarea>
@@ -13,9 +14,15 @@
 </template>
 
 <script>
+const { useLocalize } = pkp.modules.useLocalize;
+
 export default {
   props: {
     value: { type: String, required: true }
+  },
+  setup() {
+    const { t } = useLocalize();
+    return { t };
   },
   data() {
     return {
@@ -24,6 +31,10 @@ export default {
   },
   mounted() {
     this.dataSoftwareAvail = this.value;
+    // resize the textarea so the the whole placeholder is visible
+    this.resizeTextarea();
+    // resize the textarea on window resize
+    window.addEventListener('resize', this.resizeTextarea);
   },
   methods: {
     onInput(e) {
@@ -32,12 +43,37 @@ export default {
       this.dataSoftwareAvail = val;
       this.$emit("input", val);
       this.$el.dispatchEvent(new CustomEvent('input', { detail: val }));
+
+      // resize the textarea if the textarea value is empty and the placeholder appears again
+      this.resizeTextarea();
     },
 
     clearText() {
       this.dataSoftwareAvail = '';
       this.$emit("input", "");
       this.$el.dispatchEvent(new CustomEvent('input', { detail: "" }));
+    },
+
+    adjustHeight() {
+      const textarea = this.$refs.textarea;
+      if (!textarea) return;
+
+      textarea.style.height = 'auto';
+      textarea.style.height = textarea.scrollHeight + 'px';
+    },
+
+    resizeTextarea() {
+      const textarea = this.$refs.textarea;
+      if (!textarea) return;
+
+      // Temporarily set value to placeholder to measure
+      if (!this.dataSoftwareAvail) {
+        this.dataSoftwareAvail = textarea.placeholder;
+        this.$nextTick(() => {
+          this.adjustHeight();
+          this.dataSoftwareAvail = '';
+        });
+      }
     }
   }
 };
@@ -73,7 +109,6 @@ export default {
 
 .codecheck-data-and-software-availability textarea {
   width: 90%;
-  height: 100px;
   resize: none;
   overflow: scroll;
 }

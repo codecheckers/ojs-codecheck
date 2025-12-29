@@ -31,7 +31,6 @@ class UniqueArray
         if(!$this->contains($element)) {
             $this->array[] = $element;
         }
-        $this->array = array_values(array_unique($this->array, SORT_REGULAR));
     }
 
     /**
@@ -60,15 +59,13 @@ class UniqueArray
      * 
      * @return bool Returns `true` if the element exists inside the `UniqueArray` and `false` if otherwise
      */
-    public function contains($searchElement): bool
+    public function contains(mixed $element): bool
     {
-        foreach ($this->array as $arrayElement) {
-            if($arrayElement == $searchElement) {
-                return true;
-            }
-        }
-
-        return false;
+        return in_array(
+            $element,       // the element that is checked to see if it is in the array
+            $this->array,   // the array
+            false,           // don't use strict checking, as we sometimes want to check that objects are the same by checking their value and not their identity
+        );
     }
 
     /**

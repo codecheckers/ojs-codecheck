@@ -29,7 +29,7 @@ class JsonApiCaller
 
         // throw error if no data was fetched from API
         if ($response === FALSE) {
-            throw new ApiFetchException("Error fetching the Codecheck API data");
+            throw new ApiFetchException("Error fetching the Codecheck API data. URL: " . $this->url);
         }
 
         // Decode JSON into PHP array

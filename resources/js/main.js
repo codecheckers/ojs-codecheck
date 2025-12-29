@@ -3,14 +3,12 @@ import CodecheckManifestFiles from "./Components/CodecheckManifestFiles.vue";
 import CodecheckRepositoryList from "./Components/CodecheckRepositoryList.vue";
 import CodecheckReviewDisplay from "./Components/CodecheckReviewDisplay.vue";
 import CodecheckMetadataForm from "./Components/CodecheckMetadataForm.vue";
-import CodecheckCertificateIdentifier from "./Components/CodecheckCertificateIdentifier.vue";
 import CodecheckDataAndSoftwareAvailability from "./Components/CodecheckDataAndSoftwareAvailability.vue";
 
 pkp.registry.registerComponent("CodecheckReviewDisplay", CodecheckReviewDisplay);
 pkp.registry.registerComponent("CodecheckMetadataForm", CodecheckMetadataForm);
 pkp.registry.registerComponent("CodecheckManifestFiles", CodecheckManifestFiles);
 pkp.registry.registerComponent("CodecheckRepositoryList", CodecheckRepositoryList);
-pkp.registry.registerComponent("CodecheckCertificateIdentifier", CodecheckCertificateIdentifier);
 pkp.registry.registerComponent("CodecheckDataAndSoftwareAvailability", CodecheckDataAndSoftwareAvailability);
 
 const { useLocalize } = pkp.modules.useLocalize;
@@ -233,8 +231,8 @@ function mountCodecheckVueComponents() {
     
     createApp(CodecheckDataAndSoftwareAvailability, {
       name: 'dataSoftwareAvailability',
-      label: t('plugins.generic.codecheck.dataSoftwareAvail'),
-      description: t('plugins.generic.codecheck.dataSoftwareAvail.description'),
+      label: t('plugins.generic.codecheck.dataSoftwareAvailability'),
+      description: t('plugins.generic.codecheck.dataSoftwareAvailability.description'),
       value: textarea.value,
     }).mount(vueDiv);
     

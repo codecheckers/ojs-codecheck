@@ -775,6 +775,7 @@ export default {
 
       return yamlContent;
     },
+    
     showYamlModal(yamlContent) {
       const { useModal } = pkp.modules.useModal;
       const { openDialog } = useModal();
@@ -923,12 +924,14 @@ export default {
               this.metadata.certificate = data.identifier;
               this.certificateIdentifier.issueUrl = data.issueUrl;
               this.$emit('update', this.metadata.certificate);
-              alert(`New identifier reserved: ${data.identifier}`);
-              console.log('New identifier reserved: ', data.identifier, data.issueUrl);
+              this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.success.message')}: ${data.identifier}`, 'success');
+              console.log('New Certificate Identifier reserved: ', data.identifier, data.issueUrl);
           } else {
-              console.error('Error:', data.error);
+              this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.fail.message')}\n${data.error}`, 'error');
+              console.error('Error while reserving the Certificate Identifier:', data.error);
           }
       } catch (error) {
+          this.showMessage(`${this.t('plugins.generic.codecheck.request.failed')}\n${error}`, 'error');
           console.error('Request failed:', error);
       }
     },
@@ -943,7 +946,7 @@ export default {
 
     showRemoveIdentifierModal() {
       if (!this.canUsePkpModal()) {
-        this.fallbackCertificateIdentifierModal();
+        this.fallbackRemoveIdentifierModal();
         return;
       }
 
@@ -951,21 +954,21 @@ export default {
       const { openDialog } = useModal();
 
       openDialog({
-        title: "Remove Certificate Identifier",
+        title: this.t('plugins.generic.codecheck.identifier.remove.modal.title'),
         message: `
           <div class="modal-form">
             <div class="modal-field">
-              <label for="repo-url" class="modal-label">Are you sure you want to remove this identifier?</label>
+              <label for="repo-url" class="modal-label">${this.t('plugins.generic.codecheck.identifier.remove.modal.areYouSureYouWantToRemoveTheIdentifier')}</label>
             </div>
           </div>
         `,
         actions: [
           {
-            label: "No",
+            label: this.t('plugins.generic.codecheck.no'),
             callback: (close) => close()
           },
           {
-            label: "Yes",
+            label: this.t('plugins.generic.codecheck.yes'),
             isPrimary: true,
             callback: (close) => {
               this.removeIdentifier(close);
@@ -975,8 +978,8 @@ export default {
       });
     },
 
-    fallbackCertificateIdentifierModal() {
-      if(confirm('Are you sure you want to remove this identifier?')) {
+    fallbackRemoveIdentifierModal() {
+      if(confirm(this.t('plugins.generic.codecheck.identifier.remove.modal.areYouSureYouWantToRemoveTheIdentifier'))) {
         this.metadata.certificate = '';
         this.certificateIdentifier.issueUrl = '';
         this.$emit('update', this.metadata.certificate);
@@ -1397,6 +1400,7 @@ export default {
 }
 
 .codecheck-metadata-form .save-message {
+  white-space: pre-line;
   margin-top: 1rem;
   padding: 0.75rem;
   border-radius: 4px;
