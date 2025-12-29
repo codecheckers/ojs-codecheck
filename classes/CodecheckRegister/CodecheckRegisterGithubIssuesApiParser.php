@@ -138,7 +138,7 @@ class CodecheckRegisterGithubIssuesApiParser
                 ]
             );
         } catch (\Throwable $e) {
-            throw new ApiCreateException("Error while adding the new GitHub issue with the new Certificate Identifier\n" . $e->getMessage());
+    throw new ApiCreateException("Error while adding the new GitHub issue with the new Certificate Identifier: " . $certificateIdentifier->toStr() . "\n" . $e->getMessage());
         }
 
         return $issue['html_url'];
