@@ -9,12 +9,12 @@ use APP\core\Request;
 use APP\plugins\generic\codecheck\classes\Exceptions\ApiCreateException;
 use APP\plugins\generic\codecheck\classes\Exceptions\ApiFetchException;
 use APP\plugins\generic\codecheck\classes\Exceptions\NoMatchingIssuesFoundException;
-use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CodecheckVenueTypes;
-use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CodecheckVenueNames;
-use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CodecheckRegisterGithubIssuesApiParser;
-use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CertificateIdentifierList;
-use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CertificateIdentifier;
-use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CodecheckVenue;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckVenueTypes;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckVenueNames;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckRegisterGithubIssuesApiParser;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifierList;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifier;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckVenue;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
 
 use APP\facades\Repo;
@@ -215,7 +215,13 @@ class CodecheckApiHandler
         // check if they are of type string (If not return success false over the API)
         if(is_string($venueType) && is_string($venueName) && is_string($authorString)) {
             // CODECHECK GitHub Issue Register API parser
-            $apiParser = new CodecheckRegisterGithubIssuesApiParser('testing-dev-register');
+            $apiParser = new CodecheckRegisterGithubIssuesApiParser(
+                'testing-dev-register', // Name of the GitHub Repository for the Register
+                $this->codecheckMetadataHandler->getSubmissionId(), // Submission ID
+                $this->request->getContext(), // The Journal Object of the Submission
+            );
+
+            error_log(print_r($this->request->getContext(), true));
 
             // CODECHECK Register with list of all identifiers in range
             try {

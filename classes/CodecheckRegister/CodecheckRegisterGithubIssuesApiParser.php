@@ -23,17 +23,25 @@ class CodecheckRegisterGithubIssuesApiParser
     private UniqueArray $labels;
     private $client;
     private string $githubRegisterRepository;
+    private string $submissionID;
+    private string $journalName;
 
     /**
      * Initializes a new CODECHECK GitHub Register Api Parser (initialize the GitHub Client and a new unique Array)
      * 
      * @param string $githubRegisterRepository The Repository of the GitHub Register
+     * @param string $submissionID The ID of the Submission realted to the GitHub Register Issue
+     * @param mixed $journal The name of the Journal the Submission is published in
      */
-    function __construct(string $githubRegisterRepository)
+    function __construct(string $githubRegisterRepository, string $submissionID, mixed $journal)
     {
         $this->client = new Client();
         $this->labels = new UniqueArray();
         $this->githubRegisterRepository = $githubRegisterRepository;
+        $this->submissionID = $submissionID;
+        $this->journalName = $journal
+                                ? $journal->getLocalizedName()
+                                : 'Unknwon Journal';
     }
 
     /**
@@ -111,10 +119,9 @@ class CodecheckRegisterGithubIssuesApiParser
         $this->client->authenticate($token, null, Client::AUTH_ACCESS_TOKEN);
 
         $repositoryOwner = 'codecheckers';
-        $repositoryName = 'testing-dev-register';
         $authorString = empty($authorString) ? 'New CODECHECK' : $authorString;
         $issueTitle = $authorString . ' | ' . $certificateIdentifier->toStr();
-        $issueBody = '';
+        $issueBody = 'Journal: `' . $this->journalName . '`<br />' . 'Submission ID: `' . $this->submissionID . '`';
         $labelStrings = ['id assigned'];
 
         $labelStrings[] = $codecheckVenueType;
@@ -123,7 +130,7 @@ class CodecheckRegisterGithubIssuesApiParser
         try {
             $issue = $this->client->api('issue')->create(
                 $repositoryOwner,
-                $repositoryName,
+                $this->githubRegisterRepository,
                 [
                     'title' => $issueTitle,
                     'body'  => $issueBody,

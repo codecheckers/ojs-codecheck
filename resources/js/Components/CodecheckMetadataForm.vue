@@ -901,10 +901,11 @@ export default {
 
       console.log(authorString);
 
+      const submissionId = this.submission.id;
       let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
 
       try {
-          const response = await fetch(`${apiUrl}/identifier`, {
+          const response = await fetch(`${apiUrl}/identifier?submissionId=${submissionId}`, {
               method: 'POST',
               headers: {
               'Content-Type': 'application/json',
