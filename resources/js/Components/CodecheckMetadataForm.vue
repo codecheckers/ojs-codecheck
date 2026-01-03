@@ -513,7 +513,7 @@ export default {
       let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
 
       try {
-          const response = await fetch(`${apiUrl}/loadMetadataFromRepository`, {
+          const response = await fetch(`${apiUrl}/repository`, {
               method: 'POST',
               headers: {
               'Content-Type': 'application/json',
