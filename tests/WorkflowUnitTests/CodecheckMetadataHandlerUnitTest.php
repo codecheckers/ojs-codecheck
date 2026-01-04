@@ -155,4 +155,39 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $this->assertEquals($repository, $actualMetadataReturnArray["repository"]);
         $this->assertEquals(["test" => "yaml"], $actualMetadataReturnArray["metadata"]);
     }
+
+    public function testImportMetadataFromOsf()
+    {
+        $osfNodeId = 'ymc3t';
+        $repository = "https://osf.io/$osfNodeId/";
+        $client = $this->createMock(\Github\Client::class);
+        $request = new Request();
+        $curlApiClient = $this->createMock(CurlApiClient::class);
+        $curlApiClient->method('get')
+                        ->willReturnOnConsecutiveCalls(
+                            json_encode([
+                                "data" => [
+                                    [
+                                        "attributes" => [
+                                            "name" => "README.md",
+                                            "guid" => "4co4h"
+                                        ],
+                                        "attributes" => [
+                                            "name" => "codecheck.yml",
+                                            "guid" => "5zu8b"
+                                        ]
+                                    ]
+                                ]
+                            ]),
+                            "test: yaml"
+                        );
+        $this->codecheckMetadataHandler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
+        $response = $this->codecheckMetadataHandler->importMetadataFromOsf($osfNodeId);
+        $actualMetadataReturnArray = json_decode($response->getPayload(), true);
+        $this->assertEquals($response->getHttpResponseCode(), 200);
+        $this->assertCount(3, $actualMetadataReturnArray);
+        $this->assertTrue($actualMetadataReturnArray["success"]);
+        $this->assertEquals($repository, $actualMetadataReturnArray["repository"]);
+        $this->assertEquals(["test" => "yaml"], $actualMetadataReturnArray["metadata"]);
+    }
 }
