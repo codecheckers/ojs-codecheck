@@ -12,20 +12,29 @@ use APP\plugins\generic\codecheck\api\v1\JsonResponse;
 use Github\Client;
 use Symfony\Component\Yaml\Yaml;
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CodecheckRegisterGithubIssuesApiParser;
+use APP\plugins\generic\codecheck\api\v1\CurlApiClient;
+use APP\plugins\generic\codecheck\classes\Exceptions\CurlInitException;
+use APP\plugins\generic\codecheck\classes\Exceptions\CurlReadException;
 
 class CodecheckMetadataHandler
 {
     private mixed $submissionId;
     private Client $client;
+    private CurlApiClient $curlApiClient;
 
     /**
      * `CodecheckMetadataHandler`
      * @param \APP\core\Request $request The API Request
      */
+<<<<<<< HEAD
     public function __construct(\APP\core\Request $request)
+=======
+    public function __construct(Request $request, Client $client, CurlApiClient $curlApiClient)
+>>>>>>> 3b70be7 (Finished reworking curl calls, now possible to mock them #36, #75)
     {
         $this->client = new Client();
         $this->submissionId = $request->getUserVar('submissionId');
+        $this->curlApiClient = $curlApiClient;
     }
 
     /**
@@ -293,7 +302,7 @@ class CodecheckMetadataHandler
             try {
                 $repoData = $this->client->api('repo')->show($githubUrlParts['owner'], $githubUrlParts['repo']);
                 $githubUrlParts['ref'] = $repoData['default_branch'];
-            } catch (Exception $e) {
+            } catch (\Exception $e) {
                 // fallback stays 'main'
             }
         }
@@ -306,7 +315,7 @@ class CodecheckMetadataHandler
                 $githubUrlParts['path'],
                 $githubUrlParts['ref']
             );
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             return new JsonResponse([
                 'success' => false,
                 'repository' => $repository,
@@ -338,6 +347,7 @@ class CodecheckMetadataHandler
         return new JsonResponse([
             'success' => false,
             'repository' => $repository,
+            'error' => 'codecheck.yml not found',
         ], 404);
     }
 
@@ -365,40 +375,54 @@ class CodecheckMetadataHandler
         
         $apiUrl = "https://api.osf.io/v2/nodes/" . $osf_node_id . "/files/osfstorage/";
 
-        // Fetch file data from the OSF Repository
-        $curl_handle = curl_init($apiUrl);
-        curl_setopt($curl_handle, CURLOPT_RETURNTRANSFER, true);
+        // Get YAML Contents
+        try {
+            $api_response = $this->curlApiClient->get($apiUrl);
+            $data = json_decode($api_response, true);
 
-        $api_response = curl_exec($curl_handle);
-        curl_close($curl_handle);
+            if (!$data || !isset($data['data'])) {
+                return new JsonResponse([
+                    'success' => false,
+                    'error' => 'Invalid OSF API response',
+                ], 500);
+            }
 
-        $data = json_decode($api_response, true);
+            // Search for the codecheck.yml and get the guid of the codecheck.yml
+            $guid = null;
 
-        if (!$data || !isset($data['data'])) {
-            die("Invalid OSF API response\n");
-        }
+            foreach ($data['data'] as $item) {
+                $attributes = $item['attributes'];
 
-        // Search for the codecheck.yml and get the guid of the codecheck.yml
-        $guid = null;
+                if (isset($attributes['name']) && $attributes['name'] === $filename) {
+                    $guid = $attributes['guid'];   // This is the OSF file GUID
+                    break;
+                }
+            }
 
-        foreach ($data['data'] as $item) {
-            $attributes = $item['attributes'];
-
-            if (isset($attributes['name']) && $attributes['name'] === $filename) {
-                $guid = $attributes['guid'];   // This is the OSF file GUID
-                break;
+            if ($guid) {
+                $pathToCodecheckYaml = 'https://osf.io/download/' . $guid . '/';
+                $repository = 'https://osf.io/' . $osf_node_id . '/';
+                return $this->readYamlContent($pathToCodecheckYaml, $repository);
+            } else {
+                return new JsonResponse([
+                    'success' => false,
+                    'error' => 'codecheck.yml not found',
+                ], 404);
             }
         }
-
-        if ($guid) {
-            $pathToCodecheckYaml = 'https://osf.io/download/' . $guid . '/';
-            $repository = 'https://osf.io/' . $osf_node_id . '/';
-            return $this->readYamlContent($pathToCodecheckYaml, $repository);
-        } else {
+        // Check if cURL init went wrong
+        catch (CurlInitException $curlInitException) {
             return new JsonResponse([
                 'success' => false,
-                'error' => 'codecheck.yml not found',
-            ], 404);
+                'error' => $curlInitException->getMessage(),
+            ], $curlInitException->getCode());
+        }
+        // Check if curl got a response or some form of HTTP error
+        catch (CurlReadException $curlReadException) {
+            return new JsonResponse([
+                'success' => false,
+                'error' => $curlReadException->getMessage(),
+            ], $curlReadException->getCode());
         }
     }
 
@@ -423,36 +447,31 @@ class CodecheckMetadataHandler
      */
     private function readYamlContent(string $pathToYamlContent, string $repository): JsonResponse
     {
-        $curl_handle = curl_init($pathToYamlContent);
+        // Get YAML Contents
+        try {
+            $yamlContent = $this->curlApiClient->get($pathToYamlContent);
 
+            $metadata = Yaml::parse($yamlContent);
+
+            return new JsonResponse([
+                'success' => true,
+                'repository' => $repository,
+                'metadata' => $metadata,
+            ], 200);
+        }
         // Check if cURL init went wrong
-        if ($curl_handle === false) {
+        catch (CurlInitException $curlInitException) {
             return new JsonResponse([
                 'success' => false,
-                'error' => 'Failed to initialize cURL',
-            ], 500);
+                'error' => $curlInitException->getMessage(),
+            ], $curlInitException->getCode());
         }
-
-        curl_setopt($curl_handle, CURLOPT_RETURNTRANSFER, true);
-        // follow redirects
-        curl_setopt($curl_handle, CURLOPT_FOLLOWLOCATION, true);
-
-        $yamlContent = curl_exec($curl_handle);
-
         // Check if curl got a response or some form of HTTP error
-        if ($yamlContent === false) {
+        catch (CurlReadException $curlReadException) {
             return new JsonResponse([
                 'success' => false,
-                'error' => curl_error($curl_handle),
-            ], curl_errno($curl_handle));
+                'error' => $curlReadException->getMessage(),
+            ], $curlReadException->getCode());
         }
-
-        $metadata = Yaml::parse($yamlContent);
-
-        return new JsonResponse([
-            'success' => true,
-            'repository' => $repository,
-            'metadata' => $metadata,
-        ], 200);
     }
 }

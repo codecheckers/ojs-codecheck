@@ -1,0 +1,1 @@
+/var/log/php_errors.log

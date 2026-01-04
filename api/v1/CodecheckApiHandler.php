@@ -44,7 +44,11 @@ class CodecheckApiHandler
             'error' => 'No API Response was created.',
         ], 500);
 
+<<<<<<< HEAD
         $this->codecheckMetadataHandler = new CodecheckMetadataHandler($request);
+=======
+        $this->codecheckMetadataHandler = new CodecheckMetadataHandler($request, new Client(), new CurlApiClient());
+>>>>>>> 3b70be7 (Finished reworking curl calls, now possible to mock them #36, #75)
 
         $this->roles = [
             Role::ROLE_ID_MANAGER,
