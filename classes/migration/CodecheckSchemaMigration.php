@@ -10,33 +10,34 @@ class CodecheckSchemaMigration extends Migration
     public function up(): void
     {
         try {
-            if (Schema::hasTable('codecheck_metadata')) {
-                error_log("CODECHECK: Table exists, cleaning up old structure");
-                Schema::dropIfExists('codecheck_metadata');
-                error_log("CODECHECK: Dropped old table");
+            // Only create table if it doesn't exist
+            if (!Schema::hasTable('codecheck_metadata')) {
+                error_log("CODECHECK: Creating codecheck_metadata table");
+                
+                Schema::create('codecheck_metadata', function (Blueprint $table) {
+                    $table->bigInteger('submission_id')->primary();
+                    $table->string('version', 50)->default('latest');
+                    $table->string('publication_type', 50)->default('doi');
+                    $table->text('manifest')->nullable();
+                    $table->string('repository', 500)->nullable();
+                    $table->text('source')->nullable();
+                    $table->text('codecheckers')->nullable();
+                    $table->string('certificate', 100)->nullable();
+                    $table->timestamp('check_time')->nullable();
+                    $table->text('summary')->nullable();
+                    $table->string('report', 500)->nullable();
+                    $table->text('additional_content')->nullable();
+                    $table->timestamps();
+                    $table->index('submission_id');
+                });
+                
+                error_log("CODECHECK: Table created successfully");
+            } else {
+                error_log("CODECHECK: Table already exists, skipping creation");
             }
-            
-            Schema::create('codecheck_metadata', function (Blueprint $table) {
-                $table->bigInteger('submission_id')->primary();
-                $table->string('version', 50)->default('latest');
-                $table->string('publication_type', 50)->default('doi');
-                $table->text('manifest')->nullable();
-                $table->string('repository', 500)->nullable();
-                $table->text('source')->nullable();
-                $table->text('codecheckers')->nullable();
-                $table->string('certificate', 100)->nullable();
-                $table->timestamp('check_time')->nullable();
-                $table->text('summary')->nullable();
-                $table->string('report', 500)->nullable();
-                $table->text('additional_content')->nullable();
-                $table->timestamps();
-                $table->index('submission_id');
-            });
             
             // Create genres for new installations
             $this->createCodecheckGenres();
-            
-            error_log("CODECHECK: Table created successfully");
             
         } catch (\Exception $e) {
             error_log("CODECHECK Migration Error: " . $e->getMessage());
@@ -52,7 +53,6 @@ class CodecheckSchemaMigration extends Migration
             
             $contexts = $contextDao->getAll();
             while ($context = $contexts->next()) {
-                // Check if genre already exists to avoid duplicates
                 $existingGenres = $genreDao->getByContextId($context->getId());
                 $ymlExists = false;
                 

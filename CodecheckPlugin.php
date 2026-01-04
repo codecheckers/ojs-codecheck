@@ -24,6 +24,8 @@ class CodecheckPlugin extends GenericPlugin
             $this->addAssets();
 
             $articleDetails = new ArticleDetails($this);
+            $issueTOC = new \APP\plugins\generic\codecheck\classes\FrontEnd\IssueTOC($this);
+            Hook::add('Templates::Issue::Issue::Article', $issueTOC->addCodecheckBadge(...));
             Hook::add('Templates::Article::Details', $articleDetails->addCodecheckInfo(...));
 
             Hook::add('Schema::get::submission', $this->addOptInToSchema(...));
@@ -38,9 +40,7 @@ class CodecheckPlugin extends GenericPlugin
             Hook::add('LoadHandler', function($hookName, $args) use ($metadataHandler) {
                 $page = $args[0];
                 $op = $args[1];
-                
-                error_log("[CODECHECK Plugin] LoadHandler: page=$page, op=$op");
-                
+                                
                 if ($page === 'codecheck') {
                     $request = Application::get()->getRequest();
                     $submissionId = $request->getUserVar('submissionId');

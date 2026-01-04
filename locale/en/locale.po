@@ -384,3 +384,9 @@ msgstr "Add custom YAML fields for specific use cases. This content will be appe
 
 msgid "plugins.generic.codecheck.additionalContent.placeholder"
 msgstr "Example:\npublishing_inc_identifier: 12345\npublishing_inc_handler: Ed Editor\n\nTheBestRepository:\n  recordId: 1a2b3c\n  checksum: abc123..."
+
+msgid "plugins.generic.codecheck.viewCertificate"
+msgstr "View CODECHECK Certificate"
+
+msgid "plugins.generic.codecheck.badge.altText"
+msgstr "CODE WORKS"
