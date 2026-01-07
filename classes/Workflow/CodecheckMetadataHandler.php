@@ -13,8 +13,8 @@ use Github\Client;
 use Symfony\Component\Yaml\Yaml;
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CodecheckRegisterGithubIssuesApiParser;
 use APP\plugins\generic\codecheck\api\v1\CurlApiClient;
-use APP\plugins\generic\codecheck\classes\Exceptions\CurlInitException;
-use APP\plugins\generic\codecheck\classes\Exceptions\CurlReadException;
+use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitException;
+use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
 
 class CodecheckMetadataHandler
 {
@@ -372,7 +372,7 @@ class CodecheckMetadataHandler
     public function importMetadataFromOSF(string $osf_node_id): JsonResponse
     {
         $filename = 'codecheck.yml';
-        
+        $repository = "https://osf.io/$osf_node_id/";
         $apiUrl = "https://api.osf.io/v2/nodes/" . $osf_node_id . "/files/osfstorage/";
 
         // Get YAML Contents
@@ -384,6 +384,7 @@ class CodecheckMetadataHandler
                 return new JsonResponse([
                     'success' => false,
                     'error' => 'Invalid OSF API response',
+                    'repository' => $repository
                 ], 500);
             }
 
@@ -407,6 +408,7 @@ class CodecheckMetadataHandler
                 return new JsonResponse([
                     'success' => false,
                     'error' => 'codecheck.yml not found',
+                    'repository' => $repository
                 ], 404);
             }
         }
@@ -415,6 +417,7 @@ class CodecheckMetadataHandler
             return new JsonResponse([
                 'success' => false,
                 'error' => $curlInitException->getMessage(),
+                'repository' => $repository
             ], $curlInitException->getCode());
         }
         // Check if curl got a response or some form of HTTP error
@@ -422,6 +425,7 @@ class CodecheckMetadataHandler
             return new JsonResponse([
                 'success' => false,
                 'error' => $curlReadException->getMessage(),
+                'repository' => $repository
             ], $curlReadException->getCode());
         }
     }
