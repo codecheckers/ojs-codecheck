@@ -78,6 +78,21 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
 	}
 >>>>>>> 3b70be7 (Finished reworking curl calls, now possible to mock them #36, #75)
 
+    public function testGetSubmissionId()
+    {
+        $client = $this->createMock(\Github\Client::class);
+        $request = new Request();
+        // create a test content for the user variable 'submissionId'
+        $expectedSubmissionId = 123;
+        $_POST['submissionId'] = $expectedSubmissionId;
+
+        $this->codecheckMetadataHandler = new CodecheckMetadataHandler($request, $client, $this->curlApiClient);
+
+        $actualSubmissionId = $this->codecheckMetadataHandler->getSubmissionId();
+        $this->assertEquals($expectedSubmissionId, $actualSubmissionId);
+        $this->assertIsInt($actualSubmissionId);
+    }
+
     public function testImportMetadataFromGithub()
     {
         /** mock contents API */
@@ -425,6 +440,64 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
 
         $this->codecheckMetadataHandler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
         $response = $this->codecheckMetadataHandler->importMetadataFromOsf($osfNodeId);
+        $actualMetadataReturnArray = json_decode($response->getPayload(), true);
+        $this->assertEquals($response->getHttpResponseCode(), $errorCode);
+        $this->assertCount(3, $actualMetadataReturnArray);
+        $this->assertFalse($actualMetadataReturnArray["success"]);
+        $this->assertEquals($repository, $actualMetadataReturnArray["repository"]);
+        $this->assertEquals($errorMessage, $actualMetadataReturnArray["error"]);
+    }
+
+    public function testImportMetadataFromGitlab()
+    {
+        $repository = 'https://gitlab.com/cdchck/community-codechecks/2022-svaRetro-svaNUMT';
+        $client = $this->createMock(\Github\Client::class);
+        $request = new Request();
+        $curlApiClient = $this->createMock(CurlApiClient::class);
+        $curlApiClient->method('get')->willReturn("test: yaml");
+        $this->codecheckMetadataHandler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
+        $response = $this->codecheckMetadataHandler->importMetadataFromGitLab($repository);
+        $actualMetadataReturnArray = json_decode($response->getPayload(), true);
+        $this->assertEquals($response->getHttpResponseCode(), 200);
+        $this->assertCount(3, $actualMetadataReturnArray);
+        $this->assertTrue($actualMetadataReturnArray["success"]);
+        $this->assertEquals($repository, $actualMetadataReturnArray["repository"]);
+        $this->assertEquals(["test" => "yaml"], $actualMetadataReturnArray["metadata"]);
+    }
+
+    public function testReadYamlContentCurlInitException()
+    {
+        $repository = 'https://example.test.repository.com';
+        $errorCode = 500;
+        $errorMessage = "Error initializing the cURL API";
+        $client = $this->createMock(\Github\Client::class);
+        $request = new Request();
+        $curlApiClient = $this->createMock(CurlApiClient::class);
+        $curlApiClient->method('get')
+                        ->will($this->throwException(new CurlInitException($errorMessage, $errorCode)));
+        $this->codecheckMetadataHandler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
+        $response = $this->codecheckMetadataHandler->importMetadataFromGitLab($repository);
+        $actualMetadataReturnArray = json_decode($response->getPayload(), true);
+        $this->assertEquals($response->getHttpResponseCode(), $errorCode);
+        $this->assertCount(3, $actualMetadataReturnArray);
+        $this->assertFalse($actualMetadataReturnArray["success"]);
+        $this->assertEquals($repository, $actualMetadataReturnArray["repository"]);
+        $this->assertEquals($errorMessage, $actualMetadataReturnArray["error"]);
+    }
+
+    public function testReadYamlContentCurlReadException()
+    {
+        $repository = 'https://example.test.repository.com';
+        $curlHandle = curl_init();
+        $errorCode = curl_errno($curlHandle);
+        $errorMessage = curl_error($curlHandle);
+        $client = $this->createMock(\Github\Client::class);
+        $request = new Request();
+        $curlApiClient = $this->createMock(CurlApiClient::class);
+        $curlApiClient->method('get')
+                        ->will($this->throwException(new CurlReadException($curlHandle)));
+        $this->codecheckMetadataHandler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
+        $response = $this->codecheckMetadataHandler->importMetadataFromGitLab($repository);
         $actualMetadataReturnArray = json_decode($response->getPayload(), true);
         $this->assertEquals($response->getHttpResponseCode(), $errorCode);
         $this->assertCount(3, $actualMetadataReturnArray);
