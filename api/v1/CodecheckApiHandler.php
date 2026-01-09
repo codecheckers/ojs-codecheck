@@ -11,7 +11,7 @@ use APP\plugins\generic\codecheck\classes\Exceptions\ApiFetchException;
 use APP\plugins\generic\codecheck\classes\Exceptions\NoMatchingIssuesFoundException;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckVenueTypes;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckVenueNames;
-use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckRegisterGithubIssuesApiParser;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifierList;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifier;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckVenue;
@@ -215,7 +215,7 @@ class CodecheckApiHandler
         // check if they are of type string (If not return success false over the API)
         if(is_string($venueType) && is_string($venueName) && is_string($authorString)) {
             // CODECHECK GitHub Issue Register API parser
-            $apiParser = new CodecheckRegisterGithubIssuesApiParser(
+            $codecheckGithubRegisterApiClient = new CodecheckGithubRegisterApiClient(
                 'testing-dev-register', // Name of the GitHub Repository for the Register
                 $this->codecheckMetadataHandler->getSubmissionId(), // Submission ID
                 $this->request->getContext(), // The Journal Object of the Submission
@@ -225,7 +225,7 @@ class CodecheckApiHandler
 
             // CODECHECK Register with list of all identifiers in range
             try {
-                $certificateIdentifierList = CertificateIdentifierList::fromApi($apiParser);
+                $certificateIdentifierList = CertificateIdentifierList::fromApi($codecheckGithubRegisterApiClient);
             } catch (ApiFetchException $ae) {
                 $this->response->response([
                     'success'   => false,
@@ -251,7 +251,12 @@ class CodecheckApiHandler
 
             // Add the new issue to the CODECHECK GtiHub Register
             try {
-                $issueGithubUrl = $apiParser->addIssue($new_identifier, $codecheckVenue->getVenueType(), $codecheckVenue->getVenueName(), $authorString);
+                $issueGithubUrl = $codecheckGithubRegisterApiClient->addIssue(
+                    $new_identifier,
+                    $codecheckVenue->getVenueType(),
+                    $codecheckVenue->getVenueName(),
+                    $authorString,
+                );
             } catch (ApiCreateException $e) {
                 // return an error result
                 $this->response->response([

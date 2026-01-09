@@ -1,9 +1,10 @@
 <?php
 namespace APP\plugins\generic\codecheck\classes\CodecheckRegister;
 
-use APP\plugins\generic\codecheck\classes\Exceptions\ApiFetchException;
+use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitException;
+use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
 use APP\plugins\generic\codecheck\classes\DataStructures\UniqueArray;
-use APP\plugins\generic\codecheck\classes\CodecheckRegister\JsonApiCaller;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckApiClient;
 
 class CodecheckVenueTypes
 {
@@ -17,18 +18,23 @@ class CodecheckVenueTypes
         // Initialize unique Array
         $this->uniqueArray = new UniqueArray();
         // Intialize API caller
-        $jsonApiCaller = new JsonApiCaller("https://codecheck.org.uk/register/venues/index.json");
+        $codecheckApiClient = new CodecheckApiClient();
         // fetch CODECHECK Type data
         try {
-            $jsonApiCaller->fetch();
-        } catch (ApiFetchException $e) {
+            $codecheckApiClient->fetch("https://codecheck.org.uk/register/venues/index.json");
+        } catch (CurlInitException $curlInitException) {
             // TODO: Implement that the user gets notified, that the fetching of the Labels didn't work
-            error_log($e);
-            throw $e;
+            error_log($curlInitException);
+            throw $curlInitException;
+            return;
+        } catch (CurlReadException $curlReadException) {
+            // TODO: Implement that the user gets notified, that the fetching of the Labels didn't work
+            error_log($curlReadException);
+            throw $curlReadException;
             return;
         }
         // get json Data from API Caller
-        $data = $jsonApiCaller->getData();
+        $data = $codecheckApiClient->getData();
 
         foreach($data as $venue) {
             // insert every type (as this is a unique Array each Type will only occur once)

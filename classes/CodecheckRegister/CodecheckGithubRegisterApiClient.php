@@ -16,8 +16,8 @@ use APP\plugins\generic\codecheck\classes\Exceptions\ApiCreateException;
 $dotenv = Dotenv::createImmutable(__DIR__ . '/../../');
 $dotenv->load();
 
-// api call
-class CodecheckRegisterGithubIssuesApiParser
+// api client
+class CodecheckGithubRegisterApiClient
 {
     private $issues = [];
     private UniqueArray $labels;
