@@ -57,7 +57,7 @@ class CodecheckGithubRegisterApiClient
             try {
                 $allissues = $this->client->api('issue')->all('codecheckers', $this->githubRegisterRepository, [
                     'state'     => 'all',          // 'open', 'closed', or 'all'
-                    'labels'    => 'id assigned',  // label
+                    'labels'    => 'id assigned',  // select only issues where there is an id assigned
                     'sort'      => 'updated',
                     'direction' => 'desc',
                     'per_page'  => $issuesToFetchPerPage, // issues that will be fetched per page
@@ -69,7 +69,7 @@ class CodecheckGithubRegisterApiClient
 
             // stop looping if no more issues exist and we haven't yet found a matching issue
             if (empty($allissues) && empty($this->issue)) {
-                throw new NoMatchingIssuesFoundException("There was no Issue found with a '|' inside the GitHub Codecheck Register.");
+                throw new NoMatchingIssuesFoundException("There was no open or closed issue found with the label 'id assigned' in the GitHub Codecheck Register.");
             }
 
             foreach ($allissues as $issue) {
