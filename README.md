@@ -180,6 +180,143 @@ public/
     build.css
 ```
 
+### Testing
+
+The plugin includes comprehensive test coverage for both frontend components and backend PHP classes.
+
+#### Frontend Component Tests
+
+Component tests ensure Vue.js components work correctly in isolation.
+
+**Run all component tests:**
+```bash
+npm run test:component
+```
+
+**Run with Cypress UI (for debugging):**
+```bash
+npm run test:component:open
+```
+
+**Component Test Coverage:**
+
+| Component | Tests | What's Tested |
+|-----------|-------|---------------|
+| **CodecheckManifestFiles** | 6 | File management, add/remove operations, data persistence |
+| **CodecheckMetadataForm** | 10 | Form validation, data loading, file uploads, YAML generation |
+| **CodecheckRepositoryList** | 6 | Repository management, URL validation, multiple entries |
+| **CodecheckReviewDisplay** | 7 | Display states, metadata parsing, status indicators |
+| **Total** | **29** | All tests passing ✅ |
+
+#### PHP Unit Tests
+
+Unit tests ensure backend PHP classes work correctly and maintain code quality.
+
+**Run PHP tests locally (unit tests only):**
+```bash
+cd plugins/generic/codecheck
+php ../../../lib/pkp/lib/vendor/bin/phpunit --configuration phpunit.xml tests/
+```
+
+**Expected output:**
+```
+Tests: 166, Assertions: 275, Skipped: 27
+OK, but there were issues!
+```
+
+**Run in Docker/CI environment (all tests):**
+```bash
+# From OJS root
+sh plugins/generic/codecheck/tests/runTests.sh
+```
+
+**PHP Test Coverage:**
+
+| Component | Tests | Status |
+|-----------|-------|--------|
+| **Constants** | 7 | ✅ All pass |
+| **Submission Classes** | 44 | ✅ All pass |
+| **Settings Classes** | 27 | ✅ Pass (some require OJS environment) |
+| **Workflow Classes** | 16 | ✅ All pass |
+| **Frontend Classes** | 10 | ✅ Pass (some require OJS environment) |
+| **Migration Classes** | 14 | ✅ All pass |
+| **Main Plugin** | 48 | ✅ Pass (some require OJS environment) |
+| **Total** | **166** | 139 unit tests + 27 integration tests |
+
+**Note:** Integration tests (27) are skipped in local environments as they require:
+- Full OJS installation with database
+- Laravel facades initialized  
+- Translation system active (`__()` function)
+- Template rendering system
+
+These integration tests run successfully in Docker/CI environments.
+
+#### Test Structure
+```
+cypress/
+└── tests/
+    └── component/              # Frontend component tests
+        ├── CodecheckManifestFiles.cy.js
+        ├── CodecheckMetadataForm.cy.js
+        ├── CodecheckRepositoryList.cy.js
+        └── CodecheckReviewDisplay.cy.js
+
+tests/
+├── bootstrap.php                       # PHP test bootstrap
+├── PKPTestCase.php                    # Base test class
+├── phpunit.xml                        # PHPUnit configuration
+├── ConstantsUnitTest.php             # Constants tests
+├── CodecheckPluginUnitTest.php       # Main plugin tests
+├── SubmissionUnitTests/              # Submission layer tests
+├── SettingsUnitTests/                # Settings tests
+├── WorkflowUnitTests/                # Workflow tests
+├── FrontEndUnitTests/                # Frontend tests
+└── MigrationUnitTests/               # Database migration tests
+```
+
+For detailed PHP testing documentation, see [`tests/README.md`](tests/README.md).
+
+#### Continuous Integration
+
+Both component and PHP tests run automatically via GitHub Actions on:
+- Every push to `main` branch
+- Every pull request
+
+See `.github/workflows/component-tests.yml` and `.github/workflows/php-tests.yml` for CI configuration.
+
+#### Writing New Tests
+
+**For Vue components:**
+```javascript
+import '../../support/pkp-mock.js';
+import YourComponent from '../../../resources/js/Components/YourComponent.vue';
+
+describe('YourComponent', () => {
+  it('renders correctly', () => {
+    cy.mount(YourComponent, {
+      props: { /* your props */ }
+    });
+    cy.get('.your-element').should('exist');
+  });
+});
+```
+
+**For PHP classes:**
+```php
+use PKP\tests\PKPTestCase;
+
+class YourClassUnitTest extends PKPTestCase
+{
+    public function testYourMethod()
+    {
+        $result = YourClass::yourMethod();
+        $this->assertSame('expected', $result);
+    }
+}
+```
+
+Tests use mocked dependencies and don't require a running OJS instance.
+
 ### Creating a Release
 
 1. Install dependencies: `npm install`
