@@ -247,6 +247,9 @@ msgstr "This information comes from the original submission and cannot be edited
 msgid "plugins.generic.codecheck.paperMetadata.noAuthors"
 msgstr "No authors found"
 
+msgid "plugins.generic.codecheck.details.title"
+msgstr "CODECHECK Details"
+
 msgid "plugins.generic.codecheck.workflow.description"
 msgstr "Complete the following fields to document the CODECHECK process."
 

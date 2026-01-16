@@ -33,3 +33,13 @@
 
 # dependencies
 node_modules/
+
+# Cypress
+cypress/screenshots
+cypress/videos
+cypress/downloads
+cypress.env.json
+
+# Test results
+test-results/
+coverage/

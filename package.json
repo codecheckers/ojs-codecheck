@@ -6,10 +6,23 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "watch": "vite build --watch"
+    "watch": "vite build --watch",
+    "test": "npm run test:component && npm run test:e2e",
+    "test:open": "cypress open",
+    "test:component": "cypress run --component",
+    "test:component:open": "cypress open --component",
+    "test:headed": "cypress run --headed",
+    "test:chrome": "cypress run --browser chrome",
+    "test:firefox": "cypress run --browser firefox",
+    "test:ci": "cypress run --browser chrome --headless",
+    "cy:verify": "cypress verify",
+    "cy:info": "cypress info"
   },
   "devDependencies": {
+    "@cypress/vue": "^6.0.0",
     "@vitejs/plugin-vue": "^5.0.0",
+    "cypress": "^14.2.0",
+    "pinia": "^3.0.4",
     "vite": "^5.0.0",
     "vue": "^3.4.0"
   },
