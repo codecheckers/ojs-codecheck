@@ -6,18 +6,20 @@ use APP\template\TemplateManager;
 use APP\plugins\generic\codecheck\classes\FrontEnd\ArticleDetails;
 use APP\plugins\generic\codecheck\classes\Settings\Actions;
 use APP\plugins\generic\codecheck\classes\migration\CodecheckSchemaMigration;
-use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
 use APP\plugins\generic\codecheck\classes\Submission\Schema;
 use APP\plugins\generic\codecheck\classes\Submission\SubmissionWizardHandler;
 use PKP\plugins\GenericPlugin;
 use PKP\plugins\Hook;
 use PKP\components\forms\FieldOptions;
 use APP\facades\Repo;
+use APP\plugins\generic\codecheck\api\v1\CodecheckApiHandler;
 
 class CodecheckPlugin extends GenericPlugin
 {
     public function register($category, $path, $mainContextId = null): bool
     {
+        error_log('[CodecheckPlugin] register() called, path=' . $path);
+
         $success = parent::register($category, $path);
 
         if ($success && $this->getEnabled()) {
@@ -26,52 +28,16 @@ class CodecheckPlugin extends GenericPlugin
             $articleDetails = new ArticleDetails($this);
             Hook::add('Templates::Article::Details', $articleDetails->addCodecheckInfo(...));
 
+            // Opt-in checkbox on submission start
             Hook::add('Schema::get::submission', $this->addOptInToSchema(...));
             Hook::add('Form::config::before', $this->addOptInCheckbox(...));
             Hook::add('Submission::edit', $this->saveOptIn(...));
 
             Hook::add('Submission::validate', $this->saveWizardFieldsFromRequest(...));
-            
+            // Add hook for Ajax API calls
+            Hook::add('Dispatcher::dispatch', [$this, 'setupAPIHandler']);
+            // Add hook for the Template Manager
             Hook::add('TemplateManager::display', $this->callbackTemplateManagerDisplay(...));
-            
-            $metadataHandler = new CodecheckMetadataHandler($this);
-            Hook::add('LoadHandler', function($hookName, $args) use ($metadataHandler) {
-                $page = $args[0];
-                $op = $args[1];
-                
-                error_log("[CODECHECK Plugin] LoadHandler: page=$page, op=$op");
-                
-                if ($page === 'codecheck') {
-                    $request = Application::get()->getRequest();
-                    $submissionId = $request->getUserVar('submissionId');
-                    
-                    error_log("[CODECHECK Plugin] Matched codecheck page, submissionId=$submissionId");
-                    
-                    if ($op === 'metadata' && $request->isGet()) {
-                        error_log("[CODECHECK Plugin] Handling GET metadata");
-                        $result = $metadataHandler->getMetadata($request, $submissionId);
-                        header('Content-Type: application/json');
-                        echo json_encode($result);
-                        exit;
-                    } elseif ($op === 'metadata' && $request->isPost()) {
-                        error_log("[CODECHECK Plugin] Handling POST metadata");
-                        $result = $metadataHandler->saveMetadata($request, $submissionId);
-                        header('Content-Type: application/json');
-                        echo json_encode($result);
-                        exit;
-                    } elseif ($op === 'yaml') {
-                        error_log("[CODECHECK Plugin] Handling YAML generation");
-                        $result = $metadataHandler->generateYaml($request, $submissionId);
-                        header('Content-Type: application/json');
-                        echo json_encode($result);
-                        exit;
-                    }
-                    
-                    error_log("[CODECHECK Plugin] No matching operation for: $op");
-                }
-                
-                return false;
-            });
             
             // Wizard fields schema
             $codecheckSchema = new Schema();
@@ -94,6 +60,29 @@ class CodecheckPlugin extends GenericPlugin
         }
 
         return $success;
+    }
+    
+    public function setupAPIHandler(string $hookName, array $args): void
+    {
+        $request = $args[0];
+        $router = $request->getRouter();
+
+        if (!($router instanceof \PKP\core\APIRouter)) {
+            return;
+        }
+
+        if (str_contains($request->getRequestPath(), 'api/v1/codecheck')) {
+            error_log("[CODECHECK Plugin] Instanciating the CODECHECK APIHandler");
+            $apiHandler = new CodecheckApiHandler($request);
+            error_log("[CODECHECK Plugin] API request: " . $request->getRequestPath() . "\n");
+        }
+
+        if (!isset($apiHandler)) {
+            return;
+        }
+
+        $router->setHandler($apiHandler);
+        exit;
     }
 
     private function addAssets(): void
@@ -139,10 +128,11 @@ class CodecheckPlugin extends GenericPlugin
                     'codecheckSubmission' => [
                         'id' => $submission->getId(),
                         'codecheckOptIn' => $submission->getData('codecheckOptIn'),
-                        'codeRepository' => $publication?->getData('codeRepository'),
-                        'dataRepository' => $publication?->getData('dataRepository'),
-                        'manifestFiles' => $publication?->getData('manifestFiles'),
-                        'dataAvailabilityStatement' => $publication?->getData('dataAvailabilityStatement'),
+                        'retrieveReserveCertificateIdentifier' => $submission->getData('retrieveReserveCertificateIdentifier'),
+                        'codeRepository' => $submission->getData('codeRepository'),
+                        'dataRepository' => $submission->getData('dataRepository'),
+                        'manifestFiles' => $submission->getData('manifestFiles'),
+                        'dataAvailabilityStatement' => $submission->getData('dataAvailabilityStatement'),
                     ]
                 ]);
             }
@@ -157,6 +147,12 @@ class CodecheckPlugin extends GenericPlugin
         
         $schema->properties->codecheckOptIn = (object) [
             'type' => 'boolean',
+            'apiSummary' => true,
+            'validation' => ['nullable']
+        ];
+
+        $schema->properties->retrieveReserveCertificateIdentifier = (object) [
+            'type' => 'string',
             'apiSummary' => true,
             'validation' => ['nullable']
         ];

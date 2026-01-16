@@ -3,11 +3,13 @@ import CodecheckManifestFiles from "./Components/CodecheckManifestFiles.vue";
 import CodecheckRepositoryList from "./Components/CodecheckRepositoryList.vue";
 import CodecheckReviewDisplay from "./Components/CodecheckReviewDisplay.vue";
 import CodecheckMetadataForm from "./Components/CodecheckMetadataForm.vue";
+import CodecheckDataAndSoftwareAvailability from "./Components/CodecheckDataAndSoftwareAvailability.vue";
 
 pkp.registry.registerComponent("CodecheckReviewDisplay", CodecheckReviewDisplay);
 pkp.registry.registerComponent("CodecheckMetadataForm", CodecheckMetadataForm);
 pkp.registry.registerComponent("CodecheckManifestFiles", CodecheckManifestFiles);
 pkp.registry.registerComponent("CodecheckRepositoryList", CodecheckRepositoryList);
+pkp.registry.registerComponent("CodecheckDataAndSoftwareAvailability", CodecheckDataAndSoftwareAvailability);
 
 const { useLocalize } = pkp.modules.useLocalize;
 const { t } = useLocalize();
@@ -60,6 +62,7 @@ pkp.registry.storeExtend("workflow", (piniaContext) => {
     ) {
       return [
         {
+          title: "WORKFLOW: CODECHECK",
           component: "CodecheckMetadataForm",
           props: { 
             submission: submission,
@@ -177,7 +180,8 @@ function mountCodecheckVueComponents() {
       textarea.dispatchEvent(new Event('input', { bubbles: true }));
     });
   }
-  
+
+  // Mount code repository component
   const codeRepoContainer = document.querySelector('textarea[name="codeRepository"]')?.parentElement;
   if (codeRepoContainer) {
     const textarea = codeRepoContainer.querySelector('textarea');
@@ -213,6 +217,26 @@ function mountCodecheckVueComponents() {
     }).mount(vueDiv);
     
     vueDiv.addEventListener('update', (e) => {
+      textarea.value = e.detail;
+      textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  }
+
+  const dataAndSoftwareAvailabilityContainer = document.querySelector('textarea[name="dataAvailabilityStatement"]')?.parentElement;
+  if (dataAndSoftwareAvailabilityContainer) {
+    const textarea = dataAndSoftwareAvailabilityContainer.querySelector('textarea');
+    const vueDiv = document.createElement('div');
+    dataAndSoftwareAvailabilityContainer.insertBefore(vueDiv, textarea);
+    textarea.style.display = 'none';
+    
+    createApp(CodecheckDataAndSoftwareAvailability, {
+      name: 'dataSoftwareAvailability',
+      label: t('plugins.generic.codecheck.dataSoftwareAvailability'),
+      description: t('plugins.generic.codecheck.dataSoftwareAvailability.description'),
+      value: textarea.value,
+    }).mount(vueDiv);
+    
+    vueDiv.addEventListener('input', (e) => {
       textarea.value = e.detail;
       textarea.dispatchEvent(new Event('input', { bubbles: true }));
     });

@@ -225,6 +225,38 @@ codecheck/
 
 If you want to contribute to this project, we kindly ask you to follow our [contribution guidelines](CONTRIBUTING.md).
 
+### Api
+
+If you want to add a new Api Endpoint, please first register it inside the constructor of the CODECHECK Api Handler like this:
+
+```php
+$this->endpoints = [
+  'Your method (e.g. GET, POST, ...)' => [
+      [
+          'route' => 'your endpoint route',
+          'handler' => [$this, 'yourFunction'],
+          'roles' => $this->roles,
+      ],
+  ],
+];
+```
+
+Then define what `yourFunction()` should do when your Endpoint is called. It is important, that the function creates a JSON response.
+
+```php
+private function yourFunction(): void
+{   
+    /* Do some calculations */
+
+    // Serve your Api endpoint route
+    // success should be true or false along with a matching HTML response code like 200 or 404
+    $this->response->response([
+        'success' => true,
+        'payload' => $test,
+    ], 200);
+}
+```
+
 ## License
 
 Copyright (c) 2025 CODECHECK Initiative

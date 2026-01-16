@@ -245,6 +245,7 @@
             class="pkpFormField__input full-width"
           />
         </div>
+        
         <div class="field-group">
           <label class="field-label">{{ t('plugins.generic.codecheck.additionalContent.label') }}</label>
           <p class="field-description">{{ t('plugins.generic.codecheck.additionalContent.description') }}</p>
@@ -255,24 +256,66 @@
             :placeholder="t('plugins.generic.codecheck.additionalContent.placeholder')"
           ></textarea>
         </div>
-      </div>
 
-      <div class="form-section identifier-section">
-        <h3 class="section-title">{{ t('plugins.generic.codecheck.identifier.title') }} <span class="required">*</span></h3>
-        
         <div class="field-group">
-          <input
-            type="text"
-            v-model="metadata.certificate"
-            class="pkpFormField__input full-width"
-            :placeholder="t('plugins.generic.codecheck.identifier.label')"
-          />
-        </div>
-        
-        <div class="identifier-actions">
-          <button type="button" class="pkpButton codecheck-btn" @click="saveIdentifier">{{ t('plugins.generic.codecheck.identifier.save') }}</button>
-          <button type="button" class="pkpButton codecheck-btn" @click="reserveIdentifier">{{ t('plugins.generic.codecheck.identifier.reserve') }}</button>
-          <button type="button" class="pkpButton codecheck-btn pkpButton--isWarnable" @click="removeIdentifier">{{ t('plugins.generic.codecheck.identifier.remove') }}</button>
+          <label class="field-label">{{ t('plugins.generic.codecheck.identifier.title') }} <span class="required">*</span></label>
+          <p class="field-description">
+            {{ t('plugins.generic.codecheck.identifier.description') }}
+            <span v-if="certificateIdentifier.issueUrl"> - </span>
+            <a v-if="certificateIdentifier.issueUrl" :href="certificateIdentifier.issueUrl" target="_blank">
+              {{ t('plugins.generic.codecheck.identifier.viewGithubIssue') }}
+            </a>
+          </p>
+          <div class="certificate-identifier-section">
+            <div class="certificate-identifier-input-wrapper">
+                <input
+                    type="text"
+                    v-model="metadata.certificate"
+                    :placeholder="t('plugins.generic.codecheck.identifier.label')"
+                    class="certificate-identifier-input"
+                    readonly
+                />
+                <select
+                    v-model="certificateIdentifier.venueType"
+                    class="certificate-identifier-select certificate-identifier-venue-types"
+                    :disabled="isIdentifierReserved"
+                >
+                    <option disabled value="default" selected>{{ t('plugins.generic.codecheck.identifier.venue.type') }}</option>
+                    <option v-for="type in certificateIdentifier.venueTypes" :key="type" :value="type">
+                    {{ type }}
+                    </option>
+                </select>
+                <select
+                    v-model="certificateIdentifier.venueName"
+                    class="certificate-identifier-select certificate-identifier-venue-names"
+                    :disabled="isIdentifierReserved"
+                >
+                    <option disabled value="default" selected>{{ t('plugins.generic.codecheck.identifier.venue.name') }}</option>
+                    <option v-for="name in certificateIdentifier.venueNames" :key="name" :value="name">
+                    {{ name }}
+                    </option>
+                </select>
+            </div>
+
+            <div class="identifier-actions" id="certificate-identifier-button-wrapper">
+                <button
+                    type="button"
+                    class="pkpButton codecheck-btn certificate-identifier-button"
+                    :class="isIdentifierReserved ? 'bg-gray' : ''"
+                    :disabled="isIdentifierReserved"
+                    @click="reserveIdentifier"
+                >
+                    {{ t('plugins.generic.codecheck.identifier.reserve') }}
+                </button>
+                <button
+                    type="button"
+                    class="pkpButton codecheck-btn pkpButton--isWarnable codecheck-btn-warning certificate-identifier-button"
+                    @click="showRemoveIdentifierModal"
+                >
+                    {{ t('plugins.generic.codecheck.identifier.remove') }}
+                </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -310,14 +353,10 @@ const { useLocalize } = pkp.modules.useLocalize;
 export default {
   name: 'CodecheckMetadataForm',
   props: {
-    submission: {
-      type: Object,
-      required: true
-    },
-    canEdit: {
-      type: Boolean,
-      default: true
-    }
+    submission: { type: Object, required: true },
+    canEdit: { type: Boolean, default: true },
+    name: {type: String},
+    value: {type: String},
   },
   setup() {
     const { t } = useLocalize();
@@ -342,6 +381,15 @@ export default {
         manifestFiles: '',
         dataAvailabilityStatement: ''
       },
+      // Further information neccesary for retrieving and reserving the Certificate Identifier
+      // rgb(208 10 108 / var(--tw-text-opacity, 1))
+      certificateIdentifier: {
+        venueType: 'default',
+        venueName: 'default',
+        venueTypes: [],
+        venueNames: [],
+        issueUrl: '',
+      },
       metadata: {
         version: 'latest',
         publicationType: 'doi',
@@ -362,10 +410,15 @@ export default {
       return this.metadata.manifest.length > 0 && 
              this.metadata.codecheckers.length > 0 &&
              this.metadata.certificate;
+    },
+    // variable that stores if the Identifier was set and thus buttons should be disabled
+    isIdentifierReserved() {
+      return this.metadata.certificate.trim() !== '';
     }
   },
   mounted() {
     this.loadData();
+    this.getVenueData();
   },
   methods: {
     async loadData() {
@@ -379,11 +432,12 @@ export default {
         }
 
         const submissionId = this.submission.id;
-        const pathParts = window.location.pathname.split('/');
-        const contextName = pathParts[3];
-        const apiUrl = `${window.location.origin}/ojs/index.php/${contextName}/codecheck/metadata?submissionId=${submissionId}`;
+        let apiUrl = pkp.context.apiBaseUrl;
+        apiUrl += 'codecheck';
+        apiUrl = `${apiUrl}/metadata?submissionId=${submissionId}`;
         
         const response = await fetch(apiUrl, {
+          method: 'GET',
           headers: {
             'X-Csrf-Token': pkp.currentUser.csrfToken
           }
@@ -557,27 +611,6 @@ export default {
       }
     },
 
-    saveIdentifier() {
-      if (this.metadata.certificate) {
-        alert(this.t('plugins.generic.codecheck.identifier.saved', { identifier: this.metadata.certificate }));
-      } else {
-        alert(this.t('plugins.generic.codecheck.identifier.enterFirst'));
-      }
-    },
-
-    reserveIdentifier() {
-      const year = new Date().getFullYear();
-      const number = String(Math.floor(Math.random() * 9999)).padStart(4, '0');
-      this.metadata.certificate = `CODECHECK-${year}-${number}`;
-      alert(this.t('plugins.generic.codecheck.identifier.reserved', { identifier: this.metadata.certificate }));
-    },
-
-    removeIdentifier() {
-      if (confirm(this.t('plugins.generic.codecheck.identifier.removeConfirm'))) {
-        this.metadata.certificate = '';
-      }
-    },
-
     async saveMetadata() {
       if (!this.validateForm()) {
         return;
@@ -604,9 +637,9 @@ export default {
         console.log('Saving CODECHECK data:', dataToSave);
 
         const submissionId = this.submission.id;
-        const pathParts = window.location.pathname.split('/');
-        const contextName = pathParts[3];
-        const apiUrl = `${window.location.origin}/ojs/index.php/${contextName}/codecheck/metadata?submissionId=${submissionId}`;
+        let apiUrl = pkp.context.apiBaseUrl;
+        apiUrl += 'codecheck';
+        apiUrl = `${apiUrl}/metadata?submissionId=${submissionId}`;
         
         const response = await fetch(apiUrl, {
           method: 'POST',
@@ -742,6 +775,7 @@ export default {
 
       return yamlContent;
     },
+    
     showYamlModal(yamlContent) {
       const { useModal } = pkp.modules.useModal;
       const { openDialog } = useModal();
@@ -822,11 +856,134 @@ export default {
         '  a.click();' +
         '  URL.revokeObjectURL(url);' +
         '}' +
-  '<\\/script>' +
-  '</body>' +
-  '</html>';
+        '<\\/script>' +
+        '</body>' +
+        '</html>';
       
       win.document.write(html);
+    },
+
+    async getVenueData() {
+      let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
+
+      try {
+          const response = await fetch(`${apiUrl}/venue`, {
+              method: 'GET',
+              headers: {
+              'Content-Type': 'application/json',
+              'X-Csrf-Token': pkp.currentUser.csrfToken,
+              },
+          });
+          const data = await response.json();
+
+          if (data.success) {
+              console.log('Success:', data.message);
+              this.certificateIdentifier.venueTypes = data.venueTypes;
+              this.certificateIdentifier.venueNames = data.venueNames;
+              console.log('Venue types:', this.certificateIdentifier.venueTypes);
+              console.log('Venue names:', this.certificateIdentifier.venueNames);
+          } else {
+              console.error('Error:', data.error);
+          }
+      } catch (error) {
+          console.error('Failed to fetch venue data:', error);
+      }
+    },
+
+    async reserveIdentifier() {
+      if (this.certificateIdentifier.venueType === 'default' || this.certificateIdentifier.venueName === 'default') {
+        alert('Please select both a Venue Type and a Venue Name.');
+        return;
+      }
+
+      const authorString = this.submissionData.authors.length > 1
+        ? this.submissionData.authors[0].name + ' et al.'
+        : this.submissionData.authors[0].name;
+
+      console.log(authorString);
+
+      const submissionId = this.submission.id;
+      let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
+
+      try {
+          const response = await fetch(`${apiUrl}/identifier?submissionId=${submissionId}`, {
+              method: 'POST',
+              headers: {
+              'Content-Type': 'application/json',
+              'X-Csrf-Token': pkp.currentUser.csrfToken,
+              },
+              body: JSON.stringify({
+                venueType: this.certificateIdentifier.venueType,
+                venueName: this.certificateIdentifier.venueName,
+                authorString: authorString,
+              }),
+          });
+          const data = await response.json();
+
+          if (data.success) {
+              this.metadata.certificate = data.identifier;
+              this.certificateIdentifier.issueUrl = data.issueUrl;
+              this.$emit('update', this.metadata.certificate);
+              this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.success.message')}: ${data.identifier}`, 'success');
+              console.log('New Certificate Identifier reserved: ', data.identifier, data.issueUrl);
+          } else {
+              this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.fail.message')}\n${data.error}`, 'error');
+              console.error('Error while reserving the Certificate Identifier:', data.error);
+          }
+      } catch (error) {
+          this.showMessage(`${this.t('plugins.generic.codecheck.request.failed')}\n${error}`, 'error');
+          console.error('Request failed:', error);
+      }
+    },
+
+    removeIdentifier(close) {
+      this.metadata.certificate = '';
+      this.certificateIdentifier.issueUrl = '';
+      this.$emit('update', this.metadata.certificate);
+
+      close();
+    },
+
+    showRemoveIdentifierModal() {
+      if (!this.canUsePkpModal()) {
+        this.fallbackRemoveIdentifierModal();
+        return;
+      }
+
+      const { useModal } = pkp.modules.useModal;
+      const { openDialog } = useModal();
+
+      openDialog({
+        title: this.t('plugins.generic.codecheck.identifier.remove.modal.title'),
+        message: `
+          <div class="modal-form">
+            <div class="modal-field">
+              <label for="repo-url" class="modal-label">${this.t('plugins.generic.codecheck.identifier.remove.modal.areYouSureYouWantToRemoveTheIdentifier')}</label>
+            </div>
+          </div>
+        `,
+        actions: [
+          {
+            label: this.t('plugins.generic.codecheck.no'),
+            callback: (close) => close()
+          },
+          {
+            label: this.t('plugins.generic.codecheck.yes'),
+            isPrimary: true,
+            callback: (close) => {
+              this.removeIdentifier(close);
+            }
+          }
+        ]
+      });
+    },
+
+    fallbackRemoveIdentifierModal() {
+      if(confirm(this.t('plugins.generic.codecheck.identifier.remove.modal.areYouSureYouWantToRemoveTheIdentifier'))) {
+        this.metadata.certificate = '';
+        this.certificateIdentifier.issueUrl = '';
+        this.$emit('update', this.metadata.certificate);
+      }
     },
 
     escapeHtml(text) {
@@ -890,6 +1047,15 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.workflow-title {
+  margin: 0;
+  font-size: inherit;
+  font-weight: 700;
+  text-transform: uppercase;
+  line-height: 1.75;
+  color: #333;
 }
 
 .codecheck-metadata-form .version-selector {
@@ -1234,6 +1400,7 @@ export default {
 }
 
 .codecheck-metadata-form .save-message {
+  white-space: pre-line;
   margin-top: 1rem;
   padding: 0.75rem;
   border-radius: 4px;
@@ -1418,5 +1585,108 @@ export default {
 
 .btn-add:hover {
   background: #005580;
+}
+
+a {
+    word-break: break-all;
+}
+
+.certificate-identifier-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
+.certificate-identifier-input {
+    flex: 1;
+    font-size:14px;
+    padding: 6px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    height: 2.5rem;
+}
+
+.certificate-identifier-select:disabled {
+    /* Centeres the Text in the select */
+    text-align: center;
+    text-align-last: center;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: none !important; /* removes arrow background */
+    background-color: #868686;
+    color: #ffffff;
+    cursor: not-allowed;
+    pointer-events: none;
+    opacity: 0.6;
+    font-weight: 600;
+}
+
+.certificate-identifier-venue-types {
+    font-size:14px;
+    padding: 6px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    height: 2.5rem;
+    background: #fff;
+}
+
+.certificate-identifier-venue-names {
+    font-size:14px;
+    padding: 6px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    height: 2.5rem;
+    background: #fff;
+}
+
+#certificate-identifier-button-wrapper {
+    padding-top: 0.5rem;
+}
+
+.bg-blue {
+    background: #006798;
+}
+
+.bg-blue:hover {
+  background: #005580;
+}
+
+.bg-red {
+    background: #dc3545;
+}
+
+.bg-red:hover {
+  background: #c82333;
+}
+
+.bg-gray {
+  background: #868686;
+  border: 1px solid #868686;
+}
+
+.bg-gray:hover {
+  background: #868686;
+  border: 1px solid #868686;
+}
+
+.certificate-identifier-button:disabled {
+    opacity: 0.6 !important;
+    pointer-events: none !important;
+    cursor: not-allowed !important;
+}
+
+.codecheck-metadata-form .file-link {
+  color: #007ab2;
+  text-decoration: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.codecheck-metadata-form .file-link:hover {
+  text-decoration: underline;
+  color: #005a87;
 }
 </style>
