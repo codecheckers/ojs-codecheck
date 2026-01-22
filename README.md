@@ -189,9 +189,10 @@ Use during development to automatically rebuild on file changes.
 6. [Test](https://github.com/codecheckers/ojs-codecheck/?tab=readme-ov-file#testing) the plugin ([Frontend Component Tests](https://github.com/codecheckers/ojs-codecheck/?tab=readme-ov-file#frontend-component-tests) and [PHP Unit Tests](https://github.com/codecheckers/ojs-codecheck/?tab=readme-ov-file#frontend-component-tests))
 7. Package plugin:
     - **Include**: `public/build/`, all PHP files, templates, locale
-    - **Exclude**: `node_modules/`, `resources/` (source files), `.env`
-    - for **`.zip`**: `git archive --format=zip --output=codecheck-x.y.z.0.zip vx.y.z.0`
-    - for **`.tar.gz`**: `git archive --format=tar vx.y.z.0 | gzip > codecheck-x.y.z.0.tar.gz`
+    - **Exclude** (remove): `node_modules/`, `resources/` (source files), `.env`
+    - then package the Plugin **Repository**:
+      - for **`.zip`**: `git archive --format=zip --output=codecheck-x.y.z.0.zip vx.y.z.0`
+      - for **`.tar.gz`**: `git archive --format=tar vx.y.z.0 | gzip > codecheck-x.y.z.0.tar.gz`
 8. Create release tag
     - `git commit -am "Release x.y.z.0"`
     - `git tag -a vx.y.z.0 -m "Release x.y.z.0"`
