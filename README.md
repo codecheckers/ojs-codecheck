@@ -177,16 +177,30 @@ Use during development to automatically rebuild on file changes.
 
 ### Creating a Release
 
-1. Install dependencies: `npm install`
-2. Build the frontend: `npm run build`
-3. Ensure that:
+1. Checkout to a new Release branch
+   - `git checkout -b "stable-x_y_z"` (see [CHANGELOG.md](https://github.com/codecheckers/ojs-codecheck/blob/main/CHANGELOG.md) for further information on the version names)
+2. Change the release in the `version.xml` to the new version specified in the Release branch name
+   - please use the full OJS format, so `x.y.z.0`
+3. Install dependencies: `npm install`
+4. Build the frontend: `npm run build`
+5. Ensure that:
    - `public/build/` exists (**ignored by git**)
    - and contains the compiled files (`build.iife.js` and `build.css`)
-4. [Test](https://github.com/codecheckers/ojs-codecheck/?tab=readme-ov-file#testing) the plugin ([Frontend Component Tests](https://github.com/codecheckers/ojs-codecheck/?tab=readme-ov-file#frontend-component-tests) and [PHP Unit Tests](https://github.com/codecheckers/ojs-codecheck/?tab=readme-ov-file#frontend-component-tests))
-5. Create release tag
-6. Package plugin:
+6. [Test](https://github.com/codecheckers/ojs-codecheck/?tab=readme-ov-file#testing) the plugin ([Frontend Component Tests](https://github.com/codecheckers/ojs-codecheck/?tab=readme-ov-file#frontend-component-tests) and [PHP Unit Tests](https://github.com/codecheckers/ojs-codecheck/?tab=readme-ov-file#frontend-component-tests))
+7. Package plugin:
    - **Include**: `public/build/`, all PHP files, templates, locale
    - **Exclude**: `node_modules/`, `resources/` (source files), `.env`
+8. Create release tag
+   - `git commit -am "Release x.y.z.0"`
+   - git tag -a vx.y.z.0 -m "Release x.y.z.0"
+9. Push the branch
+   - `git push --follow-tags`
+10. Create the Release in the [GitHub UI](https://github.com/codecheckers/ojs-codecheck/releases/new)
+   - make sure to select the tag, which you just created (`vx.y.z.0`)
+   - select your Release branch as a target (`"stable-x_y_z"`)
+   - give the Release a fitting title
+   - please also add a thorough description, on what this release contains
+
 
 ### File Structure
 

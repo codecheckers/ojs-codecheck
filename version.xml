@@ -8,7 +8,6 @@
   *
   * CODECHECK plugin version information.
   -->
-<version>0.0.0.0</version>
 <version>
 	<application>codecheck</application>
 	<type>plugins.generic</type>
