@@ -179,8 +179,10 @@ Use during development to automatically rebuild on file changes.
 
 1. Install dependencies: `npm install`
 2. Build the frontend: `npm run build`
-3. Ensure `public/build/` exists (**ignored by git**) and contains compiled files
-4. Test the plugin in OJS
+3. Ensure that:
+   - `public/build/` exists (**ignored by git**)
+   - and contains the compiled files (`build.iife.js` and `build.css`)
+4. [Test](https://github.com/codecheckers/ojs-codecheck/?tab=readme-ov-file#testing) the plugin ([Frontend Component Tests](https://github.com/codecheckers/ojs-codecheck/?tab=readme-ov-file#frontend-component-tests) and [PHP Unit Tests](https://github.com/codecheckers/ojs-codecheck/?tab=readme-ov-file#frontend-component-tests))
 5. Create release tag
 6. Package plugin:
    - **Include**: `public/build/`, all PHP files, templates, locale
