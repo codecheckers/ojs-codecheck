@@ -187,12 +187,9 @@ Use during development to automatically rebuild on file changes.
     - `public/build/` exists (**ignored by git**)
     - and contains the compiled files (`build.iife.js` and `build.css`)
 6. [Test](https://github.com/codecheckers/ojs-codecheck/?tab=readme-ov-file#testing) the plugin ([Frontend Component Tests](https://github.com/codecheckers/ojs-codecheck/?tab=readme-ov-file#frontend-component-tests) and [PHP Unit Tests](https://github.com/codecheckers/ojs-codecheck/?tab=readme-ov-file#frontend-component-tests))
-7. Package plugin:
+7. Prepare the repository for packaging:
     - **Include**: `public/build/`, all PHP files, templates, locale
     - **Exclude** (remove): `node_modules/`, `resources/` (source files), `.env`
-    - then package the Plugin **Repository**:
-      - for **`.zip`**: `git archive --format=zip --output=codecheck-x.y.z.0.zip vx.y.z.0`
-      - for **`.tar.gz`**: `git archive --format=tar vx.y.z.0 | gzip > codecheck-x.y.z.0.tar.gz`
 8. Create release tag
     - `git commit -am "Release x.y.z.0"`
     - `git tag -a vx.y.z.0 -m "Release x.y.z.0"`
@@ -200,7 +197,10 @@ Use during development to automatically rebuild on file changes.
     - `git push --set-upstream origin stable-x_y_z-0`
 10. Push the tag
     - `git push origin vx.y.z.0`
-11. Create the Release in the [GitHub UI](https://github.com/codecheckers/ojs-codecheck/releases/new)
+11. Package the Plugin **Repository**:
+    - as **`.zip`**: `git archive --format=zip --output=codecheck-x.y.z.0.zip vx.y.z.0`
+    - as **`.tar.gz`**: `git archive --format=tar vx.y.z.0 | gzip > codecheck-x.y.z.0.tar.gz`
+12. Create the Release in the [GitHub UI](https://github.com/codecheckers/ojs-codecheck/releases/new)
     - make sure to select the tag, which you just created (`vx.y.z.0`)
     - select your Release branch as a target (`"stable-x_y_z-0"`)
     - give the Release a fitting title
