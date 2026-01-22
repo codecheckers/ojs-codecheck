@@ -196,11 +196,10 @@ Use during development to automatically rebuild on file changes.
 9. Push the branch
    - `git push --follow-tags`
 10. Create the Release in the [GitHub UI](https://github.com/codecheckers/ojs-codecheck/releases/new)
-   - make sure to select the tag, which you just created (`vx.y.z.0`)
-   - select your Release branch as a target (`"stable-x_y_z"`)
-   - give the Release a fitting title
-   - please also add a thorough description, on what this release contains
-
+    - make sure to select the tag, which you just created (`vx.y.z.0`)
+    - select your Release branch as a target (`"stable-x_y_z"`)
+    - give the Release a fitting title
+    - please also add a thorough description, on what this release contains
 
 ### File Structure
 
