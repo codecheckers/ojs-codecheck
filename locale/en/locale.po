@@ -11,6 +11,18 @@ msgstr ""
 "PO-Revision-Date: 2025-01-30T00:00:00+00:00\n"
 "Language: en\n"
 
+msgid "plugins.generic.codecheck.yes"
+msgstr "Yes"
+
+msgid "plugins.generic.codecheck.no"
+msgstr "No"
+
+msgid "plugins.generic.codecheck.ok"
+msgstr "Ok"
+
+msgid "plugins.generic.codecheck.request.failed"
+msgstr "Request failed"
+
 msgid "plugins.generic.codecheck.displayName"
 msgstr "CODECHECK"
 
@@ -53,6 +65,12 @@ msgstr "Data Repository URLs"
 msgid "plugins.generic.codecheck.dataRepository.description"
 msgstr "Link(s) to your data repository (Zenodo, OSF, etc.) - optional"
 
+msgid "plugins.generic.codecheck.dataSoftwareAvailability"
+msgstr "Data and Software Availability"
+
+msgid "plugins.generic.codecheck.dataSoftwareAvailability.description"
+msgstr "Describe where your data, code, and documentation is available and under what conditions, e.g., copyright, licenses, sensitivity limitations, or access procedures for protected data. The information should be concise and ideally comprises (a) for code, a minimal description of the workflow environment and main tools including versions, and (b) for data, persistent links to repositories for code and data using Digital Object Identifiers (DOI), but may also be plain URLs with last access dates or even a description of data access steps. Remove links for anonymity during peer review (“xxx”), or share anonymized links if your repository supports them. Used data, software and (third-party) tools should be cited."
+
 msgid "plugins.generic.codecheck.manifestFiles.label"
 msgstr "Expected Output Files"
 
@@ -87,13 +105,16 @@ msgid "plugins.generic.codecheck.review.willBeCodechecked"
 msgstr "This submission will be codechecked"
 
 msgid "plugins.generic.codecheck.workflow.title"
-msgstr "CODECHECK"
+msgstr "WORKFLOW: CODECHECK"
 
 msgid "plugins.generic.codecheck.configVersion"
 msgstr "CODECHECK config version"
 
 msgid "plugins.generic.codecheck.publishWithDOI"
 msgstr "Check published with a DOI (e.g., Zenodo)"
+
+msgid "plugins.generic.codecheck.details.title"
+msgstr "CODECHECK Details"
 
 msgid "plugins.generic.codecheck.manifest.title"
 msgstr "Manifest"
@@ -165,10 +186,22 @@ msgid "plugins.generic.codecheck.completionTime.label"
 msgstr "Time the CODECHECK was completed"
 
 msgid "plugins.generic.codecheck.identifier.title"
-msgstr "Identifier"
+msgstr "Certificate Identifier"
+
+msgid "plugins.generic.codecheck.identifier.description"
+msgstr "CODECHECK Certificate ID, Venue Type and Venue Name"
 
 msgid "plugins.generic.codecheck.identifier.label"
-msgstr "ID of the CODECHECK certificate"
+msgstr "ID of the CODECHECK certificate - e.g.: 2025-001"
+
+msgid "plugins.generic.codecheck.identifier.venue.type"
+msgstr "Venue Type"
+
+msgid "plugins.generic.codecheck.identifier.venue.name"
+msgstr "Venue Name"
+
+msgid "plugins.generic.codecheck.identifier.viewGithubIssue"
+msgstr "View GitHub Issue"
 
 msgid "plugins.generic.codecheck.identifier.save"
 msgstr "Save Identifier"
@@ -176,8 +209,20 @@ msgstr "Save Identifier"
 msgid "plugins.generic.codecheck.identifier.reserve"
 msgstr "Reserve Identifier"
 
+msgid "plugins.generic.codecheck.identifier.reserve.success.message"
+msgstr "You have reserved the Certificate Identifier"
+
+msgid "plugins.generic.codecheck.identifier.reserve.fail.message"
+msgstr "Error while reserving the Certificate Identifier"
+
 msgid "plugins.generic.codecheck.identifier.remove"
 msgstr "Remove Identifier"
+
+msgid "plugins.generic.codecheck.identifier.remove.modal.title"
+msgstr "Remove Certificate Identifier"
+
+msgid "plugins.generic.codecheck.identifier.remove.modal.areYouSureYouWantToRemoveTheIdentifier"
+msgstr "Are you sure you want to remove this identifier?"
 
 msgid "plugins.generic.codecheck.identifier.reserveConfirm"
 msgstr "Do you want to reserve a new identifier for this CODECHECK?"

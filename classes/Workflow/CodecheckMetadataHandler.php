@@ -4,22 +4,33 @@ namespace APP\plugins\generic\codecheck\classes\Workflow;
 
 use APP\core\Application;
 use APP\facades\Repo;
-use APP\plugins\generic\codecheck\CodecheckPlugin;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\Yaml\Yaml;
 
 class CodecheckMetadataHandler
 {
-    private CodecheckPlugin $plugin;
+    private mixed $submissionId;
 
-    public function __construct(CodecheckPlugin $plugin)
+    /**
+     * `CodecheckMetadataHandler`
+     * @param \APP\core\Request $request The API Request
+     */
+    public function __construct(\APP\core\Request $request)
     {
-        $this->plugin = $plugin;
+        $this->submissionId = $request->getUserVar('submissionId');
+    }
+
+    /**
+     * Get the submission ID
+     * @return mixed Returns the Submission ID for the Request that was passed in the constructor
+     */
+    public function getSubmissionId(): mixed
+    {
+        return $this->submissionId;
     }
 
     public function getMetadata($request, $submissionId): array
     {
-        
         $submission = Repo::submission()->get($submissionId);
         
         if (!$submission) {
@@ -64,7 +75,6 @@ class CodecheckMetadataHandler
 
     public function saveMetadata($request, $submissionId): array
     {
-        
         $submission = Repo::submission()->get($submissionId);
         
         if (!$submission) {
@@ -77,6 +87,7 @@ class CodecheckMetadataHandler
         $nullIfEmpty = function($value) {
             return (is_string($value) && trim($value) === '') ? null : $value;
         };
+        
         $metadataData = [
             'submission_id' => $submissionId,
             'version' => $data['version'] ?? 'latest',
@@ -114,7 +125,6 @@ class CodecheckMetadataHandler
 
     public function generateYaml($request, $submissionId): array
     {
-        
         $submission = Repo::submission()->get($submissionId);
         
         if (!$submission) {
@@ -139,7 +149,7 @@ class CodecheckMetadataHandler
         ];
     }
 
-private function buildYaml($publication, $metadata): string
+    private function buildYaml($publication, $metadata): string
     {
         $manifest = json_decode($metadata->manifest ?? '[]', true);
         $codecheckers = json_decode($metadata->codecheckers ?? '[]', true);
@@ -239,6 +249,11 @@ private function buildYaml($publication, $metadata): string
         return $yaml;
     }
 
+    /**
+     * Get the Authors for a specific publication
+     * @param mixed $publication The publication data
+     * @return array The Authors with Name and ORCID (if isset) in an Array
+     */
     private function getAuthors($publication): array
     {
         if (!$publication) {
@@ -259,5 +274,4 @@ private function buildYaml($publication, $metadata): string
         }
         return $authors;
     }
-
 }
