@@ -19,7 +19,6 @@ class CodecheckMetadataHandler
 
     public function getMetadata($request, $submissionId): array
     {
-        error_log("[CODECHECK Metadata] getMetadata called for submission: $submissionId");
         
         $submission = Repo::submission()->get($submissionId);
         
@@ -59,15 +58,12 @@ class CodecheckMetadataHandler
                 'additionalContent' => $metadata->additional_content,
             ] : null
         ];
-
-        error_log("[CODECHECK Metadata] Response: " . json_encode($response));
         
         return $response;
     }
 
     public function saveMetadata($request, $submissionId): array
     {
-        error_log("[CODECHECK Metadata] saveMetadata called for submission: $submissionId");
         
         $submission = Repo::submission()->get($submissionId);
         
@@ -78,8 +74,6 @@ class CodecheckMetadataHandler
         $jsonData = file_get_contents('php://input');
         $data = json_decode($jsonData, true);
         
-        error_log("[CODECHECK Metadata] Received data: " . $jsonData);
-
         $nullIfEmpty = function($value) {
             return (is_string($value) && trim($value) === '') ? null : $value;
         };
@@ -107,11 +101,9 @@ class CodecheckMetadataHandler
             DB::table('codecheck_metadata')
                 ->where('submission_id', $submissionId)
                 ->update($metadataData);
-            error_log("[CODECHECK Metadata] Updated existing record");
         } else {
             $metadataData['created_at'] = date('Y-m-d H:i:s');
             DB::table('codecheck_metadata')->insert($metadataData);
-            error_log("[CODECHECK Metadata] Created new record");
         }
 
         return [
@@ -122,7 +114,6 @@ class CodecheckMetadataHandler
 
     public function generateYaml($request, $submissionId): array
     {
-        error_log("[CODECHECK Metadata] generateYaml called for submission: $submissionId");
         
         $submission = Repo::submission()->get($submissionId);
         

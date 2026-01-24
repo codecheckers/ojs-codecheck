@@ -44,30 +44,24 @@ class CodecheckPlugin extends GenericPlugin
                 if ($page === 'codecheck') {
                     $request = Application::get()->getRequest();
                     $submissionId = $request->getUserVar('submissionId');
-                    
-                    error_log("[CODECHECK Plugin] Matched codecheck page, submissionId=$submissionId");
-                    
+                                        
                     if ($op === 'metadata' && $request->isGet()) {
-                        error_log("[CODECHECK Plugin] Handling GET metadata");
                         $result = $metadataHandler->getMetadata($request, $submissionId);
                         header('Content-Type: application/json');
                         echo json_encode($result);
                         exit;
                     } elseif ($op === 'metadata' && $request->isPost()) {
-                        error_log("[CODECHECK Plugin] Handling POST metadata");
                         $result = $metadataHandler->saveMetadata($request, $submissionId);
                         header('Content-Type: application/json');
                         echo json_encode($result);
                         exit;
                     } elseif ($op === 'yaml') {
-                        error_log("[CODECHECK Plugin] Handling YAML generation");
                         $result = $metadataHandler->generateYaml($request, $submissionId);
                         header('Content-Type: application/json');
                         echo json_encode($result);
                         exit;
                     }
                     
-                    error_log("[CODECHECK Plugin] No matching operation for: $op");
                 }
                 
                 return false;
@@ -254,12 +248,8 @@ class CodecheckPlugin extends GenericPlugin
         $result = parent::setEnabled($enabled, $contextId);
         
         if ($enabled) {
-            try {
                 $migration = new CodecheckSchemaMigration();
                 $migration->up();
-            } catch (\Exception $e) {
-                error_log('CODECHECK Plugin: Migration failed - ' . $e->getMessage());
-            }
         }
         
         return $result;

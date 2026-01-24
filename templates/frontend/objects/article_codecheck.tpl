@@ -20,9 +20,9 @@
             {if $certificateLink}
                 <div class="value">
                     <a href="{$certificateLink|escape}" 
-                       target="_blank"
-                       title="{translate key='plugins.generic.codecheck.certificate.landingPage.title'}">
-                        {$linkText|escape}
+                    target="_blank"
+                    title="{translate key='plugins.generic.codecheck.certificate.landingPage.title'}">
+                        {translate key='plugins.generic.codecheck.certificate.prefix'} {$codecheckData->getCertificate()|escape}
                     </a>
                 </div>
             {/if}

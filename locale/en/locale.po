@@ -390,3 +390,9 @@ msgstr "View CODECHECK Certificate"
 
 msgid "plugins.generic.codecheck.badge.altText"
 msgstr "CODE WORKS"
+
+msgid "plugins.generic.codecheck.certificate.prefix"
+msgstr "CODECHECK"
+
+msgid "plugins.generic.codecheck.certificate.viewLink"
+msgstr "View Certificate"

@@ -87,7 +87,7 @@ class ArticleDetails
                 'codecheckStatus' => 'completed',
                 'certificateLink' => $codecheckData->getCertificateLink(),
                 'doiLink' => $codecheckData->getDoiLink(),
-                'linkText' => $codecheckData->getFormattedCertificateLinkText(),
+                'linkText' => $codecheckData->getCertificate(),
                 'codecheckerNames' => $codecheckData->getCodecheckerNames(),
                 'certificateDate' => $codecheckData->getCertificateDate(),
             ]);

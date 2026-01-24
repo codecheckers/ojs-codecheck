@@ -203,30 +203,22 @@ class CodecheckSubmission
     {
         $report = $this->getReport();
         
-        // Check if report is a DOI
-        if (preg_match('/^(https?:\/\/)?(doi\.org\/)?(.+)$/', $report, $matches)) {
-            return 'https://doi.org/' . $matches[3];
-        }
-        
-        return '';
-    }
-
-    /**
-     * Get formatted certificate link text
-     */
-    public function getFormattedCertificateLinkText(): string 
-    {
-        $certificate = $this->getCertificate();
-        
-        if (empty($certificate)) {
+        // If report is empty, return empty
+        if (empty($report)) {
             return '';
         }
         
-        // If it's a CODECHECK ID, return it formatted
-        if (preg_match('/^CODECHECK-(\d{4}-\d+)$/', $certificate, $matches)) {
-            return 'CODECHECK ' . $matches[1];
+        // Check if report is a valid DOI format
+        if (preg_match('/^(https?:\/\/)?(doi\.org\/)?(.+)$/', $report, $matches)) {
+            $doi = $matches[3];
+            
+            // Validate DOI format (should contain at least one slash, e.g., 10.xxxx/yyyy)
+            if (strpos($doi, '/') !== false && preg_match('/^10\.\d+\//', $doi)) {
+                return 'https://doi.org/' . $doi;
+            }
         }
         
-        return 'View Certificate';
+        // Return raw value as fallback
+        return $report;
     }
 }
