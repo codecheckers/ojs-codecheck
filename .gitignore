@@ -35,3 +35,6 @@
 
 # dependencies
 node_modules/
+
+# npm release build
+public/
