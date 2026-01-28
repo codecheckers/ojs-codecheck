@@ -203,8 +203,8 @@ Use during development to automatically rebuild on file changes.
 12. Create the Release in the [GitHub UI](https://github.com/codecheckers/ojs-codecheck/releases/new)
     - make sure to select the tag, which you just created (`vx.y.z.0`)
     - select your Release branch as a target (`"stable-x_y_z-0"`)
-    - give the Release a fitting title
-    - please also add a thorough description, on what this Release contains based on the entries from the [CHANGELOG.md](https://github.com/codecheckers/ojs-codecheck/blob/main/CHANGELOG.md)
+    - give the Release a fitting title, using terms like "alpha" or "beta" as suitable to communicate the development status
+    - add a detailed description on the new features and fixes, based on the entries from the [CHANGELOG.md](https://github.com/codecheckers/ojs-codecheck/blob/main/CHANGELOG.md)
 
 ### File Structure
 
