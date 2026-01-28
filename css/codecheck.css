@@ -71,6 +71,7 @@
 
 .codecheck-metadata-form .certificate-input-group input {
   flex: 1;
+}
 
 /* Data Availability textarea */
 textarea[name="dataAvailabilityStatement"] {
@@ -168,4 +169,14 @@ textarea[name="dataAvailabilityStatement"] {
 .codecheck-wizard-section .description {
   margin-bottom: 1.5rem;
   color: #666;
+}
+
+.codecheck-badge {
+    text-decoration: none;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.codecheck-badge-img {
+    height: 18px;
 }

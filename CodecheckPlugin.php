@@ -26,6 +26,8 @@ class CodecheckPlugin extends GenericPlugin
             $this->addAssets();
 
             $articleDetails = new ArticleDetails($this);
+            $issueTOC = new \APP\plugins\generic\codecheck\classes\FrontEnd\IssueTOC($this);
+            Hook::add('Templates::Issue::Issue::Article', $issueTOC->addCodecheckBadge(...));
             Hook::add('Templates::Article::Details', $articleDetails->addCodecheckInfo(...));
 
             // Opt-in checkbox on submission start
@@ -38,6 +40,37 @@ class CodecheckPlugin extends GenericPlugin
             Hook::add('Dispatcher::dispatch', [$this, 'setupAPIHandler']);
             // Add hook for the Template Manager
             Hook::add('TemplateManager::display', $this->callbackTemplateManagerDisplay(...));
+            
+            $metadataHandler = new CodecheckMetadataHandler($this);
+            Hook::add('LoadHandler', function($hookName, $args) use ($metadataHandler) {
+                $page = $args[0];
+                $op = $args[1];
+                                
+                if ($page === 'codecheck') {
+                    $request = Application::get()->getRequest();
+                    $submissionId = $request->getUserVar('submissionId');
+                                        
+                    if ($op === 'metadata' && $request->isGet()) {
+                        $result = $metadataHandler->getMetadata($request, $submissionId);
+                        header('Content-Type: application/json');
+                        echo json_encode($result);
+                        exit;
+                    } elseif ($op === 'metadata' && $request->isPost()) {
+                        $result = $metadataHandler->saveMetadata($request, $submissionId);
+                        header('Content-Type: application/json');
+                        echo json_encode($result);
+                        exit;
+                    } elseif ($op === 'yaml') {
+                        $result = $metadataHandler->generateYaml($request, $submissionId);
+                        header('Content-Type: application/json');
+                        echo json_encode($result);
+                        exit;
+                    }
+                    
+                }
+                
+                return false;
+            });
             
             // Wizard fields schema
             $codecheckSchema = new Schema();
@@ -250,12 +283,8 @@ class CodecheckPlugin extends GenericPlugin
         $result = parent::setEnabled($enabled, $contextId);
         
         if ($enabled) {
-            try {
                 $migration = new CodecheckSchemaMigration();
                 $migration->up();
-            } catch (\Exception $e) {
-                error_log('CODECHECK Plugin: Migration failed - ' . $e->getMessage());
-            }
         }
         
         return $result;

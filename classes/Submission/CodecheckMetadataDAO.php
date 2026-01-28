@@ -23,7 +23,6 @@ class CodecheckMetadataDAO
             
             return $this->fromRow($result);
         } catch (Exception $e) {
-            error_log("CODECHECK DAO: Error getting metadata: " . $e->getMessage());
             return null;
         }
     }
@@ -55,7 +54,6 @@ class CodecheckMetadataDAO
             
             return true;
         } catch (Exception $e) {
-            error_log("CODECHECK DAO: Error saving metadata: " . $e->getMessage());
             return false;
         }
     }
@@ -71,7 +69,6 @@ class CodecheckMetadataDAO
                 ->delete();
             return true;
         } catch (Exception $e) {
-            error_log("CODECHECK DAO: Error deleting metadata: " . $e->getMessage());
             return false;
         }
     }
@@ -88,7 +85,6 @@ class CodecheckMetadataDAO
             
             return array_map([$this, 'fromRow'], $results->toArray());
         } catch (Exception $e) {
-            error_log("CODECHECK DAO: Error getting opted-in submissions: " . $e->getMessage());
             return [];
         }
     }
@@ -108,7 +104,6 @@ class CodecheckMetadataDAO
             
             return !$query->exists();
         } catch (Exception $e) {
-            error_log("CODECHECK DAO: Error checking identifier uniqueness: " . $e->getMessage());
             return false;
         }
     }
@@ -137,7 +132,6 @@ class CodecheckMetadataDAO
             
             return $prefix . str_pad($number, 4, '0', STR_PAD_LEFT);
         } catch (Exception $e) {
-            error_log("CODECHECK DAO: Error generating identifier: " . $e->getMessage());
             return "CODECHECK-" . date('Y') . "-" . uniqid();
         }
     }
