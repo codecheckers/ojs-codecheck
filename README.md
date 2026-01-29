@@ -198,8 +198,16 @@ Use during development to automatically rebuild on file changes.
 10. Push the tag
     - `git push origin vx.y.z.0`
 11. Package the Plugin **Repository**:
-    - as **`.zip`**: `git archive --format=zip --output=codecheck-x.y.z.0.zip vx.y.z.0`
-    - as **`.tar.gz`**: `git archive --format=tar vx.y.z.0 | gzip > codecheck-x.y.z.0.tar.gz`
+    - as **`.zip`**:
+      ```bash
+      git archive --format=zip --output=codecheck-x.y.z.0.zip vx.y.z.0
+      zip -r codecheck-x.y.z.0.zip public/
+      ```
+    - as **`.tar.gz`**:
+      ```bash
+      git archive --format=tar vx.y.z.0 | gzip > codecheck-x.y.z.0.tar.gz
+      tar -rzf codecheck-x.y.z.0.tar.gz public/
+      ```
 12. Create the Release in the [GitHub UI](https://github.com/codecheckers/ojs-codecheck/releases/new)
     - make sure to select the tag, which you just created (`vx.y.z.0`)
     - select your Release branch as a target (`"stable-x_y_z-0"`)
