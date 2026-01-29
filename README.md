@@ -209,8 +209,8 @@ Use during development to automatically rebuild on file changes.
       tar -rzf codecheck-x.y.z.0.tar.gz public/
       ```
 12. Create the Release in the [GitHub UI](https://github.com/codecheckers/ojs-codecheck/releases/new)
-    - **<img src="assets/img/github-tag.png" width="10" height="10"> Tag:** make sure to select the tag, which you just created (`vx.y.z.0`)
-    - **<img src="assets/img/github-branch.png" width="10" height="10"> Target:** select your Release branch as a target (`"release-x_y_z-0"`)
+    - **Tag [ <img src="assets/img/github-tag.png" width="10" height="10"> ]:** make sure to select the tag, which you just created (`vx.y.z.0`)
+    - **Target [ <img src="assets/img/github-branch.png" width="10" height="10"> ]:** select your Release branch as a target (`"release-x_y_z-0"`)
     - **Title:** use both release number and a speaking title with terms like `"alpha"` or `"beta"` to communicate the development status
     - **Description:** detailed description on the new features and fixes, based on the entries from the [CHANGELOG.md](https://github.com/codecheckers/ojs-codecheck/blob/main/CHANGELOG.md)
 
