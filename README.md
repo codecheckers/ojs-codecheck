@@ -178,7 +178,7 @@ Use during development to automatically rebuild on file changes.
 ### Creating a Release
 
 1. Checkout to a new Release branch
-    - `git checkout -b "stable-x_y_z-0"` (see [CHANGELOG.md](https://github.com/codecheckers/ojs-codecheck/blob/main/CHANGELOG.md) for further information on the version names)
+    - `git checkout -b "release-x_y_z-0"` (see [CHANGELOG.md](https://github.com/codecheckers/ojs-codecheck/blob/main/CHANGELOG.md) for further information on the version names)
 2. Change the release in the `version.xml` to the new version specified in the Release branch name
     - please use the full OJS format, so `x.y.z.0`
 3. Install dependencies: `npm install`
@@ -194,7 +194,7 @@ Use during development to automatically rebuild on file changes.
     - `git commit -am "Release x.y.z.0"`
     - `git tag -a vx.y.z.0 -m "Release x.y.z.0"`
 9. Push the branch
-    - `git push --set-upstream origin stable-x_y_z-0`
+    - `git push --set-upstream origin release-x_y_z-0`
 10. Push the tag
     - `git push origin vx.y.z.0`
 11. Package the Plugin **Repository**:
@@ -209,10 +209,10 @@ Use during development to automatically rebuild on file changes.
       tar -rzf codecheck-x.y.z.0.tar.gz public/
       ```
 12. Create the Release in the [GitHub UI](https://github.com/codecheckers/ojs-codecheck/releases/new)
-    - make sure to select the tag, which you just created (`vx.y.z.0`)
-    - select your Release branch as a target (`"stable-x_y_z-0"`)
-    - give the Release a fitting title, using terms like "alpha" or "beta" as suitable to communicate the development status
-    - add a detailed description on the new features and fixes, based on the entries from the [CHANGELOG.md](https://github.com/codecheckers/ojs-codecheck/blob/main/CHANGELOG.md)
+    - **<img src="assets/img/github-tag.png"> Tag:** make sure to select the tag, which you just created (`vx.y.z.0`)
+    - **<img src="assets/img/github-branch.png"> Target:** select your Release branch as a target (`"release-x_y_z-0"`)
+    - **Title:** use both release number and a speaking title with terms like `"alpha"` or `"beta"` to communicate the development status
+    - **Description:** detailed description on the new features and fixes, based on the entries from the [CHANGELOG.md](https://github.com/codecheckers/ojs-codecheck/blob/main/CHANGELOG.md)
 
 ### File Structure
 
