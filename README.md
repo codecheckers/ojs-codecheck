@@ -187,27 +187,35 @@ Use during development to automatically rebuild on file changes.
     - `public/build/` exists (**ignored by git**)
     - and contains the compiled files (`build.iife.js` and `build.css`)
 6. [Test](https://github.com/codecheckers/ojs-codecheck/?tab=readme-ov-file#testing) the plugin ([Frontend Component Tests](https://github.com/codecheckers/ojs-codecheck/?tab=readme-ov-file#frontend-component-tests) and [PHP Unit Tests](https://github.com/codecheckers/ojs-codecheck/?tab=readme-ov-file#frontend-component-tests))
-7. Prepare the repository for packaging:
-    - **Include**: `public/build/`, all PHP files, templates, locale
-    - **Exclude** (remove): `node_modules/`, `resources/` (source files), `.env`
-8. Create release tag
+7. Create release tag
     - `git commit -am "Release x.y.z.0"`
     - `git tag -a vx.y.z.0 -m "Release x.y.z.0"`
-9. Push the branch
+8. Push the branch
     - `git push --set-upstream origin release-x_y_z-0`
-10. Push the tag
+9. Push the tag
     - `git push origin vx.y.z.0`
-11. Package the Plugin **Repository**:
-    - as **`.zip`**:
+10. Package the Plugin: *(ensure that `vx.y.z.0` matches the tag you pushed)*
+    - **manually**
+        - as **`.zip`**:
+          ```bash
+          git archive --format=zip --output=codecheck-x.y.z.0.zip vx.y.z.0
+          zip -r codecheck-x.y.z.0.zip public/
+          zip -d codecheck-x.y.z.0.zip 'resources/*'
+          ```
+        - as **`.tar.gz`**:
+          ```bash
+          git archive --format=tar vx.y.z.0 > codecheck-x.y.z.0.tar
+          tar -rf codecheck-x.y.z.0.tar public/
+          tar --delete -f codecheck-x.y.z.0.tar resources
+          gzip codecheck-x.y.z.0.tar
+          ```
+    - **via the `package-plugin.sh` script** *(recommended)*
       ```bash
-      git archive --format=zip --output=codecheck-x.y.z.0.zip vx.y.z.0
-      zip -r codecheck-x.y.z.0.zip public/
+      sh package-plugin.sh --format zip|tar.gz --version x.y.z.0
       ```
-    - as **`.tar.gz`**:
-      ```bash
-      git archive --format=tar vx.y.z.0 | gzip > codecheck-x.y.z.0.tar.gz
-      tar -rzf codecheck-x.y.z.0.tar.gz public/
-      ```
+11. Double check that the package:
+    - **Includes**: `public/build/`, all PHP files, templates, locale
+    - **Doesn't include**: `node_modules/`, `vendor/`, `resources/` (source files), `.env`
 12. Create the Release in the [GitHub UI](https://github.com/codecheckers/ojs-codecheck/releases/new)
     - **Tag [ <img src="assets/img/github-tag.png" width="10" height="10"> ]:** make sure to select the tag, which you just created (`vx.y.z.0`)
     - **Target [ <img src="assets/img/github-branch.png" width="10" height="10"> ]:** select your Release branch as a target (`"release-x_y_z-0"`)
