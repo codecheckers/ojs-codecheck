@@ -33,13 +33,34 @@ msgid "plugins.generic.codecheck.settings.title"
 msgstr "CODECHECK Settings"
 
 msgid "plugins.generic.codecheck.settings.description"
-msgstr "Configure CODECHECK integration settings for this journal"
+msgstr "Configure the CODECHECK integration settings for this journal"
 
 msgid "plugins.generic.codecheck.settings.enableCodecheck"
 msgstr "Enable CODECHECK for this journal"
 
 msgid "plugins.generic.codecheck.settings.enableCodecheck.description"
 msgstr "Allow editors to assign codecheckers to submissions"
+
+msgid "plugins.generic.codecheck.settings.authorAnonymity"
+msgstr "Author anonymity"
+
+msgid "plugins.generic.codecheck.settings.authorAnonymity.description"
+msgstr "Include the author names in the GitHub register issue"
+
+msgid "plugins.generic.codecheck.settings.githubRegisterRepository"
+msgstr "GitHub Repository used as the CODECHECK register"
+
+msgid "plugins.generic.codecheck.settings.githubRegisterRepository.description"
+msgstr "default: https://github.com/codecheckers/register"
+
+msgid "plugins.generic.codecheck.settings.githubLabels"
+msgstr "GitHub Register Labels"
+
+msgid "plugins.generic.codecheck.settings.githubLabels.description"
+msgstr "Add custom Labels that can be displayed in the GitHub CODECHECK Register"
+
+msgid "plugins.generic.codecheck.settings.githubLabels.button.add"
+msgstr "+ Label"
 
 msgid "plugins.generic.codecheck.title"
 msgstr "CODECHECK"

@@ -66,6 +66,14 @@ class CodecheckPlugin extends GenericPlugin
         return $success;
     }
     
+    /**
+     * Setup the `CodecheckApiHandler`
+     * 
+     * @param string $hookname The name of the hook
+     * @param array $args The arguments passed by the hook
+     * 
+     * @return void
+     */
     public function setupAPIHandler(string $hookName, array $args): void
     {
         $request = $args[0];
@@ -233,16 +241,34 @@ class CodecheckPlugin extends GenericPlugin
         return false;
     }
 
+    /**
+     * Provide a name for this plugin
+     *
+     * The name will appear in the Plugin Gallery where editors can
+     * install, enable and disable plugins.
+     */
     public function getDisplayName(): string
     {
         return __('plugins.generic.codecheck.displayName');
     }
 
+    /**
+     * Provide a description for this plugin
+     *
+     * The description will appear in the Plugin Gallery where editors can
+     * install, enable and disable plugins.
+     */
     public function getDescription(): string
     {
         return __('plugins.generic.codecheck.description');
     }
 
+    /**
+     * Add a settings action to the plugin's entry in the CODECHECK plugins list.
+     *
+     * @param Request $request
+     * @param array $actionArgs
+     */
     public function getActions($request, $actionArgs): array
     {
         $actions = new Actions($this);

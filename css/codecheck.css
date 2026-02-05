@@ -179,3 +179,26 @@ textarea[name="dataAvailabilityStatement"] {
 .codecheck-badge-img {
     height: 18px;
 }
+
+h1#codecheckSettingsTitle {
+  margin-bottom: 2rem;
+  font-size: 1.5rem;
+  color: #01354F;
+  font-weight: bold;
+}
+
+#codecheckSettings #codecheckSettingsArea .section {
+	padding: 20px;
+  border: 3px solid #BBBBBB;
+  margin-bottom: 1.5rem !important;
+}
+
+.settingsLabelRow {
+  display: flex;
+  flex-direction: row;
+  margin-bottom: 0.5rem;
+}
+
+.settingsLabelRow .remove {
+  padding-left: 1rem;
+}
