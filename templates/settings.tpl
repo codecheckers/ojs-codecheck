@@ -16,19 +16,37 @@
 {literal}
 <script>
 	$(function () {
-		let label_index = 0;
+		let label_index = $('#labelList .settingsLabelRow').length;
+
+		function updateEmptyState() {
+			if ($('#labelList .settingsLabelRow').length === 0) {
+				$('#labelListEmptyState').show();
+			} else {
+				$('#labelListEmptyState').hide();
+			}
+		}
+
+		// Initial state
+		updateEmptyState();
+
 		$('#addLabel').on('click', function () {
 			$('#labelList').append(`
 				<div class="settingsLabelRow">
-					<input type="text" name="labels[${label_index}][name]">
-					<button type="button" class="remove">✕</button>
+					<input
+						type="text"
+						name="labels[${label_index}][name]"
+						class="pkpFormField__input"
+					/>
+					<button type="button" class="remove pkpButton pkpButton--close">×</button>
 				</div>
 			`);
 			label_index++;
+			updateEmptyState();
 		});
 
-		$('.labelList').on('click', '.remove', function () {
+		$('#labelList').on('click', '.remove', function () {
 			$(this).closest('.settingsLabelRow').remove();
+			updateEmptyState();
 		});
 	});
 </script>
@@ -81,20 +99,23 @@
 			{fbvElement
 				type="text"
 				id="githubRegisterRepository"
+				class="pkpFormField__input"
 				value=$githubRegisterRepository
 				placeholder="plugins.generic.codecheck.settings.githubRegisterRepository.description"
 			}
 		{/fbvFormSection}
 
-		{fbvFormSection
-			title="plugins.generic.codecheck.settings.githubLabels"
-			description="plugins.generic.codecheck.settings.githubLabels.description"
-		}
-			{fbvElement
-				type="button"
-				id="addLabel"
-				label="plugins.generic.codecheck.settings.githubLabels.button.add"
-			}
+		{fbvFormSection}
+			<div class="field-header">
+				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.githubLabels"}</label>
+				<button type="button" id="addLabel" class="pkpButton btn-add">
+					{translate key="plugins.generic.codecheck.settings.githubLabels.button.add"}
+				</button>
+			</div>
+			<label class="description">{translate key="plugins.generic.codecheck.settings.githubLabels.description"}</label>
+			<div id="labelListEmptyState" class="empty-state">
+				{translate key="plugins.generic.codecheck.settings.githubLabels.emptyState"}
+			</div>
 			<div id="labelList"></div>
 		{/fbvFormSection}
 

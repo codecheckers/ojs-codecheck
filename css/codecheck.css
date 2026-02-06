@@ -189,16 +189,54 @@ h1#codecheckSettingsTitle {
 
 #codecheckSettings #codecheckSettingsArea .section {
 	padding: 20px;
-  border: 3px solid #BBBBBB;
+  border: 2px solid #BBBBBB;
   margin-bottom: 1.5rem !important;
+}
+
+#codecheckSettings #codecheckSettingsArea .section .field-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#codecheckSettings #codecheckSettingsArea .section .empty-state {
+  padding: 2rem;
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+  background: #f8f9fa;
+  border: 2px dashed #dee2e6;
+  border-radius: 4px;
+}
+
+#codecheckSettings #codecheckSettingsArea .section .pkpFormField__input {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  font-size: 14px;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .settingsLabelRow {
   display: flex;
-  flex-direction: row;
-  margin-bottom: 0.5rem;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.settingsLabelRow input[type="text"] {
+  flex: 1;
 }
 
 .settingsLabelRow .remove {
-  padding-left: 1rem;
+  padding: 0;
+  font-size: 1.2rem;
+  line-height: 1;
+  color: #d00;
+  text-decoration: none;
+}
+
+.settingsLabelRow .remove:hover {
+  color: #a00;
 }

@@ -62,6 +62,9 @@ msgstr "Add custom Labels that can be displayed in the GitHub CODECHECK Register
 msgid "plugins.generic.codecheck.settings.githubLabels.button.add"
 msgstr "+ Label"
 
+msgid "plugins.generic.codecheck.settings.githubLabels.emptyState"
+msgstr "No custom journal labels added yet"
+
 msgid "plugins.generic.codecheck.title"
 msgstr "CODECHECK"
 
