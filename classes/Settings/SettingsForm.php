@@ -63,6 +63,22 @@ class SettingsForm extends Form
         );
 
         $this->setData(
+            Constants::CODECHECK_AUTHOR_ANONYMITY,
+            $this->plugin->getSetting(
+                $context->getId(),
+                Constants::CODECHECK_AUTHOR_ANONYMITY
+            )
+        );
+
+        $this->setData(
+            Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN,
+            $this->plugin->getSetting(
+                $context->getId(),
+                Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN
+            )
+        );
+
+        $this->setData(
             Constants::CODECHECK_API_ENDPOINT,
             $this->plugin->getSetting(
                 $context->getId(),
@@ -78,6 +94,14 @@ class SettingsForm extends Form
             )
         );
 
+        $this->setData(
+            Constants::GITHUB_REGISTER_REPOSITORY,
+            $this->plugin->getSetting(
+                $context->getId(),
+                Constants::GITHUB_REGISTER_REPOSITORY
+            )
+        );
+
         parent::initData();
     }
 
@@ -88,8 +112,11 @@ class SettingsForm extends Form
     {
         $this->readUserVars([
             Constants::CODECHECK_ENABLED,
+            Constants::CODECHECK_AUTHOR_ANONYMITY,
+            Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN,
             Constants::CODECHECK_API_ENDPOINT,
-            Constants::CODECHECK_API_KEY
+            Constants::CODECHECK_API_KEY,
+            Constants::GITHUB_REGISTER_REPOSITORY
         ]);
 
         parent::readInputData();
@@ -129,6 +156,18 @@ class SettingsForm extends Form
 
         $this->plugin->updateSetting(
             $context->getId(),
+            Constants::CODECHECK_AUTHOR_ANONYMITY,
+            $this->getData(Constants::CODECHECK_AUTHOR_ANONYMITY)
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_AUTHOR_ANONYMITY,
+            $this->getData(Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN)
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
             Constants::CODECHECK_API_ENDPOINT,
             $this->getData(Constants::CODECHECK_API_ENDPOINT)
         );
@@ -137,6 +176,12 @@ class SettingsForm extends Form
             $context->getId(),
             Constants::CODECHECK_API_KEY,
             $this->getData(Constants::CODECHECK_API_KEY)
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::GITHUB_REGISTER_REPOSITORY,
+            $this->getData(Constants::GITHUB_REGISTER_REPOSITORY)
         );
 
         $notificationMgr = new NotificationManager();

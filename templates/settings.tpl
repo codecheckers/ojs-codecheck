@@ -60,15 +60,19 @@
 >
 	<!-- Always add the csrf token to secure your form -->
 	{csrf}
-	
-	<h1 id="codecheckSettingsTitle">{translate key="plugins.generic.codecheck.settings.title"}</h1>
 
 	{fbvFormArea id="codecheckSettingsArea"}
+		{* CODECHECK Settings Heading *}
+		<h3 class="section-title">{translate key="plugins.generic.codecheck.settings.title"}</h3>
+		<p class="section-description">{translate key="plugins.generic.codecheck.settings.description"}</p>
+		
 		{* Option to enable/ disable CODECHECK *}
 		{fbvFormSection
 			list=true
-			title="plugins.generic.codecheck.settings.enableCodecheck"
 		}
+			<div class="field-header">
+				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.enableCodecheck"}</label>
+			</div>
 			{fbvElement
 				type="checkbox"
 				id="codecheckEnabled"
@@ -81,40 +85,60 @@
 
 		{fbvFormSection
 			list=true
-			title="plugins.generic.codecheck.settings.authorAnonymity"
 		}
+			<div class="field-header">
+				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.authorAnonymity"}</label>
+			</div>
 			{fbvElement
 				type="checkbox"
 				id="authorAnonymity"
-				checked=$authorNotAnonym
+				checked=$authorAnonymity
 				label="plugins.generic.codecheck.settings.authorAnonymity.description"
+			}
+		{/fbvFormSection}
+
+		{* GitHub Personal Access Token option *}
+		{fbvFormSection
+			list=true
+		}
+			<div class="field-header">
+				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.github.personalAccessToken"}</label>
+			</div>
+			<label class="description">{translate key="plugins.generic.codecheck.settings.github.personalAccessToken.description"}</label>
+			{fbvElement
+				type="text"
+				id="githubRegisterRepository"
+				class="pkpFormField__input"
+				value=$githubPersonalAccessToken
 			}
 		{/fbvFormSection}
 
 		{* Repository connection settings option *}
 		{fbvFormSection
 			list=true
-			title="plugins.generic.codecheck.settings.githubRegisterRepository"
 		}
+			<div class="field-header">
+				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.github.registerRepository"}</label>
+			</div>
+			<label class="description">{translate key="plugins.generic.codecheck.settings.github.registerRepository.description"}</label>
 			{fbvElement
 				type="text"
 				id="githubRegisterRepository"
 				class="pkpFormField__input"
-				value=$githubRegisterRepository
-				placeholder="plugins.generic.codecheck.settings.githubRegisterRepository.description"
+				value=$githubRegisterRepository|default:"https://github.com/codecheckers/testing-dev-register/"
 			}
 		{/fbvFormSection}
 
 		{fbvFormSection}
 			<div class="field-header">
-				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.githubLabels"}</label>
+				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.github.labels"}</label>
 				<button type="button" id="addLabel" class="pkpButton btn-add">
-					{translate key="plugins.generic.codecheck.settings.githubLabels.button.add"}
+					{translate key="plugins.generic.codecheck.settings.github.labels.button.add"}
 				</button>
 			</div>
-			<label class="description">{translate key="plugins.generic.codecheck.settings.githubLabels.description"}</label>
+			<label class="description">{translate key="plugins.generic.codecheck.settings.github.labels.description"}</label>
 			<div id="labelListEmptyState" class="empty-state">
-				{translate key="plugins.generic.codecheck.settings.githubLabels.emptyState"}
+				{translate key="plugins.generic.codecheck.settings.github.labels.emptyState"}
 			</div>
 			<div id="labelList"></div>
 		{/fbvFormSection}

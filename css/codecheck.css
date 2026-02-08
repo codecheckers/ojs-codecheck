@@ -180,16 +180,36 @@ textarea[name="dataAvailabilityStatement"] {
     height: 18px;
 }
 
-h1#codecheckSettingsTitle {
-  margin-bottom: 2rem;
-  font-size: 1.5rem;
-  color: #01354F;
-  font-weight: bold;
+#codecheckSettings {
+  border: 2px solid #ccc;
+  margin: 0;
+  padding: 2rem 1.5rem;
+}
+
+#codecheckSettings .section-title {
+  margin: 0 0 .5rem;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+#codecheckSettings .section-description {
+  margin: 0 0 1.5rem;
+  font-size: 14px;
+  color: #666;
+  font-style: italic;
 }
 
 #codecheckSettings #codecheckSettingsArea .section {
 	padding: 20px;
-  border: 2px solid #BBBBBB;
+  border: 2px solid #ccc;
+  margin-bottom: 1.5rem !important;
+}
+
+#codecheckSettings #codecheckSettingsArea .section#settingsHeader {
+	padding: 20px;
+  border: 2px solid #ccc;
+  background: #f8f9fa !important;
   margin-bottom: 1.5rem !important;
 }
 
@@ -197,6 +217,10 @@ h1#codecheckSettingsTitle {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+#codecheckSettings #codecheckSettingsArea .section .field-header .pkp_form_label {
+  margin-bottom: 0.5rem;
 }
 
 #codecheckSettings #codecheckSettingsArea .section .empty-state {
@@ -216,6 +240,20 @@ h1#codecheckSettingsTitle {
   font-size: 14px;
   box-sizing: border-box;
   width: 100%;
+  height: 2.5rem !important;
+}
+
+#codecheckSettings #codecheckSettingsArea .section .pkpFormField__input:focus {
+  outline: none;
+  border-color: #007ab2;
+  box-shadow: 0 0 0 2px rgba(0, 122, 178, 0.2);
+}
+
+#codecheckSettings #codecheckSettingsArea .section .pkpFormField__input--textarea {
+  min-height: 100px;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.6;
 }
 
 .settingsLabelRow {

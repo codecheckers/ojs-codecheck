@@ -47,22 +47,28 @@ msgstr "Author anonymity"
 msgid "plugins.generic.codecheck.settings.authorAnonymity.description"
 msgstr "Include the author names in the GitHub register issue"
 
-msgid "plugins.generic.codecheck.settings.githubRegisterRepository"
+msgid "plugins.generic.codecheck.settings.github.personalAccessToken"
+msgstr "GitHub Personal Access Token"
+
+msgid "plugins.generic.codecheck.settings.github.personalAccessToken.description"
+msgstr "Provide your GitHub Personal Access Token, so the CODECHECK plugin can create new GitHub issues"
+
+msgid "plugins.generic.codecheck.settings.github.registerRepository"
 msgstr "GitHub Repository used as the CODECHECK register"
 
-msgid "plugins.generic.codecheck.settings.githubRegisterRepository.description"
+msgid "plugins.generic.codecheck.settings.github.registerRepository.description"
 msgstr "default: https://github.com/codecheckers/register"
 
-msgid "plugins.generic.codecheck.settings.githubLabels"
+msgid "plugins.generic.codecheck.settings.github.labels"
 msgstr "GitHub Register Labels"
 
-msgid "plugins.generic.codecheck.settings.githubLabels.description"
+msgid "plugins.generic.codecheck.settings.github.labels.description"
 msgstr "Add custom Labels that can be displayed in the GitHub CODECHECK Register"
 
-msgid "plugins.generic.codecheck.settings.githubLabels.button.add"
+msgid "plugins.generic.codecheck.settings.github.labels.button.add"
 msgstr "+ Label"
 
-msgid "plugins.generic.codecheck.settings.githubLabels.emptyState"
+msgid "plugins.generic.codecheck.settings.github.labels.emptyState"
 msgstr "No custom journal labels added yet"
 
 msgid "plugins.generic.codecheck.title"
