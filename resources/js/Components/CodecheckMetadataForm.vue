@@ -282,52 +282,63 @@
           </p>
           <div class="certificate-identifier-section">
             <div class="certificate-identifier-input-wrapper">
-                <input
-                    type="text"
-                    v-model="metadata.certificate"
-                    :placeholder="t('plugins.generic.codecheck.identifier.label')"
-                    class="certificate-identifier-input"
-                    readonly
-                />
-                <select
-                    v-model="certificateIdentifier.venueType"
-                    class="certificate-identifier-select certificate-identifier-venue-types"
-                    :disabled="isIdentifierReserved"
-                >
-                    <option disabled value="default" selected>{{ t('plugins.generic.codecheck.identifier.venue.type') }}</option>
-                    <option v-for="type in certificateIdentifier.venueTypes" :key="type" :value="type">
-                    {{ type }}
-                    </option>
-                </select>
-                <select
-                    v-model="certificateIdentifier.venueName"
-                    class="certificate-identifier-select certificate-identifier-venue-names"
-                    :disabled="isIdentifierReserved"
-                >
-                    <option disabled value="default" selected>{{ t('plugins.generic.codecheck.identifier.venue.name') }}</option>
-                    <option v-for="name in certificateIdentifier.venueNames" :key="name" :value="name">
-                    {{ name }}
-                    </option>
-                </select>
+              <input
+                  type="text"
+                  v-model="metadata.certificate"
+                  :placeholder="t('plugins.generic.codecheck.identifier.label')"
+                  class="certificate-identifier-input"
+                  readonly
+              />
+              <div class="certificate-identifier-select dropdown">
+                <button class="dropbtn">{{ t('plugins.generic.codecheck.identifier.customLabels') }}
+                    <i class="fa fa-caret-down"></i>
+                </button>
+                <div class="dropdown-content">
+                  <div class="dropdown-checkbox-input" v-for="label in certificateIdentifier.customLabels" :key="label">   
+                    <input type="checkbox" v-model="certificateIdentifier.customLabelSelected" :value="label"/>
+                    <label :for="label">{{ label }}</label>
+                  </div>
+                </div>
+              </div>
+              <select
+                  v-model="certificateIdentifier.venueType"
+                  class="certificate-identifier-select certificate-identifier-venue-types"
+                  :disabled="isIdentifierReserved"
+              >
+                  <option disabled value="default" selected>{{ t('plugins.generic.codecheck.identifier.venue.type') }}</option>
+                  <option v-for="type in certificateIdentifier.venueTypes" :key="type" :value="type">
+                  {{ type }}
+                  </option>
+              </select>
+              <select
+                  v-model="certificateIdentifier.venueName"
+                  class="certificate-identifier-select certificate-identifier-venue-names"
+                  :disabled="isIdentifierReserved"
+              >
+                  <option disabled value="default" selected>{{ t('plugins.generic.codecheck.identifier.venue.name') }}</option>
+                  <option v-for="name in certificateIdentifier.venueNames" :key="name" :value="name">
+                  {{ name }}
+                  </option>
+              </select>
             </div>
 
             <div class="identifier-actions" id="certificate-identifier-button-wrapper">
-                <button
-                    type="button"
-                    class="pkpButton codecheck-btn certificate-identifier-button"
-                    :class="isIdentifierReserved ? 'bg-gray' : ''"
-                    :disabled="isIdentifierReserved"
-                    @click="reserveIdentifier"
-                >
-                    {{ t('plugins.generic.codecheck.identifier.reserve') }}
-                </button>
-                <button
-                    type="button"
-                    class="pkpButton codecheck-btn pkpButton--isWarnable codecheck-btn-warning certificate-identifier-button"
-                    @click="showRemoveIdentifierModal"
-                >
-                    {{ t('plugins.generic.codecheck.identifier.remove') }}
-                </button>
+              <button
+                  type="button"
+                  class="pkpButton codecheck-btn certificate-identifier-button"
+                  :class="isIdentifierReserved ? 'bg-gray' : ''"
+                  :disabled="isIdentifierReserved"
+                  @click="reserveIdentifier"
+              >
+                  {{ t('plugins.generic.codecheck.identifier.reserve') }}
+              </button>
+              <button
+                  type="button"
+                  class="pkpButton codecheck-btn pkpButton--isWarnable codecheck-btn-warning certificate-identifier-button"
+                  @click="showRemoveIdentifierModal"
+              >
+                  {{ t('plugins.generic.codecheck.identifier.remove') }}
+              </button>
             </div>
           </div>
         </div>
@@ -404,6 +415,8 @@ export default {
         venueName: 'default',
         venueTypes: [],
         venueNames: [],
+        customLabelSelected: [],
+        customLabels: [],
         issueUrl: '',
       },
       metadata: {
@@ -948,11 +961,13 @@ export default {
               console.log('Success:', data.message);
               this.certificateIdentifier.venueTypes = data.venueTypes;
               this.certificateIdentifier.venueNames = data.venueNames;
+              this.certificateIdentifier.customLabels = data.customLabels;
               console.log('Venue types:', this.certificateIdentifier.venueTypes);
               console.log('Venue names:', this.certificateIdentifier.venueNames);
           } else {
               this.showMessage(`${this.t('plugins.generic.codecheck.identifier.venue.fetch.error.curl')}\n${data.error}`, 'error');
               console.error(`${this.t('plugins.generic.codecheck.identifier.venue.fetch.error.curl')}:`, data.error);
+              console.log('Custom journal Labels:', this.certificateIdentifier.customLabels);
           }
       } catch (error) {
           console.error(`${this.t('plugins.generic.codecheck.identifier.venue.fetch.error.codecheckAPI')}:`, error);
@@ -985,6 +1000,7 @@ export default {
               body: JSON.stringify({
                 venueType: this.certificateIdentifier.venueType,
                 venueName: this.certificateIdentifier.venueName,
+                customLabels: this.certificateIdentifier.customLabelSelected,
                 authorString: authorString,
               }),
           });
@@ -1701,17 +1717,8 @@ a {
     font-weight: 600;
 }
 
-.certificate-identifier-venue-types {
-    font-size:14px;
-    padding: 6px;
-    border: 1px solid #ccc;
-    border-radius: 3px;
-    height: 2.5rem;
-    background: #fff;
-}
-
-.certificate-identifier-venue-names {
-    font-size:14px;
+.certificate-identifier-select {
+    font-size: 14px;
     padding: 6px;
     border: 1px solid #ccc;
     border-radius: 3px;
@@ -1770,5 +1777,68 @@ a {
 
 .info-button {
   cursor: pointer;
+}
+
+/* The dropdown container */
+.dropdown {
+  float: right;
+  overflow: hidden;
+  color: inherit;
+  padding: 0 !important;
+}
+
+/* Dropdown button */
+.dropdown .dropbtn {
+  font-size: 14px;
+  padding-left: 6px;
+  padding-right: 6px;
+  padding-bottom: 0;
+  padding-top: 0;
+  height: 100%;
+  border: none;
+  outline: none;
+  background-color: inherit;
+  font-family: inherit; /* Important for vertical align on mobile phones */
+  margin: 0; /* Important for vertical align on mobile phones */
+}
+
+/* Add a red background color to navbar links on hover */
+.dropdown:hover .dropbtn {
+  background-color: #eee;
+}
+
+/* Dropdown content (hidden by default) */
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: #fff;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  min-width: 160px;
+  z-index: 1;
+  padding: 10px;
+}
+
+/* Links inside the dropdown */
+.dropdown-content .dropdown-checkbox-input {
+  float: none;
+  text-decoration: none;
+  display: block;
+  text-align: left;
+  outline: none;
+  border: none;
+  width: 100%;
+  padding: 0;
+}
+
+/* Show the dropdown menu on hover */
+.dropdown:hover .dropdown-content {
+  display: block;
+}
+
+.dropdown .dropdown-content label {
+  font-style: italic;
+  margin-left: 5px;
+  color: inherit;
 }
 </style>

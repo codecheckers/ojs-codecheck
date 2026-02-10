@@ -202,7 +202,7 @@ class SettingsForm extends Form
             Constants::GITHUB_CUSTOM_LABELS,
             array_values(array_filter(
                 (array) $this->getData(Constants::GITHUB_CUSTOM_LABELS),
-                fn ($label) => !empty($label['name'])
+                fn ($label) => !empty($label)
             ))
         );
 

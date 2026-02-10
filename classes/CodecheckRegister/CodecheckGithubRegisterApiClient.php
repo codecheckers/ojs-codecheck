@@ -144,6 +144,7 @@ class CodecheckGithubRegisterApiClient
         CertificateIdentifier $certificateIdentifier,
         string $codecheckVenueType,
         string $codecheckVenueName,
+        array $customLabels,
         string $authorString,
     ): string {
         $token = $_ENV['CODECHECK_REGISTER_GITHUB_TOKEN'];
@@ -158,6 +159,10 @@ class CodecheckGithubRegisterApiClient
 
         $labelStrings[] = $codecheckVenueType;
         $labelStrings[] = $codecheckVenueName;
+
+        $labelStrings = array_merge($labelStrings, $customLabels);
+
+        error_log(print_r($labelStrings, true));
 
         try {
             $issue = $this->client->api('issue')->create(

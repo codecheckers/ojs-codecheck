@@ -236,6 +236,9 @@ msgstr "Venue Type"
 msgid "plugins.generic.codecheck.identifier.venue.name"
 msgstr "Venue Name"
 
+msgid "plugins.generic.codecheck.identifier.customLabels"
+msgstr "Custom Labels"
+
 msgid "plugins.generic.codecheck.identifier.viewGithubIssue"
 msgstr "View GitHub Issue"
 

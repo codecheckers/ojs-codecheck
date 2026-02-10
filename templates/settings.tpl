@@ -34,7 +34,7 @@
 				<div class="settingsLabelRow">
 					<input
 						type="text"
-						name="githubCustomLabels[${label_index}][name]"
+						name="githubCustomLabels[${label_index}]"
 						class="pkpFormField__input"
 					/>
 					<button type="button" class="remove pkpButton pkpButton--close">×</button>
@@ -145,9 +145,9 @@
 					<div class="settingsLabelRow">
 						<input
 							type="text"
-							name="githubCustomLabels[{$index}][name]"
+							name="githubCustomLabels[{$index}]"
 							class="pkpFormField__input"
-							value="{$label.name|escape}"
+							value="{$label|escape}"
 						/>
 						<button type="button" class="remove pkpButton pkpButton--close">×</button>
 					</div>

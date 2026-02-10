@@ -25,6 +25,8 @@ use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitExce
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
 use Illuminate\Support\Facades\DB;
 
+use function Clue\StreamFilter\append;
+
 class CodecheckApiHandler
 {
     private JsonResponse $response;
@@ -208,11 +210,16 @@ class CodecheckApiHandler
             return;
         }
 
+        // get the github custom labels specified in the plugin settings form
+        $context = $this->request->getContext();
+        $githubCustomLabels = $this->plugin->getSetting($context->getId(), Constants::GITHUB_CUSTOM_LABELS);
+
         // Serve the getVenueData API route
         JsonResponse::staticResponse([
             'success' => true,
             'venueTypes' => $codecheckVenueTypes->get()->toArray(),
             'venueNames' => $codecheckVenueNames->get()->toArray(),
+            'customLabels' => $githubCustomLabels,
         ], 200);
     }
 
@@ -226,6 +233,7 @@ class CodecheckApiHandler
         $postParams = json_decode(file_get_contents('php://input'), true);
         $venueType = $postParams["venueType"];
         $venueName = $postParams["venueName"];
+        $customLabels = $postParams["customLabels"];
         $authorString = $postParams["authorString"];
 
         // get the github Register Repository specified in the plugin settings form
@@ -235,7 +243,7 @@ class CodecheckApiHandler
         error_log("[Codecheck Api Handler] GitHub Register Repository specified in the Settings form: " . $githubRegisterrepository);
 
         // check if they are of type string (If not return success false over the API)
-        if(is_string($venueType) && is_string($venueName) && is_string($authorString)) {
+        if(is_string($venueType) && is_string($venueName) && is_string($authorString) && is_array($customLabels)) {
             // CODECHECK GitHub Issue Register API parser
             $codecheckGithubRegisterApiClient = new CodecheckGithubRegisterApiClient(
                 $githubRegisterrepository, // Name of the GitHub Repository for the Register
@@ -277,6 +285,7 @@ class CodecheckApiHandler
                     $new_identifier,
                     $codecheckVenue->getVenueType(),
                     $codecheckVenue->getVenueName(),
+                    $customLabels,
                     $authorString,
                 );
             } catch (ApiCreateException $e) {
