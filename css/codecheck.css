@@ -221,6 +221,7 @@ textarea[name="dataAvailabilityStatement"] {
 
 #codecheckSettings #codecheckSettingsArea .section .field-header .pkp_form_label {
   margin-bottom: 0.5rem;
+  cursor: text !important;
 }
 
 #codecheckSettings #codecheckSettingsArea .section .empty-state {

@@ -34,7 +34,7 @@
 				<div class="settingsLabelRow">
 					<input
 						type="text"
-						name="labels[${label_index}][name]"
+						name="githubCustomLabels[${label_index}][name]"
 						class="pkpFormField__input"
 					/>
 					<button type="button" class="remove pkpButton pkpButton--close">×</button>
@@ -140,7 +140,19 @@
 			<div id="labelListEmptyState" class="empty-state">
 				{translate key="plugins.generic.codecheck.settings.github.labels.emptyState"}
 			</div>
-			<div id="labelList"></div>
+			<div id="labelList">
+				{foreach from=$githubCustomLabels item=label key=index}
+					<div class="settingsLabelRow">
+						<input
+							type="text"
+							name="githubCustomLabels[{$index}][name]"
+							class="pkpFormField__input"
+							value="{$label.name|escape}"
+						/>
+						<button type="button" class="remove pkpButton pkpButton--close">×</button>
+					</div>
+				{/foreach}
+			</div>
 		{/fbvFormSection}
 
 		{* TODO: Add more settings in future development *}

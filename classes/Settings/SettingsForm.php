@@ -102,6 +102,14 @@ class SettingsForm extends Form
             )
         );
 
+        $this->setData(
+            Constants::GITHUB_CUSTOM_LABELS,
+            $this->plugin->getSetting(
+                $context->getId(),
+                Constants::GITHUB_CUSTOM_LABELS
+            ) ?? []
+        );
+
         parent::initData();
     }
 
@@ -116,7 +124,8 @@ class SettingsForm extends Form
             Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN,
             Constants::CODECHECK_API_ENDPOINT,
             Constants::CODECHECK_API_KEY,
-            Constants::GITHUB_REGISTER_REPOSITORY
+            Constants::GITHUB_REGISTER_REPOSITORY,
+            Constants::GITHUB_CUSTOM_LABELS,
         ]);
 
         parent::readInputData();
@@ -133,6 +142,10 @@ class SettingsForm extends Form
     {
         $templateMgr = TemplateManager::getManager($request);
         $templateMgr->assign('pluginName', $this->plugin->getName());
+        $templateMgr->assign(
+            'githubCustomLabels',
+            $this->getData(Constants::GITHUB_CUSTOM_LABELS) ?? []
+        );
 
         return parent::fetch($request, $template, $display);
     }
@@ -162,7 +175,7 @@ class SettingsForm extends Form
 
         $this->plugin->updateSetting(
             $context->getId(),
-            Constants::CODECHECK_AUTHOR_ANONYMITY,
+            Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN,
             $this->getData(Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN)
         );
 
@@ -182,6 +195,15 @@ class SettingsForm extends Form
             $context->getId(),
             Constants::GITHUB_REGISTER_REPOSITORY,
             $this->getData(Constants::GITHUB_REGISTER_REPOSITORY)
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::GITHUB_CUSTOM_LABELS,
+            array_values(array_filter(
+                (array) $this->getData(Constants::GITHUB_CUSTOM_LABELS),
+                fn ($label) => !empty($label['name'])
+            ))
         );
 
         $notificationMgr = new NotificationManager();

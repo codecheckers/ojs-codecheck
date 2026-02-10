@@ -85,7 +85,7 @@ class CodecheckPlugin extends GenericPlugin
 
         if (str_contains($request->getRequestPath(), 'api/v1/codecheck')) {
             error_log("[CODECHECK Plugin] Instanciating the CODECHECK APIHandler");
-            $apiHandler = new CodecheckApiHandler($request);
+            $apiHandler = new CodecheckApiHandler($this, $request);
             error_log("[CODECHECK Plugin] API request: " . $request->getRequestPath() . "\n");
         }
 
