@@ -95,18 +95,26 @@ class SettingsForm extends Form
         );
 
         $this->setData(
-            Constants::GITHUB_REGISTER_REPOSITORY,
+            Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION,
             $this->plugin->getSetting(
                 $context->getId(),
-                Constants::GITHUB_REGISTER_REPOSITORY
+                Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION
             )
         );
 
         $this->setData(
-            Constants::GITHUB_CUSTOM_LABELS,
+            Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY,
             $this->plugin->getSetting(
                 $context->getId(),
-                Constants::GITHUB_CUSTOM_LABELS
+                Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY
+            )
+        );
+
+        $this->setData(
+            Constants::CODECHECK_GITHUB_CUSTOM_LABELS,
+            $this->plugin->getSetting(
+                $context->getId(),
+                Constants::CODECHECK_GITHUB_CUSTOM_LABELS
             ) ?? []
         );
 
@@ -124,8 +132,9 @@ class SettingsForm extends Form
             Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN,
             Constants::CODECHECK_API_ENDPOINT,
             Constants::CODECHECK_API_KEY,
-            Constants::GITHUB_REGISTER_REPOSITORY,
-            Constants::GITHUB_CUSTOM_LABELS,
+            Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION,
+            Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY,
+            Constants::CODECHECK_GITHUB_CUSTOM_LABELS,
         ]);
 
         parent::readInputData();
@@ -144,7 +153,7 @@ class SettingsForm extends Form
         $templateMgr->assign('pluginName', $this->plugin->getName());
         $templateMgr->assign(
             'githubCustomLabels',
-            $this->getData(Constants::GITHUB_CUSTOM_LABELS) ?? []
+            $this->getData(Constants::CODECHECK_GITHUB_CUSTOM_LABELS) ?? []
         );
 
         return parent::fetch($request, $template, $display);
@@ -193,15 +202,21 @@ class SettingsForm extends Form
 
         $this->plugin->updateSetting(
             $context->getId(),
-            Constants::GITHUB_REGISTER_REPOSITORY,
-            $this->getData(Constants::GITHUB_REGISTER_REPOSITORY)
+            Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION,
+            $this->getData(Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION)
         );
 
         $this->plugin->updateSetting(
             $context->getId(),
-            Constants::GITHUB_CUSTOM_LABELS,
+            Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY,
+            $this->getData(Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY)
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_GITHUB_CUSTOM_LABELS,
             array_values(array_filter(
-                (array) $this->getData(Constants::GITHUB_CUSTOM_LABELS),
+                (array) $this->getData(Constants::CODECHECK_GITHUB_CUSTOM_LABELS),
                 fn ($label) => !empty($label)
             ))
         );

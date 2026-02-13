@@ -212,7 +212,7 @@ class CodecheckApiHandler
 
         // get the github custom labels specified in the plugin settings form
         $context = $this->request->getContext();
-        $githubCustomLabels = $this->plugin->getSetting($context->getId(), Constants::GITHUB_CUSTOM_LABELS);
+        $githubCustomLabels = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_CUSTOM_LABELS);
 
         // Serve the getVenueData API route
         JsonResponse::staticResponse([
@@ -238,15 +238,19 @@ class CodecheckApiHandler
 
         // get the github Register Repository specified in the plugin settings form
         $context = $this->request->getContext();
-        $githubRegisterrepository = $this->plugin->getSetting($context->getId(), Constants::GITHUB_REGISTER_REPOSITORY);
+        $githubPersonalAccessToken = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN);
+        $githubRegisterOrganization = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION);
+        $githubRegisterRepository = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY);
 
-        error_log("[Codecheck Api Handler] GitHub Register Repository specified in the Settings form: " . $githubRegisterrepository);
+        error_log("[Codecheck Api Handler] GitHub Register Repository specified in the Settings form: " . $githubRegisterRepository);
 
         // check if they are of type string (If not return success false over the API)
         if(is_string($venueType) && is_string($venueName) && is_string($authorString) && is_array($customLabels)) {
             // CODECHECK GitHub Issue Register API parser
             $codecheckGithubRegisterApiClient = new CodecheckGithubRegisterApiClient(
-                $githubRegisterrepository, // Name of the GitHub Repository for the Register
+                $githubPersonalAccessToken, // The GitHub PAT (classic) needed to access the Register Repository
+                $githubRegisterOrganization, // The organization owning the GitHub Register Repository
+                $githubRegisterRepository, // Name of the GitHub Repository for the Register
                 $this->codecheckMetadataHandler->getSubmissionId(), // Submission ID
                 $context, // The Journal Object of the Submission
             );

@@ -257,6 +257,30 @@ textarea[name="dataAvailabilityStatement"] {
   line-height: 1.6;
 }
 
+#codecheckSettings #codecheckSettingsArea .section .pkp_form_input_with_button_row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+
+#codecheckSettings #codecheckSettingsArea .section .pkp_form_input_with_button_row #githubRegisterInputSection {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  justify-content: center;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+#codecheckSettings #codecheckSettingsArea .section .pkp_form_input_with_button_row button {
+  flex: 0 0 auto;
+}
+
+#codecheckSettings #codecheckSettingsArea .section .pkp_form_input_with_button_row #githubRegisterInputSection div {
+  white-space: nowrap;
+}
+
 .settingsLabelRow {
   display: flex;
   align-items: center;

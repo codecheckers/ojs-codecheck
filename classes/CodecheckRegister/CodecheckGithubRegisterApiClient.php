@@ -23,6 +23,8 @@ class CodecheckGithubRegisterApiClient
     private $issues = [];
     private UniqueArray $labels;
     private $client;
+    private string $githubPAT;
+    private string $githubRegisterOrganization;
     private string $githubRegisterRepository;
     private string $submissionID;
     private string $journalName;
@@ -30,14 +32,18 @@ class CodecheckGithubRegisterApiClient
     /**
      * Initializes a new CODECHECK GitHub Register Api Parser (initialize the GitHub Client and a new unique Array)
      * 
+     * @param string $githubPersonalAccessToken The required GitHub `(PAT)` (classic), to access the GitHub Register Repository
+     * @param string $githubRegisterOrganization The Organization owning the GitHub Register Repository
      * @param string $githubRegisterRepository The Repository of the GitHub Register
      * @param string $submissionID The ID of the Submission realted to the GitHub Register Issue
      * @param mixed $journal The name of the Journal the Submission is published in
      */
-    function __construct(string $githubRegisterRepository, string $submissionID, mixed $journal, ?Client $client = null)
+    function __construct(string $githubPersonalAccessToken, string $githubRegisterOrganization, string $githubRegisterRepository, string $submissionID, mixed $journal, ?Client $client = null)
     {
         $this->client = $client ?? new Client();
         $this->labels = new UniqueArray();
+        $this->githubPAT = $githubPersonalAccessToken;
+        $this->githubRegisterOrganization = $githubRegisterOrganization;
         $this->githubRegisterRepository = $githubRegisterRepository;
         $this->submissionID = $submissionID;
         $this->journalName = $journal?->getLocalizedName() ?? 'Unknown Journal';
@@ -87,7 +93,7 @@ class CodecheckGithubRegisterApiClient
 
         do {
             try {
-                $allissues = $this->client->api('issue')->all('codecheckers', $this->githubRegisterRepository, [
+                $allissues = $this->client->api('issue')->all($this->githubRegisterOrganization, $this->githubRegisterRepository, [
                     'state'     => 'all',          // 'open', 'closed', or 'all'
                     'labels'    => 'id assigned',  // select only issues where there is an id assigned
                     'sort'      => 'updated',
@@ -121,7 +127,7 @@ class CodecheckGithubRegisterApiClient
     public function fetchLabels(): void
     {
         try {
-            $fetchedLabels = $this->client->api('issue')->labels()->all('codecheckers', $this->githubRegisterRepository);
+            $fetchedLabels = $this->client->api('issue')->labels()->all($this->githubRegisterOrganization, $this->githubRegisterRepository);
         } catch (\Throwable $e) {
             throw new ApiFetchException("Failed fetching the GitHub Issue Labels for the Venue Names\n" . $e->getMessage());
         }
@@ -147,11 +153,8 @@ class CodecheckGithubRegisterApiClient
         array $customLabels,
         string $authorString,
     ): string {
-        $token = $_ENV['CODECHECK_REGISTER_GITHUB_TOKEN'];
+        $this->client->authenticate($this->githubPAT, null, Client::AUTH_ACCESS_TOKEN);
 
-        $this->client->authenticate($token, null, Client::AUTH_ACCESS_TOKEN);
-
-        $repositoryOwner = 'codecheckers';
         $authorString = empty($authorString) ? 'New CODECHECK' : $authorString;
         $issueTitle = $authorString . ' | ' . $certificateIdentifier->toStr();
         $issueBody = 'Journal: `' . $this->journalName . '`<br />' . 'Submission ID: `' . $this->submissionID . '`';
@@ -162,13 +165,11 @@ class CodecheckGithubRegisterApiClient
 
         $labelStrings = array_merge($labelStrings, $customLabels);
 
-        error_log(print_r($labelStrings, true));
+        //error_log(print_r($labelStrings, true));
+        error_log($this->githubRegisterOrganization);
 
         try {
-            $issue = $this->client->api('issue')->create(
-                $repositoryOwner,
-                $this->githubRegisterRepository,
-                [
+            $issue = $this->client->api('issue')->create($this->githubRegisterOrganization, $this->githubRegisterRepository, [
                     'title' => $issueTitle,
                     'body'  => $issueBody,
                     'labels' => $labelStrings

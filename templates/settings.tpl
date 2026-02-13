@@ -49,6 +49,11 @@
 			updateEmptyState();
 		});
 	});
+
+	function resetGitHubRegisterRepository() {
+		$('input[name="githubRegisterOrganization"]').val("codecheckers");
+		$('input[name="githubRegisterRepository"]').val("testing-dev-register");
+	}
 </script>
 {/literal}
 
@@ -108,12 +113,12 @@
 				{translate key="plugins.generic.codecheck.settings.github.personalAccessToken.description"}
 				<a href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-personal-access-token-classic">https://docs.github.com/</a>
 			</label>
-			{fbvElement
-				type="text"
-				id="githubRegisterRepository"
+			<input 
+				type="password"
+				name="githubPersonalAccessToken"
 				class="pkpFormField__input"
-				value=$githubPersonalAccessToken
-			}
+				value="{$githubPersonalAccessToken|escape}"
+			/>
 		{/fbvFormSection}
 
 		{* Repository connection settings option *}
@@ -124,12 +129,31 @@
 				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.github.registerRepository"}</label>
 			</div>
 			<label class="description">{translate key="plugins.generic.codecheck.settings.github.registerRepository.description"}</label>
-			{fbvElement
-				type="text"
-				id="githubRegisterRepository"
-				class="pkpFormField__input"
-				value=$githubRegisterRepository|default:"https://github.com/codecheckers/testing-dev-register/"
-			}
+			<div class="pkp_form_input_with_button_row">
+				<div id="githubRegisterInputSection">
+					<div>https://github.com/</div>
+					<input
+						type="text"
+						name="githubRegisterOrganization"
+						class="pkpFormField__input"
+						value="{$githubRegisterOrganization|escape|default:'codecheckers'}"
+					/>
+					<div>/</div>
+					<input
+						type="text"
+						name="githubRegisterRepository"
+						class="pkpFormField__input"
+						value="{$githubRegisterRepository|escape|default:'testing-dev-register'}"
+					/>
+				</div>
+				<button
+                  type="button"
+                  class="pkpButton btn-remove"
+                  onclick="resetGitHubRegisterRepository()"
+              	>
+                  {translate key="plugins.generic.settings.button.reset"}
+              	</button>
+			</div>
 		{/fbvFormSection}
 
 		{fbvFormSection}

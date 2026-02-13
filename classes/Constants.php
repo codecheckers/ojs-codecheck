@@ -31,6 +31,7 @@ class Constants
     public const CODECHECK_API_ENDPOINT = 'codecheckApiEndpoint';
     public const CODECHECK_API_KEY = 'codecheckApiKey';
     public const CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN = 'githubPersonalAccessToken';
-    public const GITHUB_REGISTER_REPOSITORY = 'githubRegisterRepository';
-    public const GITHUB_CUSTOM_LABELS = 'githubCustomLabels';
+    public const CODECHECK_GITHUB_REGISTER_ORGANIZATION = 'githubRegisterOrganization';
+    public const CODECHECK_GITHUB_REGISTER_REPOSITORY = 'githubRegisterRepository';
+    public const CODECHECK_GITHUB_CUSTOM_LABELS = 'githubCustomLabels';
 }

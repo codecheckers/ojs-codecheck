@@ -35,6 +35,9 @@ msgstr "CODECHECK Settings"
 msgid "plugins.generic.codecheck.settings.description"
 msgstr "Configure the CODECHECK integration settings for this journal"
 
+msgid "plugins.generic.settings.button.reset"
+msgstr "Reset"
+
 msgid "plugins.generic.codecheck.settings.enableCodecheck"
 msgstr "Enable CODECHECK for this journal"
 
