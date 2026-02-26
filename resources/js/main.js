@@ -500,13 +500,13 @@ function mountCodecheckVueComponents() {
     textarea.style.display = 'none';
     
     createApp(CodecheckDataAndSoftwareAvailability, {
-      name: 'dataSoftwareAvailability',
+      name: 'dataAvailabilityStatement',
       label: t('plugins.generic.codecheck.dataSoftwareAvailability'),
       description: t('plugins.generic.codecheck.dataSoftwareAvailability.description'),
       value: textarea.value,
     }).mount(vueDiv);
     
-    vueDiv.addEventListener('input', (e) => {
+    vueDiv.addEventListener('update', (e) => {
       textarea.value = e.detail;
       textarea.dispatchEvent(new Event('input', { bubbles: true }));
     });
