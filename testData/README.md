@@ -7,14 +7,24 @@
 - Copy the directory [stable-3_5_0-codecheck](stable-3_5_0-codecheck) into `/datasets/ojs`
 - `cd /ojs` in your OJS installation directory
     - `mkdir files`
-    - `export DBTYPE=MySQL DBTYPE_SYMBOLIC=mysql DBUSERNAME=ojs_dump DBPASSWORD=ojs_dump DBNAME=ojs_dump DBHOST=localhost APP=ojs BRANCH=stable-3_5_0-codecheck`
+    - Set environment variables (adjust credentials to match your MySQL setup):
+    ```bash
+    export DBTYPE=MySQL
+    export DBTYPE_SYMBOLIC=mysql
+    export DBUSERNAME=root
+    export DBPASSWORD=root
+    export DBNAME=ojs_dump
+    export DBHOST=localhost
+    export APP=ojs
+    export BRANCH=stable-3_5_0-codecheck
+    ```
     - `/path/to/datasets/tools/load.sh`
 - Update `config.inc.php` database settings:
     ```
     driver = mysqli
     host = localhost
-    username = ojs_dump
-    password = ojs_dump
+    username = root
+    password = root
     name = ojs_dump
     ```
 - `php -S localhost:8000` (Username: `admin`, Password: `admin`)
@@ -30,11 +40,11 @@
 | Username | Password | Role |
 |---|---|---|
 | admin | admin | Administrator |
-| jmanager | jmanagerjmanager | Journal Manager, Editor |
-| seglen | seglensglen | Author |
-| dnuest | dnuestdnuest | Author |
-| fostermann | fostermannfostermann | Author |
-| rreviewer | rreviewerrreviewer | Reviewer |
+| jmanager | jmanager | Journal Manager, Editor |
+| seglen | seglen | Author |
+| dnuest | dnuest | Author |
+| fostermann | fostermann | Author |
+| rreviewer | rreviewer | Reviewer |
 
 **Articles:** 8 submissions from the [CODECHECK register](https://codecheck.org.uk/register/)
 - 5 published (3 in Issue 1, 2 in Issue 2)
