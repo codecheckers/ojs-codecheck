@@ -13,10 +13,10 @@ fi
 
 # Parameter prüfen
 case "$1" in
-    --coverage=true)
+    --coverage-report=true)
         exec $COVERAGE_CMD
         ;;
-    --coverage=false)
+    --coverage-report=false)
         exec $DEFAULT_CMD
         ;;
     *)

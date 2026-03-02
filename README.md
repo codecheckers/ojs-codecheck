@@ -312,17 +312,17 @@ From the plugins directory:
     cd plugins/generic/codecheck/tests/
     ```
 2. Run the tests:
-    - **without** test coverage:
+    - **without** a test coverage report:
         ```bash
         sh runTests.sh
         ```
         or
         ```bash
-        sh runTests.sh --coverage=false
+        sh runTests.sh --coverage-report=false
         ```
-    - **with** test coverage:
+    - **with** a test coverage report:
         ```bash
-        sh runTests.sh --coverage=true
+        sh runTests.sh --coverage-report=true
         ```
         **Note:** You will find the test coverage in the `tests/results/index.html` file.
 
