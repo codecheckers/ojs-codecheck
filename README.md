@@ -302,12 +302,26 @@ The plugin includes comprehensive test coverage for both backend PHP code and fr
 
 **Option 1: Local Testing**
 
-From the plugin directory:
+From the plugins `tests/` directory:
 
+1. Navigate to the `tests/` directory:
 ```bash
-cd plugins/generic/codecheck
-php ../../../lib/pkp/lib/vendor/phpunit/phpunit/phpunit --configuration phpunit.xml tests/
+cd plugins/generic/codecheck/tests/
 ```
+2. Run the tests:
+    - **without** test coverage:
+        ```bash
+        sh runTests.sh
+        ```
+        or
+        ```bash
+        sh runTests.sh --coverage=false
+        ```
+    - **with** test coverage:
+        ```bash
+        sh runTests.sh --coverage=true
+        ```
+        **Note:** You will find the test coverage in the `tests/results/index.html` file.
 
 **Option 2: Docker/CI Environment**
 

@@ -3,7 +3,7 @@
 
 # CakePHP 3
 
-/vendor/*
+/vendor/
 /config/app.php
 
 /tmp/cache/models/*
@@ -19,8 +19,6 @@
 
 /logs/*
 !/logs/empty
-
-.phpunit.result.cache
 
 # CakePHP 2
 
@@ -38,3 +36,7 @@ node_modules/
 
 # npm release build
 public/
+
+# test results
+tests/.phpunit.result.cache
+tests/results/

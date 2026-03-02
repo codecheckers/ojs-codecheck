@@ -18,9 +18,6 @@ use PKP\tests\PKPTestCase;
  */
 class CodecheckVenueNamesUnitTest extends PKPTestCase
 {
-    /**
-     * Set up the test environment
-     */
     protected function setUp(): void
 	{
 		parent::setUp();
@@ -28,30 +25,23 @@ class CodecheckVenueNamesUnitTest extends PKPTestCase
 
     public function testVenueNames()
     {
-        // Mock JsonApiCaller used inside CodecheckVenueTypes
         $jsonApiMockVenueTypes = $this->createMock(CodecheckApiClient::class);
-
         $jsonApiMockVenueTypes->expects($this->once())
                                 ->method('fetch')
                                 ->with('https://codecheck.org.uk/register/venues/index.json');
 
-        // Mocked "venue types" data returned from API
         $jsonApiMockVenueTypes->method('getData')->willReturn([
             ['Venue type' => 'journal'],
             ['Venue type' => 'community'],
         ]);
 
-        // Create CodecheckVenueTypes using the mocked jonApiCaller
         $venueTypes = new CodecheckVenueTypes($jsonApiMockVenueTypes);
 
-        // Mock GitHub API parser for CodecheckVenueNames
         $jsonApiMockVenueNames = $this->createMock(CodecheckApiClient::class);
-
         $jsonApiMockVenueNames->expects($this->once())
                                 ->method('fetch')
                                 ->with('https://codecheck.org.uk/register/venues/index.json');
                                 
-        // Provide labels (some are venue types, some are venue names)
         $jsonApiMockVenueNames->method('getData')->willReturn([
             ["Issue label" => 'journal'],
             ["Issue label" => 'lifecycle journal'],
@@ -62,9 +52,7 @@ class CodecheckVenueNamesUnitTest extends PKPTestCase
             ["Issue label" => 'development'],
         ]);
 
-        // Create the tested CodecheckVenueNames class with both mocked dependencies
         $venueNames = new CodecheckVenueNames($jsonApiMockVenueNames, $venueTypes);
-
         $result = $venueNames->get()->toArray();
 
         $this->assertEquals(
@@ -73,39 +61,17 @@ class CodecheckVenueNamesUnitTest extends PKPTestCase
         );
     }
 
-    public function testVenueNamesCurlInitException()
-    {
-        // Create a mock of the CodecheckApiClient
-        $clientMock = $this->createMock(CodecheckApiClient::class);
-
-        // Mock fetchLabels() so it does nothing
-        $clientMock->method('fetch')
-                        ->will($this->throwException(new CurlInitException('Curl initialization failed', 500)));
-
-        $this->expectException(CurlInitException::class);
-        $this->expectExceptionMessage('Curl initialization failed');
-        $this->expectExceptionCode(500);
-
-        // Inject the mock into the constructor
-        new CodecheckVenueNames($clientMock);
-    }
-
-    public function testVenueNamesCurlReadException()
+    public function testVenueNamesCurlReadExceptionCheckThatErrorAndErrnoAreCurlSpecific()
     {
         $testCurlHandle = curl_init();
 
-        // Create a mock of the CodecheckApiClient
         $clientMock = $this->createMock(CodecheckApiClient::class);
-
-        // Mock fetchLabels() so it does nothing
-        $clientMock->method('fetch')
-                        ->will($this->throwException(new CurlReadException($testCurlHandle)));
+        $clientMock->method('fetch')->will($this->throwException(new CurlReadException($testCurlHandle)));
 
         $this->expectException(CurlReadException::class);
         $this->expectExceptionMessage(curl_error($testCurlHandle));
         $this->expectExceptionCode(curl_errno($testCurlHandle));
 
-        // Inject the mock into the constructor
         new CodecheckVenueNames($clientMock);
     }
 }

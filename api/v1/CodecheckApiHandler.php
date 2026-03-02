@@ -292,8 +292,12 @@ class CodecheckApiHandler
         $submissionId = $this->codecheckMetadataHandler->getSubmissionId();
         $result = $this->codecheckMetadataHandler->getMetadata($this->request, $submissionId);
 
-        $statusCode = isset($result['error']) ? 404 : 200;
-        $this->response->response($result, $statusCode);
+        if(isset($result['error'])) {
+            $result = array_merge($result, ['submissionID' => $submissionId]);
+            $this->response->response($result, 404);
+        }
+
+        $this->response->response($result, 200);
     }
 
     /**
@@ -306,8 +310,12 @@ class CodecheckApiHandler
         $submissionId = $this->codecheckMetadataHandler->getSubmissionId();
         $result = $this->codecheckMetadataHandler->saveMetadata($this->request, $submissionId);
 
-        $statusCode = isset($result['error']) ? 404 : 200;
-        $this->response->response($result, $statusCode);
+        if(isset($result['error'])) {
+            $result = array_merge($result, ['submissionID' => $submissionId]);
+            $this->response->response($result, 404);
+        }
+
+        $this->response->response($result, 200);
     }
 
     /**
@@ -328,7 +336,7 @@ class CodecheckApiHandler
             $this->response->response([
                 'success' => false,
                 'error' => 'Submission not found',
-                'subimssionID' => $submissionId,
+                'submissionID' => $submissionId,
             ], 400);
             return;
         }
@@ -455,7 +463,11 @@ class CodecheckApiHandler
         $submissionId = $this->codecheckMetadataHandler->getSubmissionId();
         $result = $this->codecheckMetadataHandler->generateYaml($this->request, $submissionId);
 
-        $statusCode = isset($result['error']) ? 404 : 200;
-        $this->response->response($result, $statusCode);
+        if(isset($result['error'])) {
+            $result = array_merge($result, ['submissionID' => $submissionId]);
+            $this->response->response($result, 404);
+        }
+
+        $this->response->response($result, 200);
     }
 }

@@ -16,9 +16,6 @@ use PKP\tests\PKPTestCase;
  */
 class CertificateIdentifierUnitTest extends PKPTestCase
 {
-    /**
-     * Set up the test environment
-     */
     protected function setUp(): void
 	{
 		parent::setUp();
@@ -29,14 +26,14 @@ class CertificateIdentifierUnitTest extends PKPTestCase
         $year = 2025;
         $number = 1;
         $identifier = new CertificateIdentifier($year, $number);
-        $this->assertSame($identifier->toStr(), "2025-001");
+        $this->assertSame("2025-001", $identifier->toStr());
     }
 
     public function testIdentifierFromStr()
     {
         $identifier_str = '2025-001';
         $identifier = CertificateIdentifier::fromStr($identifier_str);
-        $this->assertSame($identifier->toStr(), "2025-001");
+        $this->assertSame("2025-001", $identifier->toStr());
     }
 
     public function testIdentifierSetYear()
@@ -45,7 +42,7 @@ class CertificateIdentifierUnitTest extends PKPTestCase
         $number = 1;
         $identifier = new CertificateIdentifier($year, $number);
         $identifier->setYear(2024);
-        $this->assertSame($identifier->toStr(), "2024-001");
+        $this->assertSame("2024-001", $identifier->toStr());
     }
 
     public function testIdentifierSetRunningNumber()
@@ -54,15 +51,13 @@ class CertificateIdentifierUnitTest extends PKPTestCase
         $number = 1;
         $identifier = new CertificateIdentifier($year, $number);
         $identifier->setNumber(2624);
-        $this->assertSame($identifier->toStr(), "2025-2624");
+        $this->assertSame("2025-2624", $identifier->toStr());
     }
 
     public function testIdentifierNewUniqueIdentifierFromIdentifierList()
     {
         $year = (int) date('Y');
-        // Create a mock of the API parser
         $apiParser = $this->createMock(CodecheckGithubRegisterApiClient::class);
-
         $apiParser->expects($this->once())
                     ->method('fetchIssues');
         $apiParser->method('getIssues')
@@ -71,7 +66,6 @@ class CertificateIdentifierUnitTest extends PKPTestCase
               ]);
 
         $identifierList = CertificateIdentifierList::fromApi($apiParser);
-
         $newUniqueIdentifier = CertificateIdentifier::newUniqueIdentifier($identifierList);
 
         $this->assertSame("$year-004", $newUniqueIdentifier->toStr());
@@ -79,20 +73,16 @@ class CertificateIdentifierUnitTest extends PKPTestCase
 
     public function testIdentifierNewUniqueIdentifierFromIdentifierListBrandNewYear()
     {
-        // Create a mock of the API parser
         $apiParser = $this->createMock(CodecheckGithubRegisterApiClient::class);
-
         $apiParser->method('getIssues')
               ->willReturn([
                     ['title' => 'Example Authors et al. | 2024-001/2024-003'],
               ]);
 
         $identifierList = CertificateIdentifierList::fromApi($apiParser);
-
         $newUniqueIdentifier = CertificateIdentifier::newUniqueIdentifier($identifierList);
+        $currentYear = (int) date("Y");
 
-        $expectedIdentifier = (string) date("Y") . '-001';
-
-        $this->assertSame($newUniqueIdentifier->toStr(), $expectedIdentifier);
+        $this->assertSame("$currentYear-001", $newUniqueIdentifier->toStr());
     }
 }

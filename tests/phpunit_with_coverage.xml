@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit 
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/11.5/phpunit.xsd"
+    bootstrap="bootstrap.php"
+    colors="true"
+    testdox="true"
+    convertDeprecationsToExceptions="true"
+    convertErrorsToExceptions="true"
+    convertNoticesToExceptions="true"
+    convertWarningsToExceptions="true"
+    stopOnFailure="false"
+>
+    <testsuites>
+        <testsuite name="Codecheck Plugin Test Suite">
+            <directory>.</directory>
+        </testsuite>
+    </testsuites>
+    <coverage>
+        <report>
+            <html outputDirectory="tests/results/"/>
+        </report>
+    </coverage>
+    <source>
+        <include>
+            <directory suffix=".php">.</directory>
+        </include>
+    </source>
+</phpunit>

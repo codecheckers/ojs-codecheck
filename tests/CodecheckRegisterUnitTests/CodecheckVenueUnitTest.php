@@ -14,9 +14,6 @@ use PKP\tests\PKPTestCase;
  */
 class CodecheckVenueUnitTest extends PKPTestCase
 {
-    /**
-     * Set up the test environment
-     */
     protected function setUp(): void
 	{
 		parent::setUp();
@@ -28,8 +25,8 @@ class CodecheckVenueUnitTest extends PKPTestCase
         $venueName = 'check-nl';
         $venue = new CodecheckVenue('testVenueType', $oldVenueName);
         $venue->setVenueName($venueName);
-        $this->assertSame($venue->getVenueName(), $venueName);
-        $this->assertNotEquals($venue->getVenueName(), $oldVenueName);
+        $this->assertSame($venueName, $venue->getVenueName());
+        $this->assertNotEquals($oldVenueName, $venue->getVenueName());
     }
 
     public function testSetAndGetVenueType()
@@ -38,7 +35,7 @@ class CodecheckVenueUnitTest extends PKPTestCase
         $venueType = 'community';
         $venue = new CodecheckVenue($oldVenueType, 'testVenueName');
         $venue->setVenueType($venueType);
-        $this->assertSame($venue->getVenueType(), $venueType);
-        $this->assertNotEquals($venue->getVenueType(), $oldVenueType);
+        $this->assertSame($venueType, $venue->getVenueType());
+        $this->assertNotEquals($oldVenueType, $venue->getVenueType());
     }
 }

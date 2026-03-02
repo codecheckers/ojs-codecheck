@@ -30,14 +30,14 @@ class UniqueArrayUnitTest extends PKPTestCase
         $this->assertCount(2, $uniqueArray->toArray());
         $uniqueArray->remove(1);
         $this->assertCount(1, $uniqueArray->toArray());
-        $this->assertEquals($uniqueArray->toArray(), [1]);
+        $this->assertEquals([1], $uniqueArray->toArray());
     }
 
     public function testUniqueArrayFrom()
     {
-        $from_arr = ['some', 'array', 'content', 4];
-        $uniqueArray = UniqueArray::from($from_arr);
+        $array = ['some', 'array', 'content', 4];
+        $uniqueArray = UniqueArray::from($array);
         $this->assertCount(4, $uniqueArray->toArray());
-        $this->assertEquals($uniqueArray->toArray(), $from_arr);
+        $this->assertEquals($array, $uniqueArray->toArray());
     }
 }
