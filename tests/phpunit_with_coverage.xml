@@ -18,7 +18,7 @@
     </testsuites>
     <coverage>
         <report>
-            <html outputDirectory="tests/results/"/>
+            <html outputDirectory="results/"/>
         </report>
     </coverage>
     <source>
