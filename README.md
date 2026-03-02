@@ -300,14 +300,17 @@ The plugin includes comprehensive test coverage for both backend PHP code and fr
 
 ### PHP Unit Tests
 
-**Option 1: Local Testing**
+**Note:** Some tests require the full OJS environment (e.g.: database, facades, translations).
+They run successfully in [**Option 2: Docker/CI Environment**](#option-2-dockerci-environment) but are skipped in [**Option 1: Local Testing**](#option-1-local-testing).
 
-From the plugins `tests/` directory:
+#### Option 1: Local Testing
+
+From the plugins directory:
 
 1. Navigate to the `tests/` directory:
-```bash
-cd plugins/generic/codecheck/tests/
-```
+    ```bash
+    cd plugins/generic/codecheck/tests/
+    ```
 2. Run the tests:
     - **without** test coverage:
         ```bash
@@ -323,7 +326,7 @@ cd plugins/generic/codecheck/tests/
         ```
         **Note:** You will find the test coverage in the `tests/results/index.html` file.
 
-**Option 2: Docker/CI Environment**
+#### Option 2: Docker/CI Environment
 
 From the root of the OJS application directory:
 
@@ -336,9 +339,6 @@ If you want to visualize the test coverage, open the following file which is cre
 ```bash
 lib/pkp/tests/results/index.html
 ```
-
-**Note:** Some tests require full OJS environment and are skipped locally (database, facades, translations).
-They run successfully in Docker/CI.
 
 ### Frontend Component Tests
 
