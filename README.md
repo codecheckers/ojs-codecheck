@@ -334,7 +334,7 @@ From the root of the OJS application directory:
 lib/pkp/lib/vendor/phpunit/phpunit/phpunit -c lib/pkp/tests/phpunit.xml plugins/generic/codecheck/tests/
 ```
 
-If you want to visualize the test coverage, open the following file which is created during each test run:
+If you want to visualize the test coverage, open the test coverage report which is located in the following file:
 
 ```bash
 lib/pkp/tests/results/index.html
