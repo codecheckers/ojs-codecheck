@@ -312,14 +312,23 @@
             </div>
 
             <div class="identifier-actions" id="certificate-identifier-button-wrapper">
-                <button
+              <button
                     type="button"
                     class="pkpButton codecheck-btn certificate-identifier-button"
                     :class="isIdentifierReserved ? 'bg-gray' : ''"
                     :disabled="isIdentifierReserved"
-                    @click="reserveIdentifier"
+                    @click="reserveIdentifierWithNewIssueUrl"
                 >
-                    {{ t('plugins.generic.codecheck.identifier.reserve') }}
+                    {{ t('plugins.generic.codecheck.identifier.reserve.withNewIssueUrl') }}
+                </button>  
+              <button
+                    type="button"
+                    class="pkpButton codecheck-btn certificate-identifier-button"
+                    :class="isIdentifierReserved ? 'bg-gray' : ''"
+                    :disabled="isIdentifierReserved"
+                    @click="reserveIdentifierWithApi"
+                >
+                    {{ t('plugins.generic.codecheck.identifier.reserve.withApi') }}
                 </button>
                 <button
                     type="button"
@@ -960,7 +969,7 @@ export default {
       }
     },
 
-    async reserveIdentifier() {
+    async reserveIdentifierWithApi() {
       if (this.certificateIdentifier.venueType === 'default' || this.certificateIdentifier.venueName === 'default') {
         alert('Please select both a Venue Type and a Venue Name.');
         return;
@@ -976,7 +985,7 @@ export default {
       let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
 
       try {
-          const response = await fetch(`${apiUrl}/identifier?submissionId=${submissionId}`, {
+          const response = await fetch(`${apiUrl}/identifier/withApi?submissionId=${submissionId}`, {
               method: 'POST',
               headers: {
               'Content-Type': 'application/json',
@@ -996,6 +1005,48 @@ export default {
               this.$emit('update', this.metadata.certificate);
               this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.success.message')}: ${data.identifier}`, 'success');
               console.log('New Certificate Identifier reserved: ', data.identifier, data.issueUrl);
+          } else {
+              this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.fail.message')}\n${data.error}`, 'error');
+              console.error('Error while reserving the Certificate Identifier:', data.error);
+          }
+      } catch (error) {
+          this.showMessage(`${this.t('plugins.generic.codecheck.request.failed')}\n${error}`, 'error');
+          console.error('Request failed:', error);
+      }
+    },
+
+    async reserveIdentifierWithNewIssueUrl() {
+      if (this.certificateIdentifier.venueType === 'default' || this.certificateIdentifier.venueName === 'default') {
+        alert('Please select both a Venue Type and a Venue Name.');
+        return;
+      }
+
+      const authorString = this.submissionData.authors.length > 1
+        ? this.submissionData.authors[0].name + ' et al.'
+        : this.submissionData.authors[0].name;
+
+      console.log(authorString);
+
+      const submissionId = this.submission.id;
+      let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
+
+      try {
+          const response = await fetch(`${apiUrl}/identifier/withNewIssueUrl?submissionId=${submissionId}`, {
+              method: 'POST',
+              headers: {
+              'Content-Type': 'application/json',
+              'X-Csrf-Token': pkp.currentUser.csrfToken,
+              },
+              body: JSON.stringify({
+                venueType: this.certificateIdentifier.venueType,
+                venueName: this.certificateIdentifier.venueName,
+                authorString: authorString,
+              }),
+          });
+          const data = await response.json();
+
+          if (data.success) {
+              
           } else {
               this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.fail.message')}\n${data.error}`, 'error');
               console.error('Error while reserving the Certificate Identifier:', data.error);

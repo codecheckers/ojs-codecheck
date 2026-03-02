@@ -79,8 +79,13 @@ class CodecheckApiHandler
             ],
             'POST' => [
                 [
-                    'route' => 'identifier',
-                    'handler' => [$this, 'reserveIdentifier'],
+                    'route' => 'identifier/withApi',
+                    'handler' => [$this, 'reserveIdentifierWithApi'],
+                    'roles' => $this->roles,
+                ],
+                [
+                    'route' => 'identifier/withNewIssueUrl',
+                    'handler' => [$this, 'reserveIdentifierWithNewIssueUrl'],
                     'roles' => $this->roles,
                 ],
                 [
@@ -212,11 +217,11 @@ class CodecheckApiHandler
     }
 
     /**
-     * This reserves a new Identifier
+     * This reserves a new Identifier with the GitHub API
      * 
      * @return void
      */
-    public function reserveIdentifier(): void
+    public function reserveIdentifierWithApi(): void
     {
         $postParams = json_decode(file_get_contents('php://input'), true);
         $venueType = $postParams["venueType"];
@@ -260,13 +265,18 @@ class CodecheckApiHandler
             // create the CODECHECK Venue with the selected type and name
             $codecheckVenue = new CodecheckVenue($venueType, $venueName);
 
+            $issueContents = $codecheckGithubRegisterApiClient->createIssueContents(
+                $new_identifier,
+                $codecheckVenue->getVenueType(),
+                $codecheckVenue->getVenueName(),
+                $authorString,
+            );
+
             // Add the new issue to the CODECHECK GtiHub Register
             try {
                 $issueGithubUrl = $codecheckGithubRegisterApiClient->addIssue(
                     $new_identifier,
-                    $codecheckVenue->getVenueType(),
-                    $codecheckVenue->getVenueName(),
-                    $authorString,
+                    $issueContents
                 );
             } catch (ApiCreateException $e) {
                 // return an error result
@@ -286,6 +296,80 @@ class CodecheckApiHandler
             return;
         } else {
             JsonResponse::staticResponse([
+                'success'   => false,
+                'error'     => "The CODECHECK Venue Type and/ or Venue Names aren't of Type string as expected.",
+            ], 400);
+            return;
+        }
+    }
+
+    /**
+     * This reserves a new Identifier with the GitHub New Issue Url
+     * 
+     * @return void
+     */
+    public function reserveIdentifierWithNewIssueUrl(): void
+    {
+        $postParams = json_decode(file_get_contents('php://input'), true);
+        $venueType = $postParams["venueType"];
+        $venueName = $postParams["venueName"];
+        $authorString = $postParams["authorString"];
+
+        // check if they are of type string (If not return success false over the API)
+        if(is_string($venueType) && is_string($venueName) && is_string($authorString)) {
+            // CODECHECK GitHub Issue Register API parser
+            $codecheckGithubRegisterApiClient = new CodecheckGithubRegisterApiClient(
+                'testing-dev-register', // Name of the GitHub Repository for the Register
+                $this->codecheckMetadataHandler->getSubmissionId(), // Submission ID
+                $this->request->getContext(), // The Journal Object of the Submission
+            );
+
+            error_log(print_r($this->request->getContext(), true));
+
+            // CODECHECK Register with list of all identifiers in range
+            try {
+                $certificateIdentifierList = CertificateIdentifierList::fromApi($codecheckGithubRegisterApiClient);
+            } catch (ApiFetchException $ae) {
+                $this->response->response([
+                    'success'   => false,
+                    'error'     => $e->getMessage(),
+                ], 400);
+                return;
+            } catch (NoMatchingIssuesFoundException $me) {
+                $this->response->response([
+                    'success'   => false,
+                    'error'     => $e->getMessage(),
+                ], 400);
+                return;
+            }
+
+            // print Certificate Identifier list
+            $certificateIdentifierList->sortDesc();
+
+            // create the new unique Identifier
+            $new_identifier = CertificateIdentifier::newUniqueIdentifier($certificateIdentifierList);
+
+            // create the CODECHECK Venue with the selected type and name
+            $codecheckVenue = new CodecheckVenue($venueType, $venueName);
+
+            $issueContents = $codecheckGithubRegisterApiClient->createIssueContents(
+                $new_identifier,
+                $codecheckVenue->getVenueType(),
+                $codecheckVenue->getVenueName(),
+                $authorString,
+            );
+            
+            
+
+            // return a success result
+            $this->response->response([
+                'success' => true,
+                'identifier' => $new_identifier->toStr(),
+                'issueUrl' => $issueGithubUrl,
+            ], 200);
+            return;
+        } else {
+            $this->response->response([
                 'success'   => false,
                 'error'     => "The CODECHECK Venue Type and/ or Venue Names aren't of Type string as expected.",
             ], 400);

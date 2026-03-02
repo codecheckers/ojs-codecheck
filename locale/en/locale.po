@@ -212,8 +212,11 @@ msgstr "View GitHub Issue"
 msgid "plugins.generic.codecheck.identifier.save"
 msgstr "Save Identifier"
 
-msgid "plugins.generic.codecheck.identifier.reserve"
-msgstr "Reserve Identifier"
+msgid "plugins.generic.codecheck.identifier.reserve.withApi"
+msgstr "Reserve Identifier Automatically"
+
+msgid "plugins.generic.codecheck.identifier.reserve.withNewIssueUrl"
+msgstr "Reserve Identifier Manually"
 
 msgid "plugins.generic.codecheck.identifier.reserve.success.message"
 msgstr "You have reserved the Certificate Identifier"
