@@ -241,11 +241,17 @@ class CodecheckApiHandler
         $githubPersonalAccessToken = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN);
         $githubRegisterOrganization = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION);
         $githubRegisterRepository = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY);
+        $isAuthorStringEnabled = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_AUTHOR_ANONYMITY);
 
         error_log("[Codecheck Api Handler] GitHub Register Repository specified in the Settings form: " . $githubRegisterRepository);
 
+        // if Authors should be Anonymous/ if no Author string was given, set it to null
+        if(!$isAuthorStringEnabled || !is_string($authorString)) {
+            $authorString = null;
+        }
+
         // check if they are of type string (If not return success false over the API)
-        if(is_string($venueType) && is_string($venueName) && is_string($authorString) && is_array($customLabels)) {
+        if(is_string($venueType) && is_string($venueName) && is_array($customLabels)) {
             // CODECHECK GitHub Issue Register API parser
             $codecheckGithubRegisterApiClient = new CodecheckGithubRegisterApiClient(
                 $githubPersonalAccessToken, // The GitHub PAT (classic) needed to access the Register Repository

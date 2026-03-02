@@ -151,7 +151,7 @@ class CodecheckGithubRegisterApiClient
         string $codecheckVenueType,
         string $codecheckVenueName,
         array $customLabels,
-        string $authorString,
+        ?string $authorString,
     ): string {
         $this->client->authenticate($this->githubPAT, null, Client::AUTH_ACCESS_TOKEN);
 
