@@ -12,6 +12,7 @@ use APP\plugins\generic\codecheck\classes\Exceptions\NoMatchingIssuesFoundExcept
 use APP\plugins\generic\codecheck\classes\Exceptions\ApiFetchException;
 use APP\plugins\generic\codecheck\classes\Exceptions\ApiCreateException;
 use APP\plugins\generic\codecheck\classes\Exceptions\GithubUrlParseException;
+use CodecheckGithubRegisterIssue;
 
 // Load .env variables
 $dotenv = Dotenv::createImmutable(__DIR__ . '/../../');
@@ -23,6 +24,7 @@ class CodecheckGithubRegisterApiClient
     private $issues = [];
     private UniqueArray $labels;
     private $client;
+    private string $githubRegisterRepositoryOwner;
     private string $githubRegisterRepository;
     private string $submissionID;
     private string $journalName;
@@ -34,10 +36,11 @@ class CodecheckGithubRegisterApiClient
      * @param string $submissionID The ID of the Submission realted to the GitHub Register Issue
      * @param mixed $journal The name of the Journal the Submission is published in
      */
-    function __construct(string $githubRegisterRepository, string $submissionID, mixed $journal, ?Client $client = null)
+    function __construct(string $githubRegisterRepositoryOwner, string $githubRegisterRepository, string $submissionID, mixed $journal, ?Client $client = null)
     {
         $this->client = $client ?? new Client();
         $this->labels = new UniqueArray();
+        $this->githubRegisterRepositoryOwner = $githubRegisterRepositoryOwner;
         $this->githubRegisterRepository = $githubRegisterRepository;
         $this->submissionID = $submissionID;
         $this->journalName = $journal?->getLocalizedName() ?? 'Unknown Journal';
@@ -131,47 +134,6 @@ class CodecheckGithubRegisterApiClient
         }
     }
 
-    public function createIssueContents(
-        CertificateIdentifier $certificateIdentifier,
-        string $codecheckVenueType,
-        string $codecheckVenueName,
-        string $authorString,
-    ): array
-    {
-        $repositoryOwner = 'codecheckers';
-        $authorString = empty($authorString) ? 'New CODECHECK' : $authorString;
-        $issueTitle = $authorString . ' | ' . $certificateIdentifier->toStr();
-        $issueBody = 'Journal: `' . $this->journalName . '`<br />' . 'Submission ID: `' . $this->submissionID . '`';
-        $labelStrings = ['id assigned'];
-
-        $labelStrings[] = $codecheckVenueType;
-        $labelStrings[] = $codecheckVenueName;
-
-        return [
-            'repositoryOwner' => $repositoryOwner,
-            'title' => $issueTitle,
-            'body' => $issueBody,
-            'labels' => $labelStrings
-        ];
-    }
-
-    public function formatIssueContentsForUrl(
-        array $issueContents
-    ): array
-    {
-        foreach ($issueContents as $content) {
-            $content = preg_replace_callback(
-                '/[:\n |]/',
-                fn($m) => rawurlencode($m[0]),
-                $content
-            );
-        }
-
-        return $issueContents;
-    }
-
-    // TODO: function to create URL
-
     /**
      * Adds an Issue with the new Certificate Identifier to the CODECHECK GitHub Register
      *
@@ -183,20 +145,30 @@ class CodecheckGithubRegisterApiClient
      */
     public function addIssue(
         CertificateIdentifier $certificateIdentifier,
-        array $issueContents
+        CodecheckVenue $codecheckVenue,
+        string $authorString
     ): string {
         $token = $_ENV['CODECHECK_REGISTER_GITHUB_TOKEN'];
 
         $this->client->authenticate($token, null, Client::AUTH_ACCESS_TOKEN);
 
+        $codecheckIssue = new CodecheckGithubRegisterIssue(
+            $this->githubRegisterRepositoryOwner,
+            $this->githubRegisterRepository,
+            $certificateIdentifier,
+            $codecheckVenue,
+            $this->journalName,
+            $authorString
+        );
+
         try {
             $issue = $this->client->api('issue')->create(
-                $issueContents['repositoryOwner'],
+                $this->githubRegisterRepositoryOwner,
                 $this->githubRegisterRepository,
                 [
-                    'title' => $issueContents['title'],
-                    'body'  => $issueContents['body'],
-                    'labels' => $issueContents['labels']
+                    'title' => $codecheckIssue->getTitle(),
+                    'body'  => $codecheckIssue->getBody(),
+                    'labels' => $codecheckIssue->getLabels()
                 ]
             );
         } catch (\Throwable $e) {

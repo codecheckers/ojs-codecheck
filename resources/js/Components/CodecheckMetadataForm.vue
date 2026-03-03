@@ -1046,10 +1046,11 @@ export default {
           const data = await response.json();
 
           if (data.success) {
-              
+              this.metadata.certificate = data.identifier;
+              console.log(data.newIssueUrl);
           } else {
               this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.fail.message')}\n${data.error}`, 'error');
-              console.error('Error while reserving the Certificate Identifier:', data.error);
+              console.error('Error while creating the New Issue URL:', data.error);
           }
       } catch (error) {
           this.showMessage(`${this.t('plugins.generic.codecheck.request.failed')}\n${error}`, 'error');
