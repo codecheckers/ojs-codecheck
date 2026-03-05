@@ -80,13 +80,8 @@ class CodecheckApiHandler
             ],
             'POST' => [
                 [
-                    'route' => 'identifier/withApi',
-                    'handler' => [$this, 'reserveIdentifierWithApi'],
-                    'roles' => $this->roles,
-                ],
-                [
-                    'route' => 'identifier/withNewIssueUrl',
-                    'handler' => [$this, 'reserveIdentifierWithNewIssueUrl'],
+                    'route' => 'identifier',
+                    'handler' => [$this, 'reserveIdentifier'],
                     'roles' => $this->roles,
                 ],
                 [
@@ -218,93 +213,23 @@ class CodecheckApiHandler
     }
 
     /**
-     * This reserves a new Identifier with the GitHub API
+     * This reserves a new Identifier
      * 
      * @return void
      */
-    public function reserveIdentifierWithApi(): void
+    public function reserveIdentifier(): void
     {
         $postParams = json_decode(file_get_contents('php://input'), true);
-        $venueType = $postParams["venueType"];
-        $venueName = $postParams["venueName"];
-        $authorString = $postParams["authorString"];
+        $reserveIdentifierMode = $postParams['reserveIdentifierMode'];
 
-        // check if they are of type string (If not return success false over the API)
-        if(is_string($venueType) && is_string($venueName) && is_string($authorString)) {
-            // CODECHECK GitHub Issue Register API parser
-            $codecheckGithubRegisterApiClient = new CodecheckGithubRegisterApiClient(
-                'codecheckers',
-                'testing-dev-register', // Name of the GitHub Repository for the Register
-                $this->codecheckMetadataHandler->getSubmissionId(), // Submission ID
-                $this->request->getContext(), // The Journal Object of the Submission
-            );
-
-            // CODECHECK Register with list of all identifiers in range
-            try {
-                $certificateIdentifierList = CertificateIdentifierList::fromApi($codecheckGithubRegisterApiClient);
-            } catch (ApiFetchException $ae) {
-                JsonResponse::staticResponse([
-                    'success'   => false,
-                    'error'     => $ae->getMessage(),
-                ], 400);
-                return;
-            } catch (NoMatchingIssuesFoundException $me) {
-                JsonResponse::staticResponse([
-                    'success'   => false,
-                    'error'     => $me->getMessage(),
-                ], 400);
-                return;
-            }
-
-            // print Certificate Identifier list
-            $certificateIdentifierList->sortDesc();
-
-            // create the new unique Identifier
-            $new_identifier = CertificateIdentifier::newUniqueIdentifier($certificateIdentifierList);
-
-            // create the CODECHECK Venue with the selected type and name
-            $codecheckVenue = new CodecheckVenue($venueType, $venueName);
-
-            // Add the new issue to the CODECHECK GtiHub Register
-            try {
-                $issueGithubUrl = $codecheckGithubRegisterApiClient->addIssue(
-                    $new_identifier,
-                    $codecheckVenue,
-                    $authorString
-                );
-            } catch (ApiCreateException $e) {
-                // return an error result
-                JsonResponse::staticResponse([
-                    'success'   => false,
-                    'error'     => $e->getMessage(),
-                ], 400);
-                return;
-            }
-
-            // return a success result
-            JsonResponse::staticResponse([
-                'success' => true,
-                'identifier' => $new_identifier->toStr(),
-                'issueUrl' => $issueGithubUrl,
-            ], 200);
-            return;
-        } else {
-            JsonResponse::staticResponse([
+        if(!is_string($reserveIdentifierMode)) {
+            $this->response->response([
                 'success'   => false,
-                'error'     => "The CODECHECK Venue Type and/ or Venue Names aren't of Type string as expected.",
+                'error'     => "No Reserve Identifier Mode was specified.",
             ], 400);
             return;
         }
-    }
 
-    /**
-     * This reserves a new Identifier with the GitHub New Issue Url
-     * 
-     * @return void
-     */
-    public function reserveIdentifierWithNewIssueUrl(): void
-    {
-        $postParams = json_decode(file_get_contents('php://input'), true);
         $venueType = $postParams["venueType"];
         $venueName = $postParams["venueName"];
         $authorString = $postParams["authorString"];
@@ -345,23 +270,40 @@ class CodecheckApiHandler
             // create the CODECHECK Venue with the selected type and name
             $codecheckVenue = new CodecheckVenue($venueType, $venueName);
 
-            $journalName = $this->request->getContext()?->getLocalizedName() ?? 'Unknwon Journal';
+            switch ($reserveIdentifierMode) {
+                case 'api':
+                    $issueGithubUrl = $this->reserveIdentifierWithApi(
+                        $codecheckGithubRegisterApiClient,
+                        $newIdentifier,
+                        $codecheckVenue,
+                        $authorString
+                    );
+                    break;
+                
+                case 'newIssueUrl':
+                    $issueGithubUrl = $this->reserveIdentifierWithNewIssueUrl(
+                        $newIdentifier,
+                        $codecheckVenue,
+                        $authorString
+                    );
+                    break;
 
-            $codecheckIssue = new CodecheckGithubRegisterIssue(
-                'codecheckers',
-                'testing-dev-register',
-                $newIdentifier,
-                $codecheckVenue,
-                $journalName,
-                $authorString,
-                $this->codecheckMetadataHandler->getSubmissionId()
-            );
-            
+                default:
+                    $this->response->response([
+                        'success'   => false,
+                        'error'     => "An unexpected mode for the reservation of the Certificate Identifier was given: " . $reserveIdentifierMode,
+                    ], 400);
+                    break;
+            }
+
+            // check if an error happened and return if that is the case
+            if($issueGithubUrl == null) { return; }
+
             // return a success result
             $this->response->response([
                 'success' => true,
                 'identifier' => $newIdentifier->toStr(),
-                'newIssueUrl' => $codecheckIssue->getNewIssueUrl(),
+                'issueUrl' => $issueGithubUrl,
             ], 200);
             return;
         } else {
@@ -371,6 +313,64 @@ class CodecheckApiHandler
             ], 400);
             return;
         }
+    }
+     
+    /**
+     * This reserves a new Identifier with the GitHub API
+     * 
+     * @return ?string
+     */
+    private function reserveIdentifierWithApi(
+        CodecheckGithubRegisterApiClient $codecheckGithubRegisterApiClient,
+        CertificateIdentifier $identifier,
+        CodecheckVenue $venue,
+        string $authorString
+
+    ): ?string
+    {
+        // Add the new issue to the CODECHECK GtiHub Register
+        try {
+            $issueGithubUrl = $codecheckGithubRegisterApiClient->addIssue(
+                $identifier,
+                $venue,
+                $authorString
+            );
+        } catch (ApiCreateException $e) {
+            // return an error result
+            $this->response->response([
+                'success'   => false,
+                'error'     => $e->getMessage(),
+            ], 400);
+            return null;
+        }
+
+        return $issueGithubUrl;
+    }
+
+    /**
+     * This reserves a new Identifier with the GitHub New Issue Url
+     * 
+     * @return string
+     */
+    private function reserveIdentifierWithNewIssueUrl(
+        CertificateIdentifier $identifier,
+        CodecheckVenue $venue,
+        string $authorString
+    ): string
+    {
+        $journalName = $this->request->getContext()?->getLocalizedName() ?? 'Unknwon Journal';
+
+        $codecheckIssue = new CodecheckGithubRegisterIssue(
+            'codecheckers',
+            'testing-dev-register',
+            $identifier,
+            $venue,
+            $journalName,
+            $authorString,
+            $this->codecheckMetadataHandler->getSubmissionId()
+        );
+
+        return $codecheckIssue->getNewIssueUrl();
     }
 
     /**

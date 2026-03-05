@@ -317,7 +317,7 @@
                     class="pkpButton codecheck-btn certificate-identifier-button"
                     :class="isIdentifierReserved ? 'bg-gray' : ''"
                     :disabled="isIdentifierReserved"
-                    @click="reserveIdentifierWithNewIssueUrl"
+                    @click="reserveIdentifier('newIssueUrl')"
                 >
                     {{ t('plugins.generic.codecheck.identifier.reserve.withNewIssueUrl') }}
                 </button>  
@@ -326,7 +326,7 @@
                     class="pkpButton codecheck-btn certificate-identifier-button"
                     :class="isIdentifierReserved ? 'bg-gray' : ''"
                     :disabled="isIdentifierReserved"
-                    @click="reserveIdentifierWithApi"
+                    @click="reserveIdentifier('api')"
                 >
                     {{ t('plugins.generic.codecheck.identifier.reserve.withApi') }}
                 </button>
@@ -969,7 +969,7 @@ export default {
       }
     },
 
-    async reserveIdentifierWithApi() {
+    async reserveIdentifier(reserveIdentifierMode) {
       if (this.certificateIdentifier.venueType === 'default' || this.certificateIdentifier.venueName === 'default') {
         alert('Please select both a Venue Type and a Venue Name.');
         return;
@@ -980,77 +980,55 @@ export default {
         : this.submissionData.authors[0].name;
 
       console.log(authorString);
+      console.log(reserveIdentifierMode);
+      console.log(this.submissionData.codeRepository);
+      console.log(this.submissionData.dataRepository);
+      console.log(this.submissionData.doi);
 
       const submissionId = this.submission.id;
       let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
 
       try {
-          const response = await fetch(`${apiUrl}/identifier/withApi?submissionId=${submissionId}`, {
+          const response = await fetch(`${apiUrl}/identifier?submissionId=${submissionId}`, {
               method: 'POST',
               headers: {
-              'Content-Type': 'application/json',
-              'X-Csrf-Token': pkp.currentUser.csrfToken,
+                'Content-Type': 'application/json',
+                'X-Csrf-Token': pkp.currentUser.csrfToken,
               },
               body: JSON.stringify({
+                reserveIdentifierMode: reserveIdentifierMode,
                 venueType: this.certificateIdentifier.venueType,
                 venueName: this.certificateIdentifier.venueName,
                 authorString: authorString,
+                codeRepository: this.submissionData.codeRepository,
+                dataRepository: this.submissionData.dataRepository,
+                doi: this.submissionData.doi
               }),
           });
           const data = await response.json();
 
-          if (data.success) {
+          if (reserveIdentifierMode == 'api') {
+            if (data.success) {
               this.metadata.certificate = data.identifier;
               this.certificateIdentifier.issueUrl = data.issueUrl;
               this.$emit('update', this.metadata.certificate);
               this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.success.message')}: ${data.identifier}`, 'success');
               console.log('New Certificate Identifier reserved: ', data.identifier, data.issueUrl);
-          } else {
+            } else {
               this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.fail.message')}\n${data.error}`, 'error');
               console.error('Error while reserving the Certificate Identifier:', data.error);
-          }
-      } catch (error) {
-          this.showMessage(`${this.t('plugins.generic.codecheck.request.failed')}\n${error}`, 'error');
-          console.error('Request failed:', error);
-      }
-    },
-
-    async reserveIdentifierWithNewIssueUrl() {
-      if (this.certificateIdentifier.venueType === 'default' || this.certificateIdentifier.venueName === 'default') {
-        alert('Please select both a Venue Type and a Venue Name.');
-        return;
-      }
-
-      const authorString = this.submissionData.authors.length > 1
-        ? this.submissionData.authors[0].name + ' et al.'
-        : this.submissionData.authors[0].name;
-
-      console.log(authorString);
-
-      const submissionId = this.submission.id;
-      let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
-
-      try {
-          const response = await fetch(`${apiUrl}/identifier/withNewIssueUrl?submissionId=${submissionId}`, {
-              method: 'POST',
-              headers: {
-              'Content-Type': 'application/json',
-              'X-Csrf-Token': pkp.currentUser.csrfToken,
-              },
-              body: JSON.stringify({
-                venueType: this.certificateIdentifier.venueType,
-                venueName: this.certificateIdentifier.venueName,
-                authorString: authorString,
-              }),
-          });
-          const data = await response.json();
-
-          if (data.success) {
+            }
+          } else if (reserveIdentifierMode == 'newIssueUrl') {
+            if (data.success) {
               this.metadata.certificate = data.identifier;
-              window.open(data.newIssueUrl);
-          } else {
+              window.open(data.issueUrl);
+            } else {
               this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.fail.message')}\n${data.error}`, 'error');
               console.error('Error while creating the New Issue URL:', data.error);
+            }
+          } else {
+            this.showMessage(`${this.t('plugins.generic.codecheck.request.failed')}\nNo/ or wrong Reserve Identifier Mode specified.`, 'error');  
+            console.error(`${this.t('plugins.generic.codecheck.request.failed')}\nNo/ or wrong Reserve Identifier Mode specified.`);
           }
       } catch (error) {
           this.showMessage(`${this.t('plugins.generic.codecheck.request.failed')}\n${error}`, 'error');

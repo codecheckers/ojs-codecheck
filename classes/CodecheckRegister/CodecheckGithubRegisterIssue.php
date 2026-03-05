@@ -27,7 +27,7 @@ class CodecheckGithubRegisterIssue {
         $this->submissionID = $submissionID;
         $authorString = empty($authorString) ? 'New CODECHECK' : $authorString;
         $this->title = $authorString . ' | ' . $certificateIdentifier->toStr();
-        $this->body = "**Journal:** `" . $journalName . "` *(Submission ID: `" . $this->submissionID . "`)*\n\n" . "**Code Repository:**\n<!-- Provide a link to your code repository (GitHub, GitLab, etc.) -->\n\n**Data Repository:**\n<!-- Provide a link to your data repository or dataset -->\n\n**Published Paper or Preprint:**\n<!-- Provide a link to your published paper or preprint, ideally with a DOI -->";
+        $this->body = "<!-- Information about the Journal in which the paper/ preprint is published -->\n**Journal:** `" . $journalName . "` *(Submission ID: `" . $this->submissionID . "`)*\n\n" . "<!-- Provide a link to your code repository (GitHub, GitLab, etc.) -->\n**Code Repository:**\n\n<!-- Provide a link to your data repository or dataset -->\n**Data Repository:**\n\n<!-- Provide a link to your published paper or preprint, ideally with a DOI -->\n**Published Paper or Preprint:**";
         $this->labels = ['id assigned'];
 
         $this->labels[] = $codecheckVenue->getVenueType();
