@@ -883,10 +883,12 @@ export default {
               console.log('Venue types:', this.certificateIdentifier.venueTypes);
               console.log('Venue names:', this.certificateIdentifier.venueNames);
           } else {
-              console.error('Error:', data.error);
+              this.showMessage(`${this.t('plugins.generic.codecheck.identifier.venue.fetch.error.curl')}\n${data.error}`, 'error');
+              console.error(`${this.t('plugins.generic.codecheck.identifier.venue.fetch.error.curl')}:`, data.error);
           }
       } catch (error) {
-          console.error('Failed to fetch venue data:', error);
+          console.error(`${this.t('plugins.generic.codecheck.identifier.venue.fetch.error.codecheckAPI')}:`, error);
+          this.showMessage(`${this.t('plugins.generic.codecheck.identifier.venue.fetch.error.codecheckAPI')}\n${data.error}`, 'error');
       }
     },
 

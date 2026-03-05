@@ -24,14 +24,14 @@ class CodecheckVenueNames
         $codecheckApiClient = $apiClient ?? new CodecheckApiClient();
         // fetch CODECHECK Type data
         try {
-            $codecheckApiClient->fetch("https://codecheck.org.uk/register/venues/index.json");
+            $codecheckApiClient->fetch("https://does-not-exist.example");
         } catch (CurlInitException $curlInitException) {
             // TODO: Implement that the user gets notified, that the fetching of the Labels didn't work
-            error_log($curlInitException);
+            error_log("CurlInit Exception: " . $curlInitException);
             throw $curlInitException;
         } catch (CurlReadException $curlReadException) {
             // TODO: Implement that the user gets notified, that the fetching of the Labels didn't work
-            error_log($curlReadException);
+            error_log("CurlInit Exception: " . $curlReadException);
             throw $curlReadException;
         }
         // get json Data from API call

@@ -18,6 +18,8 @@ use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckVenue;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
 
 use APP\facades\Repo;
+use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitException;
+use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
 use Illuminate\Support\Facades\DB;
 
 class CodecheckApiHandler
@@ -174,20 +176,20 @@ class CodecheckApiHandler
     {   
         try {
             $codecheckVenueTypes = new CodecheckVenueTypes();
-        } catch (ApiFetchException $e) {
+        } catch (\Throwable $e) {
             $this->response->response([
                 'success'   => false,
-                'error'     => $e->getMessage(),
+                'error'     => "Error while fetching the Venue Types: " . $e->getMessage(),
             ], 400);
             return;
         }
 
         try {
             $codecheckVenueNames = new CodecheckVenueNames();
-        } catch (ApiFetchException $e) {
+        } catch (\Throwable $e) {
             $this->response->response([
                 'success'   => false,
-                'error'     => $e->getMessage(),
+                'error'     => "Error while fetching the Venue Names: " . $e->getMessage(),
             ], 400);
             return;
         }
