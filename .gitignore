@@ -40,3 +40,4 @@ public/
 # test results
 tests/.phpunit.result.cache
 tests/results/
+.phpunit.cache/
