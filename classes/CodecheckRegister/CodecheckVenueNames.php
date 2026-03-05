@@ -24,7 +24,7 @@ class CodecheckVenueNames
         $codecheckApiClient = $apiClient ?? new CodecheckApiClient();
         // fetch CODECHECK Type data
         try {
-            $codecheckApiClient->fetch("https://does-not-exist.example");
+            $codecheckApiClient->fetch("https://codecheck.org.uk/register/venues/index.json");
         } catch (CurlInitException $curlInitException) {
             // TODO: Implement that the user gets notified, that the fetching of the Labels didn't work
             error_log("CurlInit Exception: " . $curlInitException);
