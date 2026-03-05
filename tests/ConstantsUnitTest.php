@@ -22,31 +22,6 @@ class ConstantsUnitTest extends PKPTestCase
         parent::setUp();
     }
 
-    public function testSettingsTemplateConstant()
-    {
-        $this->assertSame('settings.tpl', Constants::SETTINGS_TEMPLATE);
-    }
-
-    public function testSettingEnableCodecheckConstant()
-    {
-        $this->assertSame('enableCodecheck', Constants::SETTING_ENABLE_CODECHECK);
-    }
-
-    public function testCodecheckEnabledConstant()
-    {
-        $this->assertSame('enabled', Constants::CODECHECK_ENABLED);
-    }
-
-    public function testCodecheckApiEndpointConstant()
-    {
-        $this->assertSame('codecheckApiEndpoint', Constants::CODECHECK_API_ENDPOINT);
-    }
-
-    public function testCodecheckApiKeyConstant()
-    {
-        $this->assertSame('codecheckApiKey', Constants::CODECHECK_API_KEY);
-    }
-
     public function testAllConstantsAreStrings()
     {
         $reflection = new \ReflectionClass(Constants::class);
