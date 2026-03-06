@@ -45,6 +45,7 @@ class CertificateIdentifierList
         }
 
         foreach ($codecheckGithubRegisterApiClient->getIssues() as $issue) {
+            error_log(print_r($issue, true));
             // raw identifier (can still have ranges of identifiers);
             $rawIdentifier = CertificateIdentifierList::getRawIdentifier($issue['title']);
             
@@ -55,7 +56,7 @@ class CertificateIdentifierList
             }
 
             // append to all identifiers in new Register
-            $newCertificateIdentifierList->appendToCertificateIdList($rawIdentifier);
+            $newCertificateIdentifierList->appendToCertificateIdList($rawIdentifier, $issue['html_url']);
         }
 
         // return the new Register
@@ -98,9 +99,10 @@ class CertificateIdentifierList
      * Appends a raw Identifier to the list of Certificate Identifiers
      * 
      * @param string $rawidentifier The raw Identifier to be appended
+     * @param string $issueUrl The Issue URL of the raw Identifier to be appended
      * @return void
      */
-    public function appendToCertificateIdList(string $rawIdentifier): void
+    public function appendToCertificateIdList(string $rawIdentifier, string $issueUrl): void
     {
         // list of certificate identifiers in range
         $idRange = [];
@@ -110,20 +112,26 @@ class CertificateIdentifierList
             // split into "fromIdStr" and "toIdStr"
             list($fromIdStr, $toIdStr) = explode('/', $rawIdentifier);
 
-            $from_identifier = CertificateIdentifier::fromStr($fromIdStr);
-            $to_identifier = CertificateIdentifier::fromStr($toIdStr);
+            $fromIdentifier = CertificateIdentifier::fromStr($fromIdStr);
+            $toIdentifier = CertificateIdentifier::fromStr($toIdStr);
 
             // append to $idRange list
-            for ($id_count = $from_identifier->getNumber(); $id_count <= $to_identifier->getNumber(); $id_count++) {
-                $new_identifier = new CertificateIdentifier($from_identifier->getYear(), $id_count);
+            for ($id_count = $fromIdentifier->getNumber(); $id_count <= $toIdentifier->getNumber(); $id_count++) {
+                $newIdentifier = new CertificateIdentifier($fromIdentifier->getYear(), $id_count);
                 // append new identifier
-                $idRange[] = $new_identifier;
+                $idRange[] = [
+                    'identifier' => $newIdentifier,
+                    'issueUrl' => $issueUrl
+                ];
             }
         }
         // if it isn't a list then just append on identifier
         else {
-            $new_identifier = CertificateIdentifier::fromStr($rawIdentifier);
-            $idRange[] = $new_identifier;
+            $newIdentifier = CertificateIdentifier::fromStr($rawIdentifier);
+            $idRange[] = [
+                'identifier' => $newIdentifier,
+                'issueUrl' => $issueUrl
+            ];
         }
 
         // append to all certificate identifiers
@@ -141,11 +149,11 @@ class CertificateIdentifierList
     {
         $this->uniqueArray->sort(function($a, $b) {
             // First, compare year
-            if ($a->getYear() !== $b->getYear()) {
-                return $a->getYear() <=> $b->getYear();
+            if ($a['identifier']->getYear() !== $b['identifier']->getYear()) {
+                return $a['identifier']->getYear() <=> $b['identifier']->getYear();
             }
             // If years are equal, compare ID
-            return $a->getNumber() <=> $b->getNumber();
+            return $a['identifier']->getNumber() <=> $b['identifier']->getNumber();
         });
     }
 
@@ -156,11 +164,11 @@ class CertificateIdentifierList
     {
         $this->uniqueArray->sort(function($a, $b) {
             // First, compare year descending
-            if ($a->getYear() !== $b->getYear()) {
-                return $b->getYear() <=> $a->getYear();
+            if ($a['identifier']->getYear() !== $b['identifier']->getYear()) {
+                return $b['identifier']->getYear() <=> $a['identifier']->getYear();
             }
             // If years are equal, compare ID descending
-            return $b->getNumber() <=> $a->getNumber();
+            return $b['identifier']->getNumber() <=> $a['identifier']->getNumber();
         });
     }
 
@@ -183,7 +191,7 @@ class CertificateIdentifierList
     {
         $this->sortDesc();
         // get first element of sort descending -> newest element
-        return $this->uniqueArray->at(0);
+        return $this->uniqueArray->at(0)['identifier'];
     }
 
     /**
@@ -193,10 +201,21 @@ class CertificateIdentifierList
      */
     public function toStr(): string
     {
-        $return_str = "Certificate Identifiers:\n";
-        foreach ($this->uniqueArray->toArray() as $identifier) {
-            $return_str .= $identifier->toStr() . "\n";
+        $returnStr = "Certificate Identifiers:\n";
+        foreach ($this->uniqueArray as $identifier) {
+            $returnStr .= $identifier->toStr() . "\n";
         }
-        return $return_str;
+        return $returnStr;
+    }
+
+    public function getIssueUrlByIdentifier(CertificateIdentifier $identifier): ?string
+    {
+        foreach ($this->uniqueArray->toArray() as $identifierInformation) {
+            if($identifierInformation['identifier']->toStr() == $identifier->toStr()){
+                return $identifierInformation['issueUrl'];
+            }
+        }
+
+        return null;
     }
 }

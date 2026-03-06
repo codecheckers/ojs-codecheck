@@ -41,6 +41,7 @@
   "plugins.generic.codecheck.identifier.remove.modal.areYouSureYouWantToRemoveTheIdentifier",
   "plugins.generic.codecheck.identifier.remove.modal.title",
   "plugins.generic.codecheck.identifier.reserve.fail.message",
+  "plugins.generic.codecheck.identifier.reserve.linkExistingIdentifier",
   "plugins.generic.codecheck.identifier.reserve.success.message",
   "plugins.generic.codecheck.identifier.reserve.withApi",
   "plugins.generic.codecheck.identifier.reserve.withNewIssueUrl",

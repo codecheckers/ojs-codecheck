@@ -212,6 +212,9 @@ msgstr "View GitHub Issue"
 msgid "plugins.generic.codecheck.identifier.save"
 msgstr "Save Identifier"
 
+msgid "plugins.generic.codecheck.identifier.reserve.linkExistingIdentifier"
+msgstr "Link Existing Identifier"
+
 msgid "plugins.generic.codecheck.identifier.reserve.withApi"
 msgstr "Reserve Identifier Automatically"
 
