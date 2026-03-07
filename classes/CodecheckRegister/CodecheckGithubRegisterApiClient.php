@@ -146,6 +146,7 @@ class CodecheckGithubRegisterApiClient
     public function addIssue(
         CertificateIdentifier $certificateIdentifier,
         CodecheckVenue $codecheckVenue,
+        string $paperTitle,
         string $authorString
     ): string {
         $token = $_ENV['CODECHECK_REGISTER_GITHUB_TOKEN'];
@@ -157,6 +158,7 @@ class CodecheckGithubRegisterApiClient
             $this->githubRegisterRepository,
             $certificateIdentifier,
             $codecheckVenue,
+            $paperTitle,
             $this->journalName,
             $authorString,
             $this->submissionID
