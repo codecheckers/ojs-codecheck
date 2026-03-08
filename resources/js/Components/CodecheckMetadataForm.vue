@@ -1040,20 +1040,21 @@ export default {
             if (data.success) {
               this.metadata.certificate = data.identifier;
               this.certificateIdentifier.isReserved = true;
+              this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.withNewIssueUrl.success.message')}`, 'success');
               window.open(data.issueUrl);
             } else {
-              this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.fail.message')}\n${data.error}`, 'error');
+              this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.withNewIssueUrl.fail.message')}\n${data.error}`, 'error');
               console.error('Error while creating the New Issue URL:', data.error);
             }
           } else if (reserveIdentifierMode == 'linkExistingIdentifier') {
             if (data.success) {
               this.certificateIdentifier.issueUrl = data.issueUrl;
               this.certificateIdentifier.isReserved = true;
-              this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.success.message')}: ${data.identifier}`, 'success');
-              console.log('New Certificate Identifier reserved: ', data.identifier, data.issueUrl);
+              this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.linkExistingIdentifier.success.message')}: ${data.identifier}`, 'success');
+              console.log('The GitHub Issue was linked to OJS with the Certificate Identifier: ', data.identifier, data.issueUrl);
             } else {
-              this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.fail.message')}\n${data.error}`, 'error');
-              console.error('Error while creating the New Issue URL:', data.error);
+              this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.linkExistingIdentifier.fail.message')}\n${data.error}`, 'error');
+              console.error('Error while linking an existing GitHub Issue: ', data.error);
             }
           } else {
             this.showMessage(`${this.t('plugins.generic.codecheck.request.failed')}\nNo/ or wrong Reserve Identifier Mode specified.`, 'error');  

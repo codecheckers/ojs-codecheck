@@ -221,6 +221,18 @@ msgstr "Reserve Identifier Automatically"
 msgid "plugins.generic.codecheck.identifier.reserve.withNewIssueUrl"
 msgstr "Reserve Identifier Manually"
 
+msgid "plugins.generic.codecheck.identifier.reserve.withNewIssueUrl.success.message"
+msgstr "Success: You are being forwarded to GitHub. Please finish the creation of the Issue there!"
+
+msgid "plugins.generic.codecheck.identifier.reserve.withNewIssueUrl.fail.message"
+msgstr "Error while creating the New Issue URL"
+
+msgid "plugins.generic.codecheck.identifier.reserve.linkExistingIdentifier.success.message"
+msgstr "The GitHub Issue was linked to OJS with the Certificate Identifier"
+
+msgid "plugins.generic.codecheck.identifier.reserve.linkExistingIdentifier.fail.message"
+msgstr "Error while linking an existing GitHub Issue"
+
 msgid "plugins.generic.codecheck.identifier.reserve.success.message"
 msgstr "You have reserved the Certificate Identifier"
 
