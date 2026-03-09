@@ -280,13 +280,14 @@ class CodecheckApiHandler
 
             switch ($reserveIdentifierMode) {
                 case 'api':
-                    $issueGithubUrl = $this->reserveIdentifierWithApi(
+                    $issue = $this->reserveIdentifierWithApi(
                         $codecheckGithubRegisterApiClient,
                         $newIdentifier,
                         $codecheckVenue,
                         $articleTitle,
                         $authorString
                     );
+                    $issueGithubUrl = $issue['html_url'];
                     break;
                 
                 case 'newIssueUrl':
@@ -328,7 +329,7 @@ class CodecheckApiHandler
     /**
      * This reserves a new Identifier with the GitHub API
      * 
-     * @return ?string
+     * @return ?array
      */
     private function reserveIdentifierWithApi(
         CodecheckGithubRegisterApiClient $codecheckGithubRegisterApiClient,
@@ -337,11 +338,11 @@ class CodecheckApiHandler
         string $articleTitle,
         string $authorString
 
-    ): ?string
+    ): ?array
     {
         // Add the new issue to the CODECHECK GtiHub Register
         try {
-            $issueGithubUrl = $codecheckGithubRegisterApiClient->addIssue(
+            $issue = $codecheckGithubRegisterApiClient->addIssue(
                 $identifier,
                 $venue,
                 $articleTitle,
@@ -356,7 +357,7 @@ class CodecheckApiHandler
             return null;
         }
 
-        return $issueGithubUrl;
+        return $issue;
     }
 
     /**

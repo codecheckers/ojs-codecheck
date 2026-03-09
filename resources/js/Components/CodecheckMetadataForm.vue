@@ -275,8 +275,8 @@
           <label class="field-label">{{ t('plugins.generic.codecheck.identifier.title') }} <span class="required">*</span></label>
           <p class="field-description">
             {{ t('plugins.generic.codecheck.identifier.description') }}
-            <span v-if="certificateIdentifier.issueUrl"> - </span>
-            <a v-if="certificateIdentifier.issueUrl" :href="certificateIdentifier.issueUrl" target="_blank">
+            <span v-if="certificateIdentifier.issueUrl && certificateIdentifier.isLinked"> - </span>
+            <a v-if="certificateIdentifier.issueUrl && certificateIdentifier.isLinked" :href="certificateIdentifier.issueUrl" target="_blank">
               {{ t('plugins.generic.codecheck.identifier.viewGithubIssue') }}
             </a>
           </p>
@@ -286,13 +286,13 @@
                     type="text"
                     v-model="metadata.certificate"
                     :placeholder="t('plugins.generic.codecheck.identifier.label')"
-                    :readonly="certificateIdentifier.isReserved"
+                    :readonly="certificateIdentifier.isReserved && !identifierInputEmpty"
                     class="certificate-identifier-input"
                 />
                 <select
                     v-model="certificateIdentifier.venueType"
                     class="certificate-identifier-select certificate-identifier-venue-types"
-                    :disabled="identifierIsInLinkingProcess || certificateIdentifier.isReserved"
+                    :disabled="!identifierInputEmpty || certificateIdentifier.isReserved"
                 >
                     <option disabled value="default" selected>{{ t('plugins.generic.codecheck.identifier.venue.type') }}</option>
                     <option v-for="type in certificateIdentifier.venueTypes" :key="type" :value="type">
@@ -302,7 +302,7 @@
                 <select
                     v-model="certificateIdentifier.venueName"
                     class="certificate-identifier-select certificate-identifier-venue-names"
-                    :disabled="identifierIsInLinkingProcess || certificateIdentifier.isReserved"
+                    :disabled="!identifierInputEmpty || certificateIdentifier.isReserved"
                 >
                     <option disabled value="default" selected>{{ t('plugins.generic.codecheck.identifier.venue.name') }}</option>
                     <option v-for="name in certificateIdentifier.venueNames" :key="name" :value="name">
@@ -315,8 +315,8 @@
               <button
                 type="button"
                 class="pkpButton codecheck-btn certificate-identifier-button"
-                :class="identifierIsInLinkingProcess || certificateIdentifier.isReserved ? 'bg-gray' : ''"
-                :disabled="identifierIsInLinkingProcess || certificateIdentifier.isReserved"
+                :class="!identifierInputEmpty || certificateIdentifier.isReserved ? 'bg-gray' : ''"
+                :disabled="!identifierInputEmpty || certificateIdentifier.isReserved"
                 @click="reserveIdentifier('newIssueUrl')"
               >
                 {{ t('plugins.generic.codecheck.identifier.reserve.withNewIssueUrl') }}
@@ -324,8 +324,8 @@
               <button
                 type="button"
                 class="pkpButton codecheck-btn certificate-identifier-button"
-                :class="identifierIsInLinkingProcess || certificateIdentifier.isReserved ? 'bg-gray' : ''"
-                :disabled="identifierIsInLinkingProcess || certificateIdentifier.isReserved"
+                :class="!identifierInputEmpty || certificateIdentifier.isReserved ? 'bg-gray' : ''"
+                :disabled="!identifierInputEmpty || certificateIdentifier.isReserved"
                 @click="reserveIdentifier('api')"
               >
                 {{ t('plugins.generic.codecheck.identifier.reserve.withApi') }}
@@ -333,8 +333,8 @@
               <button
                 type="button"
                 class="pkpButton codecheck-btn certificate-identifier-button"
-                :class="certificateIdentifier.isReserved ? 'bg-gray' : ''"
-                :disabled="certificateIdentifier.isReserved"
+                :class="certificateIdentifier.isLinked ? 'bg-gray' : ''"
+                :disabled="certificateIdentifier.isLinked"
                 @click="reserveIdentifier('linkExistingIdentifier')"
               >
                 {{ t('plugins.generic.codecheck.identifier.reserve.linkExistingIdentifier') }}
@@ -423,6 +423,7 @@ export default {
         venueNames: [],
         issueUrl: '',
         isReserved: false,
+        isLinked: false,
       },
       metadata: {
         version: 'latest',
@@ -458,8 +459,8 @@ export default {
     },
     
     // variable that stores if the Identifier was set and thus buttons should be disabled
-    identifierIsInLinkingProcess() {
-      return this.metadata.certificate.trim() !== '';
+    identifierInputEmpty() {
+      return this.metadata.certificate.trim() == '';
     }
   },
   mounted() {
@@ -1049,7 +1050,7 @@ export default {
           } else if (reserveIdentifierMode == 'linkExistingIdentifier') {
             if (data.success) {
               this.certificateIdentifier.issueUrl = data.issueUrl;
-              this.certificateIdentifier.isReserved = true;
+              this.certificateIdentifier.isLinked = true;
               this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.linkExistingIdentifier.success.message')}: ${data.identifier}`, 'success');
               console.log('The GitHub Issue was linked to OJS with the Certificate Identifier: ', data.identifier, data.issueUrl);
             } else {
@@ -1070,6 +1071,7 @@ export default {
       this.metadata.certificate = '';
       this.certificateIdentifier.issueUrl = '';
       this.certificateIdentifier.isReserved = false;
+      this.certificateIdentifier.isLinked = false;
       this.$emit('update', this.metadata.certificate);
 
       close();
@@ -1136,6 +1138,10 @@ export default {
         this.showMessage(this.t('plugins.generic.codecheck.validation.certificateRequired'), 'error');
         return false;
       }
+      if(!this.certificateIdentifier.isLinked && !this.certificateIdentifier.issueUrl) {
+        this.showMessage(this.t('plugins.generic.codecheck.validation.githubIssueLinkRequired'), 'error');
+        return false;
+      };
       if (!this.metadata.summary) {
         this.showMessage(this.t('plugins.generic.codecheck.validation.summaryRequired'), 'error');
         return false;

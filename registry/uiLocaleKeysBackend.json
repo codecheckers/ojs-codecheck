@@ -123,6 +123,7 @@
   "plugins.generic.codecheck.status.pending",
   "plugins.generic.codecheck.validation.certificateRequired",
   "plugins.generic.codecheck.validation.codecheckersRequired",
+  "plugins.generic.codecheck.validation.githubIssueLinkRequired",
   "plugins.generic.codecheck.validation.manifestRequired",
   "plugins.generic.codecheck.validation.summaryRequired",
   "plugins.generic.codecheck.viewFullMetadata",

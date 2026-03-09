@@ -45,7 +45,6 @@ class CertificateIdentifierList
         }
 
         foreach ($codecheckGithubRegisterApiClient->getIssues() as $issue) {
-            error_log(print_r($issue, true));
             // raw identifier (can still have ranges of identifiers);
             $rawIdentifier = CertificateIdentifierList::getRawIdentifier($issue['title']);
             

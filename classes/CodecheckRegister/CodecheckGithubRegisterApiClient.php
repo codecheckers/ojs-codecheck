@@ -138,17 +138,17 @@ class CodecheckGithubRegisterApiClient
      * Adds an Issue with the new Certificate Identifier to the CODECHECK GitHub Register
      *
      * @param CertificateIdentifier $certificateIdentifier The Certificate identifier to be added
-     * @param string $codecheckVenueType The CODECHECK Venue Type that will be added as a label to the issue
-     * @param string $codecheckVenueName The CODECHECK Venue Name that will be added as a second label to the issue
+     * @param CodecheckVenue $codecheckVenue The CODECHECK Venue that will be added as labels to the issue
      * @param string $authorString The formatted author string e.g. `author name et al.`
-     * @return string Returns the GitHub URL of the newly created issue
+     * @param string $paperTitle The Title of the submitted paper / preprint / article
+     * @return array Returns the GitHub URL & Issue Number of the newly created issue
      */
     public function addIssue(
         CertificateIdentifier $certificateIdentifier,
         CodecheckVenue $codecheckVenue,
         string $paperTitle,
         string $authorString
-    ): string {
+    ): array {
         $token = $_ENV['CODECHECK_REGISTER_GITHUB_TOKEN'];
 
         $this->client->authenticate($token, null, Client::AUTH_ACCESS_TOKEN);
@@ -178,7 +178,7 @@ class CodecheckGithubRegisterApiClient
             throw new ApiCreateException("Error while adding the new GitHub issue with the new Certificate Identifier: " . $certificateIdentifier->toStr() . "\n" . $e->getMessage());
         }
 
-        return $issue['html_url'];
+        return $issue;
     }
 
     /**

@@ -380,7 +380,10 @@ msgid "plugins.generic.codecheck.validation.codecheckersRequired"
 msgstr "Please add at least one codechecker"
 
 msgid "plugins.generic.codecheck.validation.certificateRequired"
-msgstr "Please provide a certificate ID"
+msgstr "Please reserve/ input a Certificate Identifier"
+
+msgid "plugins.generic.codecheck.validation.githubIssueLinkRequired"
+msgstr "Please link the OJS form to the corresponding GitHub Issue with the same Certificate Identifier"
 
 msgid "plugins.generic.codecheck.validation.summaryRequired"
 msgstr "Please provide a summary"
