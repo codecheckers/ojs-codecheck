@@ -6,6 +6,7 @@
  *
  * Settings form for the CODECHECK plugin.
  *}
+
 <script>
 	$(function() {ldelim}
 		$('#codecheckSettings').pkpHandler('$.pkp.controllers.form.AjaxFormHandler');
@@ -53,6 +54,22 @@
 		$('input[name="githubRegisterOrganization"]').val("codecheckers");
 		$('input[name="githubRegisterRepository"]').val("testing-dev-register");
 	}
+
+	$(function () {
+		$('#resetSchema').on('click', function () {
+			if (!confirm('Are you sure, you want to permanently delete all records in the CODECHECK Metadata DB Table?')) {
+				return;
+			}
+			let resetSchemaUrl = $(this).data('url');
+			$.post(
+				resetSchemaUrl,
+				{ csrfToken: pkp.currentUser.csrfToken },
+				function(response) {
+					alert('Finished resetting the CODECHECK Metadata DB.');
+				}
+			);
+		});
+	});
 </script>
 {/literal}
 
@@ -60,7 +77,7 @@
 	class="pkp_form"
 	id="codecheckSettings"
 	method="POST"
-	action="{url router=$smarty.const.ROUTE_COMPONENT op="manage" category="generic" plugin=$pluginName verb="settings" save=true}"
+	action="{url router=$smarty.const.ROUTE_COMPONENT op='manage' category='generic' plugin=$pluginName verb='settings' save=true}"
 >
 	<!-- Always add the csrf token to secure your form -->
 	{csrf}
@@ -84,9 +101,25 @@
 				label="plugins.generic.codecheck.settings.enableCodecheck.description"
 			}
 		{/fbvFormSection}
+
+		{* Clear / Reset CODECHECK Metadata DB *}
+		{fbvFormSection
+			list=true
+		}
+			<div class="field-header">
+				<label class="pkp_form_label">Clear / Reset CODECHECK Metadata Database</label>
+			</div>
+			<button
+				type="button"
+				id="resetSchema"
+				class="pkpButton btn-remove"
+				data-url="{url router=$smarty.const.ROUTE_COMPONENT component='grid.settings.plugins.SettingsPluginGridHandler' op='manage' category='generic' plugin=$pluginName verb='resetSchema' save=true}"
+			>
+				Clear / Reset DB
+			</button>
+		{/fbvFormSection}
 		
 		{* Author anonymity option *}
-
 		{fbvFormSection
 			list=true
 		}
@@ -155,6 +188,7 @@
 			</div>
 		{/fbvFormSection}
 
+		{* Add Custom GitHub Labels *}
 		{fbvFormSection}
 			<div class="field-header">
 				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.github.labels"}</label>

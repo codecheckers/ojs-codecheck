@@ -18,6 +18,8 @@ use PKP\core\JSONMessage;
 
 class CodecheckPlugin extends GenericPlugin
 {
+    private CodecheckSchemaMigration $migration;
+
     public function register($category, $path, $mainContextId = null): bool
     {
         error_log('[CodecheckPlugin] register() called, path=' . $path);
@@ -293,11 +295,18 @@ class CodecheckPlugin extends GenericPlugin
         $result = parent::setEnabled($enabled, $contextId);
         
         if ($enabled) {
-                $migration = new CodecheckSchemaMigration();
-                $migration->up();
+            $this->migration = new CodecheckSchemaMigration();
+            $this->migration->up();
         }
         
         return $result;
+    }
+
+    public function resetSchema(): void
+    {
+        $this->migration = new CodecheckSchemaMigration();
+        $this->migration->down();
+        $this->migration->up();
     }
 }
 
