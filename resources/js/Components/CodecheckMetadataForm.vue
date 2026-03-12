@@ -1047,6 +1047,7 @@ export default {
               this.certificateIdentifier.issueUrl = data.issueUrl;
               this.certificateIdentifier.issueNumber = data.issueNumber;
               this.certificateIdentifier.isReserved = true;
+              this.certificateIdentifier.isLinked = true;
               this.$emit('update', this.metadata.certificate);
               this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.success.message')}: ${data.identifier}`, 'success');
               console.log('New Certificate Identifier reserved: ', data.identifier, data.issueUrl, data.issueNumber);
