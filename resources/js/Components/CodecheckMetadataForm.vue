@@ -1034,7 +1034,9 @@ export default {
                   title: this.submissionData.title,
                   doi: this.submissionData.doi,
                 },
-                identifier: this.metadata.certificate
+                identifier: this.metadata.certificate,
+                codecheckers: this.metadata.codecheckers,
+                repositories: this.repositories,
               }),
           });
           const data = await response.json();
@@ -1098,27 +1100,29 @@ export default {
 
       try {
           const response = await fetch(`${apiUrl}/issue?submissionId=${submissionId}`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'X-Csrf-Token': pkp.currentUser.csrfToken,
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Csrf-Token': pkp.currentUser.csrfToken,
+            },
+            body: JSON.stringify({
+              venueType: this.certificateIdentifier.venueType,
+              venueName: this.certificateIdentifier.venueName,
+              submission: {
+                authorString: authorString,
+                codeRepository: this.submissionData.codeRepository,
+                dataRepository: this.submissionData.dataRepository,
+                title: this.submissionData.title,
+                doi: this.submissionData.doi,
               },
-              body: JSON.stringify({
-                venueType: this.certificateIdentifier.venueType,
-                venueName: this.certificateIdentifier.venueName,
-                submission: {
-                  authorString: authorString,
-                  codeRepository: this.submissionData.codeRepository,
-                  dataRepository: this.submissionData.dataRepository,
-                  title: this.submissionData.title,
-                  doi: this.submissionData.doi,
-                },
-                identifier: this.metadata.certificate,
-                issue: {
-                  'url': this.certificateIdentifier.issueUrl,
-                  'number': this.certificateIdentifier.issueNumber
-                }
-              }),
+              identifier: this.metadata.certificate,
+              issue: {
+                'url': this.certificateIdentifier.issueUrl,
+                'number': this.certificateIdentifier.issueNumber
+              },
+              codecheckers: this.metadata.codecheckers,
+              repositories: this.repositories,
+            }),
           });
           const data = await response.json();
 
