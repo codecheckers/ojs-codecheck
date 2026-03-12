@@ -286,7 +286,7 @@
                     type="text"
                     v-model="metadata.certificate"
                     :placeholder="t('plugins.generic.codecheck.identifier.label')"
-                    :readonly="certificateIdentifier.issueUrl && !identifierInputEmpty"
+                    :readonly="this.certificateIdentifier.issueUrl.trim() !== '' && !this.identifierInputEmpty"
                     class="certificate-identifier-input"
                 />
                 <select
@@ -459,9 +459,9 @@ export default {
       return this.t('plugins.generic.codecheck.preview.ready');
     },
     
-    // variable that stores if the Identifier was set and thus buttons should be disabled
+    // variable that stores if the identifier input is empty
     identifierInputEmpty() {
-      return this.metadata.certificate.trim() == '';
+      return this.metadata.certificate.trim() === '';
     }
   },
   mounted() {
@@ -488,6 +488,10 @@ export default {
       this.error = null;
       this.dataLoaded = false;
       
+      console.log(this.certificateIdentifier.issueUrl.trim() !== '');
+      console.log(this.identifierInputEmpty);
+      console.log(this.certificateIdentifier.issueUrl.trim() !== '' && !this.identifierInputEmpty);
+
       try {
         if (!this.submission || !this.submission.id) {
           throw new Error('Invalid submission object');
@@ -1007,12 +1011,6 @@ export default {
         ? this.submissionData.authors[0].name + ' et al.'
         : this.submissionData.authors[0].name;
 
-      console.log(authorString);
-      console.log(reserveIdentifierMode);
-      console.log(this.submissionData.codeRepository);
-      console.log(this.submissionData.dataRepository);
-      console.log(this.submissionData.doi);
-
       const submissionId = this.submission.id;
       let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
 
@@ -1091,11 +1089,6 @@ export default {
         ? this.submissionData.authors[0].name + ' et al.'
         : this.submissionData.authors[0].name;
 
-      console.log(authorString);
-      console.log(this.submissionData.codeRepository);
-      console.log(this.submissionData.dataRepository);
-      console.log(this.submissionData.doi);
-
       const submissionId = this.submission.id;
       let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
 
@@ -1127,13 +1120,9 @@ export default {
           });
           const data = await response.json();
 
-          if (data.success) {
-            
-            this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.linkExistingIdentifier.success.message')}: ${data.identifier}`, 'success');
-            console.log('The GitHub Issue was linked to OJS with the Certificate Identifier: ', data.identifier, data.issueUrl, data.issueNumber);
-          } else {
-            this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.linkExistingIdentifier.fail.message')}\n${data.error}`, 'error');
-            console.error('Error while linking an existing GitHub Issue: ', data.error);
+          if (!data.success) {
+            this.showMessage(`${this.t('plugins.generic.codecheck.identifier.update.error.message')}\n${data.error}`, 'error');
+            console.error('Error while updating the GitHub Issue: ', data.error);
           }
       } catch (error) {
           this.showMessage(`${this.t('plugins.generic.codecheck.request.failed')}\n${error}`, 'error');
