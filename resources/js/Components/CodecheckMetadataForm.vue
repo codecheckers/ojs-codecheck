@@ -286,7 +286,7 @@
                     type="text"
                     v-model="metadata.certificate"
                     :placeholder="t('plugins.generic.codecheck.identifier.label')"
-                    :readonly="certificateIdentifier.isReserved && !identifierInputEmpty"
+                    :readonly="certificateIdentifier.issueUrl && !identifierInputEmpty"
                     class="certificate-identifier-input"
                 />
                 <select
