@@ -237,7 +237,10 @@ class CodecheckWizardManager {
   setupButtonListener() {
     document.addEventListener('click', (e) => {
       const button = e.target.closest('button');
-      if (button && (button.textContent.includes('Continue') || button.textContent.includes('Save for Later'))) {
+      if (!button) return;
+      
+      // Save on any button click except cancel
+      if (button.id !== 'cancelSubmission') {
         this.saveData();
       }
     }, true);
@@ -276,24 +279,20 @@ class CodecheckReviewRefresher {
   }
 
   isOnReviewStep() {
-    const wizardSteps = document.querySelectorAll('.submissionWizard__step');
+    // Find the review step container
+    const allSteps = document.querySelectorAll('.pkpStep');
     
-    for (const step of wizardSteps) {
-      if (step.classList.contains('isActive') || step.classList.contains('isCurrent')) {
-        const stepText = step.textContent.toLowerCase();
-        if (stepText.includes('review') || stepText.includes('submit')) {
-          return true;
-        }
+    for (const step of allSteps) {
+      // Check if this step contains review panels AND is not hidden
+      const hasReviewPanels = step.querySelectorAll('.submissionWizard__reviewPanel').length >= 3;
+      const isVisible = !step.hasAttribute('hidden');
+      
+      if (hasReviewPanels && isVisible) {
+        return true;
       }
     }
-
-    const reviewPanels = document.querySelectorAll('.submissionWizard__reviewPanel');
-    const visiblePanels = Array.from(reviewPanels).filter(panel => {
-      const rect = panel.getBoundingClientRect();
-      return rect.width > 0 && rect.height > 0;
-    });
-
-    return visiblePanels.length > 2;
+    
+    return false;
   }
 
   checkForReviewPanel() {
@@ -345,7 +344,7 @@ class CodecheckReviewRefresher {
         hasData = true;
         body.innerHTML += `
           <div class="submissionWizard__reviewPanel__item">
-            <h4>${this.escapeHtml('Code Repository URLs')}</h4>
+            <h4>${this.escapeHtml(t('plugins.generic.codecheck.codeRepository'))}</h4>
             <div class="review-value">
               <p>${this.escapeHtml(publication.codeRepository).replace(/\n/g, '<br>')}</p>
             </div>
@@ -357,7 +356,7 @@ class CodecheckReviewRefresher {
         hasData = true;
         body.innerHTML += `
           <div class="submissionWizard__reviewPanel__item">
-            <h4>${this.escapeHtml('Data Repository URLs')}</h4>
+            <h4>${this.escapeHtml(t('plugins.generic.codecheck.dataRepository'))}</h4>
             <div class="review-value">
               <p>${this.escapeHtml(publication.dataRepository).replace(/\n/g, '<br>')}</p>
             </div>
@@ -369,7 +368,7 @@ class CodecheckReviewRefresher {
         hasData = true;
         body.innerHTML += `
           <div class="submissionWizard__reviewPanel__item">
-            <h4>${this.escapeHtml('Expected Output Files')}</h4>
+            <h4>${this.escapeHtml(t('plugins.generic.codecheck.manifestFiles.label'))}</h4>
             <div class="review-value">
               <pre>${this.escapeHtml(publication.manifestFiles)}</pre>
             </div>
@@ -381,7 +380,7 @@ class CodecheckReviewRefresher {
         hasData = true;
         body.innerHTML += `
           <div class="submissionWizard__reviewPanel__item">
-            <h4>${this.escapeHtml('Data and Software Availability')}</h4>
+            <h4>${this.escapeHtml(t('plugins.generic.codecheck.dataAvailability'))}</h4>
             <div class="review-value">
               <div>${publication.dataAvailabilityStatement}</div>
             </div>
@@ -393,7 +392,7 @@ class CodecheckReviewRefresher {
         body.innerHTML = `
           <div class="submissionWizard__reviewPanel__item">
             <p class="description" style="color: #d00a0a;">
-              <em>No CODECHECK data found.</em>
+              <em>${this.escapeHtml(t('plugins.generic.codecheck.noDataFound'))}</em>
             </p>
           </div>
         `;
