@@ -1067,6 +1067,8 @@ export default {
             if (data.success) {
               this.certificateIdentifier.issueUrl = data.issueUrl;
               this.certificateIdentifier.issueNumber = data.issueNumber;
+              this.certificateIdentifier.venueName = 'default';
+              this.certificateIdentifier.venueType = 'default';
               this.certificateIdentifier.isLinked = true;
               this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.linkExistingIdentifier.success.message')}: ${data.identifier}`, 'success');
               console.log('The GitHub Issue was linked to OJS with the Certificate Identifier: ', data.identifier, data.issueUrl, data.issueNumber);
