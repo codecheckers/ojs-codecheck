@@ -257,6 +257,9 @@ msgstr "Do you want to reserve a new identifier for this CODECHECK?"
 msgid "plugins.generic.codecheck.identifier.removeConfirm"
 msgstr "Are you sure you want to remove this identifier?"
 
+msgid "plugins.generic.codecheck.identifier.labels"
+msgstr "GitHub Labels"
+
 msgid "plugins.generic.codecheck.previewYaml"
 msgstr "Preview CODECHECK metadata file"
 
