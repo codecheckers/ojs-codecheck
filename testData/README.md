@@ -4,7 +4,8 @@
 
 - Download [OJS 3.5](https://pkp.sfu.ca/software/ojs/download/) and install it
 - Clone the [PKP Datasets Repository](https://github.com/pkp/datasets)
-- Copy the directory [stable-3_5_0-codecheck](stable-3_5_0-codecheck) into `/datasets/ojs`
+    - Place it somewhere on your local machine — there is no need for it to be in the direcrtory of the beforehand installed OJS instance
+- Copy the directory [stable-3_5_0-codecheck](stable-3_5_0-codecheck) into `/datasets/ojs` of the PKP Datasets Repository
 - `cd /ojs` in your OJS installation directory
     - `mkdir files`
     - Set environment variables (adjust credentials to match your MySQL setup):
