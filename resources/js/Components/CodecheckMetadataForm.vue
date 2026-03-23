@@ -275,32 +275,31 @@
           <label class="field-label">{{ t('plugins.generic.codecheck.identifier.title') }} <span class="required">*</span></label>
           <p class="field-description">
             {{ t('plugins.generic.codecheck.identifier.description') }}
-            <span v-if="certificateIdentifier.issueUrl && certificateIdentifier.isLinked"> - </span>
-            <a v-if="certificateIdentifier.issueUrl && certificateIdentifier.isLinked" :href="certificateIdentifier.issueUrl" target="_blank">
+            <span v-if="certificateIdentifier.issue.url && certificateIdentifier.isLinked"> - </span>
+            <a v-if="certificateIdentifier.issue.url && certificateIdentifier.isLinked" :href="certificateIdentifier.issue.url" target="_blank">
               {{ t('plugins.generic.codecheck.identifier.viewGithubIssue') }}
             </a>
           </p>
           <div class="certificate-identifier-section">
             <div class="certificate-identifier-input-wrapper">
-                <input
-                    type="text"
-                    v-model="metadata.certificate"
-                    :placeholder="t('plugins.generic.codecheck.identifier.label')"
-                    :readonly="this.certificateIdentifier.issueUrl.trim() !== '' && !this.identifierInputEmpty"
-                    class="certificate-identifier-input"
-                />
-                <div
-                  class="certificate-identifier-select dropdown"
-                  :disabled="!identifierInputEmpty || certificateIdentifier.isReserved"
-                >
+              <input
+                type="text"
+                v-model="metadata.certificate"
+                :placeholder="t('plugins.generic.codecheck.identifier.label')"
+                :readonly="this.certificateIdentifier.issue.url.trim() !== '' && !this.identifierInputEmpty"
+                class="certificate-identifier-input"
+              />
+              <fieldset :disabled="!identifierInputEmpty || certificateIdentifier.isReserved">
+                <div class="certificate-identifier-select dropdown">
                   <button class="dropbtn">{{ t('plugins.generic.codecheck.identifier.labels') }} ⚙</button>
                   <div class="dropdown-content">
-                    <div class="dropdown-checkbox-input" v-for="label in certificateIdentifier.labels" :key="label">   
-                      <input type="checkbox" v-model="certificateIdentifier.labelsSelected" :value="label"/>
+                    <div class="dropdown-checkbox-input" v-for="label in certificateIdentifier.issue.labels" :key="label">   
+                      <input type="checkbox" v-model="certificateIdentifier.issue.labelsSelected" :value="label"/>
                       <label :for="label">{{ label }}</label>
                     </div>
                   </div>
                 </div>
+              </fieldset>
             </div>
 
             <div class="identifier-actions" id="certificate-identifier-button-wrapper">
@@ -409,16 +408,14 @@ export default {
       },
       // Further information neccesary for retrieving and reserving the Certificate Identifier
       certificateIdentifier: {
-        venueType: 'default',
-        venueName: 'default',
-        venueTypes: [],
-        venueNames: [],
-        issueUrl: '',
-        issueNumber: null,
+        issue: {
+          url: '',
+          number: null,
+          labels: [],
+          labelsSelected: [],
+        },
         isReserved: false,
-        isLinked: false,
-        labels: ['test 1', 'label 2', 'venue name 3'],
-        labelsSelected: [],
+        isLinked: false
       },
       metadata: {
         version: 'latest',
@@ -482,9 +479,9 @@ export default {
       this.error = null;
       this.dataLoaded = false;
       
-      console.log(this.certificateIdentifier.issueUrl.trim() !== '');
+      console.log(this.certificateIdentifier.issue.url.trim() !== '');
       console.log(this.identifierInputEmpty);
-      console.log(this.certificateIdentifier.issueUrl.trim() !== '' && !this.identifierInputEmpty);
+      console.log(this.certificateIdentifier.issue.url.trim() !== '' && !this.identifierInputEmpty);
 
       try {
         if (!this.submission || !this.submission.id) {
@@ -538,9 +535,10 @@ export default {
             additionalContent: data.codecheck.additionalContent || data.codecheck.additional_content || ''
           };
 
-          this.certificateIdentifier.issueUrl = data.codecheck.issueUrl;
-          this.certificateIdentifier.issueNumber = data.codecheck.issueNumber;
-          this.certificateIdentifier.isLinked = true ? data.codecheck.issueUrl && data.codecheck.issueNumber : false;
+          this.certificateIdentifier.issue.url = data.codecheck.issue.url;
+          this.certificateIdentifier.issue.number = data.codecheck.issue.number;
+          this.certificateIdentifier.issue.labelsSelected = data.codecheck.issue.labelsSelected;
+          this.certificateIdentifier.isLinked = true ? data.codecheck.issue.url && data.codecheck.issue.number : false;
           
           if (data.codecheck.repository) {
             this.repositories = data.codecheck.repository.split(',').map(r => r.trim()).filter(r => r);
@@ -804,8 +802,7 @@ export default {
           source: this.metadata.source,
           codecheckers: this.metadata.codecheckers,
           certificate: this.metadata.certificate,
-          issueUrl: this.certificateIdentifier.issueUrl,
-          issueNumber: this.certificateIdentifier.issueNumber,
+          issue: this.certificateIdentifier.issue,
           check_time: this.metadata.check_time,
           summary: this.metadata.summary,
           report: this.metadata.report,
@@ -977,8 +974,8 @@ export default {
 
           if (data.success) {
               console.log('Success:', data.message);
-              this.certificateIdentifier.labels = data.labels;
-              console.log('CODECHECK Issue Labels:', this.certificateIdentifier.labels);
+              this.certificateIdentifier.issue.labels = data.labels;
+              console.log('CODECHECK Issue Labels:', this.certificateIdentifier.issue.labels);
           } else {
               this.showMessage(`${this.t('plugins.generic.codecheck.identifier.venue.fetch.error.curl')}\n${data.error}`, 'error');
               console.error(`${this.t('plugins.generic.codecheck.identifier.venue.fetch.error.curl')}:`, data.error);
@@ -991,7 +988,7 @@ export default {
 
     async reserveIdentifier(reserveIdentifierMode) {
       if (
-        (this.certificateIdentifier.labelsSelected.length === 0)
+        (this.certificateIdentifier.issue.labelsSelected.length === 0)
         &&
         reserveIdentifierMode != 'linkExistingIdentifier'
       ) {
@@ -1015,7 +1012,7 @@ export default {
               },
               body: JSON.stringify({
                 reserveIdentifierMode: reserveIdentifierMode,
-                labels: this.certificateIdentifier.labelsSelected,
+                labels: this.certificateIdentifier.issue.labelsSelected,
                 submission: {
                   authorString: authorString,
                   codeRepository: this.submissionData.codeRepository,
@@ -1033,8 +1030,8 @@ export default {
           if (reserveIdentifierMode == 'api') {
             if (data.success) {
               this.metadata.certificate = data.identifier;
-              this.certificateIdentifier.issueUrl = data.issueUrl;
-              this.certificateIdentifier.issueNumber = data.issueNumber;
+              this.certificateIdentifier.issue.url = data.issueUrl;
+              this.certificateIdentifier.issue.number = data.issueNumber;
               this.certificateIdentifier.isReserved = true;
               this.certificateIdentifier.isLinked = true;
               this.$emit('update', this.metadata.certificate);
@@ -1056,8 +1053,8 @@ export default {
             }
           } else if (reserveIdentifierMode == 'linkExistingIdentifier') {
             if (data.success) {
-              this.certificateIdentifier.issueUrl = data.issueUrl;
-              this.certificateIdentifier.issueNumber = data.issueNumber;
+              this.certificateIdentifier.issue.url = data.issueUrl;
+              this.certificateIdentifier.issue.number = data.issueNumber;
               this.certificateIdentifier.venueName = 'default';
               this.certificateIdentifier.venueType = 'default';
               this.certificateIdentifier.isLinked = true;
@@ -1103,10 +1100,7 @@ export default {
                 doi: this.submissionData.doi,
               },
               identifier: this.metadata.certificate,
-              issue: {
-                'url': this.certificateIdentifier.issueUrl,
-                'number': this.certificateIdentifier.issueNumber
-              },
+              issue: this.certificateIdentifier.issue,
               codecheckers: this.metadata.codecheckers,
               repositories: this.repositories,
             }),
@@ -1125,7 +1119,7 @@ export default {
 
     removeIdentifier(close) {
       this.metadata.certificate = '';
-      this.certificateIdentifier.issueUrl = '';
+      this.certificateIdentifier.issue.url = '';
       this.certificateIdentifier.isReserved = false;
       this.certificateIdentifier.isLinked = false;
       this.$emit('update', this.metadata.certificate);
@@ -1170,7 +1164,7 @@ export default {
     fallbackRemoveIdentifierModal() {
       if(confirm(this.t('plugins.generic.codecheck.identifier.remove.modal.areYouSureYouWantToRemoveTheIdentifier'))) {
         this.metadata.certificate = '';
-        this.certificateIdentifier.issueUrl = '';
+        this.certificateIdentifier.issue.url = '';
         this.$emit('update', this.metadata.certificate);
       }
     },
@@ -1194,7 +1188,7 @@ export default {
         this.showMessage(this.t('plugins.generic.codecheck.validation.certificateRequired'), 'error');
         return false;
       }
-      if(!this.certificateIdentifier.isLinked && !this.certificateIdentifier.issueUrl && !this.certificateIdentifier.issueNumber) {
+      if(!this.certificateIdentifier.isLinked && !this.certificateIdentifier.issue.url && !this.certificateIdentifier.issue.number) {
         this.showMessage(this.t('plugins.generic.codecheck.validation.githubIssueLinkRequired'), 'error');
         return false;
       };
@@ -1808,22 +1802,6 @@ a {
     height: 2.5rem;
 }
 
-.certificate-identifier-select:disabled {
-    /* Centeres the Text in the select */
-    text-align: center;
-    text-align-last: center;
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    background-image: none !important; /* removes arrow background */
-    background-color: #868686;
-    color: #ffffff;
-    cursor: not-allowed;
-    pointer-events: none;
-    opacity: 0.6;
-    font-weight: 600;
-}
-
 .certificate-identifier-select {
     font-size: 14px;
     padding: 6px;
@@ -1839,6 +1817,22 @@ a {
   overflow: hidden;
   color: inherit;
   padding: 0 !important;
+}
+
+fieldset:disabled .certificate-identifier-select.dropdown .dropbtn {
+  /* Centeres the Text in the select */
+  text-align: center;
+  text-align-last: center;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: none !important; /* removes arrow background */
+  background-color: #868686;
+  color: #ffffff;
+  cursor: not-allowed;
+  pointer-events: none;
+  opacity: 0.6;
+  font-weight: 600;
 }
 
 .certificate-identifier-select.dropdown .dropbtn {
@@ -1870,6 +1864,13 @@ a {
   padding: 10px;
 }
 
+fieldset:disabled .certificate-identifier-select .dropdown-content {
+  background-color: #868686;
+  border: 3px solid #ccc;
+  font-weight: 600;
+  color: #fff;
+}
+
 .certificate-identifier-select .dropdown-content .dropdown-checkbox-input {
   float: none;
   text-decoration: none;
@@ -1892,11 +1893,11 @@ a {
 }
 
 #certificate-identifier-button-wrapper {
-    padding-top: 0.5rem;
+  padding-top: 0.5rem;
 }
 
 .bg-blue {
-    background: #006798;
+  background: #006798;
 }
 
 .bg-blue:hover {
@@ -1904,7 +1905,7 @@ a {
 }
 
 .bg-red {
-    background: #dc3545;
+  background: #dc3545;
 }
 
 .bg-red:hover {
@@ -1922,9 +1923,9 @@ a {
 }
 
 .certificate-identifier-button:disabled {
-    opacity: 0.6 !important;
-    pointer-events: none !important;
-    cursor: not-allowed !important;
+  opacity: 0.6 !important;
+  pointer-events: none !important;
+  cursor: not-allowed !important;
 }
 
 .codecheck-metadata-form .file-link {

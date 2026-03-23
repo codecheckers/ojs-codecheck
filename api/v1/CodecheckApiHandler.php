@@ -319,7 +319,7 @@ class CodecheckApiHandler
         } else {
             $this->response->response([
                 'success'   => false,
-                'error'     => "The CODECHECK Venue Type and/ or Venue Names aren't of Type string as expected.",
+                'error'     => "Some Parameters sent with POST to the API aren't of the expected datatype.",
             ], 400);
             return;
         }
@@ -342,7 +342,7 @@ class CodecheckApiHandler
             $this->request->getContext(), // The Journal Object of the Submission
         );
 
-        $issueLabelArray = $postParams["labels"];
+        $issueLabelArray = $postParams["issue"]["labelsSelected"];
         $submissionData = $postParams["submission"];
         $authorString = $submissionData["authorString"];
         $articleTitle = $submissionData["title"];
@@ -376,7 +376,7 @@ class CodecheckApiHandler
         } else {
             $this->response->response([
                 'success'   => false,
-                'error'     => "The CODECHECK Venue Type and/ or Venue Names aren't of Type string as expected.",
+                'error'     => "Some Parameters sent with POST to the API aren't of the expected datatype.",
             ], 400);
             return;
         }

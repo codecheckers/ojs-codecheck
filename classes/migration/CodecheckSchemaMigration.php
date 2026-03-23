@@ -19,8 +19,7 @@ class CodecheckSchemaMigration extends Migration
                 $table->text('source')->nullable();
                 $table->text('codecheckers')->nullable();
                 $table->string('certificate', 100)->nullable();
-                $table->string('issueUrl', 300)->nullable();
-                $table->integer('issueNumber')->nullable();
+                $table->string('issue', 500)->default(json_encode(['url' => null, 'number' => null, 'labels' => [], 'labelsSelected' => []]));
                 $table->timestamp('check_time')->nullable();
                 $table->text('summary')->nullable();
                 $table->string('report', 500)->nullable();
