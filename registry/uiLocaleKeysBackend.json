@@ -54,8 +54,6 @@
   "plugins.generic.codecheck.identifier.venue.fetch.error.codecheckAPI",
   "plugins.generic.codecheck.identifier.venue.fetch.error.curl",
   "plugins.generic.codecheck.identifier.update.error.message",
-  "plugins.generic.codecheck.identifier.venue.name",
-  "plugins.generic.codecheck.identifier.venue.type",
   "plugins.generic.codecheck.identifier.viewGithubIssue",
   "plugins.generic.codecheck.loadError",
   "plugins.generic.codecheck.manifest.description",

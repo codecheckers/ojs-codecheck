@@ -3,7 +3,7 @@
 namespace APP\plugins\generic\codecheck\classes\CodecheckRegister;
 
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifier;
-use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckVenue;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckIssueLabels;
 
 class CodecheckGithubRegisterIssue {
     private string $repositoryOwner;
@@ -18,7 +18,7 @@ class CodecheckGithubRegisterIssue {
         string $repositoryOwner,
         string $repository,
         CertificateIdentifier $certificateIdentifier,
-        CodecheckVenue $codecheckVenue,
+        CodecheckIssueLabels $codecheckIssueLabels,
         string $paperTitle,
         string $journalName,
         string $authorString,
@@ -33,7 +33,7 @@ class CodecheckGithubRegisterIssue {
         $this->title = $this->createTitleMarkdown($authorString, $certificateIdentifier);
         $this->jsonEncodedCodecheckMetadata = $this->createJsonEncodedCodecheckMetadataMarkdown($authorString, $certificateIdentifier, $journalName, $submissionID, $codecheckers, $repositories);
         $this->body = $this->createBodyMarkdown($paperTitle, $journalName, $repositories) . "\n" . $this->jsonEncodedCodecheckMetadata;
-        $this->labels = $this->createLabelsFromVenue($codecheckVenue);
+        $this->labels = $this->fillLabels($codecheckIssueLabels);
     }
 
     public function getRepositoryOwner(): string
@@ -103,13 +103,12 @@ class CodecheckGithubRegisterIssue {
         . $repoStr;
     }
 
-    private function createLabelsFromVenue(
-        CodecheckVenue $venue
+    private function fillLabels(
+        CodecheckIssueLabels $codecheckIssueLabels
     ): array
     {
         $labels = ['id assigned'];
-        $labels[] = $venue->getVenueType();
-        $labels[] = $venue->getVenueName();
+        $labels = array_merge($labels, $codecheckIssueLabels->get()->toArray());
 
         return $labels;
     }

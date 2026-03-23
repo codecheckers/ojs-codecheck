@@ -139,14 +139,14 @@ class CodecheckGithubRegisterApiClient
      * Adds an Issue with the new Certificate Identifier to the CODECHECK GitHub Register
      *
      * @param CertificateIdentifier $certificateIdentifier The Certificate identifier to be added
-     * @param CodecheckVenue $codecheckVenue The CODECHECK Venue that will be added as labels to the issue
+     * @param CodecheckIssueLabels $codecheckIssueLabels The CODECHECK Issue Labels that will be added
      * @param string $authorString The formatted author string e.g. `author name et al.`
      * @param string $paperTitle The Title of the submitted paper / preprint / article
      * @return array Returns the GitHub URL & Issue Number of the newly created issue
      */
     public function addIssue(
         CertificateIdentifier $certificateIdentifier,
-        CodecheckVenue $codecheckVenue,
+        CodecheckIssueLabels $codecheckIssueLabels,
         string $paperTitle,
         string $authorString,
         array $codecheckers,
@@ -160,7 +160,7 @@ class CodecheckGithubRegisterApiClient
             $this->githubRegisterRepositoryOwner,
             $this->githubRegisterRepository,
             $certificateIdentifier,
-            $codecheckVenue,
+            $codecheckIssueLabels,
             $paperTitle,
             $this->journalName,
             $authorString,
@@ -191,7 +191,7 @@ class CodecheckGithubRegisterApiClient
      *
      * @param int $issueNumber The Number of the corresponding GitHub Issue
      * @param CertificateIdentifier $certificateIdentifier The Certificate identifier to be added
-     * @param CodecheckVenue $codecheckVenue The CODECHECK Venue that will be added as labels to the issue
+     * @param CodecheckIssueLabels $codecheckIssueLabels The CODECHECK Issue Labels that will be updated
      * @param string $authorString The formatted author string e.g. `author name et al.`
      * @param string $paperTitle The Title of the submitted paper / preprint / article
      * @return array Returns the GitHub URL & Issue Number of the newly created issue
@@ -199,7 +199,7 @@ class CodecheckGithubRegisterApiClient
     public function updateIssue(
         int $issueNumber,
         CertificateIdentifier $certificateIdentifier,
-        CodecheckVenue $codecheckVenue,
+        CodecheckIssueLabels $codecheckIssueLabels,
         string $paperTitle,
         string $authorString,
         array $codecheckers,
@@ -213,7 +213,7 @@ class CodecheckGithubRegisterApiClient
             $this->githubRegisterRepositoryOwner,
             $this->githubRegisterRepository,
             $certificateIdentifier,
-            $codecheckVenue,
+            $codecheckIssueLabels,
             $paperTitle,
             $this->journalName,
             $authorString,
@@ -227,7 +227,7 @@ class CodecheckGithubRegisterApiClient
             'body'  => $codecheckIssue->getBody()
         ];
 
-        if(!$codecheckVenue->isDefault()){
+        if(!empty($codecheckIssueLabels->get()->toArray())){
             $issueContents['labels'] = $codecheckIssue->getLabels();
         }
 

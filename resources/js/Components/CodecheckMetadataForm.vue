@@ -289,35 +289,18 @@
                     :readonly="this.certificateIdentifier.issueUrl.trim() !== '' && !this.identifierInputEmpty"
                     class="certificate-identifier-input"
                 />
-                <div class="certificate-identifier-select dropdown">
+                <div
+                  class="certificate-identifier-select dropdown"
+                  :disabled="!identifierInputEmpty || certificateIdentifier.isReserved"
+                >
                   <button class="dropbtn">{{ t('plugins.generic.codecheck.identifier.labels') }} ⚙</button>
                   <div class="dropdown-content">
                     <div class="dropdown-checkbox-input" v-for="label in certificateIdentifier.labels" :key="label">   
-                      <input type="checkbox" v-model="certificateIdentifier.labelSelected" :value="label"/>
+                      <input type="checkbox" v-model="certificateIdentifier.labelsSelected" :value="label"/>
                       <label :for="label">{{ label }}</label>
                     </div>
                   </div>
                 </div>
-                <select
-                    v-model="certificateIdentifier.venueType"
-                    class="certificate-identifier-select certificate-identifier-venue-types"
-                    :disabled="!identifierInputEmpty || certificateIdentifier.isReserved"
-                >
-                    <option disabled value="default" selected>{{ t('plugins.generic.codecheck.identifier.venue.type') }}</option>
-                    <option v-for="type in certificateIdentifier.venueTypes" :key="type" :value="type">
-                    {{ type }}
-                    </option>
-                </select>
-                <select
-                    v-model="certificateIdentifier.venueName"
-                    class="certificate-identifier-select certificate-identifier-venue-names"
-                    :disabled="!identifierInputEmpty || certificateIdentifier.isReserved"
-                >
-                    <option disabled value="default" selected>{{ t('plugins.generic.codecheck.identifier.venue.name') }}</option>
-                    <option v-for="name in certificateIdentifier.venueNames" :key="name" :value="name">
-                    {{ name }}
-                    </option>
-                </select>
             </div>
 
             <div class="identifier-actions" id="certificate-identifier-button-wrapper">
@@ -435,7 +418,7 @@ export default {
         isReserved: false,
         isLinked: false,
         labels: ['test 1', 'label 2', 'venue name 3'],
-        labelSelected: [],
+        labelsSelected: [],
       },
       metadata: {
         version: 'latest',
@@ -477,7 +460,7 @@ export default {
   },
   mounted() {
     this.loadData();
-    this.getVenueData();
+    this.getCodecheckIssueLabels();
   },
   watch: {
     metadata: {
@@ -979,11 +962,11 @@ export default {
       win.document.write(html);
     },
 
-    async getVenueData() {
+    async getCodecheckIssueLabels() {
       let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
 
       try {
-          const response = await fetch(`${apiUrl}/venue`, {
+          const response = await fetch(`${apiUrl}/labels`, {
               method: 'GET',
               headers: {
               'Content-Type': 'application/json',
@@ -994,10 +977,8 @@ export default {
 
           if (data.success) {
               console.log('Success:', data.message);
-              this.certificateIdentifier.venueTypes = data.venueTypes;
-              this.certificateIdentifier.venueNames = data.venueNames;
-              console.log('Venue types:', this.certificateIdentifier.venueTypes);
-              console.log('Venue names:', this.certificateIdentifier.venueNames);
+              this.certificateIdentifier.labels = data.labels;
+              console.log('CODECHECK Issue Labels:', this.certificateIdentifier.labels);
           } else {
               this.showMessage(`${this.t('plugins.generic.codecheck.identifier.venue.fetch.error.curl')}\n${data.error}`, 'error');
               console.error(`${this.t('plugins.generic.codecheck.identifier.venue.fetch.error.curl')}:`, data.error);
@@ -1010,11 +991,11 @@ export default {
 
     async reserveIdentifier(reserveIdentifierMode) {
       if (
-        (this.certificateIdentifier.venueType === 'default' || this.certificateIdentifier.venueName === 'default')
+        (this.certificateIdentifier.labelsSelected.length === 0)
         &&
         reserveIdentifierMode != 'linkExistingIdentifier'
       ) {
-        alert('Please select both a Venue Type and a Venue Name.');
+        alert('Please select at least one GitHub Issue Label.');
         return;
       }
 
@@ -1034,8 +1015,7 @@ export default {
               },
               body: JSON.stringify({
                 reserveIdentifierMode: reserveIdentifierMode,
-                venueType: this.certificateIdentifier.venueType,
-                venueName: this.certificateIdentifier.venueName,
+                labels: this.certificateIdentifier.labelsSelected,
                 submission: {
                   authorString: authorString,
                   codeRepository: this.submissionData.codeRepository,
