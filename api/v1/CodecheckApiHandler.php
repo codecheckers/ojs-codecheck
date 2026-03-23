@@ -22,8 +22,6 @@ use APP\plugins\generic\codecheck\CodecheckPlugin;
 use APP\facades\Repo;
 use Illuminate\Support\Facades\DB;
 
-use function Clue\StreamFilter\append;
-
 class CodecheckApiHandler
 {
     private JsonResponse $response;

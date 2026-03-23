@@ -102,6 +102,23 @@
 			}
 		{/fbvFormSection}
 
+		{* Setting for different CODECHECK modes *}
+		{fbvFormSection
+			list=true
+		}
+			<div class="field-header">
+				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.mode"}</label>
+			</div>
+			{fbvElement
+				type="select"
+				id="codecheckMode"
+				class="codecheck-form-select"
+				from=$codecheckModes
+				selected=$codecheckMode
+				translate=false
+			}
+		{/fbvFormSection}
+
 		{* Clear / Reset CODECHECK Metadata DB *}
 		{fbvFormSection
 			list=true
