@@ -1686,52 +1686,52 @@ a {
 }
 
 .certificate-identifier-input-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    justify-content: center;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: center;
 }
 
 .certificate-identifier-input {
-    flex: 1;
-    font-size:14px;
-    padding: 6px;
-    border: 1px solid #ccc;
-    border-radius: 3px;
-    height: 2.5rem;
+  flex: 1;
+  font-size:14px;
+  padding: 6px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  height: 2.5rem;
 }
 
 .certificate-identifier-select:disabled {
-    /* Centeres the Text in the select */
-    text-align: center;
-    text-align-last: center;
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    background-image: none !important; /* removes arrow background */
-    background-color: #868686;
-    color: #ffffff;
-    cursor: not-allowed;
-    pointer-events: none;
-    opacity: 0.6;
-    font-weight: 600;
+  /* Centeres the Text in the select */
+  text-align: center;
+  text-align-last: center;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: none !important; /* removes arrow background */
+  background-color: #868686;
+  color: #ffffff;
+  cursor: not-allowed;
+  pointer-events: none;
+  opacity: 0.6;
+  font-weight: 600;
 }
 
 .certificate-identifier-select {
-    font-size: 14px;
-    padding: 6px;
-    border: 1px solid #ccc;
-    border-radius: 3px;
-    height: 2.5rem;
-    background: #fff;
+  font-size: 14px;
+  padding: 6px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  height: 2.5rem;
+  background: #fff;
 }
 
 #certificate-identifier-button-wrapper {
-    padding-top: 0.5rem;
+  padding-top: 0.5rem;
 }
 
 .bg-blue {
-    background: #006798;
+  background: #006798;
 }
 
 .bg-blue:hover {

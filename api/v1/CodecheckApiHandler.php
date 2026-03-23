@@ -25,8 +25,6 @@ use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitExce
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
 use Illuminate\Support\Facades\DB;
 
-use function Clue\StreamFilter\append;
-
 class CodecheckApiHandler
 {
     private JsonResponse $response;

@@ -15,6 +15,8 @@ use PKP\components\forms\FieldOptions;
 use APP\facades\Repo;
 use APP\plugins\generic\codecheck\api\v1\CodecheckApiHandler;
 use PKP\core\JSONMessage;
+use APP\plugins\generic\codecheck\classes\Constants;
+use APP\plugins\generic\codecheck\controllers\page\CodecheckPageHandler;
 
 class CodecheckPlugin extends GenericPlugin
 {
@@ -42,6 +44,8 @@ class CodecheckPlugin extends GenericPlugin
             Hook::add('Submission::validate', $this->saveWizardFieldsFromRequest(...));
             // Add hook for Ajax API calls
             Hook::add('Dispatcher::dispatch', [$this, 'setupAPIHandler']);
+            // Add hook for the custom CODECHECK Pages
+            Hook::add('LoadHandler', $this->setCodecheckPageHandler(...));
             // Add hook for the Template Manager
             Hook::add('TemplateManager::display', $this->callbackTemplateManagerDisplay(...));
             
@@ -97,6 +101,46 @@ class CodecheckPlugin extends GenericPlugin
 
         $router->setHandler($apiHandler);
         exit;
+    }
+
+    /**
+     * Declare the handler function to process the actual page PATH
+     *
+     * @param string $hookName The name of the invoked hook
+     * @param array $args Hook parameters
+     *
+     * @return bool Hook handling status
+     */
+    public function setCodecheckPageHandler($hookName, $args)
+    {
+        $request = Application::get()->getRequest();
+        $templateMgr = TemplateManager::getManager($request);
+
+        $page = &$args[0];
+        $op = &$args[1];
+        $handler = &$args[3];
+
+        
+        // Construct a path to look for
+        $path = $page;
+        if ($op !== 'index') {
+            $path .= "/{$op}";
+        }
+        if ($ops = $request->getRequestedArgs()) {
+            $path .= '/' . implode('/', $ops);
+        }
+
+        // Check if this is a request for a static page or preview.
+        if ($page = 'codecheck' && $op == 'info') {
+            // Trick the handler into dealing with it normally
+            $page = 'pages';
+            $op = 'view';
+
+            // It is -- attach the static pages handler.
+            $handler = new CodecheckPageHandler($this);
+            return true;
+        }
+        return false;
     }
 
     private function addAssets(): void
@@ -155,6 +199,17 @@ class CodecheckPlugin extends GenericPlugin
         return false;
     }
 
+    public function getUrlPageRoute(string $page): string
+    {
+        $request = Application::get()->getRequest();
+        return $request->getDispatcher()->url(
+            $request,
+            ROUTE_PAGE,
+            null,
+            $page
+        );
+    }
+
     public function addOptInToSchema(string $hookName, array $args): bool
     {
         $schema = $args[0];
@@ -177,6 +232,16 @@ class CodecheckPlugin extends GenericPlugin
     public function addOptInCheckbox(string $hookName, \PKP\components\forms\FormComponent $form): bool
     {
         if ($form->id === 'submitStart' || $form->id === 'submissionStart' || str_contains($form->id, 'start')) {
+            $request = Application::get()->getRequest();
+            $context = $request->getContext();
+            $codecheckMode = $this->getSetting($context->getId(), Constants::CODECHECK_MODE);
+            error_log($codecheckMode);
+            $checkboxValue = false;
+
+            if($codecheckMode == 'opt-out') {
+                $checkboxValue = true;
+            }
+
             $form->addField(new FieldOptions('codecheckOptIn', [
                 'label' => __('plugins.generic.codecheck.displayName'),
                 'type' => 'checkbox',
@@ -184,11 +249,11 @@ class CodecheckPlugin extends GenericPlugin
                     [
                         'value' => 1, 
                         'label' => __('plugins.generic.codecheck.optIn.description', [
-                            'codecheckLink' => '<a href="https://codecheck.org.uk/" target="_blank">CODECHECK</a>'
+                            'codecheckLink' => "<a href='{$this->getUrlPageRoute("codecheck")}/info' target='_blank'>CODECHECK</a>"
                         ])
                     ]
                 ],
-                'value' => false,
+                'value' => $checkboxValue,
                 'groupId' => 'default'
             ]));
             

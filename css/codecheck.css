@@ -303,3 +303,12 @@ textarea[name="dataAvailabilityStatement"] {
 .settingsLabelRow .remove:hover {
   color: #a00;
 }
+
+.codecheck-form-select {
+  font-size: 14px !important;
+  padding: 6px !important;
+  border: 1px solid #ccc !important;
+  border-radius: 3px !important;
+  height: 2.5rem !important;
+  background: #fff;
+}

@@ -41,6 +41,18 @@ msgstr "Reset"
 msgid "plugins.generic.codecheck.settings.enableCodecheck"
 msgstr "Enable CODECHECK for this journal"
 
+msgid "plugins.generic.codecheck.settings.mode"
+msgstr "Select the CODECHECK mode used during the submission of a paper"
+
+msgid "plugins.generic.codecheck.settings.mode.opt.in"
+msgstr "opt-in by the author"
+
+msgid "plugins.generic.codecheck.settings.mode.opt.out"
+msgstr "opt-out by the author"
+
+msgid "plugins.generic.codecheck.settings.mode.confirmationButton"
+msgstr "confirmation button for required checks"
+
 msgid "plugins.generic.codecheck.settings.enableCodecheck.description"
 msgstr "Allow editors to assign codecheckers to submissions"
 

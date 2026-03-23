@@ -63,6 +63,14 @@ class SettingsForm extends Form
         );
 
         $this->setData(
+            Constants::CODECHECK_MODE,
+            $this->plugin->getSetting(
+                $context->getId(),
+                Constants::CODECHECK_MODE
+            )
+        );
+
+        $this->setData(
             Constants::CODECHECK_AUTHOR_ANONYMITY,
             $this->plugin->getSetting(
                 $context->getId(),
@@ -128,6 +136,7 @@ class SettingsForm extends Form
     {
         $this->readUserVars([
             Constants::CODECHECK_ENABLED,
+            Constants::CODECHECK_MODE,
             Constants::CODECHECK_AUTHOR_ANONYMITY,
             Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN,
             Constants::CODECHECK_API_ENDPOINT,
@@ -155,6 +164,11 @@ class SettingsForm extends Form
             'githubCustomLabels',
             $this->getData(Constants::CODECHECK_GITHUB_CUSTOM_LABELS) ?? []
         );
+        $templateMgr->assign('codecheckModes', [
+            'opt-in' => __('plugins.generic.codecheck.settings.mode.opt.in'),
+            'opt-out' => __('plugins.generic.codecheck.settings.mode.opt.out'),
+            'confirmation-button' => __('plugins.generic.codecheck.settings.mode.confirmationButton'),
+        ]);
 
         return parent::fetch($request, $template, $display);
     }
@@ -174,6 +188,12 @@ class SettingsForm extends Form
             $context->getId(),
             Constants::CODECHECK_ENABLED,
             $this->getData(Constants::CODECHECK_ENABLED)
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_MODE,
+            $this->getData(Constants::CODECHECK_MODE)
         );
 
         $this->plugin->updateSetting(
