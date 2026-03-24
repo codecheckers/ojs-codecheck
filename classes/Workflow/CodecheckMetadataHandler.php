@@ -254,7 +254,7 @@ class CodecheckMetadataHandler
      * @param mixed $publication The publication data
      * @return array The Authors with Name and ORCID (if isset) in an Array
      */
-    private function getAuthors($publication): array
+    public function getAuthors($publication): array
     {
         if (!$publication) {
             return [];
