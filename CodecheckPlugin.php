@@ -13,6 +13,7 @@ use PKP\plugins\Hook;
 use PKP\components\forms\FieldOptions;
 use APP\facades\Repo;
 use APP\plugins\generic\codecheck\api\v1\CodecheckApiHandler;
+use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
 
 class CodecheckPlugin extends GenericPlugin
 {
