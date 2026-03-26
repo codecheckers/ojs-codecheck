@@ -104,7 +104,7 @@ class CodecheckSubmissionDAOUnitTest extends PKPTestCase
             'repository' => 'https://github.com/new/repo'
         ]);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 
     public function testInsertOrUpdateUpdatesExistingRecord()
@@ -149,6 +149,6 @@ class CodecheckSubmissionDAOUnitTest extends PKPTestCase
             'repository' => 'https://github.com/updated/repo'
         ]);
 
-        $this->assertTrue(true);
+        $this->expectNotToPerformAssertions();
     }
 }
