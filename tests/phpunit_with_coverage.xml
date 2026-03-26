@@ -5,10 +5,6 @@
     bootstrap="bootstrap.php"
     colors="true"
     testdox="true"
-    convertDeprecationsToExceptions="true"
-    convertErrorsToExceptions="true"
-    convertNoticesToExceptions="true"
-    convertWarningsToExceptions="true"
     stopOnFailure="false"
 >
     <testsuites>
