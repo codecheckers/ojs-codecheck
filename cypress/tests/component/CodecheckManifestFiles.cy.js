@@ -13,7 +13,7 @@ describe('CodecheckManifestFiles Component', () => {
     });
     
     cy.get('.manifest-file-row').should('have.length', 1);
-    cy.get('input[placeholder*="Filename"]').should('have.value', '');
+    cy.get('.manifest-file-row input.form-control').first().should('have.value', '');
   });
 
   it('loads existing manifest files', () => {
@@ -28,10 +28,10 @@ describe('CodecheckManifestFiles Component', () => {
     });
     
     cy.get('.manifest-file-row').should('have.length', 2);
-    cy.get('input[placeholder*="Filename"]').eq(0).should('have.value', 'figure1.png');
-    cy.get('input[placeholder*="Comment"]').eq(0).should('have.value', 'Main result');
-    cy.get('input[placeholder*="Filename"]').eq(1).should('have.value', 'data.csv');
-    cy.get('input[placeholder*="Comment"]').eq(1).should('have.value', 'Dataset');
+    cy.get('.manifest-file-row').eq(0).find('input.form-control').eq(0).should('have.value', 'figure1.png');
+    cy.get('.manifest-file-row').eq(0).find('input.form-control').eq(1).should('have.value', 'Main result');
+    cy.get('.manifest-file-row').eq(1).find('input.form-control').eq(0).should('have.value', 'data.csv');
+    cy.get('.manifest-file-row').eq(1).find('input.form-control').eq(1).should('have.value', 'Dataset');
   });
 
   it('allows adding new file entry', () => {
@@ -60,7 +60,7 @@ describe('CodecheckManifestFiles Component', () => {
     cy.get('.btn-remove').first().click();
     
     cy.get('.manifest-file-row').should('have.length', 1);
-    cy.get('input[placeholder*="Filename"]').should('have.value', 'file2.csv');
+    cy.get('.manifest-file-row input.form-control').first().should('have.value', 'file2.csv');
   });
 
   it('maintains at least one empty row after removing all', () => {
@@ -75,7 +75,7 @@ describe('CodecheckManifestFiles Component', () => {
     cy.get('.btn-remove').click();
     
     cy.get('.manifest-file-row').should('have.length', 1);
-    cy.get('input[placeholder*="Filename"]').should('have.value', '');
+    cy.get('.manifest-file-row input.form-control').first().should('have.value', '');
   });
 
   it('formats output correctly', () => {
@@ -87,10 +87,10 @@ describe('CodecheckManifestFiles Component', () => {
       }
     });
     
-    cy.get('input[placeholder*="Filename"]').type('output.png');
-    cy.get('input[placeholder*="Comment"]').type('Main visualization');
+    cy.get('.manifest-file-row input.form-control').eq(0).type('output.png');
+    cy.get('.manifest-file-row input.form-control').eq(1).type('Main visualization');
     
     cy.get('.btn-add').click();
-    cy.get('input[placeholder*="Filename"]').eq(1).type('data.csv');
+    cy.get('.manifest-file-row').eq(1).find('input.form-control').eq(0).type('data.csv');
   });
 });
