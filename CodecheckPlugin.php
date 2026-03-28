@@ -270,9 +270,12 @@ class CodecheckPlugin extends GenericPlugin
         if ($enabled) {
             $migration = new CodecheckSchemaMigration();
             $migration->up();
+            $migration->issueLabelsUp();
             # TODO: Remove the following two lines here (they are only here for debugging purposes)
             $migration->down();
             $migration->up();
+            $migration->issueLabelsDown();
+            $migration->issueLabelsUp();
         }
         
         return $result;

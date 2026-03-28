@@ -5,6 +5,8 @@ use APP\plugins\generic\codecheck\classes\DataStructures\UniqueArray;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitException;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckApiClient;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class CodecheckIssueLabels
 {
@@ -53,7 +55,70 @@ class CodecheckIssueLabels
         }
 
         $codecheckIssueLabels = new CodecheckIssueLabels($issueLabelArray);
+
+        $codecheckIssueLabels->saveIssueLabelsToDB();
+
         return $codecheckIssueLabels;
+    }
+
+    public static function fromDB(): CodecheckIssueLabels
+    {
+        $issueLabelRecords = DB::table('codecheck_issue_labels')
+            ->pluck('label')
+            ->toArray();
+
+        error_log("[CODECHECK Issue Labels] Records: " . json_encode($issueLabelRecords));
+
+        $codecheckIssueLabels = new CodecheckIssueLabels($issueLabelRecords ?? []);
+        return $codecheckIssueLabels;
+    }
+
+    /**
+     * This function saves all the Codecheck Issue Labels to the Database
+     * 
+     * @return void
+     */
+    public function saveIssueLabelsToDB(): bool
+    {   
+        error_log("[CODECHECK Issue Labels] Saving Issue Label data to DB: " . print_r($this->uniqueArray->toArray(), true));
+
+        $tableName = 'codecheck_issue_labels';
+
+        $tableExists = Schema::hasTable('codecheck_issue_labels');
+
+        if(!$tableExists) {
+            error_log("Issue Label Table doesnt exist");
+            return !$tableExists;
+        }
+
+        $labelsLastUpdated = date('Y-m-d H:i:s');
+
+        foreach ($this->uniqueArray->toArray() as $label) {
+            if(is_string($label)) {
+                $dbLabelRecord = [
+                    'label' => $label,
+                    'labels_last_updated' => $labelsLastUpdated
+                ];
+
+                $recordExists = DB::table($tableName)
+                    ->where('label', $label)
+                    ->exists();
+
+                if ($recordExists) {
+                    DB::table($tableName)
+                        ->where('label', $label)
+                        ->update($dbLabelRecord);
+                    error_log("[CODECHECK Issue Labels] Updated existing label record");
+                } else {
+                    DB::table($tableName)->insert($dbLabelRecord);
+                    error_log("[CODECHECK Issue Labels] Created new label record");
+                }
+            }
+        }
+
+        error_log("Labels: " . print_r(DB::table('codecheck_issue_labels')->select(['*'])->get()->toArray(), true));
+
+        return true;
     }
 
     /**

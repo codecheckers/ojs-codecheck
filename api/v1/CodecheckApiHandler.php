@@ -21,6 +21,7 @@ use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitExce
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckIssueLabels;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class CodecheckApiHandler
 {
@@ -186,15 +187,29 @@ class CodecheckApiHandler
      * @return void
      */
     private function getCodecheckIssueLabels(): void
-    {   
-        try {
-            $codecheckIssueLabels = CodecheckIssueLabels::fromApi("https://codecheck.org.uk/register/venues/index.json");
-        } catch (\Throwable $e) {
-            $this->response->response([
-                'success'   => false,
-                'error'     => "Error while fetching the Venue Types: " . $e->getMessage(),
-            ], 400);
-            return;
+    {
+        $dbLabelsOutdated = false;
+
+        $issueLabelsLastUpdated = strtotime($this->getIssueLabelsLastUpdated());
+        $now = strtotime(date('Y-m-d H:i:s'));
+        $timeDifferenceInHours = round(($now - $issueLabelsLastUpdated) / 3600);
+
+        if($timeDifferenceInHours > 6) {
+            $dbLabelsOutdated = true;
+        }
+
+        $codecheckIssueLabels = CodecheckIssueLabels::fromDB();
+
+        if($dbLabelsOutdated) {
+            try {
+                $codecheckIssueLabels = CodecheckIssueLabels::fromApi("https://codecheck.org.uk/register/venues/index.json");
+            } catch (\Throwable $e) {
+                $this->response->response([
+                    'success'   => false,
+                    'error'     => $e->getMessage(),
+                ], 400);
+                return;
+            }
         }
 
         // Serve the getCodecheckIssueLabels API route
@@ -202,6 +217,31 @@ class CodecheckApiHandler
             'success' => true,
             'labels' => $codecheckIssueLabels->get()->toArray(),
         ], 200);
+    }
+
+    /**
+     * This function gets when the Codecheck Issue Labels where last updated
+     * 
+     * @return string The Date when the issues where last updated
+     */
+    private function getIssueLabelsLastUpdated(): string
+    {
+        if (!Schema::hasTable('codecheck_issue_labels')) {
+            error_log("[CODECHECK API] The Issue Label table doesn't exist");
+        }
+
+        $labelsLastUpdated = DB::table('codecheck_issue_labels')
+            ->select(['labels_last_updated'])
+            ->first();
+
+        error_log("Labels: " . print_r(DB::table('codecheck_issue_labels')->select(['*'])->get()->toArray(), true));
+
+        // If Labels weren't updated yet, set last updated to earliest date possible, so they will definitely get updated
+        $labelsLastUpdated = $labelsLastUpdated->labels_last_updated ?? date('Y-m-d H:i:s', 0);
+
+        error_log("[CODECHECK API] Codecheck Issues Last Updated: " . json_encode($labelsLastUpdated));
+        
+        return $labelsLastUpdated;
     }
 
     /**
@@ -545,7 +585,47 @@ class CodecheckApiHandler
             JsonResponse::staticResponse($result, 404);
         }
 
+<<<<<<< HEAD
         JsonResponse::staticResponse($result, 200);
+=======
+        $publication = $submission->getCurrentPublication();
+        
+        $metadata = DB::table('codecheck_metadata')
+            ->where('submission_id', $submissionId)
+            ->first();
+
+        $response = [
+            'submissionId' => $submissionId,
+            'submission' => [
+                'id' => $submission->getId(),
+                'title' => $publication ? $publication->getLocalizedTitle() : '',
+                'authors' => $this->codecheckMetadataHandler->getAuthors($publication),
+                'doi' => $publication ? $publication->getStoredPubId('doi') : null,
+                'codeRepository' => $submission->getData('codeRepository'),
+                'dataRepository' => $submission->getData('dataRepository'),
+                'manifestFiles' => $submission->getData('manifestFiles'),
+                'dataAvailabilityStatement' => $submission->getData('dataAvailabilityStatement'),
+            ],
+            'codecheck' => $metadata ? [
+                'version' => $metadata->version ?? 'latest',
+                'publicationType' => $metadata->publication_type ?? 'doi',
+                'manifest' => json_decode($metadata->manifest ?? '[]', true),
+                'repository' => $metadata->repository,
+                'codecheckers' => json_decode($metadata->codecheckers ?? '[]', true),
+                'source' => $metadata->source,
+                'certificate' => $metadata->certificate,
+                'issue' => json_decode($metadata->issue ?? '[]', true),
+                'check_time' => $metadata->check_time,
+                'summary' => $metadata->summary,
+                'report' => $metadata->report,
+                'additionalContent' => $metadata->additional_content,
+            ] : null
+        ];
+
+        error_log("[CODECHECK API] getMetadata Response: " . json_encode($response));
+        
+        $this->response->response($response, 200);
+>>>>>>> 9aee600 (Labels are now cached / saved within the OJS database #55)
     }
 
     /**
@@ -563,7 +643,57 @@ class CodecheckApiHandler
             JsonResponse::staticResponse($result, 404);
         }
 
+<<<<<<< HEAD
         JsonResponse::staticResponse($result, 200);
+=======
+        $jsonData = file_get_contents('php://input');
+        $data = json_decode($jsonData, true);
+        
+        error_log("[CODECHECK API] Received data: " . $jsonData);
+
+        $nullIfEmpty = function($value) {
+            return (is_string($value) && trim($value) === '') ? null : $value;
+        };
+        
+        $metadataData = [
+            'submission_id' => $submissionId,
+            'version' => $data['version'] ?? 'latest',
+            'publication_type' => $data['publication_type'] ?? 'doi',
+            'manifest' => json_encode($data['manifest'] ?? []),
+            'repository' => $nullIfEmpty($data['repository'] ?? null),
+            'source' => $nullIfEmpty($data['source'] ?? null),
+            'codecheckers' => json_encode($data['codecheckers'] ?? []),
+            'certificate' => $nullIfEmpty($data['certificate'] ?? null),
+            'issue' => json_encode($data['issue'] ?? ['url' => null, 'number' => null, 'labelsSelected' => []]),
+            'check_time' => $nullIfEmpty($data['check_time'] ?? null),
+            'summary' => $nullIfEmpty($data['summary'] ?? null),    
+            'report' => $nullIfEmpty($data['report'] ?? null),
+            'additional_content' => $nullIfEmpty($data['additional_content'] ?? null),
+            'updated_at' => date('Y-m-d H:i:s'),
+        ];
+
+        $exists = DB::table('codecheck_metadata')
+            ->where('submission_id', $submissionId)
+            ->exists();
+
+        if ($exists) {
+            DB::table('codecheck_metadata')
+                ->where('submission_id', $submissionId)
+                ->update($metadataData);
+            error_log("[CODECHECK API] Updated existing record");
+        } else {
+            $metadataData['created_at'] = date('Y-m-d H:i:s');
+            DB::table('codecheck_metadata')->insert($metadataData);
+            error_log("[CODECHECK Metadata] Created new record");
+        }
+
+        $this->response->response([
+            'success' => true,
+            'message' => 'CODECHECK metadata saved successfully',
+            'submissionID' => $submissionId,
+            'certificate' => $metadataData['certificate'],
+        ], 200);
+>>>>>>> 9aee600 (Labels are now cached / saved within the OJS database #55)
     }
 
     /**
