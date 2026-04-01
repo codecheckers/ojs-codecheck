@@ -34,6 +34,7 @@
   "plugins.generic.codecheck.dataSoftwareAvailability",
   "plugins.generic.codecheck.dataSoftwareAvailability.description",
   "plugins.generic.codecheck.details.title",
+  "plugins.generic.codecheck.identifier.customLabels",
   "plugins.generic.codecheck.identifier.description",
   "plugins.generic.codecheck.identifier.label",
   "plugins.generic.codecheck.identifier.remove",
