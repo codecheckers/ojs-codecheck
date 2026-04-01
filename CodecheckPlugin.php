@@ -1,6 +1,7 @@
 <?php
 namespace APP\plugins\generic\codecheck;
 
+use PKP\security\Role;
 use APP\core\Application;
 use APP\template\TemplateManager;
 use APP\plugins\generic\codecheck\classes\FrontEnd\ArticleDetails;
@@ -13,6 +14,9 @@ use PKP\plugins\Hook;
 use PKP\components\forms\FieldOptions;
 use APP\facades\Repo;
 use APP\plugins\generic\codecheck\api\v1\CodecheckApiHandler;
+use APP\plugins\generic\codecheck\classes\Roles\ReadAccessRole;
+use APP\plugins\generic\codecheck\classes\Roles\WriteAccessRole;
+use APP\plugins\generic\codecheck\classes\Roles\StandardAccessRole;
 
 class CodecheckPlugin extends GenericPlugin
 {
@@ -106,7 +110,34 @@ class CodecheckPlugin extends GenericPlugin
 
         if (str_contains($request->getRequestPath(), 'api/v1/codecheck')) {
             error_log("[CODECHECK Plugin] Instanciating the CODECHECK APIHandler");
-            $apiHandler = new CodecheckApiHandler($request);
+            $standardAccessRole = new StandardAccessRole([
+                Role::ROLE_ID_SITE_ADMIN,
+                Role::ROLE_ID_MANAGER,
+                Role::ROLE_ID_SUB_EDITOR,
+                Role::ROLE_ID_ASSISTANT,
+                Role::ROLE_ID_REVIEWER,
+                Role::ROLE_ID_AUTHOR
+            ]);
+
+            $readAccessRole = new ReadAccessRole([
+                Role::ROLE_ID_SITE_ADMIN,
+                Role::ROLE_ID_MANAGER,
+                Role::ROLE_ID_SUB_EDITOR,
+                Role::ROLE_ID_ASSISTANT,
+            ]);
+
+            $writeAccessRole = new WriteAccessRole([
+                Role::ROLE_ID_SITE_ADMIN,
+                Role::ROLE_ID_MANAGER,
+            ]);
+
+            $roles = [
+                $standardAccessRole,
+                $readAccessRole,
+                $writeAccessRole
+            ];
+
+            $apiHandler = new CodecheckApiHandler($request, $roles);
             error_log("[CODECHECK Plugin] API request: " . $request->getRequestPath() . "\n");
         }
 

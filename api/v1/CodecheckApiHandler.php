@@ -2,10 +2,9 @@
 
 namespace APP\plugins\generic\codecheck\api\v1;
 
-use PKP\security\Role;
 use APP\plugins\generic\codecheck\api\v1\JsonResponse;
+use APP\plugins\generic\codecheck\api\v1\CodecheckRoleManager;
 use APP\core\Request;
-
 use APP\plugins\generic\codecheck\classes\Exceptions\ApiCreateException;
 use APP\plugins\generic\codecheck\classes\Exceptions\ApiFetchException;
 use APP\plugins\generic\codecheck\classes\Exceptions\NoMatchingIssuesFoundException;
@@ -18,6 +17,11 @@ use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckVenue;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
 
 use APP\facades\Repo;
+use APP\plugins\generic\codecheck\classes\Exceptions\RoleExceptions\RoleNotFoundException;
+use APP\plugins\generic\codecheck\classes\Roles\CodecheckRole;
+use APP\plugins\generic\codecheck\classes\Roles\ReadAccessRole;
+use APP\plugins\generic\codecheck\classes\Roles\WriteAccessRole;
+use APP\plugins\generic\codecheck\classes\Roles\StandardAccessRole;
 use Illuminate\Support\Facades\DB;
 
 class CodecheckApiHandler
@@ -33,71 +37,87 @@ class CodecheckApiHandler
      * Initialize the Codecheck APIHandler class
      * 
      * @param Request $request API Request
+     * @param array<CodecheckRole> $roles The CODECHECK roles for `read`, `write` and `standard` access to the API routes
      * @return void
      */
-    public function __construct(Request $request)
+    public function __construct(Request $request, array $roles)
     {
         $this->response = new JsonResponse();
-
         $this->codecheckMetadataHandler = new CodecheckMetadataHandler($request);
-
-        $this->roles = [
-            Role::ROLE_ID_MANAGER,
-            Role::ROLE_ID_SUB_EDITOR,
-            Role::ROLE_ID_ASSISTANT,
-            Role::ROLE_ID_AUTHOR
-        ];
+        $this->roles = $roles;
 
         $this->endpoints = [
             'GET' => [
                 [
                     'route' => 'venue',
                     'handler' => [$this, 'getVenueData'],
-                    'roles' => $this->roles,
+                    'role' => StandardAccessRole::class,
                 ],
                 [
                     'route' => 'metadata',
                     'handler' => [$this, 'getMetadata'],
-                    'roles' => $this->roles,
+                    'role' => ReadAccessRole::class,
                 ],
                 [
                     'route' => 'download',
                     'handler' => [$this, 'downloadFile'],
-                    'roles' => $this->roles,
+                    'roles' => ReadAccessRole::class,
                 ],
                 [
                     'route' => 'yaml',
                     'handler' => [$this, 'generateYaml'],
-                    'roles' => $this->roles,
+                    'role' => ReadAccessRole::class,
                 ],
             ],
             'POST' => [
                 [
                     'route' => 'identifier',
                     'handler' => [$this, 'reserveIdentifier'],
-                    'roles' => $this->roles,
+                    'role' => StandardAccessRole::class,
                 ],
                 [
                     'route' => 'metadata',
                     'handler' => [$this, 'saveMetadata'],
-                    'roles' => $this->roles,
+                    'role' => WriteAccessRole::class,
                 ],
                 [
                     'route' => 'upload',
                     'handler' => [$this, 'uploadFile'],
-                    'roles' => $this->roles,
+                    'role' => WriteAccessRole::class,
                 ],
             ],
         ];
 
         $this->request = $request;
 
-        $this->authorize();
-
         // Get the API Route that was called from the request
         $this->route = $this->getRouteFromRequest();
+
+        $this->authorize();
+
         // Serve the Request
         $this->serveRequest();
+    }
+
+    private function getEndpoint(): ApiEndpoint
+    {
+        // get the request Method like POST or GET
+        $requestMethod = $this->request->getRequestMethod();
+
+        error_log("Method: " . $requestMethod);
+
+        return new ApiEndpoint($this->endpoints, $this->route, $requestMethod);
+    }
+
+    private function getPkpRoles(string $codecheckRole): array
+    {
+        foreach ($this->roles as $role) {
+            if($role::class === $codecheckRole) {
+                return $role->getRoles();
+            }
+        }
+
+        throw new RoleNotFoundException("The CODECHECK Role was not found in the array of roles.");
     }
 
     /**
@@ -121,12 +141,24 @@ class CodecheckApiHandler
         // Check if the user that accesses this resource has at least one valid Role and if user exists
         $user = $this->request->getUser() ?? null;
         $contextId = $this->request->getContext()->getId();
+        $apiEndpoint = $this->getEndpoint();
+        $codecheckRole = $apiEndpoint->getRole();
+        
+        try {
+            $pkpRoles = $this->getPkpRoles($codecheckRole);
 
-        if(!($user && $user->hasRole($this->roles, $contextId))) {
+            if(!($user && $user->hasRole($pkpRoles, $contextId))) {
+                $this->response->response([
+                    'success'   => false,
+                    'error'     => "User has no assigned Role or doesn't have the right roles assigned to access this resource"
+                ], 400);
+                return;
+            }
+        } catch (RoleNotFoundException $roleNotFoundException) {
             $this->response->response([
                 'success'   => false,
-                'error'     => "User has no assigned Role or doesn't have the right roles assigned to access this resource"
-            ], 400);
+                'error'     => $roleNotFoundException->getMessage()
+            ], $roleNotFoundException->getCode());
             return;
         }
     }
@@ -153,16 +185,13 @@ class CodecheckApiHandler
     private function serveRequest(): void
     {
         // get the request Method like POST or GET
-        $method = $this->request->getRequestMethod();
+        $requestMethod = $this->request->getRequestMethod();
 
-        error_log("Method: " . $method);
+        error_log("Method: " . $requestMethod);
 
-        foreach ($this->endpoints[$method] as $endpoint) {
-            if($this->route == $endpoint['route']) {
-                call_user_func($endpoint['handler']);
-                return;
-            }
-        }
+        $apiEndpoint = $this->getEndpoint();
+
+        call_user_func($apiEndpoint->getHandler());
     }
 
     /**
