@@ -11,6 +11,8 @@
     "test:open": "cypress open",
     "test:component": "cypress run --component",
     "test:component:open": "cypress open --component",
+    "test:e2e": "cypress run --e2e",
+    "test:e2e:open": "cypress open --e2e",
     "test:headed": "cypress run --headed",
     "test:chrome": "cypress run --browser chrome",
     "test:firefox": "cypress run --browser firefox",
