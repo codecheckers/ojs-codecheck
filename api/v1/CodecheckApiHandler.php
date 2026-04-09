@@ -272,7 +272,17 @@ class CodecheckApiHandler
 
         // CODECHECK Register with list of all identifiers in range
         try {
-            $certificateIdentifierList = CertificateIdentifierList::fromApi($codecheckGithubRegisterApiClient);
+            if($reserveIdentifierMode == 'linkExistingIdentifier') {
+                $identifierStr = $postParams["identifier"];
+                $certificateIdentifierList = CertificateIdentifierList::fromApiWithIdentifier(
+                    $codecheckGithubRegisterApiClient,
+                    CertificateIdentifier::fromStr($identifierStr)
+                );
+            }
+            $certificateIdentifierList = CertificateIdentifierList::fromApi(
+                $codecheckGithubRegisterApiClient,
+                true
+            );
         } catch (ApiFetchException $ae) {
             $this->response->response([
                 'success'   => false,

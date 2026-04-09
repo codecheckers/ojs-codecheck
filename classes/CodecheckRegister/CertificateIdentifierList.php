@@ -29,13 +29,18 @@ class CertificateIdentifierList
      * @return CertificateIdentifierList Returns a new List containing all fetched Certificate Identifiers from GitHub
      */
     static function fromApi(
-        CodecheckGithubRegisterApiClient $codecheckGithubRegisterApiClient
+        CodecheckGithubRegisterApiClient $codecheckGithubRegisterApiClient,
+        ?bool $onlyNewestIdentifiers
     ): CertificateIdentifierList {
         $newCertificateIdentifierList = new CertificateIdentifierList();
 
         // fetch API
         try {
-            $codecheckGithubRegisterApiClient->fetchIssues();
+            if($onlyNewestIdentifiers == true) {
+                $codecheckGithubRegisterApiClient->fetchNewestIssues();
+            } else {
+                $codecheckGithubRegisterApiClient->fetchAllIssues();
+            }
         } catch (ApiFetchException $ae) {
             error_log($ae);
             throw $ae;
@@ -44,7 +49,48 @@ class CertificateIdentifierList
             throw $me;
         }
 
-        foreach ($codecheckGithubRegisterApiClient->getIssues() as $issue) {
+        return CertificateIdentifierList::createNewCertificateIdentifierList(
+            $codecheckGithubRegisterApiClient->getIssues(),
+            $newCertificateIdentifierList
+        );
+    }
+
+    /**
+     * Factory Method to create a new CertificateIdentifierList from a GitHub API fetch
+     * 
+     * @param CodecheckGithubRegisterApiClient $codecheckGithubRegisterApiClient The APIParser for the GitHub Issues
+     * @return CertificateIdentifierList Returns a new List containing all fetched Certificate Identifiers from GitHub
+     */
+    static function fromApiWithIdentifier(
+        CodecheckGithubRegisterApiClient $codecheckGithubRegisterApiClient,
+        CertificateIdentifier $certificateIdentifier
+    ): CertificateIdentifierList {
+        $newCertificateIdentifierList = new CertificateIdentifierList();
+
+        // fetch API
+        try {
+            $codecheckGithubRegisterApiClient->fetchIssueByIdentifier($certificateIdentifier);
+        } catch (ApiFetchException $ae) {
+            throw $ae;
+            error_log($ae);
+            return $newCertificateIdentifierList;
+        } catch (NoMatchingIssuesFoundException $me) {
+            throw $me;
+            error_log($me);
+            return $newCertificateIdentifierList;
+        }
+
+        return CertificateIdentifierList::createNewCertificateIdentifierList(
+            $codecheckGithubRegisterApiClient->getIssues(),
+            $newCertificateIdentifierList
+        );
+    }
+
+    private static function createNewCertificateIdentifierList(
+        array $issues,
+        CertificateIdentifierList $newCertificateIdentifierList
+    ): CertificateIdentifierList {
+        foreach ($issues as $issue) {
             // raw identifier (can still have ranges of identifiers);
             $rawIdentifier = CertificateIdentifierList::getRawIdentifier($issue['title']);
             

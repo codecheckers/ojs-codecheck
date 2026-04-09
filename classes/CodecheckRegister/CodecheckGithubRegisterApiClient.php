@@ -81,9 +81,9 @@ class CodecheckGithubRegisterApiClient
     }
 
     /**
-     * Fetches all Issues from the CODECHECK GitHub Register
+     * Fetches only the first newest Issues from the CODECHECK GitHub Register
      */
-    public function fetchIssues(): void
+    public function fetchNewestIssues(): void
     {
         $issuePage = 1;
         $issuesToFetchPerPage = 20;
@@ -104,7 +104,7 @@ class CodecheckGithubRegisterApiClient
             }
 
             // stop looping if no more issues exist and we haven't yet found a matching issue
-            if (empty($allissues) && empty($this->issue)) {
+            if (empty($allissues) && empty($this->issues)) {
                 throw new NoMatchingIssuesFoundException("There was no open or closed issue found with the label 'id assigned' in the GitHub Codecheck Register.");
             }
 
@@ -117,6 +117,54 @@ class CodecheckGithubRegisterApiClient
 
             $issuePage++;
         } while (!$fetchedMatchingIssue);
+    }
+
+    /**
+     * Fetches all Issues from the CODECHECK GitHub Register
+     */
+    public function fetchAllIssues(): void
+    {
+        try {
+            $allissues = $this->client->api('search')->issues('repo:codecheckers/' . $this->githubRegisterRepository . ' sort:"updated"');
+        } catch (\Throwable $e) {
+            throw new ApiFetchException("Failed fetching the GitHub Issues\n" . $e->getMessage());
+        }
+
+        foreach ($allissues['items'] as $issue) {
+            if (strpos($issue['title'], '|') !== false) {
+                $this->issues[] = $issue;
+            }
+        }
+
+        // stop if no issues exist and we haven't yet found any matching issue
+        if (empty($allissues) && empty($this->issues)) {
+            throw new NoMatchingIssuesFoundException("There was no open or closed issue found with the label 'id assigned' in the GitHub Codecheck Register.");
+        }
+    }
+
+    /**
+     * Fetches all Issues from the CODECHECK GitHub Register
+     */
+    public function fetchIssueByIdentifier(
+        CertificateIdentifier $certificateIdentifier
+    ): void
+    {
+        try {
+            $allissues = $this->client->api('search')->issues('repo:codecheckers/' . $this->githubRegisterRepository . ' "'. $certificateIdentifier->toStr() . '" sort:"updated"');
+        } catch (\Throwable $e) {
+            throw new ApiFetchException("Failed fetching the GitHub Issues\n" . $e->getMessage());
+        }
+
+        foreach ($allissues['items'] as $issue) {
+            if (strpos($issue['title'], '|') !== false) {
+                $this->issues[] = $issue;
+            }
+        }
+
+        // stop if no issues exist and we haven't yet found any matching issue
+        if (empty($allissues) && empty($this->issues)) {
+            throw new NoMatchingIssuesFoundException("There was no open or closed issue found with the label 'id assigned' in the GitHub Codecheck Register.");
+        }
     }
 
     /**
