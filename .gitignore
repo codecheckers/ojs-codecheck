@@ -41,3 +41,6 @@ public/
 tests/.phpunit.result.cache
 tests/results/
 .phpunit.cache/
+CLAUDE.md
+
+.claude/
