@@ -18,6 +18,7 @@ use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckVenue;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
 
 use APP\facades\Repo;
+use \Github\Client;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitException;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
 use Illuminate\Support\Facades\DB;
@@ -39,9 +40,12 @@ class CodecheckApiHandler
      */
     public function __construct(Request $request)
     {
-        $this->response = new JsonResponse();
+        $this->response = new JsonResponse([
+            'success' => false,
+            'error' => 'No API Response was created.',
+        ], 500);
 
-        $this->codecheckMetadataHandler = new CodecheckMetadataHandler($request);
+        $this->codecheckMetadataHandler = new CodecheckMetadataHandler($request, new Client(), new CurlApiClient());
 
         $this->roles = [
             Role::ROLE_ID_MANAGER,
@@ -89,6 +93,11 @@ class CodecheckApiHandler
                     'handler' => [$this, 'uploadFile'],
                     'roles' => $this->roles,
                 ],
+                [
+                    'route' => 'repository',
+                    'handler' => [$this, 'loadMetadataFromRepository'],
+                    'roles' => $this->roles,
+                ],
             ],
         ];
 
@@ -113,7 +122,7 @@ class CodecheckApiHandler
         $csrfInHeader = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? null;
 
         if(!($csrfInHeader && $csrfInHeader === $this->request->getSession()->token())) {
-            $this->response->response([
+            JsonResponse::staticResponse([
                 'success'   => false,
                 'error'     => 'No or wrong CSRF Token'
             ], 400);
@@ -125,7 +134,7 @@ class CodecheckApiHandler
         $contextId = $this->request->getContext()->getId();
 
         if(!($user && $user->hasRole($this->roles, $contextId))) {
-            $this->response->response([
+            JsonResponse::staticResponse([
                 'success'   => false,
                 'error'     => "User has no assigned Role or doesn't have the right roles assigned to access this resource"
             ], 400);
@@ -177,7 +186,7 @@ class CodecheckApiHandler
         try {
             $codecheckVenueTypes = new CodecheckVenueTypes();
         } catch (\Throwable $e) {
-            $this->response->response([
+            JsonResponse::staticResponse([
                 'success'   => false,
                 'error'     => "Error while fetching the Venue Types: " . $e->getMessage(),
             ], 400);
@@ -187,7 +196,7 @@ class CodecheckApiHandler
         try {
             $codecheckVenueNames = new CodecheckVenueNames();
         } catch (\Throwable $e) {
-            $this->response->response([
+            JsonResponse::staticResponse([
                 'success'   => false,
                 'error'     => "Error while fetching the Venue Names: " . $e->getMessage(),
             ], 400);
@@ -195,7 +204,7 @@ class CodecheckApiHandler
         }
 
         // Serve the getVenueData API route
-        $this->response->response([
+        JsonResponse::staticResponse([
             'success' => true,
             'venueTypes' => $codecheckVenueTypes->get()->toArray(),
             'venueNames' => $codecheckVenueNames->get()->toArray(),
@@ -229,13 +238,13 @@ class CodecheckApiHandler
             try {
                 $certificateIdentifierList = CertificateIdentifierList::fromApi($codecheckGithubRegisterApiClient);
             } catch (ApiFetchException $ae) {
-                $this->response->response([
+                JsonResponse::staticResponse([
                     'success'   => false,
                     'error'     => $ae->getMessage(),
                 ], 400);
                 return;
             } catch (NoMatchingIssuesFoundException $me) {
-                $this->response->response([
+                JsonResponse::staticResponse([
                     'success'   => false,
                     'error'     => $me->getMessage(),
                 ], 400);
@@ -261,7 +270,7 @@ class CodecheckApiHandler
                 );
             } catch (ApiCreateException $e) {
                 // return an error result
-                $this->response->response([
+                JsonResponse::staticResponse([
                     'success'   => false,
                     'error'     => $e->getMessage(),
                 ], 400);
@@ -269,14 +278,14 @@ class CodecheckApiHandler
             }
 
             // return a success result
-            $this->response->response([
+            JsonResponse::staticResponse([
                 'success' => true,
                 'identifier' => $new_identifier->toStr(),
                 'issueUrl' => $issueGithubUrl,
             ], 200);
             return;
         } else {
-            $this->response->response([
+            JsonResponse::staticResponse([
                 'success'   => false,
                 'error'     => "The CODECHECK Venue Type and/ or Venue Names aren't of Type string as expected.",
             ], 400);
@@ -285,7 +294,51 @@ class CodecheckApiHandler
     }
 
     /**
-     * Get the CODECHECK Metadata for a submission
+     * This function loads the Codecheck Metadata from an existing `codecheck.yml` in an existing Code Repository
+     * 
+     * @return void
+     */
+    public function loadMetadataFromRepository(): void
+    {
+        $postParams = json_decode(file_get_contents('php://input'), true);
+        $repository = $postParams["repository"];
+
+        // Check if the repository is a Zenodo Repository
+        if (preg_match('#^https://zenodo\.org/records/\d{8}/?$#', $repository)) {
+            // Remove trailing / if it exists
+            $repository = rtrim($repository, '/');
+            $yamlResponse = $this->codecheckMetadataHandler->importMetadataFromZenodo($repository);
+            $yamlResponse->constructResponse();
+
+        } elseif (preg_match('#^https://github\.com/codecheckers/#', $repository))
+        // Check if the Repository is a GitHub Repository
+        {
+            $yamlResponse = $this->codecheckMetadataHandler->importMetadataFromGitHub($repository);
+            $yamlResponse->constructResponse();
+        } elseif (preg_match('#^https://osf\.io/([A-Za-z0-9]{5})/?$#', $repository, $matches))
+        // Check if the Repository is an OSF Repository
+        {
+            $osf_node_id = $matches[1];
+            $yamlResponse = $this->codecheckMetadataHandler->importMetadataFromOSF($osf_node_id);
+            $yamlResponse->constructResponse();
+        } elseif (preg_match('#^https://gitlab\.com/cdchck/community-codechecks/([^/]+)/?$#', $repository))
+        // Check if the Repository is a GitLab Repository
+        {
+            // Remove trailing / if it exists
+            $repository = rtrim($repository, '/');
+            $yamlResponse = $this->codecheckMetadataHandler->importMetadataFromGitLab($repository);
+            $yamlResponse->constructResponse();
+        } else {
+            JsonResponse::staticResponse([
+                'success' => false,
+                'repository' => $repository,
+                'error' => "The repository (" . $repository . ") isn't of the required format.",
+            ], 400);
+        }
+    }
+
+    /**
+     * This function gets all the Codecheck Metadata
      * 
      * @return void
      */
@@ -296,10 +349,10 @@ class CodecheckApiHandler
 
         if(isset($result['error'])) {
             $result = array_merge($result, ['submissionID' => $submissionId]);
-            $this->response->response($result, 404);
+            JsonResponse::staticResponse($result, 404);
         }
 
-        $this->response->response($result, 200);
+        JsonResponse::staticResponse($result, 200);
     }
 
     /**
@@ -314,10 +367,10 @@ class CodecheckApiHandler
 
         if(isset($result['error'])) {
             $result = array_merge($result, ['submissionID' => $submissionId]);
-            $this->response->response($result, 404);
+            JsonResponse::staticResponse($result, 404);
         }
 
-        $this->response->response($result, 200);
+        JsonResponse::staticResponse($result, 200);
     }
 
     /**
@@ -335,7 +388,7 @@ class CodecheckApiHandler
         $submission = Repo::submission()->get($submissionId);
         
         if (!$submission) {
-            $this->response->response([
+            JsonResponse::staticResponse([
                 'success' => false,
                 'error' => 'Submission not found',
                 'submissionID' => $submissionId,
@@ -344,7 +397,7 @@ class CodecheckApiHandler
         }
 
         if (!isset($_FILES['file'])) {
-            $this->response->response([
+            JsonResponse::staticResponse([
                 'success' => false,
                 'error' => 'No file uploaded'
             ], 400);
@@ -357,7 +410,7 @@ class CodecheckApiHandler
         
         // Validate file
         if ($file['error'] !== UPLOAD_ERR_OK) {
-            $this->response->response([
+            JsonResponse::staticResponse([
                 'success' => false,
                 'error' => 'Upload error: ' . $file['error']
             ], 400);
@@ -372,7 +425,7 @@ class CodecheckApiHandler
         
         if (!file_exists($uploadDir)) {
             if (!mkdir($uploadDir, 0755, true)) {
-                $this->response->response([
+                JsonResponse::staticResponse([
                     'success' => false,
                     'error' => 'Failed to create directory'
                 ], 500);
@@ -388,7 +441,7 @@ class CodecheckApiHandler
         
         // Move uploaded file
         if (!move_uploaded_file($file['tmp_name'], $filepath)) {
-            $this->response->response([
+            JsonResponse::staticResponse([
                 'success' => false,
                 'error' => 'Failed to save file'
             ], 500);
@@ -400,7 +453,7 @@ class CodecheckApiHandler
         // Return relative path for storage
         $relativePath = 'files/journals/' . $context->getId() . '/codecheck/' . $submissionId . '/' . $filename;
 
-        $this->response->response([
+        JsonResponse::staticResponse([
             'success' => true,
             'filePath' => $relativePath,
             'filename' => $originalName,
@@ -418,7 +471,7 @@ class CodecheckApiHandler
         $filePath = $this->request->getUserVar('file');
         
         if (!$filePath) {
-            $this->response->response([
+            JsonResponse::staticResponse([
                 'success' => false,
                 'error' => 'No file specified'
             ], 400);
@@ -432,7 +485,7 @@ class CodecheckApiHandler
         
         // Security: ensure file is in codecheck directory
         if (strpos($filePath, 'codecheck') === false || !file_exists($fullPath)) {
-            $this->response->response([
+            JsonResponse::staticResponse([
                 'success' => false,
                 'error' => 'File not found'
             ], 404);
@@ -467,9 +520,9 @@ class CodecheckApiHandler
 
         if(isset($result['error'])) {
             $result = array_merge($result, ['submissionID' => $submissionId]);
-            $this->response->response($result, 404);
+            JsonResponse::staticResponse($result, 404);
         }
 
-        $this->response->response($result, 200);
+        JsonResponse::staticResponse($result, 200);
     }
 }

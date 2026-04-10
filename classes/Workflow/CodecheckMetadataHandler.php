@@ -2,22 +2,36 @@
 
 namespace APP\plugins\generic\codecheck\classes\Workflow;
 
+require __DIR__ . '/../../vendor/autoload.php';
+
 use APP\core\Application;
 use APP\facades\Repo;
 use Illuminate\Support\Facades\DB;
+use \APP\core\Request;
+use APP\plugins\generic\codecheck\api\v1\JsonResponse;
+use Github\Client;
 use Symfony\Component\Yaml\Yaml;
+use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CodecheckRegisterGithubIssuesApiParser;
+use APP\plugins\generic\codecheck\api\v1\CurlApiClient;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
+use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitException;
+use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
 
 class CodecheckMetadataHandler
 {
     private mixed $submissionId;
+    private Client $client;
+    private CurlApiClient $curlApiClient;
 
     /**
      * `CodecheckMetadataHandler`
      * @param \APP\core\Request $request The API Request
      */
-    public function __construct(\APP\core\Request $request)
+    public function __construct(Request $request, ?Client $client, ?CurlApiClient $curlApiClient)
     {
+        $this->client = $client ?? new Client();
         $this->submissionId = $request->getUserVar('submissionId');
+        $this->curlApiClient = $curlApiClient ?? new CurlApiClient;
     }
 
     /**
@@ -268,5 +282,199 @@ class CodecheckMetadataHandler
             ];
         }
         return $authors;
+    }
+
+    /**
+     * Import the codecheck metadata from an existing `codecheck.yml` from the CODECHECK GitHub Repository
+     * @param string $repository The GitHub Repository
+     * @return JsonResponse The Metadata from the Repositories `codecheck.yml`
+     */
+    public function importMetadataFromGitHub(string $repository): JsonResponse
+    {
+        $githubUrlParts = CodecheckGithubRegisterApiClient::parseGithubUrl($repository);
+        $filename = 'codecheck.yml';
+
+        // AUTO-DETECT DEFAULT BRANCH if path is root
+        if ($githubUrlParts['path'] === '') {
+            try {
+                $repoData = $this->client->api('repo')->show($githubUrlParts['owner'], $githubUrlParts['repo']);
+                $githubUrlParts['ref'] = $repoData['default_branch'];
+            } catch (\Exception $e) {
+                // fallback stays 'main'
+            }
+        }
+
+        // Retrieve folder contents
+        try {
+            $contents = $this->client->api('repo')->contents()->show(
+                $githubUrlParts['owner'],
+                $githubUrlParts['repo'],
+                $githubUrlParts['path'],
+                $githubUrlParts['ref']
+            );
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'success' => false,
+                'repository' => $repository,
+            ], 404);
+        }
+
+        // Find codecheck.yml
+        foreach ($contents as $item) {
+            if ($item['type'] === 'file' && $item['name'] === $filename) {
+
+                // Fetch the raw content of the codecheck.yml file
+                $file = $this->client->api('repo')->contents()->show(
+                    $githubUrlParts['owner'],
+                    $githubUrlParts['repo'],
+                    $item['path'],
+                    $githubUrlParts['ref']
+                );
+
+                $metadata = Yaml::parse(base64_decode($file['content']));
+
+                return new JsonResponse([
+                    'success' => true,
+                    'repository' => $repository,
+                    'metadata' => $metadata,
+                ], 200);
+            }
+        }
+
+        return new JsonResponse([
+            'success' => false,
+            'repository' => $repository,
+            'error' => 'codecheck.yml not found',
+        ], 404);
+    }
+
+    /**
+     * Import the codecheck metadata from an existing `codecheck.yml` from the CODECHECK Zenodo Repository
+     * @param string $repository The Zenodo Repository
+     * @return JsonResponse The Metadata from the Repositories `codecheck.yml`
+     */
+    public function importMetadataFromZenodo(string $repository): JsonResponse
+    {
+        $filename = 'codecheck.yml';
+        $pathToCodecheckYaml = $repository . '/files/' . $filename . '?download=1';
+
+        return $this->readYamlContent($pathToCodecheckYaml, $repository);
+    }
+
+    /**
+     * Import the codecheck metadata from an existing `codecheck.yml` from the CODECHECK OSF Repository
+     * @param string $osf_node_id The node_id of the OSF Repository for the OSF API
+     * @return JsonResponse The Metadata from the Repositories `codecheck.yml`
+     */
+    public function importMetadataFromOSF(string $osf_node_id): JsonResponse
+    {
+        $filename = 'codecheck.yml';
+        $repository = "https://osf.io/$osf_node_id/";
+        $apiUrl = "https://api.osf.io/v2/nodes/" . $osf_node_id . "/files/osfstorage/";
+
+        // Get YAML Contents
+        try {
+            $api_response = $this->curlApiClient->fetch($apiUrl);
+            $data = json_decode($api_response, true);
+
+            if (!$data || !isset($data['data'])) {
+                return new JsonResponse([
+                    'success' => false,
+                    'error' => 'Invalid OSF API response',
+                    'repository' => $repository
+                ], 500);
+            }
+
+            // Search for the codecheck.yml and get the guid of the codecheck.yml
+            $guid = null;
+
+            foreach ($data['data'] as $item) {
+                $attributes = $item['attributes'];
+
+                if (isset($attributes['name']) && $attributes['name'] === $filename) {
+                    $guid = $attributes['guid'];   // This is the OSF file GUID
+                    break;
+                }
+            }
+
+            if ($guid) {
+                $pathToCodecheckYaml = 'https://osf.io/download/' . $guid . '/';
+                $repository = 'https://osf.io/' . $osf_node_id . '/';
+                return $this->readYamlContent($pathToCodecheckYaml, $repository);
+            } else {
+                return new JsonResponse([
+                    'success' => false,
+                    'error' => 'codecheck.yml not found',
+                    'repository' => $repository
+                ], 404);
+            }
+        }
+        // Check if cURL init went wrong
+        catch (CurlInitException $curlInitException) {
+            return new JsonResponse([
+                'success' => false,
+                'error' => $curlInitException->getMessage(),
+                'repository' => $repository
+            ], $curlInitException->getCode());
+        }
+        // Check if curl got a response or some form of HTTP error
+        catch (CurlReadException $curlReadException) {
+            return new JsonResponse([
+                'success' => false,
+                'error' => $curlReadException->getMessage(),
+                'repository' => $repository
+            ], $curlReadException->getCode());
+        }
+    }
+
+    /**
+     * Import the codecheck metadata from an existing `codecheck.yml` from the CODECHECK GitLab Repository
+     * @param string $repository The GitLab Repository
+     * @return JsonResponse The Metadata from the Repositories `codecheck.yml`
+     */
+    public function importMetadataFromGitLab(string $repository): JsonResponse
+    {
+        $filename = 'codecheck.yml';
+        $pathToCodecheckYaml = $repository . '/-/raw/main/' . $filename . '?ref_type=heads&inline=false';
+
+        return $this->readYamlContent($pathToCodecheckYaml, $repository);
+    }
+
+    /**
+     * Read the yaml data and return an API response array with the content of the yaml file
+     * @param string $pathToYamlContent The exact path to the download of the yaml file
+     * @param string $repository The exact path to the code repository
+     * @return JsonResponse The API Response with the repository and the yaml content array
+     */
+    private function readYamlContent(string $pathToYamlContent, string $repository): JsonResponse
+    {
+        // Get YAML Contents
+        try {
+            $yamlContent = $this->curlApiClient->fetch($pathToYamlContent);
+
+            $metadata = Yaml::parse($yamlContent);
+
+            return new JsonResponse([
+                'success' => true,
+                'repository' => $repository,
+                'metadata' => $metadata,
+            ], 200);
+        }
+        // Check if cURL init went wrong
+        catch (CurlInitException $curlInitException) {
+            return new JsonResponse([
+                'success' => false,
+                'error' => $curlInitException->getMessage(),
+                'repository' => $repository,
+            ], $curlInitException->getCode());
+        }
+        // Check if curl got a response or some form of HTTP error
+        catch (CurlReadException $curlReadException) {
+            return new JsonResponse([
+                'success' => false,
+                'error' => $curlReadException->getMessage(),
+                'repository' => $repository,
+            ], $curlReadException->getCode());
+        }
     }
 }

@@ -286,7 +286,7 @@ private function yourFunction(): void
 
     // Serve your Api endpoint route
     // success should be true or false along with a matching HTML response code like 200 or 404
-    $this->response->response([
+    JsonResponse::staticResponse([
         'success' => true,
         'payload' => $test,
     ], 200);
