@@ -153,10 +153,280 @@ pkp.registry.storeExtend("fileManager_SUBMISSION_FILES", (piniaContext) => {
   });
 });
 
+// Submission wizard field management
+class CodecheckWizardManager {
+  constructor() {
+    this.textareas = {};
+    this.saveInProgress = false;
+  }
+
+  async loadSavedData() {
+    const submissionId = this.getSubmissionId();
+    if (!submissionId) return;
+
+    try {
+      const response = await fetch(`${pkp.context.apiBaseUrl}/submissions/${submissionId}`);
+      const submission = await response.json();
+      const publication = submission.publications.find(p => p.id === submission.currentPublicationId);
+      
+      if (publication) {
+        this.setTextareaValue('codeRepository', publication.codeRepository);
+        this.setTextareaValue('dataRepository', publication.dataRepository);
+        this.setTextareaValue('manifestFiles', publication.manifestFiles);
+        this.setTextareaValue('dataAvailabilityStatement', publication.dataAvailabilityStatement);
+      }
+    } catch (error) {
+      console.error('CODECHECK: Failed to load saved data', error);
+    }
+  }
+
+  setTextareaValue(name, value) {
+    const textarea = document.querySelector(`textarea[name="${name}"]`);
+    if (textarea && value) {
+      textarea.value = value;
+      this.textareas[name] = textarea;
+    }
+  }
+
+  async saveData() {
+    if (this.saveInProgress) return;
+
+    const submissionId = this.getSubmissionId();
+    if (!submissionId) return;
+
+    const data = {};
+    ['codeRepository', 'dataRepository', 'manifestFiles', 'dataAvailabilityStatement'].forEach(field => {
+      const textarea = document.querySelector(`textarea[name="${field}"]`);
+      if (textarea && textarea.value) {
+        data[field] = textarea.value;
+      }
+    });
+
+    if (Object.keys(data).length === 0) return;
+
+    this.saveInProgress = true;
+
+    try {
+      const submissionResponse = await fetch(`${pkp.context.apiBaseUrl}/submissions/${submissionId}`);
+      const submission = await submissionResponse.json();
+      const publicationId = submission.currentPublicationId;
+
+      await fetch(
+        `${pkp.context.apiBaseUrl}/submissions/${submissionId}/publications/${publicationId}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Csrf-Token': pkp.currentUser.csrfToken
+          },
+          body: JSON.stringify(data)
+        }
+      );
+    } catch (error) {
+      console.error('CODECHECK: Save failed', error);
+    } finally {
+      this.saveInProgress = false;
+    }
+  }
+
+  getSubmissionId() {
+    const match = window.location.search.match(/id=(\d+)/);
+    return match ? match[1] : null;
+  }
+
+  setupButtonListener() {
+    document.addEventListener('click', (e) => {
+      const button = e.target.closest('button');
+      if (!button) return;
+      
+      // Save on any button click except cancel
+      if (button.id !== 'cancelSubmission') {
+        this.saveData();
+      }
+    }, true);
+  }
+
+  async init() {
+    await this.loadSavedData();
+    this.setupButtonListener();
+  }
+}
+
+// Review section refresher
+class CodecheckReviewRefresher {
+  constructor() {
+    this.refreshedPanels = new Set();
+    this.observeStepChanges();
+  }
+
+  observeStepChanges() {
+    setInterval(() => {
+      if (this.isOnReviewStep()) {
+        this.checkForReviewPanel();
+      }
+    }, 300);
+
+    const observer = new MutationObserver(() => {
+      if (this.isOnReviewStep()) {
+        this.checkForReviewPanel();
+      }
+    });
+
+    observer.observe(document.body, { 
+      childList: true, 
+      subtree: true 
+    });
+  }
+
+  isOnReviewStep() {
+    // Find the review step container
+    const allSteps = document.querySelectorAll('.pkpStep');
+    
+    for (const step of allSteps) {
+      // Check if this step contains review panels AND is not hidden
+      const hasReviewPanels = step.querySelectorAll('.submissionWizard__reviewPanel').length >= 3;
+      const isVisible = !step.hasAttribute('hidden');
+      
+      if (hasReviewPanels && isVisible) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  checkForReviewPanel() {
+    const allH3s = document.querySelectorAll('.submissionWizard__reviewPanel h3');
+    
+    for (const h3 of allH3s) {
+      if (h3.textContent.includes('CODECHECK')) {
+        const panel = h3.closest('.submissionWizard__reviewPanel');
+        
+        if (!panel) continue;
+        
+        const rect = panel.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) continue;
+        
+        const panelContent = panel.innerHTML.substring(0, 100);
+        
+        if (!this.refreshedPanels.has(panelContent)) {
+          this.refreshedPanels.add(panelContent);
+          
+          setTimeout(() => {
+            this.refreshReviewData(panel);
+          }, 200);
+          
+          return;
+        }
+      }
+    }
+  }
+
+  async refreshReviewData(panel) {
+    const submissionId = this.getSubmissionId();
+    if (!submissionId) return;
+
+    try {
+      const response = await fetch(`${pkp.context.apiBaseUrl}/submissions/${submissionId}`);
+      const submission = await response.json();
+      
+      const publication = submission.publications?.find(p => p.id === submission.currentPublicationId);
+      if (!publication) return;
+
+      const body = panel.querySelector('.submissionWizard__reviewPanel__body');
+      if (!body) return;
+
+      body.innerHTML = '';
+      
+      let hasData = false;
+      
+      if (publication.codeRepository) {
+        hasData = true;
+        body.innerHTML += `
+          <div class="submissionWizard__reviewPanel__item">
+            <h4>${this.escapeHtml(t('plugins.generic.codecheck.codeRepository'))}</h4>
+            <div class="review-value">
+              <p>${this.escapeHtml(publication.codeRepository).replace(/\n/g, '<br>')}</p>
+            </div>
+          </div>
+        `;
+      }
+      
+      if (publication.dataRepository) {
+        hasData = true;
+        body.innerHTML += `
+          <div class="submissionWizard__reviewPanel__item">
+            <h4>${this.escapeHtml(t('plugins.generic.codecheck.dataRepository'))}</h4>
+            <div class="review-value">
+              <p>${this.escapeHtml(publication.dataRepository).replace(/\n/g, '<br>')}</p>
+            </div>
+          </div>
+        `;
+      }
+      
+      if (publication.manifestFiles) {
+        hasData = true;
+        body.innerHTML += `
+          <div class="submissionWizard__reviewPanel__item">
+            <h4>${this.escapeHtml(t('plugins.generic.codecheck.manifestFiles.label'))}</h4>
+            <div class="review-value">
+              <pre>${this.escapeHtml(publication.manifestFiles)}</pre>
+            </div>
+          </div>
+        `;
+      }
+      
+      if (publication.dataAvailabilityStatement) {
+        hasData = true;
+        body.innerHTML += `
+          <div class="submissionWizard__reviewPanel__item">
+            <h4>${this.escapeHtml(t('plugins.generic.codecheck.dataAvailability'))}</h4>
+            <div class="review-value">
+              <div>${publication.dataAvailabilityStatement}</div>
+            </div>
+          </div>
+        `;
+      }
+      
+      if (!hasData) {
+        body.innerHTML = `
+          <div class="submissionWizard__reviewPanel__item">
+            <p class="description" style="color: #d00a0a;">
+              <em>${this.escapeHtml(t('plugins.generic.codecheck.noDataFound'))}</em>
+            </p>
+          </div>
+        `;
+      }
+    } catch (error) {
+      console.error('CODECHECK: Failed to refresh review data', error);
+    }
+  }
+
+  escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  getSubmissionId() {
+    const match = window.location.search.match(/id=(\d+)/);
+    return match ? match[1] : null;
+  }
+}
+
+// Initialize — mount Vue components only after WizardManager has loaded saved data
+// into textareas, so components receive the correct initial values
 window.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
+    new CodecheckReviewRefresher();
+  }, 200);
+
+  setTimeout(async () => {
+    const manager = new CodecheckWizardManager();
+    await manager.init();
     mountCodecheckVueComponents();
-  }, 1000);
+  }, 100);
 });
 
 function mountCodecheckVueComponents() {
@@ -181,7 +451,6 @@ function mountCodecheckVueComponents() {
     });
   }
 
-  // Mount code repository component
   const codeRepoContainer = document.querySelector('textarea[name="codeRepository"]')?.parentElement;
   if (codeRepoContainer) {
     const textarea = codeRepoContainer.querySelector('textarea');
@@ -230,13 +499,13 @@ function mountCodecheckVueComponents() {
     textarea.style.display = 'none';
     
     createApp(CodecheckDataAndSoftwareAvailability, {
-      name: 'dataSoftwareAvailability',
+      name: 'dataAvailabilityStatement',
       label: t('plugins.generic.codecheck.dataSoftwareAvailability'),
       description: t('plugins.generic.codecheck.dataSoftwareAvailability.description'),
       value: textarea.value,
     }).mount(vueDiv);
     
-    vueDiv.addEventListener('input', (e) => {
+    vueDiv.addEventListener('update', (e) => {
       textarea.value = e.detail;
       textarea.dispatchEvent(new Event('input', { bubbles: true }));
     });
