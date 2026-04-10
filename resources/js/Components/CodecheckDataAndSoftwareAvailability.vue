@@ -18,6 +18,7 @@ const { useLocalize } = pkp.modules.useLocalize;
 
 export default {
   props: {
+    name: { type: String, required: true },
     value: { type: String, required: true }
   },
   setup() {
@@ -39,19 +40,25 @@ export default {
   methods: {
     onInput(e) {
       const val = e.target.value;
-      // update local bound value
       this.dataSoftwareAvail = val;
-      this.$emit("input", val);
-      this.$el.dispatchEvent(new CustomEvent('input', { detail: val }));
-
-      // resize the textarea if the textarea value is empty and the placeholder appears again
+      this.$emit("update", val);
+      
+      const vueRoot = document.querySelector(`textarea[name="dataAvailabilityStatement"]`)?.previousElementSibling;
+      if (vueRoot) {
+        vueRoot.dispatchEvent(new CustomEvent('update', { detail: val, bubbles: true }));
+      }
+      
       this.resizeTextarea();
     },
 
     clearText() {
       this.dataSoftwareAvail = '';
-      this.$emit("input", "");
-      this.$el.dispatchEvent(new CustomEvent('input', { detail: "" }));
+      this.$emit("update", "");
+      
+      const vueRoot = document.querySelector(`textarea[name="dataAvailabilityStatement"]`)?.previousElementSibling;
+      if (vueRoot) {
+        vueRoot.dispatchEvent(new CustomEvent('update', { detail: "", bubbles: true }));
+      }
     },
 
     adjustHeight() {
