@@ -149,7 +149,7 @@ class CodecheckMetadataHandler
         ];
     }
 
-    private function buildYaml($publication, $metadata): string
+    public function buildYaml($publication, $metadata): string
     {
         $manifest = json_decode($metadata->manifest ?? '[]', true);
         $codecheckers = json_decode($metadata->codecheckers ?? '[]', true);
@@ -166,15 +166,10 @@ class CodecheckMetadataHandler
 
         // Paper section
         $authors = [];
-        foreach ($publication->getData('authors') as $author) {
-            $locale = $author->getDefaultLocale();
-            $givenName = $author->getGivenName($locale) ?? '';
-            $familyName = $author->getFamilyName($locale) ?? '';
-            $fullName = trim($givenName . ' ' . $familyName);
-            
-            $authorData = ['name' => $fullName];
-            if ($author->getOrcid()) {
-                $authorData['ORCID'] = $author->getOrcid();
+        foreach ($this->getAuthors($publication) as $author) {
+            $authorData = ['name' => $author['name']];
+            if (!empty($author['orcid'])) {
+                $authorData['ORCID'] = $author['orcid'];
             }
             $authors[] = $authorData;
         }
@@ -254,7 +249,7 @@ class CodecheckMetadataHandler
      * @param mixed $publication The publication data
      * @return array The Authors with Name and ORCID (if isset) in an Array
      */
-    private function getAuthors($publication): array
+    public function getAuthors($publication): array
     {
         if (!$publication) {
             return [];

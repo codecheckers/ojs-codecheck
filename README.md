@@ -5,6 +5,7 @@
 [![repo status](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Contributions - welcome](https://img.shields.io/badge/Contributions-welcome-blueviolet)](https://github.com/codecheckers/ojs-codecheck/blob/main/CONTRIBUTING.md)
+[![Component Tests](https://github.com/codecheckers/ojs-codecheck/actions/workflows/component-tests.yml/badge.svg?branch=main)](https://github.com/codecheckers/ojs-codecheck/actions/workflows/component-tests.yml)
 <br />
 
 An [OJS Plugin](https://docs.pkp.sfu.ca/dev/plugin-guide/en/) to streamline codechecking of submissions and display of [CODECHECK](https://codecheck.org.uk/) certificates.
@@ -119,6 +120,7 @@ The plugin tracks CODECHECK progress through a status system displayed in the re
 ### Status Implementation
 
 The status is determined in `CodecheckReviewDisplay.vue` using the following logic:
+
 ```javascript
 function getStatus() {
   if (metadata.value.certificate && metadata.value.checkTime) {
@@ -144,11 +146,13 @@ function getStatus() {
 This plugin uses **Vite** for building Vue.js components.
 
 #### Install dependencies
+
 ```bash
 npm install
 ```
 
 #### Build for production
+
 ```bash
 npm run build
 ```
@@ -156,6 +160,7 @@ npm run build
 This compiles Vue components and JavaScript into the `public/` directory.
 
 #### Watch mode (development)
+
 ```bash
 npm run dev
 ```
@@ -242,6 +247,7 @@ codecheck/
 ├── locale/*                   # Internationalization (language localization strings)
 ├── package-lock.json
 ├── package.json
+├── package-plugin.sh          # Shell script, that makes packaging this plugin reproducible
 ├── public/build/*             # NPM realese build files
 ├── resources/js/*             # The Vue.js Components
 ├── schema.xml                 # CODECHECK metadata table schema file
@@ -286,6 +292,68 @@ private function yourFunction(): void
         'payload' => $test,
     ], 200);
 }
+```
+
+## Running Tests
+
+The plugin includes comprehensive test coverage for both backend PHP code and frontend Vue components.
+
+### PHP Unit Tests
+
+**Note:** Some tests require the full OJS environment (e.g.: database, facades, translations).
+They run successfully in [**Option 2: Docker/CI Environment**](#option-2-dockerci-environment) but are skipped in [**Option 1: Local Testing**](#option-1-local-testing).
+
+#### Option 1: Local Testing
+
+From the plugins directory:
+
+1. Navigate to the `tests/` directory:
+    ```bash
+    cd plugins/generic/codecheck/tests/
+    ```
+2. Run the tests:
+    - **without** a test coverage report:
+        ```bash
+        sh runTests.sh
+        ```
+        or
+        ```bash
+        sh runTests.sh --coverage-report=false
+        ```
+    - **with** a test coverage report:
+        ```bash
+        sh runTests.sh --coverage-report=true
+        ```
+        **Note:** You will find the test coverage in the `tests/results/index.html` file.
+
+#### Option 2: Docker/CI Environment
+
+From the root of the OJS application directory:
+
+```bash
+lib/pkp/lib/vendor/phpunit/phpunit/phpunit -c lib/pkp/tests/phpunit.xml plugins/generic/codecheck/tests/
+```
+
+If you want to visualize the test coverage, open the test coverage report which is located in the following file:
+
+```bash
+lib/pkp/tests/results/index.html
+```
+
+### Frontend Component Tests
+
+[![Component Tests](https://github.com/codecheckers/ojs-codecheck/actions/workflows/component-tests.yml/badge.svg?branch=main)](https://github.com/codecheckers/ojs-codecheck/actions/workflows/component-tests.yml)
+
+From the plugin directory:
+
+```bash
+npm run test:component
+```
+
+For interactive testing:
+
+```bash
+npm run test:component:open
 ```
 
 ## License

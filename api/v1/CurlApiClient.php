@@ -4,8 +4,8 @@ namespace APP\plugins\generic\codecheck\api\v1;
 
 use CurlHandle;
 use APP\plugins\generic\codecheck\api\v1\ApiClientInterface;
-use App\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitException;
-use App\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
+use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitException;
+use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
 
 class CurlApiClient implements ApiClientInterface
 {
