@@ -13,12 +13,12 @@ class CodecheckVenueTypes
     /**
      * Initializes a new List of all CODECHECK Venue Types
      */
-    function __construct()
+    function __construct(?CodecheckApiClient $apiClient = null)
     {
         // Initialize unique Array
         $this->uniqueArray = new UniqueArray();
         // Intialize API caller
-        $codecheckApiClient = new CodecheckApiClient();
+        $codecheckApiClient = $apiClient ?? new CodecheckApiClient();
         // fetch CODECHECK Type data
         try {
             $codecheckApiClient->fetch("https://codecheck.org.uk/register/venues/index.json");
@@ -26,12 +26,10 @@ class CodecheckVenueTypes
             // TODO: Implement that the user gets notified, that the fetching of the Labels didn't work
             error_log($curlInitException);
             throw $curlInitException;
-            return;
         } catch (CurlReadException $curlReadException) {
             // TODO: Implement that the user gets notified, that the fetching of the Labels didn't work
             error_log($curlReadException);
             throw $curlReadException;
-            return;
         }
         // get json Data from API Caller
         $data = $codecheckApiClient->getData();

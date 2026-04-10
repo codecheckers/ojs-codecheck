@@ -1,0 +1,130 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  phpunit-tests:
+    name: PHPUnit Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: ojs_ci
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+    
+    steps:
+      - name: Checkout OJS
+        uses: actions/checkout@v4
+        with:
+          repository: pkp/ojs
+          ref: stable-3_5_0
+          path: ojs
+          submodules: recursive
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, pdo_mysql, intl, zip, bcmath, curl, gd
+          coverage: xdebug
+      
+      - name: Install PKP dependencies
+        working-directory: ojs/lib/pkp
+        run: composer install --no-interaction --no-progress --optimize-autoloader
+      
+      - name: Checkout plugin
+        uses: actions/checkout@v4
+        with:
+          path: ojs/plugins/generic/codecheck
+      
+      - name: Install plugin dependencies
+        working-directory: ojs/plugins/generic/codecheck
+        run: composer install --no-interaction || true
+      
+      - name: Create .env file
+        working-directory: ojs/plugins/generic/codecheck
+        run: |
+          cat > .env << EOF
+          GITHUB_TOKEN=${{ secrets.CODECHECK_GITHUB_TOKEN }}
+          GITHUB_OWNER=${{ secrets.CODECHECK_GITHUB_OWNER }}
+          GITHUB_REPO=${{ secrets.CODECHECK_GITHUB_REPO }}
+          EOF
+      
+      - name: Setup OJS database
+        working-directory: ojs
+        run: |
+          mysql -h 127.0.0.1 -u root -proot -e "CREATE DATABASE IF NOT EXISTS ojs_ci;"
+          cp config.TEMPLATE.inc.php config.inc.php
+          sed -i 's/username = .*/username = root/' config.inc.php
+          sed -i 's/password = .*/password = root/' config.inc.php
+          sed -i 's/name = .*/name = ojs_ci/' config.inc.php
+          sed -i 's/host = .*/host = 127.0.0.1/' config.inc.php
+      
+      - name: Create MySQL socket symlink
+        run: |
+          sudo mkdir -p /tmp
+          sudo ln -s /var/run/mysqld/mysqld.sock /tmp/mysql.sock || true
+      
+      - name: Run PHPUnit tests
+        working-directory: ojs/plugins/generic/codecheck/tests
+        run: sh runTests.sh
+      
+      - name: Run PHPUnit tests with coverage
+        working-directory: ojs/plugins/generic/codecheck/tests
+        run: sh runTests.sh --coverage-report=true
+      
+      - name: Upload coverage report
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phpunit-coverage
+          path: ojs/plugins/generic/codecheck/tests/results/
+          if-no-files-found: ignore
+      
+      - name: Upload test logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phpunit-logs
+          path: |
+            ojs/plugins/generic/codecheck/tests/*.log
+            ojs/plugins/generic/codecheck/tests/*.xml
+          if-no-files-found: ignore
+
+  component-tests:
+    name: Cypress Component Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run component tests
+        run: npm run test:component
+      
+      - name: Upload screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-screenshots
+          path: cypress/screenshots
+          if-no-files-found: ignore
