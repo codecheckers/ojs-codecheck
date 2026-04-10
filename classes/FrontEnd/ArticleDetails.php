@@ -56,7 +56,11 @@ class ArticleDetails
         $codecheckData = $dao->getBySubmissionId($article->getId());
 
         // Only show CODECHECK info if user opted in
-        if (!$codecheckData || !$codecheckData->getOptIn()) {
+        if (!$article->getData('codecheckOptIn')) {
+            return false;
+        }
+
+        if (!$codecheckData) {
             return false;
         }
 

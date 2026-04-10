@@ -448,6 +448,9 @@ msgstr "CODECHECK"
 msgid "plugins.generic.codecheck.certificate.viewLink"
 msgstr "View Certificate"
 
+msgid "plugins.generic.codecheck.noDataFound"
+msgstr "No CODECHECK data found."
+
 msgid "plugins.generic.codecheck.repository.placeholder"
 msgstr "https://github.com/username/repo"
 
