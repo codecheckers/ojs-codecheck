@@ -18,6 +18,8 @@ use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckVenue;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
 
 use APP\facades\Repo;
+use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitException;
+use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
 use Illuminate\Support\Facades\DB;
 
 class CodecheckApiHandler
@@ -174,20 +176,20 @@ class CodecheckApiHandler
     {   
         try {
             $codecheckVenueTypes = new CodecheckVenueTypes();
-        } catch (ApiFetchException $e) {
+        } catch (\Throwable $e) {
             $this->response->response([
                 'success'   => false,
-                'error'     => $e->getMessage(),
+                'error'     => "Error while fetching the Venue Types: " . $e->getMessage(),
             ], 400);
             return;
         }
 
         try {
             $codecheckVenueNames = new CodecheckVenueNames();
-        } catch (ApiFetchException $e) {
+        } catch (\Throwable $e) {
             $this->response->response([
                 'success'   => false,
-                'error'     => $e->getMessage(),
+                'error'     => "Error while fetching the Venue Names: " . $e->getMessage(),
             ], 400);
             return;
         }
@@ -229,13 +231,13 @@ class CodecheckApiHandler
             } catch (ApiFetchException $ae) {
                 $this->response->response([
                     'success'   => false,
-                    'error'     => $e->getMessage(),
+                    'error'     => $ae->getMessage(),
                 ], 400);
                 return;
             } catch (NoMatchingIssuesFoundException $me) {
                 $this->response->response([
                     'success'   => false,
-                    'error'     => $e->getMessage(),
+                    'error'     => $me->getMessage(),
                 ], 400);
                 return;
             }
@@ -283,133 +285,39 @@ class CodecheckApiHandler
     }
 
     /**
-     * This function gets all the Codecheck Metadata
+     * Get the CODECHECK Metadata for a submission
      * 
      * @return void
      */
     public function getMetadata(): void
     {
-        // get submissionId
         $submissionId = $this->codecheckMetadataHandler->getSubmissionId();
+        $result = $this->codecheckMetadataHandler->getMetadata($this->request, $submissionId);
 
-        error_log("[CODECHECK API] getMetadata called for submission: $submissionId");
-        
-        $submission = Repo::submission()->get($submissionId);
-        
-        if (!$submission) {
-            $this->response->response([
-                'success' => false,
-                'error' => 'Submission not found'
-            ], 404);
-            return;
+        if(isset($result['error'])) {
+            $result = array_merge($result, ['submissionID' => $submissionId]);
+            $this->response->response($result, 404);
         }
 
-        $publication = $submission->getCurrentPublication();
-        
-        $metadata = DB::table('codecheck_metadata')
-            ->where('submission_id', $submissionId)
-            ->first();
-
-        $response = [
-            'submissionId' => $submissionId,
-            'submission' => [
-                'id' => $submission->getId(),
-                'title' => $publication ? $publication->getLocalizedTitle() : '',
-                'authors' => $this->codecheckMetadataHandler->getAuthors($publication),
-                'doi' => $publication ? $publication->getStoredPubId('doi') : null,
-                'codeRepository' => $submission->getData('codeRepository'),
-                'dataRepository' => $submission->getData('dataRepository'),
-                'manifestFiles' => $submission->getData('manifestFiles'),
-                'dataAvailabilityStatement' => $submission->getData('dataAvailabilityStatement'),
-            ],
-            'codecheck' => $metadata ? [
-                'version' => $metadata->version ?? 'latest',
-                'publicationType' => $metadata->publication_type ?? 'doi',
-                'manifest' => json_decode($metadata->manifest ?? '[]', true),
-                'repository' => $metadata->repository,
-                'codecheckers' => json_decode($metadata->codecheckers ?? '[]', true),
-                'source' => $metadata->source,
-                'certificate' => $metadata->certificate,
-                'check_time' => $metadata->check_time,
-                'summary' => $metadata->summary,
-                'report' => $metadata->report,
-                'additionalContent' => $metadata->additional_content,
-            ] : null
-        ];
-
-        error_log("[CODECHECK API] Response: " . json_encode($response));
-        
-        $this->response->response($response, 200);
+        $this->response->response($result, 200);
     }
 
     /**
-     * This function saves all the CODECHECK Metadata to the Database
+     * Save the CODECHECK Metadata for a submission
      * 
      * @return void
      */
     public function saveMetadata(): void
     {
-        // get submissionId
         $submissionId = $this->codecheckMetadataHandler->getSubmissionId();
+        $result = $this->codecheckMetadataHandler->saveMetadata($this->request, $submissionId);
 
-        error_log("[CODECHECK API] saveMetadata called for submission: $submissionId");
-        
-        $submission = Repo::submission()->get($submissionId);
-        
-        if (!$submission) {
-            $this->response->response([
-                'success' => false,
-                'error' => 'Submission not found'
-            ], 404);
-            return;
+        if(isset($result['error'])) {
+            $result = array_merge($result, ['submissionID' => $submissionId]);
+            $this->response->response($result, 404);
         }
 
-        $jsonData = file_get_contents('php://input');
-        $data = json_decode($jsonData, true);
-        
-        error_log("[CODECHECK API] Received data: " . $jsonData);
-
-        $nullIfEmpty = function($value) {
-            return (is_string($value) && trim($value) === '') ? null : $value;
-        };
-        
-        $metadataData = [
-            'submission_id' => $submissionId,
-            'version' => $data['version'] ?? 'latest',
-            'publication_type' => $data['publication_type'] ?? 'doi',
-            'manifest' => json_encode($data['manifest'] ?? []),
-            'repository' => $nullIfEmpty($data['repository'] ?? null),
-            'source' => $nullIfEmpty($data['source'] ?? null),
-            'codecheckers' => json_encode($data['codecheckers'] ?? []),
-            'certificate' => $nullIfEmpty($data['certificate'] ?? null),
-            'check_time' => $nullIfEmpty($data['check_time'] ?? null),
-            'summary' => $nullIfEmpty($data['summary'] ?? null),    
-            'report' => $nullIfEmpty($data['report'] ?? null),
-            'additional_content' => $nullIfEmpty($data['additional_content'] ?? null),
-            'updated_at' => date('Y-m-d H:i:s'),
-        ];
-
-        $exists = DB::table('codecheck_metadata')
-            ->where('submission_id', $submissionId)
-            ->exists();
-
-        if ($exists) {
-            DB::table('codecheck_metadata')
-                ->where('submission_id', $submissionId)
-                ->update($metadataData);
-            error_log("[CODECHECK API] Updated existing record");
-        } else {
-            $metadataData['created_at'] = date('Y-m-d H:i:s');
-            DB::table('codecheck_metadata')->insert($metadataData);
-            error_log("[CODECHECK Metadata] Created new record");
-        }
-
-        $this->response->response([
-            'success' => true,
-            'message' => 'CODECHECK metadata saved successfully',
-            'submissionID' => $submissionId,
-            'certificate' => $metadataData['certificate'],
-        ], 200);
+        $this->response->response($result, 200);
     }
 
     /**
@@ -430,7 +338,7 @@ class CodecheckApiHandler
             $this->response->response([
                 'success' => false,
                 'error' => 'Submission not found',
-                'subimssionID' => $submissionId,
+                'submissionID' => $submissionId,
             ], 400);
             return;
         }
@@ -548,48 +456,20 @@ class CodecheckApiHandler
     }
 
     /**
-     * This function generates the Yaml file based on the CODECHECK Metadata
+     * Generate the CODECHECK YAML file for a submission
      * 
      * @return void
      */
     public function generateYaml(): void
     {
         $submissionId = $this->codecheckMetadataHandler->getSubmissionId();
+        $result = $this->codecheckMetadataHandler->generateYaml($this->request, $submissionId);
 
-        error_log("[CODECHECK Metadata] generateYaml called for submission: $submissionId");
-        
-        $submission = Repo::submission()->get($submissionId);
-        
-        if (!$submission) {
-            $this->response->response([
-                'success' => false,
-                'error' => 'Submission not found',
-                'subimssionID' => $submissionId,
-            ], 404);
-            return;
+        if(isset($result['error'])) {
+            $result = array_merge($result, ['submissionID' => $submissionId]);
+            $this->response->response($result, 404);
         }
 
-        $publication = $submission->getCurrentPublication();
-        
-        $metadata = DB::table('codecheck_metadata')
-            ->where('submission_id', $submissionId)
-            ->first();
-
-        if (!$metadata) {
-            $this->response->response([
-                'success' => false,
-                'error' => 'No CODECHECK metadata found',
-                'subimssionID' => $submissionId,
-            ], 404);
-            return;
-        }
-
-        $yaml = $this->codecheckMetadataHandler->buildYaml($publication, $metadata);
-
-        $this->response->response([
-            'success' => false,
-            'yaml' => $yaml,
-            'filename' => 'codecheck.yml'
-        ], 200);
+        $this->response->response($result, 200);
     }
 }

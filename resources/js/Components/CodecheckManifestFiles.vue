@@ -5,14 +5,14 @@
         <input
           v-model="file.filename"
           type="text"
-          placeholder="Filename (e.g., figures/figure1.png)"
+          :placeholder="t('plugins.generic.codecheck.manifestFiles.filenamePlaceholder')"
           @input="updateValue"
           class="form-control"
         />
         <input
           v-model="file.comment"
           type="text"
-          placeholder="Comment (e.g., Main result visualization)"
+          :placeholder="t('plugins.generic.codecheck.manifestFiles.commentPlaceholder')"
           @input="updateValue"
           class="form-control"
         />
@@ -20,7 +20,7 @@
       </div>
     </div>
     <button type="button" @click="addFile" class="btn-add">
-      + Add File
+      {{ t('plugins.generic.codecheck.manifestFiles.addButton') }}
     </button>
   </div>
 </template>

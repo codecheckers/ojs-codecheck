@@ -194,6 +194,12 @@ msgstr "CODECHECK Certificate ID, Venue Type and Venue Name"
 msgid "plugins.generic.codecheck.identifier.label"
 msgstr "ID of the CODECHECK certificate - e.g.: 2025-001"
 
+msgid "plugins.generic.codecheck.identifier.venue.fetch.error.curl"
+msgstr "Venue Data Error"
+
+msgid "plugins.generic.codecheck.identifier.venue.fetch.error.codecheckAPI"
+msgstr "Failed to fetch venue data"
+
 msgid "plugins.generic.codecheck.identifier.venue.type"
 msgstr "Venue Type"
 
@@ -444,3 +450,24 @@ msgstr "View Certificate"
 
 msgid "plugins.generic.codecheck.noDataFound"
 msgstr "No CODECHECK data found."
+
+msgid "plugins.generic.codecheck.repository.placeholder"
+msgstr "https://github.com/username/repo"
+
+msgid "plugins.generic.codecheck.repository.addButton"
+msgstr "+ Add URL"
+
+msgid "plugins.generic.codecheck.repository.validation.protocol"
+msgstr "URL must start with http:// or https://"
+
+msgid "plugins.generic.codecheck.repository.validation.invalid"
+msgstr "Please enter a valid URL"
+
+msgid "plugins.generic.codecheck.manifestFiles.filenamePlaceholder"
+msgstr "Filename (e.g., figures/figure1.png)"
+
+msgid "plugins.generic.codecheck.manifestFiles.commentPlaceholder"
+msgstr "Comment (e.g., Main result visualization)"
+
+msgid "plugins.generic.codecheck.manifestFiles.addButton"
+msgstr "+ Add File"

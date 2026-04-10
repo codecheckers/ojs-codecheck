@@ -5,7 +5,7 @@
         <input
           v-model="repositories[index]"
           type="url"
-          placeholder="https://github.com/username/repo"
+          :placeholder="t('plugins.generic.codecheck.repository.placeholder')"
           @input="updateValue"
           @blur="validateUrl(index)"
           :class="['form-control', { 'is-invalid': errors[index] }]"
@@ -17,7 +17,7 @@
       </div>
     </div>
     <button type="button" @click="addRepository" class="btn-add">
-      + Add URL
+      {{ t('plugins.generic.codecheck.repository.addButton') }}
     </button>
   </div>
 </template>
@@ -68,12 +68,12 @@ function validateUrl(index) {
   try {
     new URL(url);
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      errors.value[index] = 'URL must start with http:// or https://';
+      errors.value[index] = t('plugins.generic.codecheck.repository.validation.protocol');
     } else {
       errors.value[index] = '';
     }
   } catch {
-    errors.value[index] = 'Please enter a valid URL';
+    errors.value[index] = t('plugins.generic.codecheck.repository.validation.invalid');
   }
 }
 

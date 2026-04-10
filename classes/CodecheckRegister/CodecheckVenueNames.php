@@ -14,33 +14,32 @@ class CodecheckVenueNames
     /**
      * Initializes a new List of all CODECHECK Venue Names
      */
-    function __construct()
+    function __construct(?CodecheckApiClient $apiClient = null, ?CodecheckVenueTypes $codecheckVenueTypes = null)
     {
         // Initialize unique Array
         $this->uniqueArray = new UniqueArray();
 
+        // fetch CODECHECK Certificate GitHub Labels
         // Intialize API caller
-        $codecheckApiClient = new CodecheckApiClient();
+        $codecheckApiClient = $apiClient ?? new CodecheckApiClient();
         // fetch CODECHECK Type data
         try {
             $codecheckApiClient->fetch("https://codecheck.org.uk/register/venues/index.json");
         } catch (CurlInitException $curlInitException) {
             // TODO: Implement that the user gets notified, that the fetching of the Labels didn't work
-            error_log($curlInitException);
+            error_log("CurlInit Exception: " . $curlInitException);
             throw $curlInitException;
-            return;
         } catch (CurlReadException $curlReadException) {
             // TODO: Implement that the user gets notified, that the fetching of the Labels didn't work
-            error_log($curlReadException);
+            error_log("CurlInit Exception: " . $curlReadException);
             throw $curlReadException;
-            return;
         }
-        // get json Data from API Caller
+        // get json Data from API call
         $data = $codecheckApiClient->getData();
 
         // find all venue Types
         // TODO: Remove this once the actualy Codecheck API contains the labels/ Venue Names to fetch
-        $codecheckVenueTypes = new CodecheckVenueTypes();
+        $codecheckVenueTypes = $codecheckVenueTypes ?? new CodecheckVenueTypes();
 
         foreach($data as $venue) {
             $label = $venue["Issue label"];

@@ -33,15 +33,13 @@ class CodecheckGithubRegisterApiClient
      * @param string $submissionID The ID of the Submission realted to the GitHub Register Issue
      * @param mixed $journal The name of the Journal the Submission is published in
      */
-    function __construct(string $githubRegisterRepository, string $submissionID, mixed $journal)
+    function __construct(string $githubRegisterRepository, string $submissionID, mixed $journal, ?Client $client = null)
     {
-        $this->client = new Client();
+        $this->client = $client ?? new Client();
         $this->labels = new UniqueArray();
         $this->githubRegisterRepository = $githubRegisterRepository;
         $this->submissionID = $submissionID;
-        $this->journalName = $journal
-                                ? $journal->getLocalizedName()
-                                : 'Unknwon Journal';
+        $this->journalName = $journal?->getLocalizedName() ?? 'Unknown Journal';
     }
 
     /**
@@ -138,7 +136,7 @@ class CodecheckGithubRegisterApiClient
                 ]
             );
         } catch (\Throwable $e) {
-    throw new ApiCreateException("Error while adding the new GitHub issue with the new Certificate Identifier: " . $certificateIdentifier->toStr() . "\n" . $e->getMessage());
+            throw new ApiCreateException("Error while adding the new GitHub issue with the new Certificate Identifier: " . $certificateIdentifier->toStr() . "\n" . $e->getMessage());
         }
 
         return $issue['html_url'];

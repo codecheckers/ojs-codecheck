@@ -37,13 +37,11 @@ class CertificateIdentifierList
         try {
             $codecheckGithubRegisterApiClient->fetchIssues();
         } catch (ApiFetchException $ae) {
-            throw $ae;
             error_log($ae);
-            return $newCertificateIdentifierList;
+            throw $ae;
         } catch (NoMatchingIssuesFoundException $me) {
-            throw $me;
             error_log($me);
-            return $newCertificateIdentifierList;
+            throw $me;
         }
 
         foreach ($codecheckGithubRegisterApiClient->getIssues() as $issue) {
@@ -196,7 +194,7 @@ class CertificateIdentifierList
     public function toStr(): string
     {
         $return_str = "Certificate Identifiers:\n";
-        foreach ($this->uniqueArray as $identifier) {
+        foreach ($this->uniqueArray->toArray() as $identifier) {
             $return_str .= $identifier->toStr() . "\n";
         }
         return $return_str;
