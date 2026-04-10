@@ -89,6 +89,11 @@ class CodecheckApiHandler
                     'handler' => [$this, 'uploadFile'],
                     'roles' => $this->roles,
                 ],
+                [
+                    'route' => 'loadMetadataFromRepository',
+                    'handler' => [$this, 'loadMetadataFromRepository'],
+                    'roles' => $this->roles,
+                ],
             ],
         ];
 
@@ -285,7 +290,31 @@ class CodecheckApiHandler
     }
 
     /**
-     * Get the CODECHECK Metadata for a submission
+     * This function loads the Codecheck Metadata from an existing `codecheck.yml` in an existing Code Repository
+     * 
+     * @return void
+     */
+    public function loadMetadataFromRepository(): void
+    {
+        $postParams = json_decode(file_get_contents('php://input'), true);
+        $repository = $postParams["repository"];
+
+        if (preg_match('/^https:\/\/zenodo\.org\/records\/\d{8}$/', $repository)) {
+            $this->response->response([
+                'success' => true,
+                'repository' => $repository,
+            ], 200);
+        } else {
+            $this->response->response([
+                'success' => false,
+                'repository' => $repository,
+                'error' => "The repository (" . $repository . ") isn't of the required format: https://zenodo.org/records/{8 digit identifier}",
+            ], 400);
+        }
+    }
+
+    /**
+     * This function gets all the Codecheck Metadata
      * 
      * @return void
      */

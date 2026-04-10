@@ -168,6 +168,13 @@
                 class="pkpFormField__input"
                 :placeholder="t('plugins.generic.codecheck.repository.placeholder')"
               />
+              <button
+                type="button"
+                class="pkpButton btn-add"
+                @click="loadMetadataFromRepository(index)"
+              >
+                Load Metadata
+              </button>
               <button 
                 type="button"
                 class="pkpButton codecheck-btn pkpButton--close" 
@@ -490,6 +497,34 @@ export default {
         this.error = this.t('plugins.generic.codecheck.loadError') + ': ' + error.message;
       } finally {
         this.loading = false;
+      }
+    },
+
+    async loadMetadataFromRepository(repo_index) {
+      let repository = this.repositories[repo_index];
+      console.log(repository);
+      let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
+
+      try {
+          const response = await fetch(`${apiUrl}/loadMetadataFromRepository`, {
+              method: 'POST',
+              headers: {
+              'Content-Type': 'application/json',
+              'X-Csrf-Token': pkp.currentUser.csrfToken,
+              },
+              body: JSON.stringify({
+                repository: repository,
+              }),
+          });
+          const data = await response.json();
+
+          if (data.success) {
+              console.log('Success:', data.repository);
+          } else {
+              console.error('Error:', data.error);
+          }
+      } catch (error) {
+          console.error('Failed to fetch metadata from existing Repository:', error);
       }
     },
 
