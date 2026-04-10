@@ -32,8 +32,7 @@ There are other easy ways to support ojs-codecheck, as well as the CHECK-PUB pro
 - [Commit Messages](#commit-messages-)
 - [Code of Conduct](#code-of-conduct-)
 
-
-## How do I dontribute 🔧
+## How do I contribute 🔧
 
 ### Legal notice ⚖️
 
@@ -160,7 +159,7 @@ Please try to keep your commit messages short and concise and mark the issue you
 
 In the interest of fostering an open and welcoming environment, we as contributors and maintainers pledge to making participation in our project and our community a harassment-free experience for everyone, regardless of age, body size, disability, ethnicity, gender identity and expression, level of experience, nationality, personal appearance, race, religion, or sexual identity and orientation.
 
-### Examples of behavior that contributes to creating a positive ☺️ environment include:
+### Examples of behavior that contributes to creating a positive ☺️ environment
 
 - Using welcoming and inclusive language
 - Being respectful of differing viewpoints and experiences
@@ -168,7 +167,7 @@ In the interest of fostering an open and welcoming environment, we as contributo
 - Focusing on what is best for the community
 - Showing empathy towards other community members
 
-### Examples of unacceptable ☹️ behavior by participants include:
+### Examples of unacceptable ☹️ behavior by participants
 
 - The use of sexualized language or imagery and unwelcome sexual attention or advances
 - Trolling, insulting/derogatory comments, and personal or political attacks

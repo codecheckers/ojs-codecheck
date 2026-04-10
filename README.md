@@ -12,7 +12,7 @@ An [OJS Plugin](https://docs.pkp.sfu.ca/dev/plugin-guide/en/) to streamline code
 
 ## About
 
-This plugin integrates the [CODECHECK](https://codecheck.org.uk/) process into the submission and review workflows within Open Journal Systems (OJS), allowing journals to streamline code and computational reproducibility checking of scholarly submissions. The plugin provides tools for metadata creation and certificate deposition, displaying certificates, ensuring computational transparency in published research, as well as certificate and metadata publication. Therefore the plugin connects seamlessly with the CODECHECK infrastructure.
+This plugin integrates the [CODECHECK](https://codecheck.org.uk/) process into the submission and review workflows within Open Journal Systems ([OJS](https://pkp.sfu.ca/software/ojs/)), allowing journals to streamline code and computational reproducibility checking of scholarly submissions. The plugin provides tools for metadata creation and certificate deposition, displaying certificates, ensuring computational transparency in published research, as well as certificate and metadata publication. Therefore the plugin connects seamlessly with the CODECHECK infrastructure.
 
 The ojs-codecheck plugin development was started as part of the [CHECK-PUB](https://codecheck.org.uk/pub/) project with support from TU Delft Library.
 
@@ -29,7 +29,7 @@ The ojs-codecheck plugin development was started as part of the [CHECK-PUB](http
 
 ## Installation
 
-1. Download the plugin from the [releases page](https://github.com/codecheckers/ojs-codecheck/releases)
+1. Download the plugin from the [releases page](https://github.com/codecheckers/ojs-codecheck/releases) or clone the repository
 2. Extract the plugin to your OJS `plugins/generic/` directory
 3. Navigate to **Settings → Website → Plugins** in your OJS admin panel
 4. Find "CODECHECK" and click **Enable**
@@ -85,25 +85,24 @@ This plugin follows the CODECHECK brand guidelines and integrates with OJS desig
 ### For codecheckers
 
 1. **Metadata creation**: Assistance for creating a CODECHECK metadata file `codecheck.yml`
-2. **Metadata import**: If `codecheck.yml` already exists, you can also use it instead
-3. **Manage CODECHECKs**: The plugin enables you to manage your different ongoing CODECHECK tasks
+1. **Metadata import**: If `codecheck.yml` already exists, you can also use it instead
+1. **Manage CODECHECKs**: The plugin enables you to manage your different ongoing CODECHECK tasks
 
 ### For journal managers and editors
 
 1. **Manage the plugin**: Activate through the plugin management interface and set up display preferences and workflow options
-3. **Workflow integration**: The plugin automatically integrates with your submission workflow
-4. **Monitor certificates**: View and manage CODECHECK certificates through the admin interface
+1. **Workflow integration**: The plugin automatically integrates with your submission workflow
+1. **Monitor certificates**: View and manage CODECHECK certificates through the admin interface
 
 ### For authors
 
-<!-- 1. **Submit Code**: Include computational materials with your submission -->
-2. **CODECHECK Process**: Work with codecheckers to verify your computational work
-3. **Certificate Integration**: Certificates are automatically displayed once verification is complete
+1. **CODECHECK Process**: Work with codecheckers to verify your computational work
+1. **Certificate Integration**: Certificates are automatically displayed once verification is complete
 
 ### For Readers
 
 1. **View certificates**: Explore CODECHECK certificates on published articles
-2. **Access materials**: Links to computational materials and repositories
+1. **Access materials**: Links to computational materials and repositories
 
 ## CODECHECK Status System
 
