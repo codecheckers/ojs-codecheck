@@ -5,6 +5,7 @@ use APP\core\Application;
 use APP\template\TemplateManager;
 use APP\plugins\generic\codecheck\classes\FrontEnd\ArticleDetails;
 use APP\plugins\generic\codecheck\classes\Settings\Actions;
+use APP\plugins\generic\codecheck\classes\Settings\Manage;
 use APP\plugins\generic\codecheck\classes\migration\CodecheckSchemaMigration;
 use APP\plugins\generic\codecheck\classes\Submission\Schema;
 use APP\plugins\generic\codecheck\classes\Submission\SubmissionWizardHandler;
@@ -13,6 +14,7 @@ use PKP\plugins\Hook;
 use PKP\components\forms\FieldOptions;
 use APP\facades\Repo;
 use APP\plugins\generic\codecheck\api\v1\CodecheckApiHandler;
+use PKP\core\JSONMessage;
 
 class CodecheckPlugin extends GenericPlugin
 {
@@ -245,6 +247,19 @@ class CodecheckPlugin extends GenericPlugin
     {
         $actions = new Actions($this);
         return $actions->execute($request, $actionArgs, parent::getActions($request, $actionArgs));
+    }
+
+    /**
+     * Load a form when the `settings` button is clicked and
+     * save the form when the user saves it.
+     *
+     * @param array $args
+     * @param Request $request
+     */
+    public function manage($args, $request): JSONMessage
+    {
+        $manage = new Manage($this);
+        return $manage->execute($args, $request);
     }
 
     public function setEnabled($enabled, $contextId = null)
