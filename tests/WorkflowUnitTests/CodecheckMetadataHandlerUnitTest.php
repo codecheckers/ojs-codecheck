@@ -4,44 +4,36 @@ namespace APP\plugins\generic\codecheck\tests\WorkflowUnitTests;
 
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
 use PKP\tests\PKPTestCase;
-<<<<<<< HEAD
-use APP\core\Request;
-=======
+
 use \APP\core\Request;
 use APP\plugins\generic\codecheck\api\v1\CurlApiClient;
-<<<<<<< HEAD
->>>>>>> 3b70be7 (Finished reworking curl calls, now possible to mock them #36, #75)
-=======
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitException;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
 use CurlHandle;
->>>>>>> 70e54c2 (Added full test coverage for imports from github and OSF #36, 74, #76)
 
 class CodecheckMetadataHandlerUnitTest extends PKPTestCase
 {
-<<<<<<< HEAD
     private CodecheckMetadataHandler $handler;
     private $mockRequest;
-
-=======
-    private CodecheckMetadataHandler $codecheckMetadataHandler;
     private CurlApiClient $curlApiClient;
     /**
      * Set up the test environment
      */
->>>>>>> 3b70be7 (Finished reworking curl calls, now possible to mock them #36, #75)
     protected function setUp(): void
     {
         parent::setUp();
 
-<<<<<<< HEAD
         $this->mockRequest = $this->createMock(\APP\core\Request::class);
         $this->mockRequest->method('getUserVar')
             ->with('submissionId')
             ->willReturn(1);
-        
-        $this->handler = new CodecheckMetadataHandler($this->mockRequest);
-    }
+
+        /** mock GitHub client */
+        $client = $this->createMock(\Github\Client::class);
+        $this->curlApiClient = new CurlApiClient();
+
+        $this->handler = new CodecheckMetadataHandler($this->mockRequest, $client, $this->curlApiClient);
+	}
 
     public function testConstructorSetsSubmissionId()
     {
@@ -50,7 +42,7 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
             ->with('submissionId')
             ->willReturn(123);
         
-        $handler = new CodecheckMetadataHandler($mockRequest);
+        $handler = new CodecheckMetadataHandler($mockRequest, null, null);
         
         $this->assertInstanceOf(CodecheckMetadataHandler::class, $handler);
         $this->assertSame(123, $handler->getSubmissionId());
@@ -68,15 +60,6 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $this->assertIsArray($result);
         $this->assertEmpty($result);
     }
-=======
-        /** mock GitHub client */
-        $client = $this->createMock(\Github\Client::class);
-        $request = new Request();
-        $this->curlApiClient = new CurlApiClient();
-
-        $this->codecheckMetadataHandler = new CodecheckMetadataHandler($request, $client, $this->curlApiClient);
-	}
->>>>>>> 3b70be7 (Finished reworking curl calls, now possible to mock them #36, #75)
 
     public function testGetSubmissionId()
     {
@@ -86,9 +69,9 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $expectedSubmissionId = 123;
         $_POST['submissionId'] = $expectedSubmissionId;
 
-        $this->codecheckMetadataHandler = new CodecheckMetadataHandler($request, $client, $this->curlApiClient);
+        $this->handler = new CodecheckMetadataHandler($request, $client, $this->curlApiClient);
 
-        $actualSubmissionId = $this->codecheckMetadataHandler->getSubmissionId();
+        $actualSubmissionId = $this->handler->getSubmissionId();
         $this->assertEquals($expectedSubmissionId, $actualSubmissionId);
         $this->assertIsInt($actualSubmissionId);
     }
@@ -134,23 +117,15 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
 
         $request = new Request();
 
-<<<<<<< HEAD
-        $this->handler = new CodecheckMetadataHandler($request);
-=======
-        $this->codecheckMetadataHandler = new CodecheckMetadataHandler($request, $client, $this->curlApiClient);
->>>>>>> 3b70be7 (Finished reworking curl calls, now possible to mock them #36, #75)
+        $this->handler = new CodecheckMetadataHandler($request, $client, $this->curlApiClient);
 
         $owner = 'codecheckers';
         $repo = 'testing-dev-register';
         $repositoryUrl = 'https://github.com/' . $owner . '/' . $repo . '/';
-<<<<<<< HEAD
-        $actualMetadataReturnArray = $this->handler->importMetadataFromGitHub($repositoryUrl);
-=======
-        $response = $this->codecheckMetadataHandler->importMetadataFromGitHub($repositoryUrl);
+        $response = $this->handler->importMetadataFromGitHub($repositoryUrl);
         $actualMetadataReturnArray = json_decode($response->getPayload(), true);
         $this->assertEquals($response->getHttpResponseCode(), 200);
         $this->assertCount(3, $actualMetadataReturnArray);
->>>>>>> 3b70be7 (Finished reworking curl calls, now possible to mock them #36, #75)
         $this->assertTrue($actualMetadataReturnArray["success"]);
         $this->assertEquals($repositoryUrl, $actualMetadataReturnArray["repository"]);
         $this->assertEquals(["test" => "yaml"], $actualMetadataReturnArray["metadata"]);
@@ -199,12 +174,12 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
 
         $request = new Request();
 
-        $this->codecheckMetadataHandler = new CodecheckMetadataHandler($request, $client, $this->curlApiClient);
+        $this->handler = new CodecheckMetadataHandler($request, $client, $this->curlApiClient);
 
         $owner = 'codecheckers';
         $repo = 'testing-dev-register';
         $repositoryUrl = 'https://github.com/' . $owner . '/' . $repo . '/';
-        $this->codecheckMetadataHandler->importMetadataFromGitHub($repositoryUrl);
+        $this->handler->importMetadataFromGitHub($repositoryUrl);
     }
 
     public function testImportMetadataFromGithubContentsShowException()
@@ -237,12 +212,12 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
 
         $request = new Request();
 
-        $this->codecheckMetadataHandler = new CodecheckMetadataHandler($request, $client, $this->curlApiClient);
+        $this->handler = new CodecheckMetadataHandler($request, $client, $this->curlApiClient);
 
         $owner = 'codecheckers';
         $repo = 'testing-dev-register';
         $repositoryUrl = 'https://github.com/' . $owner . '/' . $repo . '/';
-        $response = $this->codecheckMetadataHandler->importMetadataFromGitHub($repositoryUrl);
+        $response = $this->handler->importMetadataFromGitHub($repositoryUrl);
         $actualMetadataReturnArray = json_decode($response->getPayload(), true);
         $this->assertEquals($response->getHttpResponseCode(), 404);
         $this->assertCount(2, $actualMetadataReturnArray);
@@ -278,12 +253,12 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
 
         $request = new Request();
 
-        $this->codecheckMetadataHandler = new CodecheckMetadataHandler($request, $client, $this->curlApiClient);
+        $this->handler = new CodecheckMetadataHandler($request, $client, $this->curlApiClient);
 
         $owner = 'codecheckers';
         $repo = 'testing-dev-register';
         $repositoryUrl = 'https://github.com/' . $owner . '/' . $repo . '/';
-        $response = $this->codecheckMetadataHandler->importMetadataFromGitHub($repositoryUrl);
+        $response = $this->handler->importMetadataFromGitHub($repositoryUrl);
         $actualMetadataReturnArray = json_decode($response->getPayload(), true);
         $this->assertEquals($response->getHttpResponseCode(), 404);
         $this->assertCount(3, $actualMetadataReturnArray);
@@ -295,18 +270,14 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
     public function testImportMetadataFromZenodo()
     {
         $repository = 'https://zenodo.org/records/14900193';
-<<<<<<< HEAD
-        $actualMetadataReturnArray = $this->handler->importMetadataFromZenodo($repository);
-=======
         $client = $this->createMock(\Github\Client::class);
         $request = new Request();
         $curlApiClient = $this->createMock(CurlApiClient::class);
-        $curlApiClient->method('get')->willReturn("test: yaml");
-        $this->codecheckMetadataHandler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
-        $response = $this->codecheckMetadataHandler->importMetadataFromZenodo($repository);
+        $curlApiClient->method('fetch')->willReturn("test: yaml");
+        $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
+        $response = $this->handler->importMetadataFromZenodo($repository);
         $actualMetadataReturnArray = json_decode($response->getPayload(), true);
         $this->assertEquals($response->getHttpResponseCode(), 200);
->>>>>>> 3b70be7 (Finished reworking curl calls, now possible to mock them #36, #75)
         $this->assertCount(3, $actualMetadataReturnArray);
         $this->assertTrue($actualMetadataReturnArray["success"]);
         $this->assertEquals($repository, $actualMetadataReturnArray["repository"]);
@@ -320,7 +291,7 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $client = $this->createMock(\Github\Client::class);
         $request = new Request();
         $curlApiClient = $this->createMock(CurlApiClient::class);
-        $curlApiClient->method('get')
+        $curlApiClient->method('fetch')
                         ->willReturnOnConsecutiveCalls(
                             json_encode([
                                 "data" => [
@@ -338,8 +309,8 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
                             ]),
                             "test: yaml"
                         );
-        $this->codecheckMetadataHandler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
-        $response = $this->codecheckMetadataHandler->importMetadataFromOsf($osfNodeId);
+        $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
+        $response = $this->handler->importMetadataFromOsf($osfNodeId);
         $actualMetadataReturnArray = json_decode($response->getPayload(), true);
         $this->assertEquals($response->getHttpResponseCode(), 200);
         $this->assertCount(3, $actualMetadataReturnArray);
@@ -355,15 +326,15 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $client = $this->createMock(\Github\Client::class);
         $request = new Request();
         $curlApiClient = $this->createMock(CurlApiClient::class);
-        $curlApiClient->method('get')
+        $curlApiClient->method('fetch')
                         ->willReturnOnConsecutiveCalls(
                             json_encode([
                                 "data" => NULL
                             ]),
                             "test: yaml"
                         );
-        $this->codecheckMetadataHandler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
-        $response = $this->codecheckMetadataHandler->importMetadataFromOsf($osfNodeId);
+        $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
+        $response = $this->handler->importMetadataFromOsf($osfNodeId);
         $actualMetadataReturnArray = json_decode($response->getPayload(), true);
         $this->assertEquals($response->getHttpResponseCode(), 500);
         $this->assertCount(3, $actualMetadataReturnArray);
@@ -379,7 +350,7 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $client = $this->createMock(\Github\Client::class);
         $request = new Request();
         $curlApiClient = $this->createMock(CurlApiClient::class);
-        $curlApiClient->method('get')
+        $curlApiClient->method('fetch')
                         ->willReturnOnConsecutiveCalls(
                             json_encode([
                                 "data" => [
@@ -393,8 +364,8 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
                             ]),
                             "test: yaml"
                         );
-        $this->codecheckMetadataHandler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
-        $response = $this->codecheckMetadataHandler->importMetadataFromOsf($osfNodeId);
+        $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
+        $response = $this->handler->importMetadataFromOsf($osfNodeId);
         $actualMetadataReturnArray = json_decode($response->getPayload(), true);
         $this->assertEquals($response->getHttpResponseCode(), 404);
         $this->assertCount(3, $actualMetadataReturnArray);
@@ -412,11 +383,11 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $client = $this->createMock(\Github\Client::class);
         $request = new Request();
         $curlApiClient = $this->createMock(CurlApiClient::class);
-        $curlApiClient->method('get')
+        $curlApiClient->method('fetch')
                         ->will($this->throwException(new CurlInitException($errorMessage, $errorCode)));
 
-        $this->codecheckMetadataHandler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
-        $response = $this->codecheckMetadataHandler->importMetadataFromOsf($osfNodeId);
+        $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
+        $response = $this->handler->importMetadataFromOsf($osfNodeId);
         $actualMetadataReturnArray = json_decode($response->getPayload(), true);
         $this->assertEquals($response->getHttpResponseCode(), $errorCode);
         $this->assertCount(3, $actualMetadataReturnArray);
@@ -435,11 +406,11 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $client = $this->createMock(\Github\Client::class);
         $request = new Request();
         $curlApiClient = $this->createMock(CurlApiClient::class);
-        $curlApiClient->method('get')
+        $curlApiClient->method('fetch')
                         ->will($this->throwException(new CurlReadException($curlHandle)));
 
-        $this->codecheckMetadataHandler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
-        $response = $this->codecheckMetadataHandler->importMetadataFromOsf($osfNodeId);
+        $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
+        $response = $this->handler->importMetadataFromOsf($osfNodeId);
         $actualMetadataReturnArray = json_decode($response->getPayload(), true);
         $this->assertEquals($response->getHttpResponseCode(), $errorCode);
         $this->assertCount(3, $actualMetadataReturnArray);
@@ -454,9 +425,9 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $client = $this->createMock(\Github\Client::class);
         $request = new Request();
         $curlApiClient = $this->createMock(CurlApiClient::class);
-        $curlApiClient->method('get')->willReturn("test: yaml");
-        $this->codecheckMetadataHandler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
-        $response = $this->codecheckMetadataHandler->importMetadataFromGitLab($repository);
+        $curlApiClient->method('fetch')->willReturn("test: yaml");
+        $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
+        $response = $this->handler->importMetadataFromGitLab($repository);
         $actualMetadataReturnArray = json_decode($response->getPayload(), true);
         $this->assertEquals($response->getHttpResponseCode(), 200);
         $this->assertCount(3, $actualMetadataReturnArray);
@@ -473,10 +444,10 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $client = $this->createMock(\Github\Client::class);
         $request = new Request();
         $curlApiClient = $this->createMock(CurlApiClient::class);
-        $curlApiClient->method('get')
+        $curlApiClient->method('fetch')
                         ->will($this->throwException(new CurlInitException($errorMessage, $errorCode)));
-        $this->codecheckMetadataHandler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
-        $response = $this->codecheckMetadataHandler->importMetadataFromGitLab($repository);
+        $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
+        $response = $this->handler->importMetadataFromGitLab($repository);
         $actualMetadataReturnArray = json_decode($response->getPayload(), true);
         $this->assertEquals($response->getHttpResponseCode(), $errorCode);
         $this->assertCount(3, $actualMetadataReturnArray);
@@ -494,10 +465,10 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $client = $this->createMock(\Github\Client::class);
         $request = new Request();
         $curlApiClient = $this->createMock(CurlApiClient::class);
-        $curlApiClient->method('get')
+        $curlApiClient->method('fetch')
                         ->will($this->throwException(new CurlReadException($curlHandle)));
-        $this->codecheckMetadataHandler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
-        $response = $this->codecheckMetadataHandler->importMetadataFromGitLab($repository);
+        $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
+        $response = $this->handler->importMetadataFromGitLab($repository);
         $actualMetadataReturnArray = json_decode($response->getPayload(), true);
         $this->assertEquals($response->getHttpResponseCode(), $errorCode);
         $this->assertCount(3, $actualMetadataReturnArray);

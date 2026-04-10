@@ -473,7 +473,7 @@ msgid "plugins.generic.codecheck.noDataFound"
 msgstr "No CODECHECK data found."
 
 msgid "plugins.generic.codecheck.repository.placeholder"
-msgstr "https://github.com/username/repo"
+msgstr "https://github.com/organization/repo"
 
 msgid "plugins.generic.codecheck.repository.addButton"
 msgstr "+ Add URL"

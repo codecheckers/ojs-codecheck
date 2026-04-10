@@ -13,6 +13,7 @@ use Github\Client;
 use Symfony\Component\Yaml\Yaml;
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CodecheckRegisterGithubIssuesApiParser;
 use APP\plugins\generic\codecheck\api\v1\CurlApiClient;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitException;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
 
@@ -26,15 +27,11 @@ class CodecheckMetadataHandler
      * `CodecheckMetadataHandler`
      * @param \APP\core\Request $request The API Request
      */
-<<<<<<< HEAD
-    public function __construct(\APP\core\Request $request)
-=======
-    public function __construct(Request $request, Client $client, CurlApiClient $curlApiClient)
->>>>>>> 3b70be7 (Finished reworking curl calls, now possible to mock them #36, #75)
+    public function __construct(Request $request, ?Client $client, ?CurlApiClient $curlApiClient)
     {
-        $this->client = new Client();
+        $this->client = $client ?? new Client();
         $this->submissionId = $request->getUserVar('submissionId');
-        $this->curlApiClient = $curlApiClient;
+        $this->curlApiClient = $curlApiClient ?? new CurlApiClient;
     }
 
     /**
@@ -294,7 +291,7 @@ class CodecheckMetadataHandler
      */
     public function importMetadataFromGitHub(string $repository): JsonResponse
     {
-        $githubUrlParts = CodecheckRegisterGithubIssuesApiParser::parseGithubUrl($repository);
+        $githubUrlParts = CodecheckGithubRegisterApiClient::parseGithubUrl($repository);
         $filename = 'codecheck.yml';
 
         // AUTO-DETECT DEFAULT BRANCH if path is root
@@ -377,7 +374,7 @@ class CodecheckMetadataHandler
 
         // Get YAML Contents
         try {
-            $api_response = $this->curlApiClient->get($apiUrl);
+            $api_response = $this->curlApiClient->fetch($apiUrl);
             $data = json_decode($api_response, true);
 
             if (!$data || !isset($data['data'])) {
@@ -453,7 +450,7 @@ class CodecheckMetadataHandler
     {
         // Get YAML Contents
         try {
-            $yamlContent = $this->curlApiClient->get($pathToYamlContent);
+            $yamlContent = $this->curlApiClient->fetch($pathToYamlContent);
 
             $metadata = Yaml::parse($yamlContent);
 

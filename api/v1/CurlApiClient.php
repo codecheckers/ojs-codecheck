@@ -3,14 +3,9 @@
 namespace APP\plugins\generic\codecheck\api\v1;
 
 use CurlHandle;
-<<<<<<< HEAD
 use APP\plugins\generic\codecheck\api\v1\ApiClientInterface;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitException;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
-=======
-use App\plugins\generic\codecheck\classes\Exceptions\CurlInitException;
-use App\plugins\generic\codecheck\classes\Exceptions\CurlReadException;
->>>>>>> 3b70be7 (Finished reworking curl calls, now possible to mock them #36, #75)
 
 class CurlApiClient implements ApiClientInterface
 {
@@ -23,11 +18,7 @@ class CurlApiClient implements ApiClientInterface
         return $curl_handle;
     }
 
-<<<<<<< HEAD
     public function fetch(string $url): string
-=======
-    public function get($url): string
->>>>>>> 3b70be7 (Finished reworking curl calls, now possible to mock them #36, #75)
     {
         $curlHandle = $this->initialize($url);
 

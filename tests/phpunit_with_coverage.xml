@@ -19,7 +19,7 @@
     </coverage>
     <source>
         <include>
-            <directory suffix=".php">.</directory>
+            <directory suffix=".php">../</directory>
         </include>
     </source>
 </phpunit>
