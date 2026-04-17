@@ -155,7 +155,14 @@
 
         <div class="field-group">
           <div class="field-header">
-            <label class="field-label">{{ t('plugins.generic.codecheck.repositories.title') }}</label>
+            <div class="field-label">{{ t('plugins.generic.codecheck.repositories.title') }} 
+              <button
+                class="info-button"
+                @click="showRepositoryInfoModal()"
+              >
+                ℹ️
+              </button>
+            </div>
             <button type="button" class="pkpButton btn-add" @click="addRepository">{{ t('plugins.generic.codecheck.repositories.add') }}</button>
           </div>
           <p class="field-description">{{ t('plugins.generic.codecheck.repositories.description') }}</p>
@@ -168,6 +175,13 @@
                 class="pkpFormField__input"
                 :placeholder="t('plugins.generic.codecheck.repository.placeholder')"
               />
+              <button
+                type="button"
+                class="pkpButton btn-add"
+                @click="loadMetadataFromRepository(index)"
+              >
+                Load Metadata
+              </button>
               <button 
                 type="button"
                 class="pkpButton codecheck-btn pkpButton--close" 
@@ -525,6 +539,57 @@ export default {
       }
     },
 
+    async loadMetadataFromRepository(repo_index) {
+      let repository = this.repositories[repo_index];
+      console.log(repository);
+      let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
+
+      try {
+          const response = await fetch(`${apiUrl}/repository`, {
+              method: 'POST',
+              headers: {
+              'Content-Type': 'application/json',
+              'X-Csrf-Token': pkp.currentUser.csrfToken,
+              },
+              body: JSON.stringify({
+                repository: repository,
+              }),
+          });
+          const data = await response.json();
+
+          if (data.success) {
+              console.log('Success:', data.repository);
+              this.submissionData = {
+                id: this.submissionData.id,
+                title: data.metadata?.paper.title ?? this.submissionData.title,
+                authors: data.metadata?.paper.authors ?? this.submissionData.authors,
+                doi: data.metadata?.paper.doi ?? this.submissionData.doi,
+                codeRepository: this.submissionData.codeRepository,
+                dataRepository: this.submissionData.dataRepository,
+                manifestFiles: data.metadata?.manifest ?? this.submissionData.manifestFiles,
+                dataAvailabilityStatement: this.submissionData.dataAvailabilityStatement,
+              };
+              this.metadata = {
+                version: data.metadata?.version.replace(/^https:\/\/codecheck\.org\.uk\/spec\/config\/|\/$/g, '') ?? this.metadata.version,
+                publicationType: data.metadata?.publicationType ?? this.metadata.publicationType,
+                manifest: data.metadata?.manifest ?? this.metadata.manifest,
+                repository: this.metadata.repository,
+                source: data.metadata?.source ?? this.metadata.source,
+                codecheckers: data.metadata?.codechecker ?? this.metadata.codecheckers,
+                certificate: data.metadata?.certificate ?? this.metadata.certificate,
+                check_time: this.formatDateTimeLocal(data.metadata?.check_time) ?? this.metadata.check_time,
+                summary: data.metadata?.summary ?? this.metadata.summary,
+                report: data.metadata?.report ?? this.metadata.report,
+                additionalContent: data.metadata?.additionalContent ?? this.metadata.additionalContent,
+              };
+          } else {
+              console.error('Error:', data.error);
+          }
+      } catch (error) {
+          console.error('Failed to fetch metadata from existing Repository:', error);
+      }
+    },
+
     triggerFileUpload() {
       this.$refs.fileInput.click();
     },
@@ -568,16 +633,66 @@ export default {
       }
     },
 
+    canUsePkpModal() {
+      return typeof pkp !== 'undefined' && pkp.modules && pkp.modules.useModal;
+    },
+
+    showRepositoryInfoModal() {
+      if (this.canUsePkpModal()) {
+        this.showPkpRepositoryInfoModal();
+      } else {
+        this.showFallbackRepositoryInfoModal();
+      }
+    },
+
+    showPkpRepositoryInfoModal() {
+      const { useModal } = pkp.modules.useModal;
+      const { openDialog } = useModal();
+
+      const modalHtml = '<div class="modal-form">' +
+        '<div class="modal-field">' +
+        '<label class="modal-label">' + this.t('plugins.generic.codecheck.repositories.infoTextOne') + '</label><br>' +
+        '<label class="modal-label">' + this.t('plugins.generic.codecheck.repositories.infoTextTwo') + '</label><br>' +
+        '<label class="modal-label text-bold text-pink">' + this.t('plugins.generic.codecheck.repositories.infoTextNote') + '</label><br>' +
+        '<label class="modal-label">' +
+          this.t('plugins.generic.codecheck.repositories.infoTextMoreInformation') +
+          '<a href="' + this.t('plugins.generic.codecheck.repositories.infoTextLinkToAllowedRepositories') + '">'
+            + this.t('plugins.generic.codecheck.repositories.infoTextLinkToAllowedRepositories') +
+          '</a>' +
+        '</label>' +
+        '</div>'
+        '</div>';
+
+      openDialog({
+        title: this.t('plugins.generic.codecheck.repositories.infoTitle'),
+        message: modalHtml,
+        actions: [
+          {
+            label: this.t('plugins.generic.codecheck.modal.close'),
+            callback: (close) => close()
+          },
+        ]
+      });
+    },
+
+    showFallbackRepositoryInfoModal() {
+      prompt(
+        this.t('plugins.generic.codecheck.repositories.infoTextOne') +
+        this.t('plugins.generic.codecheck.repositories.infoTextTwo') +
+        this.t('plugins.generic.codecheck.repositories.infoTextNote') +
+        this.t('plugins.generic.codecheck.repositories.infoTextMoreInformation') +
+        '<a href="' + this.t('plugins.generic.codecheck.repositories.infoTextLinkToAllowedRepositories') + '">' +
+          this.t('plugins.generic.codecheck.repositories.infoTextLinkToAllowedRepositories') +
+        '</a>'
+      );
+    },
+
     showCodecheckerModal() {
       if (this.canUsePkpModal()) {
         this.showPkpCodecheckerModal();
       } else {
         this.showFallbackCodecheckerModal();
       }
-    },
-
-    canUsePkpModal() {
-      return typeof pkp !== 'undefined' && pkp.modules && pkp.modules.useModal;
     },
 
     showPkpCodecheckerModal() {
@@ -989,6 +1104,14 @@ export default {
 </script>
 
 <style>
+.text-bold {
+  font-weight: bold !important;
+}
+
+.text-pink {
+  color: #d9534f !important;
+}
+
 .codecheck-metadata-form {
   background: #fff;
 }
@@ -1643,5 +1766,9 @@ a {
 .codecheck-metadata-form .file-link:hover {
   text-decoration: underline;
   color: #005a87;
+}
+
+.info-button {
+  cursor: pointer;
 }
 </style>

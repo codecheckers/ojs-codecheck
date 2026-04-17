@@ -370,6 +370,24 @@ msgstr "Please provide a summary"
 msgid "plugins.generic.codecheck.repositories.emptyState"
 msgstr "No repositories added yet"
 
+msgid "plugins.generic.codecheck.repositories.infoTitle"
+msgstr "Repositories Info"
+
+msgid "plugins.generic.codecheck.repositories.infoTextOne"
+msgstr "If you desire, you can directly load the metadata from the codecheck.yml of the provided CODECHECK Repository, if it contains a valid codecheck.yml."
+
+msgid "plugins.generic.codecheck.repositories.infoTextTwo"
+msgstr "The supported CODECHECK Repository Sites are GitHub, OSF, Zenodo and GitLab."
+
+msgid "plugins.generic.codecheck.repositories.infoTextNote"
+msgstr "Note that loading the data from a remote repository will overwrite, but not save, the values in the current form."
+
+msgid "plugins.generic.codecheck.repositories.infoTextMoreInformation"
+msgstr "More Information: "
+
+msgid "plugins.generic.codecheck.repositories.infoTextLinkToAllowedRepositories"
+msgstr "https://github.com/codecheckers/register/blob/master/README.md#editing-the-register"
+
 msgid "plugins.generic.codecheck.repositories.removeConfirm"
 msgstr "Remove this repository?"
 
@@ -384,6 +402,9 @@ msgstr "Close"
 
 msgid "plugins.generic.codecheck.yaml.previewTitle"
 msgstr "CODECHECK Metadata Preview (codecheck.yml)"
+
+msgid "plugins.generic.codecheck.modal.close"
+msgstr "Close"
 
 msgid "plugins.generic.codecheck.modal.cancel"
 msgstr "Cancel"
@@ -452,7 +473,7 @@ msgid "plugins.generic.codecheck.noDataFound"
 msgstr "No CODECHECK data found."
 
 msgid "plugins.generic.codecheck.repository.placeholder"
-msgstr "https://github.com/username/repo"
+msgstr "https://github.com/organization/repo"
 
 msgid "plugins.generic.codecheck.repository.addButton"
 msgstr "+ Add URL"
