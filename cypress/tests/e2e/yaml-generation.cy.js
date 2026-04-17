@@ -25,6 +25,9 @@ describe('YAML Generation Consistency', () => {
     });
   });
 
+  beforeEach(() => {
+    cy.ojsLogin('admin', 'admin');
+  });
   it('Preview YAML should match download YAML (both use PHP)', () => {
     // Visit the CODECHECK form
     cy.visit(`/index.php/codecheck/dashboard/editorial?currentViewId=published&workflowSubmissionId=${submissionId}&workflowMenuKey=codecheck`);
@@ -66,5 +69,48 @@ describe('YAML Generation Consistency', () => {
         });
       });
     });
+  });
+  
+  it('Preview button should be disabled when required fields are missing', () => {
+    cy.visit(`/index.php/codecheck/dashboard/editorial?currentViewId=published&workflowSubmissionId=${submissionId}&workflowMenuKey=codecheck`);
+    
+    cy.get('.codecheck-metadata-form', { timeout: 10000 }).should('exist');
+    
+    cy.window().then((win) => {
+      const csrfToken = win.pkp?.currentUser?.csrfToken;
+      
+      // Clear a required field (certificate)
+      cy.get('button').contains('Remove').then(($btn) => {
+        if ($btn.length > 0) {
+          cy.wrap($btn).click();
+          cy.get('button').contains('Yes').click({ force: true });
+          
+          // Preview button should be disabled
+          cy.get('[data-testid="preview-yaml-button"]')
+            .scrollIntoView()
+            .should('be.disabled');
+        }
+      });
+    });
+  });
+
+  it('Preview button should be disabled when form has unsaved changes', () => {
+    cy.visit(`/index.php/codecheck/dashboard/editorial?currentViewId=published&workflowSubmissionId=${submissionId}&workflowMenuKey=codecheck`);
+    
+    cy.get('.codecheck-metadata-form', { timeout: 10000 }).should('exist');
+    
+    // Initially enabled
+    cy.get('[data-testid="preview-yaml-button"]')
+      .scrollIntoView()
+      .should('not.be.disabled');
+    
+    // Edit field
+    cy.get('textarea').contains('summary').parents('.field-group').find('textarea')
+      .clear()
+      .type('Modified summary');
+    
+    // Should be disabled
+    cy.get('[data-testid="preview-yaml-button"]')
+      .should('be.disabled');
   });
 });

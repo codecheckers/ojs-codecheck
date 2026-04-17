@@ -11,7 +11,7 @@
             "php-http/discovery": true
         },
         "platform": {
-            "php": "8.2.26"
+            "php": "8.2"
         }
     }
 }
