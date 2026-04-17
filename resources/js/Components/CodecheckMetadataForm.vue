@@ -340,6 +340,8 @@
             class="pkpButton codecheck-btn" 
             @click="previewYaml"
             :disabled="!canPreview"
+            :title="previewButtonTooltip"
+            data-testid="preview-yaml-button"
           >
             {{ t('plugins.generic.codecheck.previewYaml') }}
           </button>
@@ -361,7 +363,6 @@
 </template>
 
 <script>
-import yaml from 'js-yaml';
 const { useLocalize } = pkp.modules.useLocalize;
 
 export default {
@@ -385,6 +386,7 @@ export default {
       saveMessage: '',
       saveMessageType: '',
       repositories: [],
+      hasUnsavedChanges: false,
       submissionData: {
         id: null,
         title: '',
@@ -422,9 +424,21 @@ export default {
   computed: {
     canPreview() {
       return this.metadata.manifest.length > 0 && 
-             this.metadata.codecheckers.length > 0 &&
-             this.metadata.certificate;
+            this.metadata.codecheckers.length > 0 &&
+            this.metadata.certificate &&
+            !this.hasUnsavedChanges;
     },
+
+    previewButtonTooltip() {
+      if (this.hasUnsavedChanges) {
+        return this.t('plugins.generic.codecheck.preview.saveFirst');
+      }
+      if (!this.canPreview) {
+        return this.t('plugins.generic.codecheck.preview.missingRequired');
+      }
+      return this.t('plugins.generic.codecheck.preview.ready');
+    },
+    
     // variable that stores if the Identifier was set and thus buttons should be disabled
     isIdentifierReserved() {
       return this.metadata.certificate.trim() !== '';
@@ -433,6 +447,20 @@ export default {
   mounted() {
     this.loadData();
     this.getVenueData();
+  },
+  watch: {
+    metadata: {
+      handler() {
+        this.hasUnsavedChanges = true;
+      },
+      deep: true
+    },
+    repositories: {
+      handler() {
+        this.hasUnsavedChanges = true;
+      },
+      deep: true
+    }
   },
   methods: {
     async loadData() {
@@ -498,6 +526,10 @@ export default {
         }
         
         this.dataLoaded = true;
+
+        this.$nextTick(() => {
+          this.hasUnsavedChanges = false;
+        });
         
       } catch (error) {
         console.error('Load error:', error);
@@ -769,6 +801,7 @@ export default {
           throw new Error('Failed to save');
         }
 
+        this.hasUnsavedChanges = false;
         this.showMessage(this.t('plugins.generic.codecheck.savedSuccessfully'), 'success');
       } catch (error) {
         console.error('Save error:', error);
@@ -780,7 +813,24 @@ export default {
 
     async previewYaml() {
       try {
-        const yamlContent = this.generateYamlContent();
+        const submissionId = this.submission.id;
+        let apiUrl = pkp.context.apiBaseUrl;
+        apiUrl += 'codecheck';
+        apiUrl = `${apiUrl}/yaml?submissionId=${submissionId}`;
+        
+        const response = await fetch(apiUrl, {
+          method: 'GET',
+          headers: {
+            'X-Csrf-Token': pkp.currentUser.csrfToken
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to generate YAML');
+        }
+
+        const data = await response.json();
+        const yamlContent = data.yaml;
         
         if (this.canUsePkpModal()) {
           this.showYamlModal(yamlContent);
@@ -789,106 +839,9 @@ export default {
         }
         
       } catch (error) {
+        console.error('Preview error:', error);
         this.showMessage(this.t('plugins.generic.codecheck.yamlPreviewFailed'), 'error');
       }
-    },
-
-    generateYamlContent() {
-      // Build the data structure
-      const data = {
-        version: `https://codecheck.org.uk/spec/config/${this.metadata.version}/`
-      };
-
-      // Add source if present
-      if (this.metadata.source) {
-        data.source = this.metadata.source;
-      }
-
-      // Paper section
-      const authors = [];
-      if (this.submissionData.authors && this.submissionData.authors.length > 0) {
-        this.submissionData.authors.forEach(author => {
-          const authorData = { name: author.name };
-          if (author.orcid) {
-            authorData.ORCID = author.orcid;
-          }
-          authors.push(authorData);
-        });
-      }
-
-      data.paper = {
-        title: this.submissionData.title || 'Untitled',
-        authors: authors
-      };
-
-      if (this.submissionData.doi) {
-        data.paper.reference = `https://doi.org/${this.submissionData.doi}`;
-      }
-
-      // Manifest section
-      const manifestData = [];
-      if (this.metadata.manifest && this.metadata.manifest.length > 0) {
-        this.metadata.manifest.forEach(file => {
-          const fileData = { file: file.file };
-          if (file.comment) {
-            fileData.comment = file.comment;
-          }
-          manifestData.push(fileData);
-        });
-      }
-      data.manifest = manifestData;
-
-      // Codechecker section
-      const codecheckerData = [];
-      if (this.metadata.codecheckers && this.metadata.codecheckers.length > 0) {
-        this.metadata.codecheckers.forEach(checker => {
-          const checkerData = { name: checker.name };
-          if (checker.orcid) {
-            checkerData.ORCID = checker.orcid;
-          }
-          codecheckerData.push(checkerData);
-        });
-      }
-      data.codechecker = codecheckerData;
-
-      // Summary
-      if (this.metadata.summary) {
-        data.summary = this.metadata.summary;
-      }
-
-      // Repository
-      if (this.repositories.length > 0) {
-        data.repository = this.repositories[0];
-      }
-
-      // Check time
-      if (this.metadata.check_time) {
-        data.check_time = this.metadata.check_time;
-      }
-
-      // Certificate
-      if (this.metadata.certificate) {
-        data.certificate = this.metadata.certificate;
-      }
-
-      // Report
-      if (this.metadata.report) {
-        data.report = this.metadata.report;
-      }
-
-      // Generate YAML
-      let yamlContent = '---\n' + yaml.dump(data, {
-        indent: 2,
-        lineWidth: -1, 
-        noRefs: true
-      });
-
-      // Add custom additional content at the end if present
-      if (this.metadata.additionalContent) {
-        yamlContent += '\n' + this.metadata.additionalContent.trim() + '\n';
-      }
-
-      return yamlContent;
     },
     
     showYamlModal(yamlContent) {

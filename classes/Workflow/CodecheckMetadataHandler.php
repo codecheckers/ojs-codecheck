@@ -32,6 +32,14 @@ class CodecheckMetadataHandler
         $this->client = $client ?? new Client();
         $this->submissionId = $request->getUserVar('submissionId');
         $this->curlApiClient = $curlApiClient ?? new CurlApiClient;
+      
+        // Load Composer dependencies if not already loaded
+        if (!class_exists('Symfony\Component\Yaml\Yaml')) {
+            $autoloadPath = __DIR__ . '/../../vendor/autoload.php';
+            if (file_exists($autoloadPath)) {
+                require_once($autoloadPath);
+            }
+        }
     }
 
     /**
@@ -234,7 +242,7 @@ class CodecheckMetadataHandler
 
         // Check time
         if ($metadata->check_time) {
-            $data['check_time'] = $metadata->check_time;
+            $data['check_time'] = date('Y-m-d H:i:s', strtotime($metadata->check_time));
         }
 
         // Certificate
@@ -248,7 +256,10 @@ class CodecheckMetadataHandler
         }
 
         // Generate YAML
-        $yaml = "---\n" . Yaml::dump($data, 4, 2);
+        $yaml = "---\n" . Yaml::dump($data, 10, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
+
+        // Post-process to match original format
+        $yaml = $this->normalizeYamlOutput($yaml);
 
         // Add custom additional content at the end if present
         if ($metadata->additional_content) {
@@ -285,10 +296,23 @@ class CodecheckMetadataHandler
     }
 
     /**
+     * Normalize YAML output to match original format
+     */
+    private function normalizeYamlOutput(string $yaml): string
+    {
+        // Remove quotes around URLs and simple strings
+        $yaml = preg_replace("/'(https?:\/\/[^']+)'/", '$1', $yaml);
+        $yaml = preg_replace("/'([^':\n]+)'/", '$1', $yaml);
+        
+        // Normalize list item formatting
+        $yaml = preg_replace('/^(\s+)-\n\s+(\w+):/m', '$1- $2:', $yaml);
+        
+        return $yaml;
      * Import the codecheck metadata from an existing `codecheck.yml` from the CODECHECK GitHub Repository
      * @param string $repository The GitHub Repository
      * @return JsonResponse The Metadata from the Repositories `codecheck.yml`
      */
+    
     public function importMetadataFromGitHub(string $repository): JsonResponse
     {
         $githubUrlParts = CodecheckGithubRegisterApiClient::parseGithubUrl($repository);

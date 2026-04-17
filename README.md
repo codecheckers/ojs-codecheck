@@ -355,6 +355,30 @@ For interactive testing:
 npm run test:component:open
 ```
 
+### E2E Tests
+
+End-to-end tests verify critical user workflows and integration between frontend, backend, and database.
+
+From the plugin directory:
+```bash
+npm run test:e2e
+```
+
+For interactive testing:
+```bash
+npm run test:e2e:open
+```
+
+**Prerequisites:**
+- OJS running at `http://localhost:8888/ojs` (or set `CYPRESS_BASE_URL` environment variable)
+- At least one published submission with CODECHECK metadata
+- Admin credentials configured (default: `admin/admin`)
+
+**Custom base URL:**
+```bash
+CYPRESS_BASE_URL=http://localhost:3000/ojs npm run test:e2e
+```
+
 ## License
 
 Copyright (c) 2025 CODECHECK Initiative
