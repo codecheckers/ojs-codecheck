@@ -308,11 +308,13 @@ class CodecheckMetadataHandler
         $yaml = preg_replace('/^(\s+)-\n\s+(\w+):/m', '$1- $2:', $yaml);
         
         return $yaml;
+    }
+
+    /**
      * Import the codecheck metadata from an existing `codecheck.yml` from the CODECHECK GitHub Repository
      * @param string $repository The GitHub Repository
      * @return JsonResponse The Metadata from the Repositories `codecheck.yml`
      */
-    
     public function importMetadataFromGitHub(string $repository): JsonResponse
     {
         $githubUrlParts = CodecheckGithubRegisterApiClient::parseGithubUrl($repository);
