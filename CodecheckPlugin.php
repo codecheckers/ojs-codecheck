@@ -235,11 +235,15 @@ class CodecheckPlugin extends GenericPlugin
             $request = Application::get()->getRequest();
             $context = $request->getContext();
             $codecheckMode = $this->getSetting($context->getId(), Constants::CODECHECK_MODE);
-            error_log($codecheckMode);
+            error_log("[CODECHECK Settings] Mode: " . $codecheckMode);
             $checkboxValue = false;
+            $checkboxDisabled = false;
 
             if($codecheckMode == 'opt-out') {
                 $checkboxValue = true;
+            } elseif ($codecheckMode == 'required') {
+                $checkboxValue = true;
+                $checkboxDisabled = true;
             }
 
             $form->addField(new FieldOptions('codecheckOptIn', [
@@ -250,7 +254,8 @@ class CodecheckPlugin extends GenericPlugin
                         'value' => 1, 
                         'label' => __('plugins.generic.codecheck.optIn.description', [
                             'codecheckLink' => "<a href='{$this->getUrlPageRoute("codecheck")}/info' target='_blank'>CODECHECK</a>"
-                        ])
+                        ]),
+                        'disabled' => $checkboxDisabled,
                     ]
                 ],
                 'value' => $checkboxValue,

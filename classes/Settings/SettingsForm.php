@@ -167,7 +167,7 @@ class SettingsForm extends Form
         $templateMgr->assign('codecheckModes', [
             'opt-in' => __('plugins.generic.codecheck.settings.mode.opt.in'),
             'opt-out' => __('plugins.generic.codecheck.settings.mode.opt.out'),
-            'confirmation-button' => __('plugins.generic.codecheck.settings.mode.confirmationButton'),
+            'required' => __('plugins.generic.codecheck.settings.mode.required'),
         ]);
 
         return parent::fetch($request, $template, $display);
