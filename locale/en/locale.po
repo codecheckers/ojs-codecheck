@@ -501,3 +501,18 @@ msgstr "Please complete all required fields (manifest, codecheckers, certificate
 
 msgid "plugins.generic.codecheck.preview.ready"
 msgstr "Click to preview YAML metadata"
+
+msgid "plugins.generic.codecheck.moreDetails"
+msgstr "More details"
+
+msgid "plugins.generic.codecheck.hideDetails"
+msgstr "Hide details"
+
+msgid "plugins.generic.codecheck.checkDate"
+msgstr "Check date"
+
+msgid "plugins.generic.codecheck.status.verificationInProgress"
+msgstr "Code verification is currently in progress."
+
+msgid "plugins.generic.codecheck.additionalContent.frontendLabel"
+msgstr "Additional information"
