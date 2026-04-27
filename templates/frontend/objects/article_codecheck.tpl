@@ -23,8 +23,7 @@
                 {$checker.name|escape}
                 {if $checker.orcid}
                     <a href="https://orcid.org/{$checker.orcid|escape}" target="_blank" style="margin-left:4px;">
-                        <img src="https://orcid.org/sites/default/files/images/orcid_16x16.png"
-                             alt="ORCID" style="height:14px;">
+                        <img src="{$orcidIconUrl|escape}" alt="ORCID" style="height:14px;">
                     </a>
                 {/if}
             </div>
@@ -92,7 +91,12 @@
                 <h2 class="label">{translate key='plugins.generic.codecheck.manifest.title'}</h2>
                 <ul class="value" style="margin:4px 0 0 0; padding-left:16px;">
                     {foreach from=$manifest item=file}
-                        <li>{$file.file|escape}</li>
+                        <li>
+                            {$file.file|escape}
+                            {if $file.comment}
+                                <span class="fa fa-question-circle tooltip" title="{$file.comment|escape}"></span>
+                            {/if}
+                        </li>
                     {/foreach}
                 </ul>
             </div>

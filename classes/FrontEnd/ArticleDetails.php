@@ -83,6 +83,7 @@ class ArticleDetails
 
         $templateMgr->assign([
             'logoUrl'    => $request->getBaseUrl() . '/' . $this->plugin->getPluginPath() . '/assets/img/codeworks-badge.png',
+            'orcidIconUrl' => $request->getBaseUrl() . '/' . $this->plugin->getPluginPath() . '/assets/img/orcid.svg',
             'articleId'  => $article->getId(),
         ]);
 
