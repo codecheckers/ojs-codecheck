@@ -8,73 +8,140 @@
  *}
 
 {if $codecheckStatus == 'completed'}
-    <div class="item certificate" style="padding: 15px; margin: 5px 0;">
-        <div class="sub_item" style="display: block;">
-            <img src="{$logoUrl|escape}" alt="CODECHECK" style="height: 18px; margin-right: 3px;">
-            <h2 class="label">Codecheckers</h2>
-            <span>{$codecheckerNames|escape}</span>
-        </div>
-        <div class="sub_item">
-            <h2 class="label">Certificate</h2>
-            
-            {if $certificateLink}
-                <div class="value">
-                    <a href="{$certificateLink|escape}" 
-                    target="_blank"
-                    title="{translate key='plugins.generic.codecheck.certificate.landingPage.title'}">
-                        {translate key='plugins.generic.codecheck.certificate.prefix'} {$codecheckData->getCertificate()|escape}
-                    </a>
-                </div>
-            {/if}
-            
-            {if $doiLink}
-                <div class="value">
-                    <a href="{$doiLink|escape}" 
-                       target="_blank"
-                       title="{translate key='plugins.generic.codecheck.certificate.document.title'}">
-                        {$doiLink|escape}
-                    </a>
-                </div>
-            {/if}
-        </div>
+<div class="item certificate" style="padding: 15px; margin: 5px 0;">
+
+    {* Badge *}
+    <div class="sub_item" style="display:flex; align-items:center; margin-bottom:8px;">
+        <img src="{$logoUrl|escape}" alt="{translate key='plugins.generic.codecheck.badge.altText'}" style="height:18px; margin-right:6px;">
     </div>
 
-{elseif $codecheckStatus == 'pending'}
-    <div class="item codecheck-pending" style="background: #fff8e1; border: 2px solid #ffc107; border-radius: 8px; padding: 15px; margin: 15px 0;">
-        <div style="display: flex; align-items: center; margin-bottom: 12px;">
-            <img src="{$logoUrl|escape}" alt="CODECHECK" style="height: 24px; margin-right: 8px;">
-            <span style="background: #ffc107; color: #212529; padding: 3px 8px; border-radius: 12px; font-size: 0.8em; font-weight: bold;">
-                ⏳ {translate key='plugins.generic.codecheck.status.inProgress'}
-            </span>
-        </div>
-        
-        <h4 style="color: #bf8f00; margin: 0 0 10px 0; font-size: 1.1em; font-weight: bold;">
-            CODECHECK
-        </h4>
-        
-        <p style="margin: 0 0 10px 0; font-size: 0.85em; color: #666; line-height: 1.4;">
-            {translate key='plugins.generic.codecheck.status.verificationInProgress'}
-        </p>
-        
-        {if $codeRepo || $dataRepo}
-            <div style="font-size: 0.8em; color: #666;">
-                {if $codeRepo}
-                    <p style="margin: 2px 0; word-break: break-all;">
-                        <strong>{translate key='plugins.generic.codecheck.codeRepository'}:</strong> 
-                        <a href="{$codeRepo|escape}" target="_blank" style="color: #bf8f00;">
-                            {$codeRepo|truncate:30|escape}
-                        </a>
-                    </p>
+    {* Codecheckers with ORCIDs *}
+    <div class="sub_item">
+        <h2 class="label">{translate key='plugins.generic.codecheck.codecheckers.title'}</h2>
+        {foreach from=$codecheckers item=checker}
+            <div class="value">
+                {$checker.name|escape}
+                {if $checker.orcid}
+                    <a href="https://orcid.org/{$checker.orcid|escape}" target="_blank" style="margin-left:4px;">
+                        <img src="{$orcidIconUrl|escape}" alt="ORCID" style="height:14px;">
+                    </a>
                 {/if}
-                {if $dataRepo}
-                    <p style="margin: 2px 0; word-break: break-all;">
-                        <strong>{translate key='plugins.generic.codecheck.dataRepository'}:</strong> 
-                        <a href="{$dataRepo|escape}" target="_blank" style="color: #bf8f00;">
-                            {$dataRepo|truncate:30|escape}
-                        </a>
-                    </p>
-                {/if}
+            </div>
+        {/foreach}
+    </div>
+
+    {* Certificate *}
+    <div class="sub_item">
+        <h2 class="label">{translate key='plugins.generic.codecheck.certificate.title'}</h2>
+        {if $certificateLink}
+            <div class="value">
+                <a href="{$certificateLink|escape}" target="_blank">
+                    {translate key='plugins.generic.codecheck.certificate.prefix'} {$linkText|escape}
+                </a>
+            </div>
+        {/if}
+        {if $doiLink}
+            <div class="value">
+                <a href="{$doiLink|escape}" target="_blank">{$doiLink|escape}</a>
             </div>
         {/if}
     </div>
+
+    {* More details toggle *}
+    <div class="sub_item" style="margin-top:10px;">
+        <a href="#" class="codecheck-more-toggle"
+           onclick="
+               var d=document.getElementById('codecheck-details-{$articleId|escape}');
+               d.style.display=(d.style.display==='none'?'block':'none');
+               this.textContent=(d.style.display==='none'?'▶ {translate key='plugins.generic.codecheck.moreDetails'}':'▼ {translate key='plugins.generic.codecheck.hideDetails'}');
+               return false;"
+           style="font-size:0.85em; color:#1a6496;">
+            ▶ {translate key='plugins.generic.codecheck.moreDetails'}
+        </a>
+    </div>
+
+    {* Expandable details *}
+    <div id="codecheck-details-{$articleId|escape}" style="display:none; margin-top:10px; font-size:0.85em; border-top:1px solid #ddd; padding-top:10px;">
+
+        {if $certificateDate}
+            <div class="sub_item">
+                <h2 class="label">{translate key='plugins.generic.codecheck.checkDate'}</h2>
+                <div class="value">{$certificateDate|escape}</div>
+            </div>
+        {/if}
+
+        {if $summary}
+            <div class="sub_item">
+                <h2 class="label">{translate key='plugins.generic.codecheck.certificate.summary'}</h2>
+                <div class="value">{$summary|escape}</div>
+            </div>
+        {/if}
+
+        {if $repository}
+            <div class="sub_item">
+                <h2 class="label">{translate key='plugins.generic.codecheck.repositories.title'}</h2>
+                <div class="value">
+                    <a href="{$repository|escape}" target="_blank">{$repository|truncate:40|escape}</a>
+                </div>
+            </div>
+        {/if}
+
+        {if $manifest}
+            <div class="sub_item">
+                <h2 class="label">{translate key='plugins.generic.codecheck.manifest.title'}</h2>
+                <ul class="value" style="margin:4px 0 0 0; padding-left:16px;">
+                    {foreach from=$manifest item=file}
+                        <li>
+                            {$file.file|escape}
+                            {if $file.comment}
+                                <span class="fa fa-question-circle tooltip" title="{$file.comment|escape}"></span>
+                            {/if}
+                        </li>
+                    {/foreach}
+                </ul>
+            </div>
+        {/if}
+
+        {if $additionalContent}
+            <div class="sub_item">
+                <h2 class="label">{translate key='plugins.generic.codecheck.additionalContent.frontendLabel'}</h2>
+                <div class="value">{$additionalContent|escape}</div>
+            </div>
+        {/if}
+
+    </div>{* end codecheck-details *}
+
+</div>
+
+{elseif $codecheckStatus == 'pending'}
+<div class="item codecheck-pending" style="padding: 15px; margin: 5px 0;">
+
+    <div class="sub_item" style="display:flex; align-items:center; margin-bottom:8px;">
+        <img src="{$logoUrl|escape}" alt="{translate key='plugins.generic.codecheck.badge.altText'}" style="height:18px; margin-right:6px;">
+    </div>
+
+    <div class="sub_item">
+        <h2 class="label">{translate key='plugins.generic.codecheck.status.pending'}</h2>
+        <div class="value">{translate key='plugins.generic.codecheck.status.verificationInProgress'}</div>
+    </div>
+
+    {if $codeRepo}
+        <div class="sub_item">
+            <h2 class="label">{translate key='plugins.generic.codecheck.codeRepository'}</h2>
+            <div class="value">
+                <a href="{$codeRepo|escape}" target="_blank">{$codeRepo|truncate:30|escape}</a>
+            </div>
+        </div>
+    {/if}
+
+    {if $dataRepo}
+        <div class="sub_item">
+            <h2 class="label">{translate key='plugins.generic.codecheck.dataRepository'}</h2>
+            <div class="value">
+                <a href="{$dataRepo|escape}" target="_blank">{$dataRepo|truncate:30|escape}</a>
+            </div>
+        </div>
+    {/if}
+
+</div>
 {/if}

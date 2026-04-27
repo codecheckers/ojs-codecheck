@@ -51,22 +51,22 @@ class ArticleDetails
             return false;
         }
 
-        // Get CODECHECK data for this submission
-        $dao = new CodecheckSubmissionDAO();
-        $codecheckData = $dao->getBySubmissionId($article->getId());
-
         // Only show CODECHECK info if user opted in
         if (!$article->getData('codecheckOptIn')) {
             return false;
         }
+
+        // Get CODECHECK data for this submission
+        $dao = new CodecheckSubmissionDAO();
+        $codecheckData = $dao->getBySubmissionId($article->getId());
 
         if (!$codecheckData) {
             return false;
         }
 
         // Generate and add the CODECHECK display
-        $codecheckHtml = $this->generateSidebarDisplay($codecheckData, $templateMgr);
-        
+        $codecheckHtml = $this->generateSidebarDisplay($codecheckData, $templateMgr, $article);
+
         if ($codecheckHtml) {
             $output .= $codecheckHtml;
         }
@@ -77,29 +77,34 @@ class ArticleDetails
     /**
      * Generate sidebar display for CODECHECK certificate
      */
-    private function generateSidebarDisplay(CodecheckSubmission $codecheckData, $templateMgr): string
+    private function generateSidebarDisplay(CodecheckSubmission $codecheckData, $templateMgr, $article): string
     {
         $request = Application::get()->getRequest();
-        
-        // Prepare common template variables
+
         $templateMgr->assign([
-            'logoUrl' => $request->getBaseUrl() . '/' . $this->plugin->getPluginPath() . '/assets/img/codeworks-badge.png',
+            'logoUrl'    => $request->getBaseUrl() . '/' . $this->plugin->getPluginPath() . '/assets/img/codeworks-badge.png',
+            'orcidIconUrl' => $request->getBaseUrl() . '/' . $this->plugin->getPluginPath() . '/assets/img/orcid.svg',
+            'articleId'  => $article->getId(),
         ]);
 
         if ($codecheckData->hasCompletedCheck()) {
             $templateMgr->assign([
-                'codecheckStatus' => 'completed',
-                'certificateLink' => $codecheckData->getCertificateLink(),
-                'doiLink' => $codecheckData->getDoiLink(),
-                'linkText' => $codecheckData->getCertificate(),
-                'codecheckerNames' => $codecheckData->getCodecheckerNames(),
-                'certificateDate' => $codecheckData->getCertificateDate(),
+                'codecheckStatus'  => 'completed',
+                'certificateLink'  => $codecheckData->getCertificateLink(),
+                'doiLink'          => $codecheckData->getDoiLink(),
+                'linkText'         => $codecheckData->getCertificate(),
+                'codecheckers'     => $codecheckData->getCodecheckers(),
+                'certificateDate'  => $codecheckData->getCertificateDate(),
+                'summary'          => $codecheckData->getSummary(),
+                'repository'       => $codecheckData->getRepository(),
+                'manifest'         => $codecheckData->getManifest(),
+                'additionalContent'=> $codecheckData->getAdditionalContent(),
             ]);
         } elseif ($codecheckData->hasAssignedChecker()) {
             $templateMgr->assign([
                 'codecheckStatus' => 'pending',
-                'codeRepo' => $codecheckData->getCodeRepository(),
-                'dataRepo' => $codecheckData->getDataRepository(),
+                'codeRepo'        => $codecheckData->getCodeRepository(),
+                'dataRepo'        => $codecheckData->getDataRepository(),
             ]);
         } else {
             return '';
