@@ -128,7 +128,7 @@
   "plugins.generic.codecheck.yaml.download",
   "plugins.generic.codecheck.yaml.invalid",
   "plugins.generic.codecheck.yaml.previewTitle",
+  "plugins.generic.codecheck.yaml.valid",
   "plugins.generic.codecheck.yamlPreviewFailed",
-  "plugins.generic.codecheck.yes",
-  "plugins.generic.codecheck.yaml.valid"
+  "plugins.generic.codecheck.yes"
 ]

@@ -100,7 +100,7 @@ class CodecheckApiHandler
                     'roles' => $this->roles,
                 ],
                 [
-                    'route' => 'validateYamlStructure',
+                    'route' => 'yaml/validate',
                     'handler' => [$this, 'validateYamlStructure'],
                     'roles' => $this->roles,
                 ],
@@ -550,7 +550,7 @@ class CodecheckApiHandler
         error_log("[CODECHECK Api Handler] Is valid YAML: " . $yamlValidator->isValidYaml());
 
         if($yamlValidator->isValidYaml()) {
-            $this->response->response([
+            JsonResponse::staticResponse([
                 'success' => true,
             ], 200);
         }
@@ -558,7 +558,7 @@ class CodecheckApiHandler
         $error_msg = $yamlValidator->getYamlParseException()->getMessage();
         error_log("[CODECHECK Api Handler] YAML Parse Exception: " . $error_msg);
 
-        $this->response->response([
+        JsonResponse::staticResponse([
             'success' => false,
             'error' => $error_msg,
         ], 500);

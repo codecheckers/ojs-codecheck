@@ -763,12 +763,6 @@ export default {
         return;
       }
 
-      let isValidYaml = await this.validateGeneratedYamlFile();
-
-      if (!isValidYaml) {
-        return;
-      }
-
       this.saving = true;
       this.saveMessage = '';
 
@@ -817,7 +811,7 @@ export default {
       }
     },
 
-    async previewYaml() {
+    async generateYamlContent() {
       try {
         const submissionId = this.submission.id;
         let apiUrl = pkp.context.apiBaseUrl;
@@ -838,6 +832,23 @@ export default {
         const data = await response.json();
         const yamlContent = data.yaml;
         
+        return yamlContent;
+        
+      } catch (error) {
+        throw error;
+      }
+    },
+
+    async previewYaml() {
+      try {
+        const yamlContent = await this.generateYamlContent();
+        
+        let isValidYaml = await this.validateGeneratedYamlFile(yamlContent);
+
+        if (!isValidYaml) {
+          return;
+        }
+
         if (this.canUsePkpModal()) {
           this.showYamlModal(yamlContent);
         } else {
@@ -1088,15 +1099,13 @@ export default {
       return true;
     },
 
-    async validateGeneratedYamlFile() {
-      const yamlContent = this.generateYamlContent();
-
+    async validateGeneratedYamlFile(yamlContent) {
       try {
         console.log('Validating the created codecheck.yml file');
         
         let apiUrl = pkp.context.apiBaseUrl;
         apiUrl += 'codecheck';
-        apiUrl = `${apiUrl}/validateYamlStructure`;
+        apiUrl = `${apiUrl}/yaml/validate`;
         
         const response = await fetch(apiUrl, {
           method: 'POST',

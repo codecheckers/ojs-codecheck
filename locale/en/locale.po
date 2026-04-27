@@ -364,6 +364,9 @@ msgstr "YAML Preview"
 msgid "plugins.generic.codecheck.yamlPreviewFailed"
 msgstr "Failed to generate preview"
 
+msgid "plugins.generic.codecheck.yamlGenerationFailed"
+msgstr "Failed to generate YAML Content"
+
 msgid "plugins.generic.codecheck.validation.manifestRequired"
 msgstr "Please add at least one manifest file"
 
