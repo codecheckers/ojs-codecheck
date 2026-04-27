@@ -238,12 +238,18 @@ class CodecheckPlugin extends GenericPlugin
             error_log("[CODECHECK Settings] Mode: " . $codecheckMode);
             $checkboxValue = false;
             $checkboxDisabled = false;
+            $codecheckDescription = __('plugins.generic.codecheck.optIn.description', [
+                'codecheckLink' => "<a href='{$this->getUrlPageRoute("codecheck")}/info' target='_blank'>CODECHECK</a>"
+            ]);
 
             if($codecheckMode == 'opt-out') {
                 $checkboxValue = true;
             } elseif ($codecheckMode == 'required') {
                 $checkboxValue = true;
                 $checkboxDisabled = true;
+                $codecheckDescription = __('plugins.generic.codecheck.mandatory.description', [
+                    'codecheckLink' => "<a href='{$this->getUrlPageRoute("codecheck")}/info' target='_blank'>CODECHECK</a>"
+                ]);
             }
 
             $form->addField(new FieldOptions('codecheckOptIn', [
@@ -252,9 +258,7 @@ class CodecheckPlugin extends GenericPlugin
                 'options' => [
                     [
                         'value' => 1, 
-                        'label' => __('plugins.generic.codecheck.optIn.description', [
-                            'codecheckLink' => "<a href='{$this->getUrlPageRoute("codecheck")}/info' target='_blank'>CODECHECK</a>"
-                        ]),
+                        'label' => $codecheckDescription,
                         'disabled' => $checkboxDisabled,
                     ]
                 ],

@@ -26,6 +26,9 @@ msgstr "Request failed"
 msgid "plugins.generic.codecheck.displayName"
 msgstr "CODECHECK"
 
+msgid "plugins.generic.codecheck.infoPage.title"
+msgstr "CODECHECK"
+
 msgid "plugins.generic.codecheck.description"
 msgstr "Integrates CODECHECK code execution verification into the OJS peer review workflow"
 
@@ -91,6 +94,9 @@ msgstr "CODECHECK"
 
 msgid "plugins.generic.codecheck.optIn.description"
 msgstr "Yes, I want my paper to be codechecked. See: {$codecheckLink}"
+
+msgid "plugins.generic.codecheck.mandatory.description"
+msgstr "I understand that as part of the mandatory {$codecheckLink}, the code of my submission will be checked to see if it's reproducible."
 
 msgid "plugins.generic.codecheck.submission.label"
 msgstr "CODECHECK Information"
