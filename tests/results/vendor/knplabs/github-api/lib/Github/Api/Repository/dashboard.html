@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <title>Dashboard for /var/www/html/ojs/plugins/generic/codecheck/vendor/knplabs/github-api/lib/Github/Api/Repository</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="../../../../../../../_css/bootstrap.min.css?v=11.0.9" rel="stylesheet" type="text/css">
+  <link href="../../../../../../../_css/nv.d3.min.css?v=11.0.9" rel="stylesheet" type="text/css">
+  <link href="../../../../../../../_css/style.css?v=11.0.9" rel="stylesheet" type="text/css">
+  <link href="../../../../../../../_css/custom.css" rel="stylesheet" type="text/css">
+ </head>
+ <body>
+  <header>
+   <div class="container-fluid">
+    <div class="row">
+     <div class="col-md-12">
+      <nav aria-label="breadcrumb">
+       <ol class="breadcrumb">
+         <li class="breadcrumb-item"><a href="../../../../../../../index.html">/var/www/html/ojs/plugins/generic/codecheck</a></li>
+         <li class="breadcrumb-item"><a href="../../../../../../index.html">vendor</a></li>
+         <li class="breadcrumb-item"><a href="../../../../../index.html">knplabs</a></li>
+         <li class="breadcrumb-item"><a href="../../../../index.html">github-api</a></li>
+         <li class="breadcrumb-item"><a href="../../../index.html">lib</a></li>
+         <li class="breadcrumb-item"><a href="../../index.html">Github</a></li>
+         <li class="breadcrumb-item"><a href="../index.html">Api</a></li>
+         <li class="breadcrumb-item"><a href="index.html">Repository</a></li>
+         <li class="breadcrumb-item active">(Dashboard)</li>
+
+       </ol>
+      </nav>
+     </div>
+    </div>
+   </div>
+  </header>
+  <div class="container-fluid">
+   <div class="row">
+    <div class="col-md-12">
+     <h2>Classes</h2>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3>Coverage Distribution</h3>
+     <div id="classCoverageDistribution" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3>Complexity</h3>
+     <div id="classComplexity" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3>Insufficient Coverage</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Class</th>
+         <th class="text-right">Coverage</th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="Actions/Artifacts.php.html#10">Github\Api\Repository\Actions\Artifacts</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/Secrets.php.html#10">Github\Api\Repository\Actions\Secrets</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/SelfHostedRunners.php.html#10">Github\Api\Repository\Actions\SelfHostedRunners</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/Variables.php.html#10">Github\Api\Repository\Actions\Variables</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/WorkflowJobs.php.html#10">Github\Api\Repository\Actions\WorkflowJobs</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/WorkflowRuns.php.html#10">Github\Api\Repository\Actions\WorkflowRuns</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/Workflows.php.html#10">Github\Api\Repository\Actions\Workflows</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Assets.php.html#15">Github\Api\Repository\Assets</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Checks/CheckRuns.php.html#11">Github\Api\Repository\Checks\CheckRuns</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Checks/CheckSuites.php.html#11">Github\Api\Repository\Checks\CheckSuites</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Collaborators.php.html#12">Github\Api\Repository\Collaborators</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Comments.php.html#15">Github\Api\Repository\Comments</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Commits.php.html#12">Github\Api\Repository\Commits</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Contents.php.html#17">Github\Api\Repository\Contents</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="DeployKeys.php.html#13">Github\Api\Repository\DeployKeys</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Downloads.php.html#12">Github\Api\Repository\Downloads</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Forks.php.html#12">Github\Api\Repository\Forks</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Hooks.php.html#13">Github\Api\Repository\Hooks</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Labels.php.html#13">Github\Api\Repository\Labels</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Pages.php.html#13">Github\Api\Repository\Pages</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Projects.php.html#8">Github\Api\Repository\Projects</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Protection.php.html#13">Github\Api\Repository\Protection</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Releases.php.html#14">Github\Api\Repository\Releases</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="SecretScanning.php.html#5">Github\Api\Repository\SecretScanning</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Stargazers.php.html#14">Github\Api\Repository\Stargazers</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Statuses.php.html#13">Github\Api\Repository\Statuses</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Traffic.php.html#12">Github\Api\Repository\Traffic</a></td><td class="text-right">0%</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3>Project Risks</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Class</th>
+         <th class="text-right"><abbr title="Change Risk Anti-Patterns (CRAP) Index">CRAP</abbr></th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="Contents.php.html#17">Github\Api\Repository\Contents</a></td><td class="text-right">1122</td></tr>
+       <tr><td><a href="Comments.php.html#15">Github\Api\Repository\Comments</a></td><td class="text-right">110</td></tr>
+       <tr><td><a href="Releases.php.html#14">Github\Api\Repository\Releases</a></td><td class="text-right">110</td></tr>
+       <tr><td><a href="Assets.php.html#15">Github\Api\Repository\Assets</a></td><td class="text-right">90</td></tr>
+       <tr><td><a href="Hooks.php.html#13">Github\Api\Repository\Hooks</a></td><td class="text-right">90</td></tr>
+       <tr><td><a href="Actions/Workflows.php.html#10">Github\Api\Repository\Actions\Workflows</a></td><td class="text-right">56</td></tr>
+       <tr><td><a href="DeployKeys.php.html#13">Github\Api\Repository\DeployKeys</a></td><td class="text-right">56</td></tr>
+       <tr><td><a href="Labels.php.html#13">Github\Api\Repository\Labels</a></td><td class="text-right">42</td></tr>
+       <tr><td><a href="Commits.php.html#12">Github\Api\Repository\Commits</a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="Forks.php.html#12">Github\Api\Repository\Forks</a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="Statuses.php.html#13">Github\Api\Repository\Statuses</a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="Projects.php.html#8">Github\Api\Repository\Projects</a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="Stargazers.php.html#14">Github\Api\Repository\Stargazers</a></td><td class="text-right">12</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-12">
+     <h2>Methods</h2>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3>Coverage Distribution</h3>
+     <div id="methodCoverageDistribution" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3>Complexity</h3>
+     <div id="methodComplexity" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3>Insufficient Coverage</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Method</th>
+         <th class="text-right">Coverage</th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="Actions/Artifacts.php.html#21"><abbr title="Github\Api\Repository\Actions\Artifacts::all">all</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/Artifacts.php.html#35"><abbr title="Github\Api\Repository\Actions\Artifacts::runArtifacts">runArtifacts</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/Artifacts.php.html#49"><abbr title="Github\Api\Repository\Actions\Artifacts::show">show</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/Artifacts.php.html#63"><abbr title="Github\Api\Repository\Actions\Artifacts::remove">remove</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/Artifacts.php.html#78"><abbr title="Github\Api\Repository\Actions\Artifacts::download">download</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/Secrets.php.html#20"><abbr title="Github\Api\Repository\Actions\Secrets::all">all</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/Secrets.php.html#34"><abbr title="Github\Api\Repository\Actions\Secrets::show">show</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/Secrets.php.html#49"><abbr title="Github\Api\Repository\Actions\Secrets::create">create</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/Secrets.php.html#64"><abbr title="Github\Api\Repository\Actions\Secrets::update">update</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/Secrets.php.html#78"><abbr title="Github\Api\Repository\Actions\Secrets::remove">remove</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/Secrets.php.html#91"><abbr title="Github\Api\Repository\Actions\Secrets::publicKey">publicKey</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/SelfHostedRunners.php.html#20"><abbr title="Github\Api\Repository\Actions\SelfHostedRunners::all">all</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/SelfHostedRunners.php.html#34"><abbr title="Github\Api\Repository\Actions\SelfHostedRunners::show">show</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/SelfHostedRunners.php.html#48"><abbr title="Github\Api\Repository\Actions\SelfHostedRunners::remove">remove</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/SelfHostedRunners.php.html#61"><abbr title="Github\Api\Repository\Actions\SelfHostedRunners::applications">applications</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/Variables.php.html#20"><abbr title="Github\Api\Repository\Actions\Variables::all">all</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/Variables.php.html#34"><abbr title="Github\Api\Repository\Actions\Variables::show">show</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/Variables.php.html#48"><abbr title="Github\Api\Repository\Actions\Variables::create">create</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/Variables.php.html#63"><abbr title="Github\Api\Repository\Actions\Variables::update">update</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/Variables.php.html#77"><abbr title="Github\Api\Repository\Actions\Variables::remove">remove</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/WorkflowJobs.php.html#22"><abbr title="Github\Api\Repository\Actions\WorkflowJobs::all">all</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/WorkflowJobs.php.html#36"><abbr title="Github\Api\Repository\Actions\WorkflowJobs::show">show</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/WorkflowJobs.php.html#50"><abbr title="Github\Api\Repository\Actions\WorkflowJobs::downloadLogs">downloadLogs</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/WorkflowRuns.php.html#21"><abbr title="Github\Api\Repository\Actions\WorkflowRuns::all">all</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/WorkflowRuns.php.html#36"><abbr title="Github\Api\Repository\Actions\WorkflowRuns::listRuns">listRuns</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/WorkflowRuns.php.html#51"><abbr title="Github\Api\Repository\Actions\WorkflowRuns::show">show</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/WorkflowRuns.php.html#65"><abbr title="Github\Api\Repository\Actions\WorkflowRuns::remove">remove</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/WorkflowRuns.php.html#79"><abbr title="Github\Api\Repository\Actions\WorkflowRuns::rerun">rerun</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/WorkflowRuns.php.html#93"><abbr title="Github\Api\Repository\Actions\WorkflowRuns::cancel">cancel</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/WorkflowRuns.php.html#107"><abbr title="Github\Api\Repository\Actions\WorkflowRuns::usage">usage</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/WorkflowRuns.php.html#121"><abbr title="Github\Api\Repository\Actions\WorkflowRuns::downloadLogs">downloadLogs</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/WorkflowRuns.php.html#135"><abbr title="Github\Api\Repository\Actions\WorkflowRuns::deleteLogs">deleteLogs</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/WorkflowRuns.php.html#151"><abbr title="Github\Api\Repository\Actions\WorkflowRuns::approve">approve</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/Workflows.php.html#21"><abbr title="Github\Api\Repository\Actions\Workflows::all">all</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/Workflows.php.html#35"><abbr title="Github\Api\Repository\Actions\Workflows::show">show</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/Workflows.php.html#53"><abbr title="Github\Api\Repository\Actions\Workflows::usage">usage</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Actions/Workflows.php.html#73"><abbr title="Github\Api\Repository\Actions\Workflows::dispatches">dispatches</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Assets.php.html#29"><abbr title="Github\Api\Repository\Assets::all">all</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Assets.php.html#44"><abbr title="Github\Api\Repository\Assets::show">show</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Assets.php.html#75"><abbr title="Github\Api\Repository\Assets::create">create</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Assets.php.html#100"><abbr title="Github\Api\Repository\Assets::edit">edit</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Assets.php.html#119"><abbr title="Github\Api\Repository\Assets::remove">remove</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Checks/CheckRuns.php.html#20"><abbr title="Github\Api\Repository\Checks\CheckRuns::create">create</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Checks/CheckRuns.php.html#32"><abbr title="Github\Api\Repository\Checks\CheckRuns::show">show</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Checks/CheckRuns.php.html#44"><abbr title="Github\Api\Repository\Checks\CheckRuns::update">update</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Checks/CheckRuns.php.html#56"><abbr title="Github\Api\Repository\Checks\CheckRuns::annotations">annotations</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Checks/CheckRuns.php.html#68"><abbr title="Github\Api\Repository\Checks\CheckRuns::allForCheckSuite">allForCheckSuite</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Checks/CheckRuns.php.html#80"><abbr title="Github\Api\Repository\Checks\CheckRuns::allForReference">allForReference</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Checks/CheckRuns.php.html#92"><abbr title="Github\Api\Repository\Checks\CheckRuns::rerequest">rerequest</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Checks/CheckSuites.php.html#20"><abbr title="Github\Api\Repository\Checks\CheckSuites::create">create</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Checks/CheckSuites.php.html#32"><abbr title="Github\Api\Repository\Checks\CheckSuites::updatePreferences">updatePreferences</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Checks/CheckSuites.php.html#44"><abbr title="Github\Api\Repository\Checks\CheckSuites::getCheckSuite">getCheckSuite</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Checks/CheckSuites.php.html#56"><abbr title="Github\Api\Repository\Checks\CheckSuites::rerequest">rerequest</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Checks/CheckSuites.php.html#68"><abbr title="Github\Api\Repository\Checks\CheckSuites::allForReference">allForReference</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Collaborators.php.html#23"><abbr title="Github\Api\Repository\Collaborators::all">all</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Collaborators.php.html#37"><abbr title="Github\Api\Repository\Collaborators::check">check</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Collaborators.php.html#52"><abbr title="Github\Api\Repository\Collaborators::add">add</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Collaborators.php.html#66"><abbr title="Github\Api\Repository\Collaborators::remove">remove</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Collaborators.php.html#80"><abbr title="Github\Api\Repository\Collaborators::permission">permission</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Comments.php.html#28"><abbr title="Github\Api\Repository\Comments::configure">configure</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Comments.php.html#39"><abbr title="Github\Api\Repository\Comments::all">all</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Comments.php.html#48"><abbr title="Github\Api\Repository\Comments::show">show</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Comments.php.html#53"><abbr title="Github\Api\Repository\Comments::create">create</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Comments.php.html#62"><abbr title="Github\Api\Repository\Comments::update">update</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Comments.php.html#71"><abbr title="Github\Api\Repository\Comments::remove">remove</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Commits.php.html#14"><abbr title="Github\Api\Repository\Commits::all">all</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Commits.php.html#19"><abbr title="Github\Api\Repository\Commits::compare">compare</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Commits.php.html#29"><abbr title="Github\Api\Repository\Commits::show">show</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Commits.php.html#34"><abbr title="Github\Api\Repository\Commits::pulls">pulls</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Contents.php.html#30"><abbr title="Github\Api\Repository\Contents::configure">configure</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Contents.php.html#52"><abbr title="Github\Api\Repository\Contents::readme">readme</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Contents.php.html#72"><abbr title="Github\Api\Repository\Contents::show">show</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Contents.php.html#101"><abbr title="Github\Api\Repository\Contents::create">create</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Contents.php.html#134"><abbr title="Github\Api\Repository\Contents::exists">exists</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Contents.php.html#177"><abbr title="Github\Api\Repository\Contents::update">update</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Contents.php.html#218"><abbr title="Github\Api\Repository\Contents::rm">rm</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Contents.php.html#253"><abbr title="Github\Api\Repository\Contents::archive">archive</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Contents.php.html#276"><abbr title="Github\Api\Repository\Contents::download">download</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Contents.php.html#313"><abbr title="Github\Api\Repository\Contents::rawDownload">rawDownload</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="DeployKeys.php.html#15"><abbr title="Github\Api\Repository\DeployKeys::all">all</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="DeployKeys.php.html#20"><abbr title="Github\Api\Repository\DeployKeys::show">show</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="DeployKeys.php.html#25"><abbr title="Github\Api\Repository\DeployKeys::create">create</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="DeployKeys.php.html#34"><abbr title="Github\Api\Repository\DeployKeys::update">update</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="DeployKeys.php.html#45"><abbr title="Github\Api\Repository\DeployKeys::remove">remove</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Downloads.php.html#24"><abbr title="Github\Api\Repository\Downloads::all">all</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Downloads.php.html#40"><abbr title="Github\Api\Repository\Downloads::show">show</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Downloads.php.html#56"><abbr title="Github\Api\Repository\Downloads::remove">remove</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Forks.php.html#14"><abbr title="Github\Api\Repository\Forks::all">all</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Forks.php.html#23"><abbr title="Github\Api\Repository\Forks::create">create</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Hooks.php.html#15"><abbr title="Github\Api\Repository\Hooks::all">all</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Hooks.php.html#20"><abbr title="Github\Api\Repository\Hooks::show">show</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Hooks.php.html#25"><abbr title="Github\Api\Repository\Hooks::create">create</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Hooks.php.html#34"><abbr title="Github\Api\Repository\Hooks::update">update</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Hooks.php.html#43"><abbr title="Github\Api\Repository\Hooks::ping">ping</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Hooks.php.html#48"><abbr title="Github\Api\Repository\Hooks::test">test</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Hooks.php.html#53"><abbr title="Github\Api\Repository\Hooks::remove">remove</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Labels.php.html#15"><abbr title="Github\Api\Repository\Labels::all">all</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Labels.php.html#20"><abbr title="Github\Api\Repository\Labels::show">show</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Labels.php.html#25"><abbr title="Github\Api\Repository\Labels::create">create</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Labels.php.html#34"><abbr title="Github\Api\Repository\Labels::update">update</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Labels.php.html#39"><abbr title="Github\Api\Repository\Labels::remove">remove</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Pages.php.html#17"><abbr title="Github\Api\Repository\Pages::show">show</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Pages.php.html#22"><abbr title="Github\Api\Repository\Pages::enable">enable</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Pages.php.html#29"><abbr title="Github\Api\Repository\Pages::disable">disable</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Pages.php.html#36"><abbr title="Github\Api\Repository\Pages::update">update</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Pages.php.html#41"><abbr title="Github\Api\Repository\Pages::requestBuild">requestBuild</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Pages.php.html#46"><abbr title="Github\Api\Repository\Pages::builds">builds</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Pages.php.html#51"><abbr title="Github\Api\Repository\Pages::showLatestBuild">showLatestBuild</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Pages.php.html#56"><abbr title="Github\Api\Repository\Pages::showBuild">showBuild</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Projects.php.html#10"><abbr title="Github\Api\Repository\Projects::all">all</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Projects.php.html#15"><abbr title="Github\Api\Repository\Projects::create">create</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Protection.php.html#28"><abbr title="Github\Api\Repository\Protection::show">show</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Protection.php.html#48"><abbr title="Github\Api\Repository\Protection::update">update</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Protection.php.html#65"><abbr title="Github\Api\Repository\Protection::remove">remove</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Protection.php.html#81"><abbr title="Github\Api\Repository\Protection::showStatusChecks">showStatusChecks</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Protection.php.html#98"><abbr title="Github\Api\Repository\Protection::updateStatusChecks">updateStatusChecks</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Protection.php.html#112"><abbr title="Github\Api\Repository\Protection::removeStatusChecks">removeStatusChecks</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Protection.php.html#128"><abbr title="Github\Api\Repository\Protection::showStatusChecksContexts">showStatusChecksContexts</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Protection.php.html#145"><abbr title="Github\Api\Repository\Protection::replaceStatusChecksContexts">replaceStatusChecksContexts</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Protection.php.html#162"><abbr title="Github\Api\Repository\Protection::addStatusChecksContexts">addStatusChecksContexts</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Protection.php.html#179"><abbr title="Github\Api\Repository\Protection::removeStatusChecksContexts">removeStatusChecksContexts</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Protection.php.html#195"><abbr title="Github\Api\Repository\Protection::showPullRequestReviewEnforcement">showPullRequestReviewEnforcement</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Protection.php.html#212"><abbr title="Github\Api\Repository\Protection::updatePullRequestReviewEnforcement">updatePullRequestReviewEnforcement</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Protection.php.html#226"><abbr title="Github\Api\Repository\Protection::removePullRequestReviewEnforcement">removePullRequestReviewEnforcement</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Protection.php.html#242"><abbr title="Github\Api\Repository\Protection::showAdminEnforcement">showAdminEnforcement</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Protection.php.html#258"><abbr title="Github\Api\Repository\Protection::addAdminEnforcement">addAdminEnforcement</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Protection.php.html#272"><abbr title="Github\Api\Repository\Protection::removeAdminEnforcement">removeAdminEnforcement</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Protection.php.html#288"><abbr title="Github\Api\Repository\Protection::showRestrictions">showRestrictions</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Protection.php.html#302"><abbr title="Github\Api\Repository\Protection::removeRestrictions">removeRestrictions</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Protection.php.html#318"><abbr title="Github\Api\Repository\Protection::showTeamRestrictions">showTeamRestrictions</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Protection.php.html#335"><abbr title="Github\Api\Repository\Protection::replaceTeamRestrictions">replaceTeamRestrictions</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Protection.php.html#352"><abbr title="Github\Api\Repository\Protection::addTeamRestrictions">addTeamRestrictions</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Protection.php.html#369"><abbr title="Github\Api\Repository\Protection::removeTeamRestrictions">removeTeamRestrictions</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Protection.php.html#385"><abbr title="Github\Api\Repository\Protection::showUserRestrictions">showUserRestrictions</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Protection.php.html#402"><abbr title="Github\Api\Repository\Protection::replaceUserRestrictions">replaceUserRestrictions</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Protection.php.html#419"><abbr title="Github\Api\Repository\Protection::addUserRestrictions">addUserRestrictions</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Protection.php.html#436"><abbr title="Github\Api\Repository\Protection::removeUserRestrictions">removeUserRestrictions</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Releases.php.html#24"><abbr title="Github\Api\Repository\Releases::latest">latest</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Releases.php.html#38"><abbr title="Github\Api\Repository\Releases::tag">tag</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Releases.php.html#52"><abbr title="Github\Api\Repository\Releases::all">all</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Releases.php.html#66"><abbr title="Github\Api\Repository\Releases::show">show</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Releases.php.html#80"><abbr title="Github\Api\Repository\Releases::generateNotes">generateNotes</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Releases.php.html#96"><abbr title="Github\Api\Repository\Releases::create">create</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Releases.php.html#115"><abbr title="Github\Api\Repository\Releases::edit">edit</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Releases.php.html#129"><abbr title="Github\Api\Repository\Releases::remove">remove</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Releases.php.html#137"><abbr title="Github\Api\Repository\Releases::assets">assets</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="SecretScanning.php.html#16"><abbr title="Github\Api\Repository\SecretScanning::alerts">alerts</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="SecretScanning.php.html#30"><abbr title="Github\Api\Repository\SecretScanning::getAlert">getAlert</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="SecretScanning.php.html#45"><abbr title="Github\Api\Repository\SecretScanning::updateAlert">updateAlert</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="SecretScanning.php.html#60"><abbr title="Github\Api\Repository\SecretScanning::locations">locations</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Stargazers.php.html#27"><abbr title="Github\Api\Repository\Stargazers::configure">configure</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Stargazers.php.html#36"><abbr title="Github\Api\Repository\Stargazers::all">all</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Statuses.php.html#24"><abbr title="Github\Api\Repository\Statuses::show">show</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Statuses.php.html#38"><abbr title="Github\Api\Repository\Statuses::combined">combined</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Statuses.php.html#55"><abbr title="Github\Api\Repository\Statuses::create">create</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Traffic.php.html#22"><abbr title="Github\Api\Repository\Traffic::referers">referers</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Traffic.php.html#35"><abbr title="Github\Api\Repository\Traffic::paths">paths</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Traffic.php.html#49"><abbr title="Github\Api\Repository\Traffic::views">views</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Traffic.php.html#63"><abbr title="Github\Api\Repository\Traffic::clones">clones</abbr></a></td><td class="text-right">0%</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3>Project Risks</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Method</th>
+         <th class="text-right"><abbr title="Change Risk Anti-Patterns (CRAP) Index">CRAP</abbr></th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="Contents.php.html#276"><abbr title="Github\Api\Repository\Contents::download">download</abbr></a></td><td class="text-right">56</td></tr>
+       <tr><td><a href="Contents.php.html#134"><abbr title="Github\Api\Repository\Contents::exists">exists</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="Contents.php.html#101"><abbr title="Github\Api\Repository\Contents::create">create</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="Contents.php.html#177"><abbr title="Github\Api\Repository\Contents::update">update</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="Contents.php.html#218"><abbr title="Github\Api\Repository\Contents::rm">rm</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="Assets.php.html#75"><abbr title="Github\Api\Repository\Assets::create">create</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="Contents.php.html#253"><abbr title="Github\Api\Repository\Contents::archive">archive</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="Forks.php.html#14"><abbr title="Github\Api\Repository\Forks::all">all</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="Actions/Workflows.php.html#35"><abbr title="Github\Api\Repository\Actions\Workflows::show">show</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="Actions/Workflows.php.html#53"><abbr title="Github\Api\Repository\Actions\Workflows::usage">usage</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="Actions/Workflows.php.html#73"><abbr title="Github\Api\Repository\Actions\Workflows::dispatches">dispatches</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="Assets.php.html#44"><abbr title="Github\Api\Repository\Assets::show">show</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="Assets.php.html#100"><abbr title="Github\Api\Repository\Assets::edit">edit</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="Comments.php.html#28"><abbr title="Github\Api\Repository\Comments::configure">configure</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="Comments.php.html#39"><abbr title="Github\Api\Repository\Comments::all">all</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="Comments.php.html#53"><abbr title="Github\Api\Repository\Comments::create">create</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="Comments.php.html#62"><abbr title="Github\Api\Repository\Comments::update">update</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="Commits.php.html#19"><abbr title="Github\Api\Repository\Commits::compare">compare</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="Contents.php.html#30"><abbr title="Github\Api\Repository\Contents::configure">configure</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="Contents.php.html#72"><abbr title="Github\Api\Repository\Contents::show">show</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="DeployKeys.php.html#25"><abbr title="Github\Api\Repository\DeployKeys::create">create</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="DeployKeys.php.html#34"><abbr title="Github\Api\Repository\DeployKeys::update">update</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="Hooks.php.html#25"><abbr title="Github\Api\Repository\Hooks::create">create</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="Hooks.php.html#34"><abbr title="Github\Api\Repository\Hooks::update">update</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="Labels.php.html#25"><abbr title="Github\Api\Repository\Labels::create">create</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="Projects.php.html#15"><abbr title="Github\Api\Repository\Projects::create">create</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="Releases.php.html#96"><abbr title="Github\Api\Repository\Releases::create">create</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="Stargazers.php.html#27"><abbr title="Github\Api\Repository\Stargazers::configure">configure</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="Statuses.php.html#55"><abbr title="Github\Api\Repository\Statuses::create">create</abbr></a></td><td class="text-right">6</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+   </div>
+   <footer>
+    <hr/>
+    <p>
+     <small>Generated by <a href="https://github.com/sebastianbergmann/php-code-coverage" target="_top">php-code-coverage 11.0.9</a> using <a href="https://www.php.net/" target="_top">PHP 8.4.16</a> and <a href="https://phpunit.de/">PHPUnit 11.5.11</a> at Fri Apr 10 15:27:13 UTC 2026.</small>
+    </p>
+   </footer>
+  </div>
+  <script src="../../../../../../../_js/jquery.min.js?v=11.0.9" type="text/javascript"></script>
+  <script src="../../../../../../../_js/d3.min.js?v=11.0.9" type="text/javascript"></script>
+  <script src="../../../../../../../_js/nv.d3.min.js?v=11.0.9" type="text/javascript"></script>
+  <script type="text/javascript">
+$(document).ready(function() {
+  nv.addGraph(function() {
+    var chart = nv.models.multiBarChart();
+    chart.tooltips(false)
+      .showControls(false)
+      .showLegend(false)
+      .reduceXTicks(false)
+      .staggerLabels(true)
+      .yAxis.tickFormat(d3.format('d'));
+
+    d3.select('#classCoverageDistribution svg')
+      .datum(getCoverageDistributionData([27,0,0,0,0,0,0,0,0,0,0,0], "Class Coverage"))
+      .transition().duration(500).call(chart);
+
+    nv.utils.windowResize(chart.update);
+
+    return chart;
+  });
+
+  nv.addGraph(function() {
+    var chart = nv.models.multiBarChart();
+    chart.tooltips(false)
+      .showControls(false)
+      .showLegend(false)
+      .reduceXTicks(false)
+      .staggerLabels(true)
+      .yAxis.tickFormat(d3.format('d'));
+
+    d3.select('#methodCoverageDistribution svg')
+      .datum(getCoverageDistributionData([159,0,0,0,0,0,0,0,0,0,0,0], "Method Coverage"))
+      .transition().duration(500).call(chart);
+
+    nv.utils.windowResize(chart.update);
+
+    return chart;
+  });
+
+  function getCoverageDistributionData(data, label) {
+    var labels = [
+      '0%',
+      '0-10%',
+      '10-20%',
+      '20-30%',
+      '30-40%',
+      '40-50%',
+      '50-60%',
+      '60-70%',
+      '70-80%',
+      '80-90%',
+      '90-100%',
+      '100%'
+    ];
+    var values = [];
+    $.each(labels, function(key) {
+      values.push({x: labels[key], y: data[key]});
+    });
+
+    return [
+      {
+        key: label,
+        values: values,
+        color: "#4572A7"
+      }
+    ];
+  }
+  nv.addGraph(function() {
+    var chart = nv.models.scatterChart()
+      .showDistX(true)
+      .showDistY(true)
+      .showLegend(false)
+      .forceX([0, 100]);
+    chart.tooltipContent(function(graph) {
+      return '<p>' + graph.point.class + '</p>';
+    });
+
+    chart.xAxis.axisLabel('Code Coverage (in percent)');
+    chart.yAxis.axisLabel('Cyclomatic Complexity');
+
+    d3.select('#classComplexity svg')
+      .datum(getComplexityData([[0,5,"<a href=\"Actions\/Artifacts.php.html#10\">Github\\Api\\Repository\\Actions\\Artifacts<\/a>"],[0,6,"<a href=\"Actions\/Secrets.php.html#10\">Github\\Api\\Repository\\Actions\\Secrets<\/a>"],[0,4,"<a href=\"Actions\/SelfHostedRunners.php.html#10\">Github\\Api\\Repository\\Actions\\SelfHostedRunners<\/a>"],[0,5,"<a href=\"Actions\/Variables.php.html#10\">Github\\Api\\Repository\\Actions\\Variables<\/a>"],[0,3,"<a href=\"Actions\/WorkflowJobs.php.html#10\">Github\\Api\\Repository\\Actions\\WorkflowJobs<\/a>"],[0,10,"<a href=\"Actions\/WorkflowRuns.php.html#10\">Github\\Api\\Repository\\Actions\\WorkflowRuns<\/a>"],[0,7,"<a href=\"Actions\/Workflows.php.html#10\">Github\\Api\\Repository\\Actions\\Workflows<\/a>"],[0,9,"<a href=\"Assets.php.html#15\">Github\\Api\\Repository\\Assets<\/a>"],[0,7,"<a href=\"Checks\/CheckRuns.php.html#11\">Github\\Api\\Repository\\Checks\\CheckRuns<\/a>"],[0,5,"<a href=\"Checks\/CheckSuites.php.html#11\">Github\\Api\\Repository\\Checks\\CheckSuites<\/a>"],[0,5,"<a href=\"Collaborators.php.html#12\">Github\\Api\\Repository\\Collaborators<\/a>"],[0,10,"<a href=\"Comments.php.html#15\">Github\\Api\\Repository\\Comments<\/a>"],[0,5,"<a href=\"Commits.php.html#12\">Github\\Api\\Repository\\Commits<\/a>"],[0,33,"<a href=\"Contents.php.html#17\">Github\\Api\\Repository\\Contents<\/a>"],[0,7,"<a href=\"DeployKeys.php.html#13\">Github\\Api\\Repository\\DeployKeys<\/a>"],[0,3,"<a href=\"Downloads.php.html#12\">Github\\Api\\Repository\\Downloads<\/a>"],[0,4,"<a href=\"Forks.php.html#12\">Github\\Api\\Repository\\Forks<\/a>"],[0,9,"<a href=\"Hooks.php.html#13\">Github\\Api\\Repository\\Hooks<\/a>"],[0,6,"<a href=\"Labels.php.html#13\">Github\\Api\\Repository\\Labels<\/a>"],[0,8,"<a href=\"Pages.php.html#13\">Github\\Api\\Repository\\Pages<\/a>"],[0,3,"<a href=\"Projects.php.html#8\">Github\\Api\\Repository\\Projects<\/a>"],[0,26,"<a href=\"Protection.php.html#13\">Github\\Api\\Repository\\Protection<\/a>"],[0,10,"<a href=\"Releases.php.html#14\">Github\\Api\\Repository\\Releases<\/a>"],[0,4,"<a href=\"SecretScanning.php.html#5\">Github\\Api\\Repository\\SecretScanning<\/a>"],[0,3,"<a href=\"Stargazers.php.html#14\">Github\\Api\\Repository\\Stargazers<\/a>"],[0,4,"<a href=\"Statuses.php.html#13\">Github\\Api\\Repository\\Statuses<\/a>"],[0,4,"<a href=\"Traffic.php.html#12\">Github\\Api\\Repository\\Traffic<\/a>"]], 'Class Complexity'))
+      .transition()
+      .duration(500)
+      .call(chart);
+
+    nv.utils.windowResize(chart.update);
+
+    return chart;
+  });
+
+  nv.addGraph(function() {
+    var chart = nv.models.scatterChart()
+      .showDistX(true)
+      .showDistY(true)
+      .showLegend(false)
+      .forceX([0, 100]);
+    chart.tooltipContent(function(graph) {
+      return '<p>' + graph.point.class + '</p>';
+    });
+
+    chart.xAxis.axisLabel('Code Coverage (in percent)');
+    chart.yAxis.axisLabel('Method Complexity');
+
+    d3.select('#methodComplexity svg')
+      .datum(getComplexityData([[0,1,"<a href=\"Actions\/Artifacts.php.html#21\">Github\\Api\\Repository\\Actions\\Artifacts::all<\/a>"],[0,1,"<a href=\"Actions\/Artifacts.php.html#35\">Github\\Api\\Repository\\Actions\\Artifacts::runArtifacts<\/a>"],[0,1,"<a href=\"Actions\/Artifacts.php.html#49\">Github\\Api\\Repository\\Actions\\Artifacts::show<\/a>"],[0,1,"<a href=\"Actions\/Artifacts.php.html#63\">Github\\Api\\Repository\\Actions\\Artifacts::remove<\/a>"],[0,1,"<a href=\"Actions\/Artifacts.php.html#78\">Github\\Api\\Repository\\Actions\\Artifacts::download<\/a>"],[0,1,"<a href=\"Actions\/Secrets.php.html#20\">Github\\Api\\Repository\\Actions\\Secrets::all<\/a>"],[0,1,"<a href=\"Actions\/Secrets.php.html#34\">Github\\Api\\Repository\\Actions\\Secrets::show<\/a>"],[0,1,"<a href=\"Actions\/Secrets.php.html#49\">Github\\Api\\Repository\\Actions\\Secrets::create<\/a>"],[0,1,"<a href=\"Actions\/Secrets.php.html#64\">Github\\Api\\Repository\\Actions\\Secrets::update<\/a>"],[0,1,"<a href=\"Actions\/Secrets.php.html#78\">Github\\Api\\Repository\\Actions\\Secrets::remove<\/a>"],[0,1,"<a href=\"Actions\/Secrets.php.html#91\">Github\\Api\\Repository\\Actions\\Secrets::publicKey<\/a>"],[0,1,"<a href=\"Actions\/SelfHostedRunners.php.html#20\">Github\\Api\\Repository\\Actions\\SelfHostedRunners::all<\/a>"],[0,1,"<a href=\"Actions\/SelfHostedRunners.php.html#34\">Github\\Api\\Repository\\Actions\\SelfHostedRunners::show<\/a>"],[0,1,"<a href=\"Actions\/SelfHostedRunners.php.html#48\">Github\\Api\\Repository\\Actions\\SelfHostedRunners::remove<\/a>"],[0,1,"<a href=\"Actions\/SelfHostedRunners.php.html#61\">Github\\Api\\Repository\\Actions\\SelfHostedRunners::applications<\/a>"],[0,1,"<a href=\"Actions\/Variables.php.html#20\">Github\\Api\\Repository\\Actions\\Variables::all<\/a>"],[0,1,"<a href=\"Actions\/Variables.php.html#34\">Github\\Api\\Repository\\Actions\\Variables::show<\/a>"],[0,1,"<a href=\"Actions\/Variables.php.html#48\">Github\\Api\\Repository\\Actions\\Variables::create<\/a>"],[0,1,"<a href=\"Actions\/Variables.php.html#63\">Github\\Api\\Repository\\Actions\\Variables::update<\/a>"],[0,1,"<a href=\"Actions\/Variables.php.html#77\">Github\\Api\\Repository\\Actions\\Variables::remove<\/a>"],[0,1,"<a href=\"Actions\/WorkflowJobs.php.html#22\">Github\\Api\\Repository\\Actions\\WorkflowJobs::all<\/a>"],[0,1,"<a href=\"Actions\/WorkflowJobs.php.html#36\">Github\\Api\\Repository\\Actions\\WorkflowJobs::show<\/a>"],[0,1,"<a href=\"Actions\/WorkflowJobs.php.html#50\">Github\\Api\\Repository\\Actions\\WorkflowJobs::downloadLogs<\/a>"],[0,1,"<a href=\"Actions\/WorkflowRuns.php.html#21\">Github\\Api\\Repository\\Actions\\WorkflowRuns::all<\/a>"],[0,1,"<a href=\"Actions\/WorkflowRuns.php.html#36\">Github\\Api\\Repository\\Actions\\WorkflowRuns::listRuns<\/a>"],[0,1,"<a href=\"Actions\/WorkflowRuns.php.html#51\">Github\\Api\\Repository\\Actions\\WorkflowRuns::show<\/a>"],[0,1,"<a href=\"Actions\/WorkflowRuns.php.html#65\">Github\\Api\\Repository\\Actions\\WorkflowRuns::remove<\/a>"],[0,1,"<a href=\"Actions\/WorkflowRuns.php.html#79\">Github\\Api\\Repository\\Actions\\WorkflowRuns::rerun<\/a>"],[0,1,"<a href=\"Actions\/WorkflowRuns.php.html#93\">Github\\Api\\Repository\\Actions\\WorkflowRuns::cancel<\/a>"],[0,1,"<a href=\"Actions\/WorkflowRuns.php.html#107\">Github\\Api\\Repository\\Actions\\WorkflowRuns::usage<\/a>"],[0,1,"<a href=\"Actions\/WorkflowRuns.php.html#121\">Github\\Api\\Repository\\Actions\\WorkflowRuns::downloadLogs<\/a>"],[0,1,"<a href=\"Actions\/WorkflowRuns.php.html#135\">Github\\Api\\Repository\\Actions\\WorkflowRuns::deleteLogs<\/a>"],[0,1,"<a href=\"Actions\/WorkflowRuns.php.html#151\">Github\\Api\\Repository\\Actions\\WorkflowRuns::approve<\/a>"],[0,1,"<a href=\"Actions\/Workflows.php.html#21\">Github\\Api\\Repository\\Actions\\Workflows::all<\/a>"],[0,2,"<a href=\"Actions\/Workflows.php.html#35\">Github\\Api\\Repository\\Actions\\Workflows::show<\/a>"],[0,2,"<a href=\"Actions\/Workflows.php.html#53\">Github\\Api\\Repository\\Actions\\Workflows::usage<\/a>"],[0,2,"<a href=\"Actions\/Workflows.php.html#73\">Github\\Api\\Repository\\Actions\\Workflows::dispatches<\/a>"],[0,1,"<a href=\"Assets.php.html#29\">Github\\Api\\Repository\\Assets::all<\/a>"],[0,2,"<a href=\"Assets.php.html#44\">Github\\Api\\Repository\\Assets::show<\/a>"],[0,3,"<a href=\"Assets.php.html#75\">Github\\Api\\Repository\\Assets::create<\/a>"],[0,2,"<a href=\"Assets.php.html#100\">Github\\Api\\Repository\\Assets::edit<\/a>"],[0,1,"<a href=\"Assets.php.html#119\">Github\\Api\\Repository\\Assets::remove<\/a>"],[0,1,"<a href=\"Checks\/CheckRuns.php.html#20\">Github\\Api\\Repository\\Checks\\CheckRuns::create<\/a>"],[0,1,"<a href=\"Checks\/CheckRuns.php.html#32\">Github\\Api\\Repository\\Checks\\CheckRuns::show<\/a>"],[0,1,"<a href=\"Checks\/CheckRuns.php.html#44\">Github\\Api\\Repository\\Checks\\CheckRuns::update<\/a>"],[0,1,"<a href=\"Checks\/CheckRuns.php.html#56\">Github\\Api\\Repository\\Checks\\CheckRuns::annotations<\/a>"],[0,1,"<a href=\"Checks\/CheckRuns.php.html#68\">Github\\Api\\Repository\\Checks\\CheckRuns::allForCheckSuite<\/a>"],[0,1,"<a href=\"Checks\/CheckRuns.php.html#80\">Github\\Api\\Repository\\Checks\\CheckRuns::allForReference<\/a>"],[0,1,"<a href=\"Checks\/CheckRuns.php.html#92\">Github\\Api\\Repository\\Checks\\CheckRuns::rerequest<\/a>"],[0,1,"<a href=\"Checks\/CheckSuites.php.html#20\">Github\\Api\\Repository\\Checks\\CheckSuites::create<\/a>"],[0,1,"<a href=\"Checks\/CheckSuites.php.html#32\">Github\\Api\\Repository\\Checks\\CheckSuites::updatePreferences<\/a>"],[0,1,"<a href=\"Checks\/CheckSuites.php.html#44\">Github\\Api\\Repository\\Checks\\CheckSuites::getCheckSuite<\/a>"],[0,1,"<a href=\"Checks\/CheckSuites.php.html#56\">Github\\Api\\Repository\\Checks\\CheckSuites::rerequest<\/a>"],[0,1,"<a href=\"Checks\/CheckSuites.php.html#68\">Github\\Api\\Repository\\Checks\\CheckSuites::allForReference<\/a>"],[0,1,"<a href=\"Collaborators.php.html#23\">Github\\Api\\Repository\\Collaborators::all<\/a>"],[0,1,"<a href=\"Collaborators.php.html#37\">Github\\Api\\Repository\\Collaborators::check<\/a>"],[0,1,"<a href=\"Collaborators.php.html#52\">Github\\Api\\Repository\\Collaborators::add<\/a>"],[0,1,"<a href=\"Collaborators.php.html#66\">Github\\Api\\Repository\\Collaborators::remove<\/a>"],[0,1,"<a href=\"Collaborators.php.html#80\">Github\\Api\\Repository\\Collaborators::permission<\/a>"],[0,2,"<a href=\"Comments.php.html#28\">Github\\Api\\Repository\\Comments::configure<\/a>"],[0,2,"<a href=\"Comments.php.html#39\">Github\\Api\\Repository\\Comments::all<\/a>"],[0,1,"<a href=\"Comments.php.html#48\">Github\\Api\\Repository\\Comments::show<\/a>"],[0,2,"<a href=\"Comments.php.html#53\">Github\\Api\\Repository\\Comments::create<\/a>"],[0,2,"<a href=\"Comments.php.html#62\">Github\\Api\\Repository\\Comments::update<\/a>"],[0,1,"<a href=\"Comments.php.html#71\">Github\\Api\\Repository\\Comments::remove<\/a>"],[0,1,"<a href=\"Commits.php.html#14\">Github\\Api\\Repository\\Commits::all<\/a>"],[0,2,"<a href=\"Commits.php.html#19\">Github\\Api\\Repository\\Commits::compare<\/a>"],[0,1,"<a href=\"Commits.php.html#29\">Github\\Api\\Repository\\Commits::show<\/a>"],[0,1,"<a href=\"Commits.php.html#34\">Github\\Api\\Repository\\Commits::pulls<\/a>"],[0,2,"<a href=\"Contents.php.html#30\">Github\\Api\\Repository\\Contents::configure<\/a>"],[0,1,"<a href=\"Contents.php.html#52\">Github\\Api\\Repository\\Contents::readme<\/a>"],[0,2,"<a href=\"Contents.php.html#72\">Github\\Api\\Repository\\Contents::show<\/a>"],[0,4,"<a href=\"Contents.php.html#101\">Github\\Api\\Repository\\Contents::create<\/a>"],[0,5,"<a href=\"Contents.php.html#134\">Github\\Api\\Repository\\Contents::exists<\/a>"],[0,4,"<a href=\"Contents.php.html#177\">Github\\Api\\Repository\\Contents::update<\/a>"],[0,4,"<a href=\"Contents.php.html#218\">Github\\Api\\Repository\\Contents::rm<\/a>"],[0,3,"<a href=\"Contents.php.html#253\">Github\\Api\\Repository\\Contents::archive<\/a>"],[0,7,"<a href=\"Contents.php.html#276\">Github\\Api\\Repository\\Contents::download<\/a>"],[0,1,"<a href=\"Contents.php.html#313\">Github\\Api\\Repository\\Contents::rawDownload<\/a>"],[0,1,"<a href=\"DeployKeys.php.html#15\">Github\\Api\\Repository\\DeployKeys::all<\/a>"],[0,1,"<a href=\"DeployKeys.php.html#20\">Github\\Api\\Repository\\DeployKeys::show<\/a>"],[0,2,"<a href=\"DeployKeys.php.html#25\">Github\\Api\\Repository\\DeployKeys::create<\/a>"],[0,2,"<a href=\"DeployKeys.php.html#34\">Github\\Api\\Repository\\DeployKeys::update<\/a>"],[0,1,"<a href=\"DeployKeys.php.html#45\">Github\\Api\\Repository\\DeployKeys::remove<\/a>"],[0,1,"<a href=\"Downloads.php.html#24\">Github\\Api\\Repository\\Downloads::all<\/a>"],[0,1,"<a href=\"Downloads.php.html#40\">Github\\Api\\Repository\\Downloads::show<\/a>"],[0,1,"<a href=\"Downloads.php.html#56\">Github\\Api\\Repository\\Downloads::remove<\/a>"],[0,3,"<a href=\"Forks.php.html#14\">Github\\Api\\Repository\\Forks::all<\/a>"],[0,1,"<a href=\"Forks.php.html#23\">Github\\Api\\Repository\\Forks::create<\/a>"],[0,1,"<a href=\"Hooks.php.html#15\">Github\\Api\\Repository\\Hooks::all<\/a>"],[0,1,"<a href=\"Hooks.php.html#20\">Github\\Api\\Repository\\Hooks::show<\/a>"],[0,2,"<a href=\"Hooks.php.html#25\">Github\\Api\\Repository\\Hooks::create<\/a>"],[0,2,"<a href=\"Hooks.php.html#34\">Github\\Api\\Repository\\Hooks::update<\/a>"],[0,1,"<a href=\"Hooks.php.html#43\">Github\\Api\\Repository\\Hooks::ping<\/a>"],[0,1,"<a href=\"Hooks.php.html#48\">Github\\Api\\Repository\\Hooks::test<\/a>"],[0,1,"<a href=\"Hooks.php.html#53\">Github\\Api\\Repository\\Hooks::remove<\/a>"],[0,1,"<a href=\"Labels.php.html#15\">Github\\Api\\Repository\\Labels::all<\/a>"],[0,1,"<a href=\"Labels.php.html#20\">Github\\Api\\Repository\\Labels::show<\/a>"],[0,2,"<a href=\"Labels.php.html#25\">Github\\Api\\Repository\\Labels::create<\/a>"],[0,1,"<a href=\"Labels.php.html#34\">Github\\Api\\Repository\\Labels::update<\/a>"],[0,1,"<a href=\"Labels.php.html#39\">Github\\Api\\Repository\\Labels::remove<\/a>"],[0,1,"<a href=\"Pages.php.html#17\">Github\\Api\\Repository\\Pages::show<\/a>"],[0,1,"<a href=\"Pages.php.html#22\">Github\\Api\\Repository\\Pages::enable<\/a>"],[0,1,"<a href=\"Pages.php.html#29\">Github\\Api\\Repository\\Pages::disable<\/a>"],[0,1,"<a href=\"Pages.php.html#36\">Github\\Api\\Repository\\Pages::update<\/a>"],[0,1,"<a href=\"Pages.php.html#41\">Github\\Api\\Repository\\Pages::requestBuild<\/a>"],[0,1,"<a href=\"Pages.php.html#46\">Github\\Api\\Repository\\Pages::builds<\/a>"],[0,1,"<a href=\"Pages.php.html#51\">Github\\Api\\Repository\\Pages::showLatestBuild<\/a>"],[0,1,"<a href=\"Pages.php.html#56\">Github\\Api\\Repository\\Pages::showBuild<\/a>"],[0,1,"<a href=\"Projects.php.html#10\">Github\\Api\\Repository\\Projects::all<\/a>"],[0,2,"<a href=\"Projects.php.html#15\">Github\\Api\\Repository\\Projects::create<\/a>"],[0,1,"<a href=\"Protection.php.html#28\">Github\\Api\\Repository\\Protection::show<\/a>"],[0,1,"<a href=\"Protection.php.html#48\">Github\\Api\\Repository\\Protection::update<\/a>"],[0,1,"<a href=\"Protection.php.html#65\">Github\\Api\\Repository\\Protection::remove<\/a>"],[0,1,"<a href=\"Protection.php.html#81\">Github\\Api\\Repository\\Protection::showStatusChecks<\/a>"],[0,1,"<a href=\"Protection.php.html#98\">Github\\Api\\Repository\\Protection::updateStatusChecks<\/a>"],[0,1,"<a href=\"Protection.php.html#112\">Github\\Api\\Repository\\Protection::removeStatusChecks<\/a>"],[0,1,"<a href=\"Protection.php.html#128\">Github\\Api\\Repository\\Protection::showStatusChecksContexts<\/a>"],[0,1,"<a href=\"Protection.php.html#145\">Github\\Api\\Repository\\Protection::replaceStatusChecksContexts<\/a>"],[0,1,"<a href=\"Protection.php.html#162\">Github\\Api\\Repository\\Protection::addStatusChecksContexts<\/a>"],[0,1,"<a href=\"Protection.php.html#179\">Github\\Api\\Repository\\Protection::removeStatusChecksContexts<\/a>"],[0,1,"<a href=\"Protection.php.html#195\">Github\\Api\\Repository\\Protection::showPullRequestReviewEnforcement<\/a>"],[0,1,"<a href=\"Protection.php.html#212\">Github\\Api\\Repository\\Protection::updatePullRequestReviewEnforcement<\/a>"],[0,1,"<a href=\"Protection.php.html#226\">Github\\Api\\Repository\\Protection::removePullRequestReviewEnforcement<\/a>"],[0,1,"<a href=\"Protection.php.html#242\">Github\\Api\\Repository\\Protection::showAdminEnforcement<\/a>"],[0,1,"<a href=\"Protection.php.html#258\">Github\\Api\\Repository\\Protection::addAdminEnforcement<\/a>"],[0,1,"<a href=\"Protection.php.html#272\">Github\\Api\\Repository\\Protection::removeAdminEnforcement<\/a>"],[0,1,"<a href=\"Protection.php.html#288\">Github\\Api\\Repository\\Protection::showRestrictions<\/a>"],[0,1,"<a href=\"Protection.php.html#302\">Github\\Api\\Repository\\Protection::removeRestrictions<\/a>"],[0,1,"<a href=\"Protection.php.html#318\">Github\\Api\\Repository\\Protection::showTeamRestrictions<\/a>"],[0,1,"<a href=\"Protection.php.html#335\">Github\\Api\\Repository\\Protection::replaceTeamRestrictions<\/a>"],[0,1,"<a href=\"Protection.php.html#352\">Github\\Api\\Repository\\Protection::addTeamRestrictions<\/a>"],[0,1,"<a href=\"Protection.php.html#369\">Github\\Api\\Repository\\Protection::removeTeamRestrictions<\/a>"],[0,1,"<a href=\"Protection.php.html#385\">Github\\Api\\Repository\\Protection::showUserRestrictions<\/a>"],[0,1,"<a href=\"Protection.php.html#402\">Github\\Api\\Repository\\Protection::replaceUserRestrictions<\/a>"],[0,1,"<a href=\"Protection.php.html#419\">Github\\Api\\Repository\\Protection::addUserRestrictions<\/a>"],[0,1,"<a href=\"Protection.php.html#436\">Github\\Api\\Repository\\Protection::removeUserRestrictions<\/a>"],[0,1,"<a href=\"Releases.php.html#24\">Github\\Api\\Repository\\Releases::latest<\/a>"],[0,1,"<a href=\"Releases.php.html#38\">Github\\Api\\Repository\\Releases::tag<\/a>"],[0,1,"<a href=\"Releases.php.html#52\">Github\\Api\\Repository\\Releases::all<\/a>"],[0,1,"<a href=\"Releases.php.html#66\">Github\\Api\\Repository\\Releases::show<\/a>"],[0,1,"<a href=\"Releases.php.html#80\">Github\\Api\\Repository\\Releases::generateNotes<\/a>"],[0,2,"<a href=\"Releases.php.html#96\">Github\\Api\\Repository\\Releases::create<\/a>"],[0,1,"<a href=\"Releases.php.html#115\">Github\\Api\\Repository\\Releases::edit<\/a>"],[0,1,"<a href=\"Releases.php.html#129\">Github\\Api\\Repository\\Releases::remove<\/a>"],[0,1,"<a href=\"Releases.php.html#137\">Github\\Api\\Repository\\Releases::assets<\/a>"],[0,1,"<a href=\"SecretScanning.php.html#16\">Github\\Api\\Repository\\SecretScanning::alerts<\/a>"],[0,1,"<a href=\"SecretScanning.php.html#30\">Github\\Api\\Repository\\SecretScanning::getAlert<\/a>"],[0,1,"<a href=\"SecretScanning.php.html#45\">Github\\Api\\Repository\\SecretScanning::updateAlert<\/a>"],[0,1,"<a href=\"SecretScanning.php.html#60\">Github\\Api\\Repository\\SecretScanning::locations<\/a>"],[0,2,"<a href=\"Stargazers.php.html#27\">Github\\Api\\Repository\\Stargazers::configure<\/a>"],[0,1,"<a href=\"Stargazers.php.html#36\">Github\\Api\\Repository\\Stargazers::all<\/a>"],[0,1,"<a href=\"Statuses.php.html#24\">Github\\Api\\Repository\\Statuses::show<\/a>"],[0,1,"<a href=\"Statuses.php.html#38\">Github\\Api\\Repository\\Statuses::combined<\/a>"],[0,2,"<a href=\"Statuses.php.html#55\">Github\\Api\\Repository\\Statuses::create<\/a>"],[0,1,"<a href=\"Traffic.php.html#22\">Github\\Api\\Repository\\Traffic::referers<\/a>"],[0,1,"<a href=\"Traffic.php.html#35\">Github\\Api\\Repository\\Traffic::paths<\/a>"],[0,1,"<a href=\"Traffic.php.html#49\">Github\\Api\\Repository\\Traffic::views<\/a>"],[0,1,"<a href=\"Traffic.php.html#63\">Github\\Api\\Repository\\Traffic::clones<\/a>"]], 'Method Complexity'))
+      .transition()
+      .duration(500)
+      .call(chart);
+
+    nv.utils.windowResize(chart.update);
+
+    return chart;
+  });
+
+  function getComplexityData(data, label) {
+    var values = [];
+    $.each(data, function(key) {
+      var value = Math.round(data[key][0]*100) / 100;
+      values.push({
+        x: value,
+        y: data[key][1],
+        class: data[key][2],
+        size: 0.05,
+        shape: 'diamond'
+      });
+    });
+
+    return [
+      {
+        key: label,
+        values: values,
+        color: "#4572A7"
+      }
+    ];
+  }
+});
+  </script>
+ </body>
+</html>

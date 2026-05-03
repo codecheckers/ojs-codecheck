@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <title>Dashboard for /var/www/html/ojs/plugins/generic/codecheck/vendor/guzzlehttp/promises</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="../../../_css/bootstrap.min.css?v=11.0.9" rel="stylesheet" type="text/css">
+  <link href="../../../_css/nv.d3.min.css?v=11.0.9" rel="stylesheet" type="text/css">
+  <link href="../../../_css/style.css?v=11.0.9" rel="stylesheet" type="text/css">
+  <link href="../../../_css/custom.css" rel="stylesheet" type="text/css">
+ </head>
+ <body>
+  <header>
+   <div class="container-fluid">
+    <div class="row">
+     <div class="col-md-12">
+      <nav aria-label="breadcrumb">
+       <ol class="breadcrumb">
+         <li class="breadcrumb-item"><a href="../../../index.html">/var/www/html/ojs/plugins/generic/codecheck</a></li>
+         <li class="breadcrumb-item"><a href="../../index.html">vendor</a></li>
+         <li class="breadcrumb-item"><a href="../index.html">guzzlehttp</a></li>
+         <li class="breadcrumb-item"><a href="index.html">promises</a></li>
+         <li class="breadcrumb-item active">(Dashboard)</li>
+
+       </ol>
+      </nav>
+     </div>
+    </div>
+   </div>
+  </header>
+  <div class="container-fluid">
+   <div class="row">
+    <div class="col-md-12">
+     <h2>Classes</h2>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3>Coverage Distribution</h3>
+     <div id="classCoverageDistribution" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3>Complexity</h3>
+     <div id="classComplexity" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3>Insufficient Coverage</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Class</th>
+         <th class="text-right">Coverage</th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="src/AggregateException.php.html#10">GuzzleHttp\Promise\AggregateException</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Coroutine.php.html#46">GuzzleHttp\Promise\Coroutine</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Create.php.html#7">GuzzleHttp\Promise\Create</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Each.php.html#7">GuzzleHttp\Promise\Each</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/EachPromise.php.html#13">GuzzleHttp\Promise\EachPromise</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/FulfilledPromise.php.html#15">GuzzleHttp\Promise\FulfilledPromise</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Is.php.html#7">GuzzleHttp\Promise\Is</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Promise.php.html#14">GuzzleHttp\Promise\Promise</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/RejectedPromise.php.html#15">GuzzleHttp\Promise\RejectedPromise</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/RejectionException.php.html#12">GuzzleHttp\Promise\RejectionException</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/TaskQueue.php.html#18">GuzzleHttp\Promise\TaskQueue</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Utils.php.html#7">GuzzleHttp\Promise\Utils</a></td><td class="text-right">0%</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3>Project Risks</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Class</th>
+         <th class="text-right"><abbr title="Change Risk Anti-Patterns (CRAP) Index">CRAP</abbr></th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="src/Promise.php.html#14">GuzzleHttp\Promise\Promise</a></td><td class="text-right">2550</td></tr>
+       <tr><td><a href="src/EachPromise.php.html#13">GuzzleHttp\Promise\EachPromise</a></td><td class="text-right">1260</td></tr>
+       <tr><td><a href="src/Utils.php.html#7">GuzzleHttp\Promise\Utils</a></td><td class="text-right">600</td></tr>
+       <tr><td><a href="src/Coroutine.php.html#46">GuzzleHttp\Promise\Coroutine</a></td><td class="text-right">306</td></tr>
+       <tr><td><a href="src/FulfilledPromise.php.html#15">GuzzleHttp\Promise\FulfilledPromise</a></td><td class="text-right">240</td></tr>
+       <tr><td><a href="src/RejectedPromise.php.html#15">GuzzleHttp\Promise\RejectedPromise</a></td><td class="text-right">240</td></tr>
+       <tr><td><a href="src/Create.php.html#7">GuzzleHttp\Promise\Create</a></td><td class="text-right">182</td></tr>
+       <tr><td><a href="src/TaskQueue.php.html#18">GuzzleHttp\Promise\TaskQueue</a></td><td class="text-right">110</td></tr>
+       <tr><td><a href="src/RejectionException.php.html#12">GuzzleHttp\Promise\RejectionException</a></td><td class="text-right">56</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-12">
+     <h2>Methods</h2>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3>Coverage Distribution</h3>
+     <div id="methodCoverageDistribution" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3>Complexity</h3>
+     <div id="methodComplexity" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3>Insufficient Coverage</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Method</th>
+         <th class="text-right">Coverage</th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="src/AggregateException.php.html#12"><abbr title="GuzzleHttp\Promise\AggregateException::__construct">__construct</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Coroutine.php.html#63"><abbr title="GuzzleHttp\Promise\Coroutine::__construct">__construct</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Coroutine.php.html#81"><abbr title="GuzzleHttp\Promise\Coroutine::of">of</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Coroutine.php.html#86"><abbr title="GuzzleHttp\Promise\Coroutine::then">then</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Coroutine.php.html#93"><abbr title="GuzzleHttp\Promise\Coroutine::otherwise">otherwise</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Coroutine.php.html#98"><abbr title="GuzzleHttp\Promise\Coroutine::wait">wait</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Coroutine.php.html#103"><abbr title="GuzzleHttp\Promise\Coroutine::getState">getState</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Coroutine.php.html#108"><abbr title="GuzzleHttp\Promise\Coroutine::resolve">resolve</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Coroutine.php.html#113"><abbr title="GuzzleHttp\Promise\Coroutine::reject">reject</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Coroutine.php.html#118"><abbr title="GuzzleHttp\Promise\Coroutine::cancel">cancel</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Coroutine.php.html#124"><abbr title="GuzzleHttp\Promise\Coroutine::nextCoroutine">nextCoroutine</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Coroutine.php.html#133"><abbr title="GuzzleHttp\Promise\Coroutine::_handleSuccess">_handleSuccess</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Coroutine.php.html#151"><abbr title="GuzzleHttp\Promise\Coroutine::_handleFailure">_handleFailure</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Create.php.html#14"><abbr title="GuzzleHttp\Promise\Create::promiseFor">promiseFor</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Create.php.html#39"><abbr title="GuzzleHttp\Promise\Create::rejectionFor">rejectionFor</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Create.php.html#53"><abbr title="GuzzleHttp\Promise\Create::exceptionFor">exceptionFor</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Create.php.html#67"><abbr title="GuzzleHttp\Promise\Create::iterFor">iterFor</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Each.php.html#24"><abbr title="GuzzleHttp\Promise\Each::of">of</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Each.php.html#46"><abbr title="GuzzleHttp\Promise\Each::ofLimit">ofLimit</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Each.php.html#67"><abbr title="GuzzleHttp\Promise\Each::ofLimitAll">ofLimitAll</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/EachPromise.php.html#58"><abbr title="GuzzleHttp\Promise\EachPromise::__construct">__construct</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/EachPromise.php.html#76"><abbr title="GuzzleHttp\Promise\EachPromise::promise">promise</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/EachPromise.php.html#97"><abbr title="GuzzleHttp\Promise\EachPromise::createPromise">createPromise</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/EachPromise.php.html#126"><abbr title="GuzzleHttp\Promise\EachPromise::refillPending">refillPending</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/EachPromise.php.html#157"><abbr title="GuzzleHttp\Promise\EachPromise::addPending">addPending</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/EachPromise.php.html#196"><abbr title="GuzzleHttp\Promise\EachPromise::advanceIterator">advanceIterator</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/EachPromise.php.html#219"><abbr title="GuzzleHttp\Promise\EachPromise::step">step</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/EachPromise.php.html#237"><abbr title="GuzzleHttp\Promise\EachPromise::checkIfFinished">checkIfFinished</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/FulfilledPromise.php.html#22"><abbr title="GuzzleHttp\Promise\FulfilledPromise::__construct">__construct</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/FulfilledPromise.php.html#33"><abbr title="GuzzleHttp\Promise\FulfilledPromise::then">then</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/FulfilledPromise.php.html#58"><abbr title="GuzzleHttp\Promise\FulfilledPromise::otherwise">otherwise</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/FulfilledPromise.php.html#63"><abbr title="GuzzleHttp\Promise\FulfilledPromise::wait">wait</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/FulfilledPromise.php.html#68"><abbr title="GuzzleHttp\Promise\FulfilledPromise::getState">getState</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/FulfilledPromise.php.html#73"><abbr title="GuzzleHttp\Promise\FulfilledPromise::resolve">resolve</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/FulfilledPromise.php.html#80"><abbr title="GuzzleHttp\Promise\FulfilledPromise::reject">reject</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/FulfilledPromise.php.html#85"><abbr title="GuzzleHttp\Promise\FulfilledPromise::cancel">cancel</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Is.php.html#12"><abbr title="GuzzleHttp\Promise\Is::pending">pending</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Is.php.html#20"><abbr title="GuzzleHttp\Promise\Is::settled">settled</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Is.php.html#28"><abbr title="GuzzleHttp\Promise\Is::fulfilled">fulfilled</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Is.php.html#36"><abbr title="GuzzleHttp\Promise\Is::rejected">rejected</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Promise.php.html#27"><abbr title="GuzzleHttp\Promise\Promise::__construct">__construct</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Promise.php.html#35"><abbr title="GuzzleHttp\Promise\Promise::then">then</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Promise.php.html#62"><abbr title="GuzzleHttp\Promise\Promise::otherwise">otherwise</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Promise.php.html#67"><abbr title="GuzzleHttp\Promise\Promise::wait">wait</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Promise.php.html#83"><abbr title="GuzzleHttp\Promise\Promise::getState">getState</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Promise.php.html#88"><abbr title="GuzzleHttp\Promise\Promise::cancel">cancel</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Promise.php.html#113"><abbr title="GuzzleHttp\Promise\Promise::resolve">resolve</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Promise.php.html#118"><abbr title="GuzzleHttp\Promise\Promise::reject">reject</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Promise.php.html#123"><abbr title="GuzzleHttp\Promise\Promise::settle">settle</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Promise.php.html#188"><abbr title="GuzzleHttp\Promise\Promise::callHandler">callHandler</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Promise.php.html#222"><abbr title="GuzzleHttp\Promise\Promise::waitIfPending">waitIfPending</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Promise.php.html#246"><abbr title="GuzzleHttp\Promise\Promise::invokeWaitFn">invokeWaitFn</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Promise.php.html#265"><abbr title="GuzzleHttp\Promise\Promise::invokeWaitList">invokeWaitList</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/RejectedPromise.php.html#22"><abbr title="GuzzleHttp\Promise\RejectedPromise::__construct">__construct</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/RejectedPromise.php.html#33"><abbr title="GuzzleHttp\Promise\RejectedPromise::then">then</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/RejectedPromise.php.html#60"><abbr title="GuzzleHttp\Promise\RejectedPromise::otherwise">otherwise</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/RejectedPromise.php.html#65"><abbr title="GuzzleHttp\Promise\RejectedPromise::wait">wait</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/RejectedPromise.php.html#74"><abbr title="GuzzleHttp\Promise\RejectedPromise::getState">getState</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/RejectedPromise.php.html#79"><abbr title="GuzzleHttp\Promise\RejectedPromise::resolve">resolve</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/RejectedPromise.php.html#84"><abbr title="GuzzleHttp\Promise\RejectedPromise::reject">reject</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/RejectedPromise.php.html#91"><abbr title="GuzzleHttp\Promise\RejectedPromise::cancel">cancel</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/RejectionException.php.html#21"><abbr title="GuzzleHttp\Promise\RejectionException::__construct">__construct</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/RejectionException.php.html#45"><abbr title="GuzzleHttp\Promise\RejectionException::getReason">getReason</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/TaskQueue.php.html#23"><abbr title="GuzzleHttp\Promise\TaskQueue::__construct">__construct</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/TaskQueue.php.html#38"><abbr title="GuzzleHttp\Promise\TaskQueue::isEmpty">isEmpty</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/TaskQueue.php.html#43"><abbr title="GuzzleHttp\Promise\TaskQueue::add">add</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/TaskQueue.php.html#48"><abbr title="GuzzleHttp\Promise\TaskQueue::run">run</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/TaskQueue.php.html#67"><abbr title="GuzzleHttp\Promise\TaskQueue::disableShutdown">disableShutdown</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Utils.php.html#24"><abbr title="GuzzleHttp\Promise\Utils::queue">queue</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Utils.php.html#43"><abbr title="GuzzleHttp\Promise\Utils::task">task</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Utils.php.html#72"><abbr title="GuzzleHttp\Promise\Utils::inspect">inspect</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Utils.php.html#96"><abbr title="GuzzleHttp\Promise\Utils::inspectAll">inspectAll</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Utils.php.html#117"><abbr title="GuzzleHttp\Promise\Utils::unwrap">unwrap</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Utils.php.html#138"><abbr title="GuzzleHttp\Promise\Utils::all">all</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Utils.php.html#186"><abbr title="GuzzleHttp\Promise\Utils::some">some</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Utils.php.html#226"><abbr title="GuzzleHttp\Promise\Utils::any">any</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Utils.php.html#243"><abbr title="GuzzleHttp\Promise\Utils::settle">settle</abbr></a></td><td class="text-right">0%</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3>Project Risks</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Method</th>
+         <th class="text-right"><abbr title="Change Risk Anti-Patterns (CRAP) Index">CRAP</abbr></th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="src/Promise.php.html#123"><abbr title="GuzzleHttp\Promise\Promise::settle">settle</abbr></a></td><td class="text-right">240</td></tr>
+       <tr><td><a href="src/EachPromise.php.html#126"><abbr title="GuzzleHttp\Promise\EachPromise::refillPending">refillPending</abbr></a></td><td class="text-right">90</td></tr>
+       <tr><td><a href="src/Create.php.html#14"><abbr title="GuzzleHttp\Promise\Create::promiseFor">promiseFor</abbr></a></td><td class="text-right">42</td></tr>
+       <tr><td><a href="src/RejectionException.php.html#21"><abbr title="GuzzleHttp\Promise\RejectionException::__construct">__construct</abbr></a></td><td class="text-right">42</td></tr>
+       <tr><td><a href="src/EachPromise.php.html#157"><abbr title="GuzzleHttp\Promise\EachPromise::addPending">addPending</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="src/Promise.php.html#35"><abbr title="GuzzleHttp\Promise\Promise::then">then</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="src/Promise.php.html#88"><abbr title="GuzzleHttp\Promise\Promise::cancel">cancel</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="src/Promise.php.html#188"><abbr title="GuzzleHttp\Promise\Promise::callHandler">callHandler</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="src/Promise.php.html#222"><abbr title="GuzzleHttp\Promise\Promise::waitIfPending">waitIfPending</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="src/TaskQueue.php.html#23"><abbr title="GuzzleHttp\Promise\TaskQueue::__construct">__construct</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="src/Utils.php.html#138"><abbr title="GuzzleHttp\Promise\Utils::all">all</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="src/EachPromise.php.html#58"><abbr title="GuzzleHttp\Promise\EachPromise::__construct">__construct</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="src/EachPromise.php.html#97"><abbr title="GuzzleHttp\Promise\EachPromise::createPromise">createPromise</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="src/EachPromise.php.html#219"><abbr title="GuzzleHttp\Promise\EachPromise::step">step</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="src/FulfilledPromise.php.html#33"><abbr title="GuzzleHttp\Promise\FulfilledPromise::then">then</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="src/Promise.php.html#67"><abbr title="GuzzleHttp\Promise\Promise::wait">wait</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="src/RejectedPromise.php.html#33"><abbr title="GuzzleHttp\Promise\RejectedPromise::then">then</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="src/Utils.php.html#186"><abbr title="GuzzleHttp\Promise\Utils::some">some</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="src/Coroutine.php.html#63"><abbr title="GuzzleHttp\Promise\Coroutine::__construct">__construct</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="src/Coroutine.php.html#133"><abbr title="GuzzleHttp\Promise\Coroutine::_handleSuccess">_handleSuccess</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="src/Create.php.html#67"><abbr title="GuzzleHttp\Promise\Create::iterFor">iterFor</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="src/EachPromise.php.html#76"><abbr title="GuzzleHttp\Promise\EachPromise::promise">promise</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="src/EachPromise.php.html#196"><abbr title="GuzzleHttp\Promise\EachPromise::advanceIterator">advanceIterator</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="src/EachPromise.php.html#237"><abbr title="GuzzleHttp\Promise\EachPromise::checkIfFinished">checkIfFinished</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="src/FulfilledPromise.php.html#22"><abbr title="GuzzleHttp\Promise\FulfilledPromise::__construct">__construct</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="src/Promise.php.html#246"><abbr title="GuzzleHttp\Promise\Promise::invokeWaitFn">invokeWaitFn</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="src/Promise.php.html#265"><abbr title="GuzzleHttp\Promise\Promise::invokeWaitList">invokeWaitList</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="src/RejectedPromise.php.html#22"><abbr title="GuzzleHttp\Promise\RejectedPromise::__construct">__construct</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="src/Utils.php.html#24"><abbr title="GuzzleHttp\Promise\Utils::queue">queue</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="src/Utils.php.html#43"><abbr title="GuzzleHttp\Promise\Utils::task">task</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="src/Utils.php.html#72"><abbr title="GuzzleHttp\Promise\Utils::inspect">inspect</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="src/Coroutine.php.html#151"><abbr title="GuzzleHttp\Promise\Coroutine::_handleFailure">_handleFailure</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Create.php.html#39"><abbr title="GuzzleHttp\Promise\Create::rejectionFor">rejectionFor</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Create.php.html#53"><abbr title="GuzzleHttp\Promise\Create::exceptionFor">exceptionFor</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/FulfilledPromise.php.html#63"><abbr title="GuzzleHttp\Promise\FulfilledPromise::wait">wait</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/FulfilledPromise.php.html#73"><abbr title="GuzzleHttp\Promise\FulfilledPromise::resolve">resolve</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/RejectedPromise.php.html#65"><abbr title="GuzzleHttp\Promise\RejectedPromise::wait">wait</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/RejectedPromise.php.html#84"><abbr title="GuzzleHttp\Promise\RejectedPromise::reject">reject</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/TaskQueue.php.html#48"><abbr title="GuzzleHttp\Promise\TaskQueue::run">run</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Utils.php.html#96"><abbr title="GuzzleHttp\Promise\Utils::inspectAll">inspectAll</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Utils.php.html#117"><abbr title="GuzzleHttp\Promise\Utils::unwrap">unwrap</abbr></a></td><td class="text-right">6</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+   </div>
+   <footer>
+    <hr/>
+    <p>
+     <small>Generated by <a href="https://github.com/sebastianbergmann/php-code-coverage" target="_top">php-code-coverage 11.0.9</a> using <a href="https://www.php.net/" target="_top">PHP 8.4.16</a> and <a href="https://phpunit.de/">PHPUnit 11.5.11</a> at Fri Apr 10 15:27:13 UTC 2026.</small>
+    </p>
+   </footer>
+  </div>
+  <script src="../../../_js/jquery.min.js?v=11.0.9" type="text/javascript"></script>
+  <script src="../../../_js/d3.min.js?v=11.0.9" type="text/javascript"></script>
+  <script src="../../../_js/nv.d3.min.js?v=11.0.9" type="text/javascript"></script>
+  <script type="text/javascript">
+$(document).ready(function() {
+  nv.addGraph(function() {
+    var chart = nv.models.multiBarChart();
+    chart.tooltips(false)
+      .showControls(false)
+      .showLegend(false)
+      .reduceXTicks(false)
+      .staggerLabels(true)
+      .yAxis.tickFormat(d3.format('d'));
+
+    d3.select('#classCoverageDistribution svg')
+      .datum(getCoverageDistributionData([12,0,0,0,0,0,0,0,0,0,0,1], "Class Coverage"))
+      .transition().duration(500).call(chart);
+
+    nv.utils.windowResize(chart.update);
+
+    return chart;
+  });
+
+  nv.addGraph(function() {
+    var chart = nv.models.multiBarChart();
+    chart.tooltips(false)
+      .showControls(false)
+      .showLegend(false)
+      .reduceXTicks(false)
+      .staggerLabels(true)
+      .yAxis.tickFormat(d3.format('d'));
+
+    d3.select('#methodCoverageDistribution svg')
+      .datum(getCoverageDistributionData([77,0,0,0,0,0,0,0,0,0,0,0], "Method Coverage"))
+      .transition().duration(500).call(chart);
+
+    nv.utils.windowResize(chart.update);
+
+    return chart;
+  });
+
+  function getCoverageDistributionData(data, label) {
+    var labels = [
+      '0%',
+      '0-10%',
+      '10-20%',
+      '20-30%',
+      '30-40%',
+      '40-50%',
+      '50-60%',
+      '60-70%',
+      '70-80%',
+      '80-90%',
+      '90-100%',
+      '100%'
+    ];
+    var values = [];
+    $.each(labels, function(key) {
+      values.push({x: labels[key], y: data[key]});
+    });
+
+    return [
+      {
+        key: label,
+        values: values,
+        color: "#4572A7"
+      }
+    ];
+  }
+  nv.addGraph(function() {
+    var chart = nv.models.scatterChart()
+      .showDistX(true)
+      .showDistY(true)
+      .showLegend(false)
+      .forceX([0, 100]);
+    chart.tooltipContent(function(graph) {
+      return '<p>' + graph.point.class + '</p>';
+    });
+
+    chart.xAxis.axisLabel('Code Coverage (in percent)');
+    chart.yAxis.axisLabel('Cyclomatic Complexity');
+
+    d3.select('#classComplexity svg')
+      .datum(getComplexityData([[0,1,"<a href=\"src\/AggregateException.php.html#10\">GuzzleHttp\\Promise\\AggregateException<\/a>"],[100,0,"<a href=\"src\/CancellationException.php.html#10\">GuzzleHttp\\Promise\\CancellationException<\/a>"],[0,17,"<a href=\"src\/Coroutine.php.html#46\">GuzzleHttp\\Promise\\Coroutine<\/a>"],[0,13,"<a href=\"src\/Create.php.html#7\">GuzzleHttp\\Promise\\Create<\/a>"],[0,3,"<a href=\"src\/Each.php.html#7\">GuzzleHttp\\Promise\\Each<\/a>"],[0,35,"<a href=\"src\/EachPromise.php.html#13\">GuzzleHttp\\Promise\\EachPromise<\/a>"],[0,15,"<a href=\"src\/FulfilledPromise.php.html#15\">GuzzleHttp\\Promise\\FulfilledPromise<\/a>"],[0,4,"<a href=\"src\/Is.php.html#7\">GuzzleHttp\\Promise\\Is<\/a>"],[0,50,"<a href=\"src\/Promise.php.html#14\">GuzzleHttp\\Promise\\Promise<\/a>"],[0,15,"<a href=\"src\/RejectedPromise.php.html#15\">GuzzleHttp\\Promise\\RejectedPromise<\/a>"],[0,7,"<a href=\"src\/RejectionException.php.html#12\">GuzzleHttp\\Promise\\RejectionException<\/a>"],[0,10,"<a href=\"src\/TaskQueue.php.html#18\">GuzzleHttp\\Promise\\TaskQueue<\/a>"],[0,24,"<a href=\"src\/Utils.php.html#7\">GuzzleHttp\\Promise\\Utils<\/a>"]], 'Class Complexity'))
+      .transition()
+      .duration(500)
+      .call(chart);
+
+    nv.utils.windowResize(chart.update);
+
+    return chart;
+  });
+
+  nv.addGraph(function() {
+    var chart = nv.models.scatterChart()
+      .showDistX(true)
+      .showDistY(true)
+      .showLegend(false)
+      .forceX([0, 100]);
+    chart.tooltipContent(function(graph) {
+      return '<p>' + graph.point.class + '</p>';
+    });
+
+    chart.xAxis.axisLabel('Code Coverage (in percent)');
+    chart.yAxis.axisLabel('Method Complexity');
+
+    d3.select('#methodComplexity svg')
+      .datum(getComplexityData([[0,1,"<a href=\"src\/AggregateException.php.html#12\">GuzzleHttp\\Promise\\AggregateException::__construct<\/a>"],[0,3,"<a href=\"src\/Coroutine.php.html#63\">GuzzleHttp\\Promise\\Coroutine::__construct<\/a>"],[0,1,"<a href=\"src\/Coroutine.php.html#81\">GuzzleHttp\\Promise\\Coroutine::of<\/a>"],[0,1,"<a href=\"src\/Coroutine.php.html#86\">GuzzleHttp\\Promise\\Coroutine::then<\/a>"],[0,1,"<a href=\"src\/Coroutine.php.html#93\">GuzzleHttp\\Promise\\Coroutine::otherwise<\/a>"],[0,1,"<a href=\"src\/Coroutine.php.html#98\">GuzzleHttp\\Promise\\Coroutine::wait<\/a>"],[0,1,"<a href=\"src\/Coroutine.php.html#103\">GuzzleHttp\\Promise\\Coroutine::getState<\/a>"],[0,1,"<a href=\"src\/Coroutine.php.html#108\">GuzzleHttp\\Promise\\Coroutine::resolve<\/a>"],[0,1,"<a href=\"src\/Coroutine.php.html#113\">GuzzleHttp\\Promise\\Coroutine::reject<\/a>"],[0,1,"<a href=\"src\/Coroutine.php.html#118\">GuzzleHttp\\Promise\\Coroutine::cancel<\/a>"],[0,1,"<a href=\"src\/Coroutine.php.html#124\">GuzzleHttp\\Promise\\Coroutine::nextCoroutine<\/a>"],[0,3,"<a href=\"src\/Coroutine.php.html#133\">GuzzleHttp\\Promise\\Coroutine::_handleSuccess<\/a>"],[0,2,"<a href=\"src\/Coroutine.php.html#151\">GuzzleHttp\\Promise\\Coroutine::_handleFailure<\/a>"],[0,6,"<a href=\"src\/Create.php.html#14\">GuzzleHttp\\Promise\\Create::promiseFor<\/a>"],[0,2,"<a href=\"src\/Create.php.html#39\">GuzzleHttp\\Promise\\Create::rejectionFor<\/a>"],[0,2,"<a href=\"src\/Create.php.html#53\">GuzzleHttp\\Promise\\Create::exceptionFor<\/a>"],[0,3,"<a href=\"src\/Create.php.html#67\">GuzzleHttp\\Promise\\Create::iterFor<\/a>"],[0,1,"<a href=\"src\/Each.php.html#24\">GuzzleHttp\\Promise\\Each::of<\/a>"],[0,1,"<a href=\"src\/Each.php.html#46\">GuzzleHttp\\Promise\\Each::ofLimit<\/a>"],[0,1,"<a href=\"src\/Each.php.html#67\">GuzzleHttp\\Promise\\Each::ofLimitAll<\/a>"],[0,4,"<a href=\"src\/EachPromise.php.html#58\">GuzzleHttp\\Promise\\EachPromise::__construct<\/a>"],[0,3,"<a href=\"src\/EachPromise.php.html#76\">GuzzleHttp\\Promise\\EachPromise::promise<\/a>"],[0,4,"<a href=\"src\/EachPromise.php.html#97\">GuzzleHttp\\Promise\\EachPromise::createPromise<\/a>"],[0,9,"<a href=\"src\/EachPromise.php.html#126\">GuzzleHttp\\Promise\\EachPromise::refillPending<\/a>"],[0,5,"<a href=\"src\/EachPromise.php.html#157\">GuzzleHttp\\Promise\\EachPromise::addPending<\/a>"],[0,3,"<a href=\"src\/EachPromise.php.html#196\">GuzzleHttp\\Promise\\EachPromise::advanceIterator<\/a>"],[0,4,"<a href=\"src\/EachPromise.php.html#219\">GuzzleHttp\\Promise\\EachPromise::step<\/a>"],[0,3,"<a href=\"src\/EachPromise.php.html#237\">GuzzleHttp\\Promise\\EachPromise::checkIfFinished<\/a>"],[0,3,"<a href=\"src\/FulfilledPromise.php.html#22\">GuzzleHttp\\Promise\\FulfilledPromise::__construct<\/a>"],[0,4,"<a href=\"src\/FulfilledPromise.php.html#33\">GuzzleHttp\\Promise\\FulfilledPromise::then<\/a>"],[0,1,"<a href=\"src\/FulfilledPromise.php.html#58\">GuzzleHttp\\Promise\\FulfilledPromise::otherwise<\/a>"],[0,2,"<a href=\"src\/FulfilledPromise.php.html#63\">GuzzleHttp\\Promise\\FulfilledPromise::wait<\/a>"],[0,1,"<a href=\"src\/FulfilledPromise.php.html#68\">GuzzleHttp\\Promise\\FulfilledPromise::getState<\/a>"],[0,2,"<a href=\"src\/FulfilledPromise.php.html#73\">GuzzleHttp\\Promise\\FulfilledPromise::resolve<\/a>"],[0,1,"<a href=\"src\/FulfilledPromise.php.html#80\">GuzzleHttp\\Promise\\FulfilledPromise::reject<\/a>"],[0,1,"<a href=\"src\/FulfilledPromise.php.html#85\">GuzzleHttp\\Promise\\FulfilledPromise::cancel<\/a>"],[0,1,"<a href=\"src\/Is.php.html#12\">GuzzleHttp\\Promise\\Is::pending<\/a>"],[0,1,"<a href=\"src\/Is.php.html#20\">GuzzleHttp\\Promise\\Is::settled<\/a>"],[0,1,"<a href=\"src\/Is.php.html#28\">GuzzleHttp\\Promise\\Is::fulfilled<\/a>"],[0,1,"<a href=\"src\/Is.php.html#36\">GuzzleHttp\\Promise\\Is::rejected<\/a>"],[0,1,"<a href=\"src\/Promise.php.html#27\">GuzzleHttp\\Promise\\Promise::__construct<\/a>"],[0,5,"<a href=\"src\/Promise.php.html#35\">GuzzleHttp\\Promise\\Promise::then<\/a>"],[0,1,"<a href=\"src\/Promise.php.html#62\">GuzzleHttp\\Promise\\Promise::otherwise<\/a>"],[0,4,"<a href=\"src\/Promise.php.html#67\">GuzzleHttp\\Promise\\Promise::wait<\/a>"],[0,1,"<a href=\"src\/Promise.php.html#83\">GuzzleHttp\\Promise\\Promise::getState<\/a>"],[0,5,"<a href=\"src\/Promise.php.html#88\">GuzzleHttp\\Promise\\Promise::cancel<\/a>"],[0,1,"<a href=\"src\/Promise.php.html#113\">GuzzleHttp\\Promise\\Promise::resolve<\/a>"],[0,1,"<a href=\"src\/Promise.php.html#118\">GuzzleHttp\\Promise\\Promise::reject<\/a>"],[0,15,"<a href=\"src\/Promise.php.html#123\">GuzzleHttp\\Promise\\Promise::settle<\/a>"],[0,5,"<a href=\"src\/Promise.php.html#188\">GuzzleHttp\\Promise\\Promise::callHandler<\/a>"],[0,5,"<a href=\"src\/Promise.php.html#222\">GuzzleHttp\\Promise\\Promise::waitIfPending<\/a>"],[0,3,"<a href=\"src\/Promise.php.html#246\">GuzzleHttp\\Promise\\Promise::invokeWaitFn<\/a>"],[0,3,"<a href=\"src\/Promise.php.html#265\">GuzzleHttp\\Promise\\Promise::invokeWaitList<\/a>"],[0,3,"<a href=\"src\/RejectedPromise.php.html#22\">GuzzleHttp\\Promise\\RejectedPromise::__construct<\/a>"],[0,4,"<a href=\"src\/RejectedPromise.php.html#33\">GuzzleHttp\\Promise\\RejectedPromise::then<\/a>"],[0,1,"<a href=\"src\/RejectedPromise.php.html#60\">GuzzleHttp\\Promise\\RejectedPromise::otherwise<\/a>"],[0,2,"<a href=\"src\/RejectedPromise.php.html#65\">GuzzleHttp\\Promise\\RejectedPromise::wait<\/a>"],[0,1,"<a href=\"src\/RejectedPromise.php.html#74\">GuzzleHttp\\Promise\\RejectedPromise::getState<\/a>"],[0,1,"<a href=\"src\/RejectedPromise.php.html#79\">GuzzleHttp\\Promise\\RejectedPromise::resolve<\/a>"],[0,2,"<a href=\"src\/RejectedPromise.php.html#84\">GuzzleHttp\\Promise\\RejectedPromise::reject<\/a>"],[0,1,"<a href=\"src\/RejectedPromise.php.html#91\">GuzzleHttp\\Promise\\RejectedPromise::cancel<\/a>"],[0,6,"<a href=\"src\/RejectionException.php.html#21\">GuzzleHttp\\Promise\\RejectionException::__construct<\/a>"],[0,1,"<a href=\"src\/RejectionException.php.html#45\">GuzzleHttp\\Promise\\RejectionException::getReason<\/a>"],[0,5,"<a href=\"src\/TaskQueue.php.html#23\">GuzzleHttp\\Promise\\TaskQueue::__construct<\/a>"],[0,1,"<a href=\"src\/TaskQueue.php.html#38\">GuzzleHttp\\Promise\\TaskQueue::isEmpty<\/a>"],[0,1,"<a href=\"src\/TaskQueue.php.html#43\">GuzzleHttp\\Promise\\TaskQueue::add<\/a>"],[0,2,"<a href=\"src\/TaskQueue.php.html#48\">GuzzleHttp\\Promise\\TaskQueue::run<\/a>"],[0,1,"<a href=\"src\/TaskQueue.php.html#67\">GuzzleHttp\\Promise\\TaskQueue::disableShutdown<\/a>"],[0,3,"<a href=\"src\/Utils.php.html#24\">GuzzleHttp\\Promise\\Utils::queue<\/a>"],[0,3,"<a href=\"src\/Utils.php.html#43\">GuzzleHttp\\Promise\\Utils::task<\/a>"],[0,3,"<a href=\"src\/Utils.php.html#72\">GuzzleHttp\\Promise\\Utils::inspect<\/a>"],[0,2,"<a href=\"src\/Utils.php.html#96\">GuzzleHttp\\Promise\\Utils::inspectAll<\/a>"],[0,2,"<a href=\"src\/Utils.php.html#117\">GuzzleHttp\\Promise\\Utils::unwrap<\/a>"],[0,5,"<a href=\"src\/Utils.php.html#138\">GuzzleHttp\\Promise\\Utils::all<\/a>"],[0,4,"<a href=\"src\/Utils.php.html#186\">GuzzleHttp\\Promise\\Utils::some<\/a>"],[0,1,"<a href=\"src\/Utils.php.html#226\">GuzzleHttp\\Promise\\Utils::any<\/a>"],[0,1,"<a href=\"src\/Utils.php.html#243\">GuzzleHttp\\Promise\\Utils::settle<\/a>"]], 'Method Complexity'))
+      .transition()
+      .duration(500)
+      .call(chart);
+
+    nv.utils.windowResize(chart.update);
+
+    return chart;
+  });
+
+  function getComplexityData(data, label) {
+    var values = [];
+    $.each(data, function(key) {
+      var value = Math.round(data[key][0]*100) / 100;
+      values.push({
+        x: value,
+        y: data[key][1],
+        class: data[key][2],
+        size: 0.05,
+        shape: 'diamond'
+      });
+    });
+
+    return [
+      {
+        key: label,
+        values: values,
+        color: "#4572A7"
+      }
+    ];
+  }
+});
+  </script>
+ </body>
+</html>

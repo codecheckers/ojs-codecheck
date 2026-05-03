@@ -286,7 +286,7 @@
                 type="text"
                 v-model="metadata.certificate"
                 :placeholder="t('plugins.generic.codecheck.identifier.label')"
-                :readonly="this.certificateIdentifier.issue.url.trim() !== '' && !this.identifierInputEmpty"
+                :readonly="(this.certificateIdentifier.issue?.url ?? '').trim() !== '' && !this.identifierInputEmpty"
                 class="certificate-identifier-input"
               />
               <fieldset :disabled="!identifierInputEmpty || certificateIdentifier.isReserved">
@@ -479,9 +479,9 @@ export default {
       this.error = null;
       this.dataLoaded = false;
       
-      console.log(this.certificateIdentifier.issue.url.trim() !== '');
+      //console.log((this.certificateIdentifier.issue?.url ?? '').trim() !== '');
       console.log(this.identifierInputEmpty);
-      console.log(this.certificateIdentifier.issue.url.trim() !== '' && !this.identifierInputEmpty);
+      //console.log((this.certificateIdentifier.issue?.url ?? '').trim() !== '' && !this.identifierInputEmpty);
 
       try {
         if (!this.submission || !this.submission.id) {

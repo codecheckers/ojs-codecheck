@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <title>Dashboard for /var/www/html/ojs/plugins/generic/codecheck/vendor/guzzlehttp/guzzle</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="../../../_css/bootstrap.min.css?v=11.0.9" rel="stylesheet" type="text/css">
+  <link href="../../../_css/nv.d3.min.css?v=11.0.9" rel="stylesheet" type="text/css">
+  <link href="../../../_css/style.css?v=11.0.9" rel="stylesheet" type="text/css">
+  <link href="../../../_css/custom.css" rel="stylesheet" type="text/css">
+ </head>
+ <body>
+  <header>
+   <div class="container-fluid">
+    <div class="row">
+     <div class="col-md-12">
+      <nav aria-label="breadcrumb">
+       <ol class="breadcrumb">
+         <li class="breadcrumb-item"><a href="../../../index.html">/var/www/html/ojs/plugins/generic/codecheck</a></li>
+         <li class="breadcrumb-item"><a href="../../index.html">vendor</a></li>
+         <li class="breadcrumb-item"><a href="../index.html">guzzlehttp</a></li>
+         <li class="breadcrumb-item"><a href="index.html">guzzle</a></li>
+         <li class="breadcrumb-item active">(Dashboard)</li>
+
+       </ol>
+      </nav>
+     </div>
+    </div>
+   </div>
+  </header>
+  <div class="container-fluid">
+   <div class="row">
+    <div class="col-md-12">
+     <h2>Classes</h2>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3>Coverage Distribution</h3>
+     <div id="classCoverageDistribution" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3>Complexity</h3>
+     <div id="classComplexity" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3>Insufficient Coverage</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Class</th>
+         <th class="text-right">Coverage</th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="src/BodySummarizer.php.html#7">GuzzleHttp\BodySummarizer</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/CookieJar.php.html#11">GuzzleHttp\Cookie\CookieJar</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/FileCookieJar.php.html#10">GuzzleHttp\Cookie\FileCookieJar</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/SessionCookieJar.php.html#8">GuzzleHttp\Cookie\SessionCookieJar</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#8">GuzzleHttp\Cookie\SetCookie</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Exception/BadResponseException.php.html#11">GuzzleHttp\Exception\BadResponseException</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Exception/ConnectException.php.html#13">GuzzleHttp\Exception\ConnectException</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Exception/RequestException.php.html#14">GuzzleHttp\Exception\RequestException</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/EasyHandle.php.html#16">GuzzleHttp\Handler\EasyHandle</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/HeaderProcessor.php.html#10">GuzzleHttp\Handler\HeaderProcessor</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/MockHandler.php.html#20">GuzzleHttp\Handler\MockHandler</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#23">GuzzleHttp\Handler\StreamHandler</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/MessageFormatter.php.html#38">GuzzleHttp\MessageFormatter</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Pool.php.html#24">GuzzleHttp\Pool</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/PrepareBodyMiddleware.php.html#14">GuzzleHttp\PrepareBodyMiddleware</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/RedirectMiddleware.php.html#20">GuzzleHttp\RedirectMiddleware</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/RetryMiddleware.php.html#16">GuzzleHttp\RetryMiddleware</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/TransferStats.php.html#13">GuzzleHttp\TransferStats</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/ClientTrait.php.html#13">GuzzleHttp\ClientTrait</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#21">GuzzleHttp\Handler\CurlFactory</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Middleware.php.html#16">GuzzleHttp\Middleware</a></td><td class="text-right">7%</td></tr>
+       <tr><td><a href="src/Handler/CurlMultiHandler.php.html#21">GuzzleHttp\Handler\CurlMultiHandler</a></td><td class="text-right">7%</td></tr>
+       <tr><td><a href="src/Utils.php.html#12">GuzzleHttp\Utils</a></td><td class="text-right">10%</td></tr>
+       <tr><td><a href="src/Client.php.html#17">GuzzleHttp\Client</a></td><td class="text-right">10%</td></tr>
+       <tr><td><a href="src/HandlerStack.php.html#15">GuzzleHttp\HandlerStack</a></td><td class="text-right">12%</td></tr>
+       <tr><td><a href="src/Handler/CurlHandler.php.html#17">GuzzleHttp\Handler\CurlHandler</a></td><td class="text-right">25%</td></tr>
+       <tr><td><a href="src/Handler/Proxy.php.html#14">GuzzleHttp\Handler\Proxy</a></td><td class="text-right">66%</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3>Project Risks</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Class</th>
+         <th class="text-right"><abbr title="Change Risk Anti-Patterns (CRAP) Index">CRAP</abbr></th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#21">GuzzleHttp\Handler\CurlFactory</a></td><td class="text-right">20256</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#23">GuzzleHttp\Handler\StreamHandler</a></td><td class="text-right">13110</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#8">GuzzleHttp\Cookie\SetCookie</a></td><td class="text-right">8556</td></tr>
+       <tr><td><a href="src/Cookie/CookieJar.php.html#11">GuzzleHttp\Cookie\CookieJar</a></td><td class="text-right">3906</td></tr>
+       <tr><td><a href="src/Client.php.html#17">GuzzleHttp\Client</a></td><td class="text-right">3427</td></tr>
+       <tr><td><a href="src/Utils.php.html#12">GuzzleHttp\Utils</a></td><td class="text-right">2452</td></tr>
+       <tr><td><a href="src/MessageFormatter.php.html#38">GuzzleHttp\MessageFormatter</a></td><td class="text-right">1560</td></tr>
+       <tr><td><a href="src/Handler/CurlMultiHandler.php.html#21">GuzzleHttp\Handler\CurlMultiHandler</a></td><td class="text-right">1110</td></tr>
+       <tr><td><a href="src/Handler/MockHandler.php.html#20">GuzzleHttp\Handler\MockHandler</a></td><td class="text-right">992</td></tr>
+       <tr><td><a href="src/RedirectMiddleware.php.html#20">GuzzleHttp\RedirectMiddleware</a></td><td class="text-right">870</td></tr>
+       <tr><td><a href="src/HandlerStack.php.html#15">GuzzleHttp\HandlerStack</a></td><td class="text-right">762</td></tr>
+       <tr><td><a href="src/PrepareBodyMiddleware.php.html#14">GuzzleHttp\PrepareBodyMiddleware</a></td><td class="text-right">380</td></tr>
+       <tr><td><a href="src/Middleware.php.html#16">GuzzleHttp\Middleware</a></td><td class="text-right">368</td></tr>
+       <tr><td><a href="src/Cookie/FileCookieJar.php.html#10">GuzzleHttp\Cookie\FileCookieJar</a></td><td class="text-right">210</td></tr>
+       <tr><td><a href="src/Exception/RequestException.php.html#14">GuzzleHttp\Exception\RequestException</a></td><td class="text-right">182</td></tr>
+       <tr><td><a href="src/Cookie/SessionCookieJar.php.html#8">GuzzleHttp\Cookie\SessionCookieJar</a></td><td class="text-right">110</td></tr>
+       <tr><td><a href="src/Pool.php.html#24">GuzzleHttp\Pool</a></td><td class="text-right">110</td></tr>
+       <tr><td><a href="src/RetryMiddleware.php.html#16">GuzzleHttp\RetryMiddleware</a></td><td class="text-right">110</td></tr>
+       <tr><td><a href="src/Handler/EasyHandle.php.html#16">GuzzleHttp\Handler\EasyHandle</a></td><td class="text-right">56</td></tr>
+       <tr><td><a href="src/Handler/HeaderProcessor.php.html#10">GuzzleHttp\Handler\HeaderProcessor</a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="src/BodySummarizer.php.html#7">GuzzleHttp\BodySummarizer</a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="src/Handler/CurlHandler.php.html#17">GuzzleHttp\Handler\CurlHandler</a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Handler/Proxy.php.html#14">GuzzleHttp\Handler\Proxy</a></td><td class="text-right">4</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-12">
+     <h2>Methods</h2>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3>Coverage Distribution</h3>
+     <div id="methodCoverageDistribution" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3>Complexity</h3>
+     <div id="methodComplexity" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3>Insufficient Coverage</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Method</th>
+         <th class="text-right">Coverage</th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="src/BodySummarizer.php.html#14"><abbr title="GuzzleHttp\BodySummarizer::__construct">__construct</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/BodySummarizer.php.html#22"><abbr title="GuzzleHttp\BodySummarizer::summarize">summarize</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Client.php.html#81"><abbr title="GuzzleHttp\Client::__call">__call</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Client.php.html#101"><abbr title="GuzzleHttp\Client::sendAsync">sendAsync</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Client.php.html#120"><abbr title="GuzzleHttp\Client::send">send</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Client.php.html#132"><abbr title="GuzzleHttp\Client::sendRequest">sendRequest</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Client.php.html#153"><abbr title="GuzzleHttp\Client::requestAsync">requestAsync</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Client.php.html#185"><abbr title="GuzzleHttp\Client::request">request</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Client.php.html#205"><abbr title="GuzzleHttp\Client::getConfig">getConfig</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Client.php.html#212"><abbr title="GuzzleHttp\Client::buildUri">buildUri</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Client.php.html#283"><abbr title="GuzzleHttp\Client::prepareDefaults">prepareDefaults</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Client.php.html#326"><abbr title="GuzzleHttp\Client::transfer">transfer</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Client.php.html#342"><abbr title="GuzzleHttp\Client::applyOptions">applyOptions</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Client.php.html#475"><abbr title="GuzzleHttp\Client::invalidBody">invalidBody</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/CookieJar.php.html#30"><abbr title="GuzzleHttp\Cookie\CookieJar::__construct">__construct</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/CookieJar.php.html#48"><abbr title="GuzzleHttp\Cookie\CookieJar::fromArray">fromArray</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/CookieJar.php.html#70"><abbr title="GuzzleHttp\Cookie\CookieJar::shouldPersist">shouldPersist</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/CookieJar.php.html#88"><abbr title="GuzzleHttp\Cookie\CookieJar::getCookieByName">getCookieByName</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/CookieJar.php.html#99"><abbr title="GuzzleHttp\Cookie\CookieJar::toArray">toArray</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/CookieJar.php.html#106"><abbr title="GuzzleHttp\Cookie\CookieJar::clear">clear</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/CookieJar.php.html#139"><abbr title="GuzzleHttp\Cookie\CookieJar::clearSessionCookies">clearSessionCookies</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/CookieJar.php.html#149"><abbr title="GuzzleHttp\Cookie\CookieJar::setCookie">setCookie</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/CookieJar.php.html#209"><abbr title="GuzzleHttp\Cookie\CookieJar::count">count</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/CookieJar.php.html#217"><abbr title="GuzzleHttp\Cookie\CookieJar::getIterator">getIterator</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/CookieJar.php.html#222"><abbr title="GuzzleHttp\Cookie\CookieJar::extractCookies">extractCookies</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/CookieJar.php.html#248"><abbr title="GuzzleHttp\Cookie\CookieJar::getCookiePathFromRequest">getCookiePathFromRequest</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/CookieJar.php.html#268"><abbr title="GuzzleHttp\Cookie\CookieJar::withCookieHeader">withCookieHeader</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/CookieJar.php.html#296"><abbr title="GuzzleHttp\Cookie\CookieJar::removeCookieIfEmpty">removeCookieIfEmpty</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/FileCookieJar.php.html#31"><abbr title="GuzzleHttp\Cookie\FileCookieJar::__construct">__construct</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/FileCookieJar.php.html#45"><abbr title="GuzzleHttp\Cookie\FileCookieJar::__destruct">__destruct</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/FileCookieJar.php.html#57"><abbr title="GuzzleHttp\Cookie\FileCookieJar::save">save</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/FileCookieJar.php.html#82"><abbr title="GuzzleHttp\Cookie\FileCookieJar::load">load</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/SessionCookieJar.php.html#28"><abbr title="GuzzleHttp\Cookie\SessionCookieJar::__construct">__construct</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/SessionCookieJar.php.html#39"><abbr title="GuzzleHttp\Cookie\SessionCookieJar::__destruct">__destruct</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/SessionCookieJar.php.html#47"><abbr title="GuzzleHttp\Cookie\SessionCookieJar::save">save</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/SessionCookieJar.php.html#63"><abbr title="GuzzleHttp\Cookie\SessionCookieJar::load">load</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#35"><abbr title="GuzzleHttp\Cookie\SetCookie::fromString">fromString</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#85"><abbr title="GuzzleHttp\Cookie\SetCookie::__construct">__construct</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#139"><abbr title="GuzzleHttp\Cookie\SetCookie::__toString">__toString</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#155"><abbr title="GuzzleHttp\Cookie\SetCookie::toArray">toArray</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#165"><abbr title="GuzzleHttp\Cookie\SetCookie::getName">getName</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#175"><abbr title="GuzzleHttp\Cookie\SetCookie::setName">setName</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#189"><abbr title="GuzzleHttp\Cookie\SetCookie::getValue">getValue</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#199"><abbr title="GuzzleHttp\Cookie\SetCookie::setValue">setValue</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#213"><abbr title="GuzzleHttp\Cookie\SetCookie::getDomain">getDomain</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#223"><abbr title="GuzzleHttp\Cookie\SetCookie::setDomain">setDomain</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#237"><abbr title="GuzzleHttp\Cookie\SetCookie::getPath">getPath</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#247"><abbr title="GuzzleHttp\Cookie\SetCookie::setPath">setPath</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#261"><abbr title="GuzzleHttp\Cookie\SetCookie::getMaxAge">getMaxAge</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#271"><abbr title="GuzzleHttp\Cookie\SetCookie::setMaxAge">setMaxAge</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#285"><abbr title="GuzzleHttp\Cookie\SetCookie::getExpires">getExpires</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#295"><abbr title="GuzzleHttp\Cookie\SetCookie::setExpires">setExpires</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#309"><abbr title="GuzzleHttp\Cookie\SetCookie::getSecure">getSecure</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#319"><abbr title="GuzzleHttp\Cookie\SetCookie::setSecure">setSecure</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#333"><abbr title="GuzzleHttp\Cookie\SetCookie::getDiscard">getDiscard</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#343"><abbr title="GuzzleHttp\Cookie\SetCookie::setDiscard">setDiscard</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#357"><abbr title="GuzzleHttp\Cookie\SetCookie::getHttpOnly">getHttpOnly</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#367"><abbr title="GuzzleHttp\Cookie\SetCookie::setHttpOnly">setHttpOnly</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#391"><abbr title="GuzzleHttp\Cookie\SetCookie::matchesPath">matchesPath</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#419"><abbr title="GuzzleHttp\Cookie\SetCookie::matchesDomain">matchesDomain</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#449"><abbr title="GuzzleHttp\Cookie\SetCookie::isExpired">isExpired</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#459"><abbr title="GuzzleHttp\Cookie\SetCookie::validate">validate</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Exception/BadResponseException.php.html#13"><abbr title="GuzzleHttp\Exception\BadResponseException::__construct">__construct</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Exception/BadResponseException.php.html#26"><abbr title="GuzzleHttp\Exception\BadResponseException::hasResponse">hasResponse</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Exception/BadResponseException.php.html#34"><abbr title="GuzzleHttp\Exception\BadResponseException::getResponse">getResponse</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Exception/ConnectException.php.html#25"><abbr title="GuzzleHttp\Exception\ConnectException::__construct">__construct</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Exception/ConnectException.php.html#39"><abbr title="GuzzleHttp\Exception\ConnectException::getRequest">getRequest</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Exception/ConnectException.php.html#52"><abbr title="GuzzleHttp\Exception\ConnectException::getHandlerContext">getHandlerContext</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Exception/RequestException.php.html#31"><abbr title="GuzzleHttp\Exception\RequestException::__construct">__construct</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Exception/RequestException.php.html#49"><abbr title="GuzzleHttp\Exception\RequestException::wrapException">wrapException</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Exception/RequestException.php.html#63"><abbr title="GuzzleHttp\Exception\RequestException::create">create</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Exception/RequestException.php.html#117"><abbr title="GuzzleHttp\Exception\RequestException::getRequest">getRequest</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Exception/RequestException.php.html#125"><abbr title="GuzzleHttp\Exception\RequestException::getResponse">getResponse</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Exception/RequestException.php.html#133"><abbr title="GuzzleHttp\Exception\RequestException::hasResponse">hasResponse</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Exception/RequestException.php.html#146"><abbr title="GuzzleHttp\Exception\RequestException::getHandlerContext">getHandlerContext</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#48"><abbr title="GuzzleHttp\Handler\CurlFactory::create">create</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#86"><abbr title="GuzzleHttp\Handler\CurlFactory::supportsHttp2">supportsHttp2</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#99"><abbr title="GuzzleHttp\Handler\CurlFactory::supportsTls12">supportsTls12</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#110"><abbr title="GuzzleHttp\Handler\CurlFactory::supportsTls13">supportsTls13</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#122"><abbr title="GuzzleHttp\Handler\CurlFactory::release">release</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#152"><abbr title="GuzzleHttp\Handler\CurlFactory::finish">finish</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#174"><abbr title="GuzzleHttp\Handler\CurlFactory::invokeStats">invokeStats</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#191"><abbr title="GuzzleHttp\Handler\CurlFactory::finishError">finishError</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#210"><abbr title="GuzzleHttp\Handler\CurlFactory::getCurlVersion">getCurlVersion</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#221"><abbr title="GuzzleHttp\Handler\CurlFactory::createRejection">createRejection</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#283"><abbr title="GuzzleHttp\Handler\CurlFactory::sanitizeCurlError">sanitizeCurlError</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#304"><abbr title="GuzzleHttp\Handler\CurlFactory::getDefaultConf">getDefaultConf</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#332"><abbr title="GuzzleHttp\Handler\CurlFactory::applyMethod">applyMethod</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#360"><abbr title="GuzzleHttp\Handler\CurlFactory::applyBody">applyBody</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#399"><abbr title="GuzzleHttp\Handler\CurlFactory::applyHeaders">applyHeaders</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#426"><abbr title="GuzzleHttp\Handler\CurlFactory::removeHeader">removeHeader</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#437"><abbr title="GuzzleHttp\Handler\CurlFactory::applyHandlerOptions">applyHandlerOptions</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#646"><abbr title="GuzzleHttp\Handler\CurlFactory::retryFailedRewind">retryFailedRewind</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#682"><abbr title="GuzzleHttp\Handler\CurlFactory::createHeaderFn">createHeaderFn</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/CurlHandler.php.html#37"><abbr title="GuzzleHttp\Handler\CurlHandler::__invoke">__invoke</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/CurlMultiHandler.php.html#97"><abbr title="GuzzleHttp\Handler\CurlMultiHandler::__get">__get</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/CurlMultiHandler.php.html#127"><abbr title="GuzzleHttp\Handler\CurlMultiHandler::__invoke">__invoke</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/CurlMultiHandler.php.html#147"><abbr title="GuzzleHttp\Handler\CurlMultiHandler::tick">tick</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/CurlMultiHandler.php.html#186"><abbr title="GuzzleHttp\Handler\CurlMultiHandler::tickInQueue">tickInQueue</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/CurlMultiHandler.php.html#197"><abbr title="GuzzleHttp\Handler\CurlMultiHandler::execute">execute</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/CurlMultiHandler.php.html#210"><abbr title="GuzzleHttp\Handler\CurlMultiHandler::addRequest">addRequest</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/CurlMultiHandler.php.html#229"><abbr title="GuzzleHttp\Handler\CurlMultiHandler::cancel">cancel</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/CurlMultiHandler.php.html#251"><abbr title="GuzzleHttp\Handler\CurlMultiHandler::processMessages">processMessages</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/CurlMultiHandler.php.html#275"><abbr title="GuzzleHttp\Handler\CurlMultiHandler::timeToNext">timeToNext</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/EasyHandle.php.html#69"><abbr title="GuzzleHttp\Handler\EasyHandle::createResponse">createResponse</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/EasyHandle.php.html#107"><abbr title="GuzzleHttp\Handler\EasyHandle::__get">__get</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/HeaderProcessor.php.html#21"><abbr title="GuzzleHttp\Handler\HeaderProcessor::parseHeaders">parseHeaders</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/MockHandler.php.html#55"><abbr title="GuzzleHttp\Handler\MockHandler::createWithMiddleware">createWithMiddleware</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/MockHandler.php.html#69"><abbr title="GuzzleHttp\Handler\MockHandler::__construct">__construct</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/MockHandler.php.html#80"><abbr title="GuzzleHttp\Handler\MockHandler::__invoke">__invoke</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/MockHandler.php.html#153"><abbr title="GuzzleHttp\Handler\MockHandler::append">append</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/MockHandler.php.html#171"><abbr title="GuzzleHttp\Handler\MockHandler::getLastRequest">getLastRequest</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/MockHandler.php.html#179"><abbr title="GuzzleHttp\Handler\MockHandler::getLastOptions">getLastOptions</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/MockHandler.php.html#187"><abbr title="GuzzleHttp\Handler\MockHandler::count">count</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/MockHandler.php.html#192"><abbr title="GuzzleHttp\Handler\MockHandler::reset">reset</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/MockHandler.php.html#200"><abbr title="GuzzleHttp\Handler\MockHandler::invokeStats">invokeStats</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#36"><abbr title="GuzzleHttp\Handler\StreamHandler::__invoke">__invoke</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#94"><abbr title="GuzzleHttp\Handler\StreamHandler::invokeStats">invokeStats</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#110"><abbr title="GuzzleHttp\Handler\StreamHandler::createResponse">createResponse</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#160"><abbr title="GuzzleHttp\Handler\StreamHandler::createSink">createSink</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#174"><abbr title="GuzzleHttp\Handler\StreamHandler::checkDecode">checkDecode</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#213"><abbr title="GuzzleHttp\Handler\StreamHandler::drain">drain</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#240"><abbr title="GuzzleHttp\Handler\StreamHandler::createResource">createResource</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#275"><abbr title="GuzzleHttp\Handler\StreamHandler::createStream">createStream</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#363"><abbr title="GuzzleHttp\Handler\StreamHandler::resolveHost">resolveHost</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#389"><abbr title="GuzzleHttp\Handler\StreamHandler::getDefaultContext">getDefaultContext</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#429"><abbr title="GuzzleHttp\Handler\StreamHandler::add_proxy">add_proxy</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#462"><abbr title="GuzzleHttp\Handler\StreamHandler::parse_proxy">parse_proxy</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#490"><abbr title="GuzzleHttp\Handler\StreamHandler::add_timeout">add_timeout</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#500"><abbr title="GuzzleHttp\Handler\StreamHandler::add_crypto_method">add_crypto_method</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#519"><abbr title="GuzzleHttp\Handler\StreamHandler::add_verify">add_verify</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#545"><abbr title="GuzzleHttp\Handler\StreamHandler::add_cert">add_cert</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#562"><abbr title="GuzzleHttp\Handler\StreamHandler::add_progress">add_progress</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#579"><abbr title="GuzzleHttp\Handler\StreamHandler::add_debug">add_debug</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#613"><abbr title="GuzzleHttp\Handler\StreamHandler::addNotification">addNotification</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#626"><abbr title="GuzzleHttp\Handler\StreamHandler::callArray">callArray</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/HandlerStack.php.html#71"><abbr title="GuzzleHttp\HandlerStack::__invoke">__invoke</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/HandlerStack.php.html#83"><abbr title="GuzzleHttp\HandlerStack::__toString">__toString</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/HandlerStack.php.html#114"><abbr title="GuzzleHttp\HandlerStack::setHandler">setHandler</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/HandlerStack.php.html#123"><abbr title="GuzzleHttp\HandlerStack::hasHandler">hasHandler</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/HandlerStack.php.html#134"><abbr title="GuzzleHttp\HandlerStack::unshift">unshift</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/HandlerStack.php.html#159"><abbr title="GuzzleHttp\HandlerStack::before">before</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/HandlerStack.php.html#171"><abbr title="GuzzleHttp\HandlerStack::after">after</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/HandlerStack.php.html#181"><abbr title="GuzzleHttp\HandlerStack::remove">remove</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/HandlerStack.php.html#202"><abbr title="GuzzleHttp\HandlerStack::resolve">resolve</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/HandlerStack.php.html#220"><abbr title="GuzzleHttp\HandlerStack::findByName">findByName</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/HandlerStack.php.html#234"><abbr title="GuzzleHttp\HandlerStack::splice">splice</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/HandlerStack.php.html#260"><abbr title="GuzzleHttp\HandlerStack::debugCallable">debugCallable</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/MessageFormatter.php.html#59"><abbr title="GuzzleHttp\MessageFormatter::__construct">__construct</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/MessageFormatter.php.html#71"><abbr title="GuzzleHttp\MessageFormatter::format">format</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/MessageFormatter.php.html#190"><abbr title="GuzzleHttp\MessageFormatter::headers">headers</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Middleware.php.html#88"><abbr title="GuzzleHttp\Middleware::history">history</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Middleware.php.html#135"><abbr title="GuzzleHttp\Middleware::tap">tap</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Middleware.php.html#179"><abbr title="GuzzleHttp\Middleware::retry">retry</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Middleware.php.html#198"><abbr title="GuzzleHttp\Middleware::log">log</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Middleware.php.html#244"><abbr title="GuzzleHttp\Middleware::mapRequest">mapRequest</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Middleware.php.html#260"><abbr title="GuzzleHttp\Middleware::mapResponse">mapResponse</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Pool.php.html#41"><abbr title="GuzzleHttp\Pool::__construct">__construct</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Pool.php.html#73"><abbr title="GuzzleHttp\Pool::promise">promise</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Pool.php.html#96"><abbr title="GuzzleHttp\Pool::batch">batch</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Pool.php.html#111"><abbr title="GuzzleHttp\Pool::cmpCallback">cmpCallback</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/PrepareBodyMiddleware.php.html#24"><abbr title="GuzzleHttp\PrepareBodyMiddleware::__construct">__construct</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/PrepareBodyMiddleware.php.html#29"><abbr title="GuzzleHttp\PrepareBodyMiddleware::__invoke">__invoke</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/PrepareBodyMiddleware.php.html#70"><abbr title="GuzzleHttp\PrepareBodyMiddleware::addExpectHeader">addExpectHeader</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/RedirectMiddleware.php.html#45"><abbr title="GuzzleHttp\RedirectMiddleware::__construct">__construct</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/RedirectMiddleware.php.html#50"><abbr title="GuzzleHttp\RedirectMiddleware::__invoke">__invoke</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/RedirectMiddleware.php.html#80"><abbr title="GuzzleHttp\RedirectMiddleware::checkRedirect">checkRedirect</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/RedirectMiddleware.php.html#124"><abbr title="GuzzleHttp\RedirectMiddleware::withTracking">withTracking</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/RedirectMiddleware.php.html#147"><abbr title="GuzzleHttp\RedirectMiddleware::guardMax">guardMax</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/RedirectMiddleware.php.html#159"><abbr title="GuzzleHttp\RedirectMiddleware::modifyRequest">modifyRequest</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/RedirectMiddleware.php.html#211"><abbr title="GuzzleHttp\RedirectMiddleware::redirectUri">redirectUri</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/RetryMiddleware.php.html#43"><abbr title="GuzzleHttp\RetryMiddleware::__construct">__construct</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/RetryMiddleware.php.html#55"><abbr title="GuzzleHttp\RetryMiddleware::exponentialDelay">exponentialDelay</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/RetryMiddleware.php.html#60"><abbr title="GuzzleHttp\RetryMiddleware::__invoke">__invoke</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/RetryMiddleware.php.html#78"><abbr title="GuzzleHttp\RetryMiddleware::onFulfilled">onFulfilled</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/RetryMiddleware.php.html#97"><abbr title="GuzzleHttp\RetryMiddleware::onRejected">onRejected</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/RetryMiddleware.php.html#113"><abbr title="GuzzleHttp\RetryMiddleware::doRetry">doRetry</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/TransferStats.php.html#47"><abbr title="GuzzleHttp\TransferStats::__construct">__construct</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/TransferStats.php.html#61"><abbr title="GuzzleHttp\TransferStats::getRequest">getRequest</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/TransferStats.php.html#69"><abbr title="GuzzleHttp\TransferStats::getResponse">getResponse</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/TransferStats.php.html#77"><abbr title="GuzzleHttp\TransferStats::hasResponse">hasResponse</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/TransferStats.php.html#91"><abbr title="GuzzleHttp\TransferStats::getHandlerErrorData">getHandlerErrorData</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/TransferStats.php.html#99"><abbr title="GuzzleHttp\TransferStats::getEffectiveUri">getEffectiveUri</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/TransferStats.php.html#109"><abbr title="GuzzleHttp\TransferStats::getTransferTime">getTransferTime</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/TransferStats.php.html#117"><abbr title="GuzzleHttp\TransferStats::getHandlerStats">getHandlerStats</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/TransferStats.php.html#129"><abbr title="GuzzleHttp\TransferStats::getHandlerStat">getHandlerStat</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Utils.php.html#22"><abbr title="GuzzleHttp\Utils::describeType">describeType</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Utils.php.html#46"><abbr title="GuzzleHttp\Utils::headersFromLines">headersFromLines</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Utils.php.html#65"><abbr title="GuzzleHttp\Utils::debugResource">debugResource</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Utils.php.html#134"><abbr title="GuzzleHttp\Utils::defaultCaBundle">defaultCaBundle</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Utils.php.html#194"><abbr title="GuzzleHttp\Utils::normalizeHeaderKeys">normalizeHeaderKeys</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Utils.php.html#223"><abbr title="GuzzleHttp\Utils::isHostInNoProxy">isHostInNoProxy</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Utils.php.html#273"><abbr title="GuzzleHttp\Utils::jsonDecode">jsonDecode</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Utils.php.html#294"><abbr title="GuzzleHttp\Utils::jsonEncode">jsonEncode</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Utils.php.html#313"><abbr title="GuzzleHttp\Utils::currentTime">currentTime</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Utils.php.html#323"><abbr title="GuzzleHttp\Utils::idnUriConvert">idnUriConvert</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Utils.php.html#376"><abbr title="GuzzleHttp\Utils::idnToAsci">idnToAsci</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/ClientTrait.php.html#42"><abbr title="GuzzleHttp\ClientTrait::get">get</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/ClientTrait.php.html#59"><abbr title="GuzzleHttp\ClientTrait::head">head</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/ClientTrait.php.html#76"><abbr title="GuzzleHttp\ClientTrait::put">put</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/ClientTrait.php.html#93"><abbr title="GuzzleHttp\ClientTrait::post">post</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/ClientTrait.php.html#110"><abbr title="GuzzleHttp\ClientTrait::patch">patch</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/ClientTrait.php.html#127"><abbr title="GuzzleHttp\ClientTrait::delete">delete</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/ClientTrait.php.html#157"><abbr title="GuzzleHttp\ClientTrait::getAsync">getAsync</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/ClientTrait.php.html#173"><abbr title="GuzzleHttp\ClientTrait::headAsync">headAsync</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/ClientTrait.php.html#189"><abbr title="GuzzleHttp\ClientTrait::putAsync">putAsync</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/ClientTrait.php.html#205"><abbr title="GuzzleHttp\ClientTrait::postAsync">postAsync</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/ClientTrait.php.html#221"><abbr title="GuzzleHttp\ClientTrait::patchAsync">patchAsync</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/ClientTrait.php.html#237"><abbr title="GuzzleHttp\ClientTrait::deleteAsync">deleteAsync</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="src/Middleware.php.html#26"><abbr title="GuzzleHttp\Middleware::cookies">cookies</abbr></a></td><td class="text-right">11%</td></tr>
+       <tr><td><a href="src/Middleware.php.html#58"><abbr title="GuzzleHttp\Middleware::httpErrors">httpErrors</abbr></a></td><td class="text-right">14%</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#731"><abbr title="GuzzleHttp\Handler\CurlFactory::__destruct">__destruct</abbr></a></td><td class="text-right">25%</td></tr>
+       <tr><td><a href="src/Handler/CurlMultiHandler.php.html#119"><abbr title="GuzzleHttp\Handler\CurlMultiHandler::__destruct">__destruct</abbr></a></td><td class="text-right">33%</td></tr>
+       <tr><td><a href="src/Utils.php.html#86"><abbr title="GuzzleHttp\Utils::chooseHandler">chooseHandler</abbr></a></td><td class="text-right">53%</td></tr>
+       <tr><td><a href="src/Client.php.html#57"><abbr title="GuzzleHttp\Client::__construct">__construct</abbr></a></td><td class="text-right">57%</td></tr>
+       <tr><td><a href="src/Utils.php.html#360"><abbr title="GuzzleHttp\Utils::getenv">getenv</abbr></a></td><td class="text-right">60%</td></tr>
+       <tr><td><a href="src/Client.php.html#229"><abbr title="GuzzleHttp\Client::configureDefaults">configureDefaults</abbr></a></td><td class="text-right">62%</td></tr>
+       <tr><td><a href="src/Handler/CurlMultiHandler.php.html#69"><abbr title="GuzzleHttp\Handler\CurlMultiHandler::__construct">__construct</abbr></a></td><td class="text-right">66%</td></tr>
+       <tr><td><a href="src/Handler/Proxy.php.html#25"><abbr title="GuzzleHttp\Handler\Proxy::wrapSync">wrapSync</abbr></a></td><td class="text-right">66%</td></tr>
+       <tr><td><a href="src/Handler/Proxy.php.html#45"><abbr title="GuzzleHttp\Handler\Proxy::wrapStreaming">wrapStreaming</abbr></a></td><td class="text-right">66%</td></tr>
+       <tr><td><a href="src/Middleware.php.html#157"><abbr title="GuzzleHttp\Middleware::redirect">redirect</abbr></a></td><td class="text-right">66%</td></tr>
+       <tr><td><a href="src/Middleware.php.html#230"><abbr title="GuzzleHttp\Middleware::prepareBody">prepareBody</abbr></a></td><td class="text-right">66%</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3>Project Risks</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Method</th>
+         <th class="text-right"><abbr title="Change Risk Anti-Patterns (CRAP) Index">CRAP</abbr></th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#437"><abbr title="GuzzleHttp\Handler\CurlFactory::applyHandlerOptions">applyHandlerOptions</abbr></a></td><td class="text-right">2970</td></tr>
+       <tr><td><a href="src/MessageFormatter.php.html#71"><abbr title="GuzzleHttp\MessageFormatter::format">format</abbr></a></td><td class="text-right">1260</td></tr>
+       <tr><td><a href="src/Client.php.html#342"><abbr title="GuzzleHttp\Client::applyOptions">applyOptions</abbr></a></td><td class="text-right">756</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#275"><abbr title="GuzzleHttp\Handler\StreamHandler::createStream">createStream</abbr></a></td><td class="text-right">342</td></tr>
+       <tr><td><a href="src/Handler/MockHandler.php.html#80"><abbr title="GuzzleHttp\Handler\MockHandler::__invoke">__invoke</abbr></a></td><td class="text-right">272</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#85"><abbr title="GuzzleHttp\Cookie\SetCookie::__construct">__construct</abbr></a></td><td class="text-right">240</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#35"><abbr title="GuzzleHttp\Cookie\SetCookie::fromString">fromString</abbr></a></td><td class="text-right">210</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#36"><abbr title="GuzzleHttp\Handler\StreamHandler::__invoke">__invoke</abbr></a></td><td class="text-right">210</td></tr>
+       <tr><td><a href="src/Cookie/CookieJar.php.html#149"><abbr title="GuzzleHttp\Cookie\CookieJar::setCookie">setCookie</abbr></a></td><td class="text-right">182</td></tr>
+       <tr><td><a href="src/RedirectMiddleware.php.html#159"><abbr title="GuzzleHttp\RedirectMiddleware::modifyRequest">modifyRequest</abbr></a></td><td class="text-right">132</td></tr>
+       <tr><td><a href="src/Cookie/CookieJar.php.html#268"><abbr title="GuzzleHttp\Cookie\CookieJar::withCookieHeader">withCookieHeader</abbr></a></td><td class="text-right">90</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#48"><abbr title="GuzzleHttp\Handler\CurlFactory::create">create</abbr></a></td><td class="text-right">90</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#360"><abbr title="GuzzleHttp\Handler\CurlFactory::applyBody">applyBody</abbr></a></td><td class="text-right">90</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#363"><abbr title="GuzzleHttp\Handler\StreamHandler::resolveHost">resolveHost</abbr></a></td><td class="text-right">90</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#462"><abbr title="GuzzleHttp\Handler\StreamHandler::parse_proxy">parse_proxy</abbr></a></td><td class="text-right">90</td></tr>
+       <tr><td><a href="src/PrepareBodyMiddleware.php.html#29"><abbr title="GuzzleHttp\PrepareBodyMiddleware::__invoke">__invoke</abbr></a></td><td class="text-right">90</td></tr>
+       <tr><td><a href="src/PrepareBodyMiddleware.php.html#70"><abbr title="GuzzleHttp\PrepareBodyMiddleware::addExpectHeader">addExpectHeader</abbr></a></td><td class="text-right">90</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#139"><abbr title="GuzzleHttp\Cookie\SetCookie::__toString">__toString</abbr></a></td><td class="text-right">72</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#682"><abbr title="GuzzleHttp\Handler\CurlFactory::createHeaderFn">createHeaderFn</abbr></a></td><td class="text-right">72</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#429"><abbr title="GuzzleHttp\Handler\StreamHandler::add_proxy">add_proxy</abbr></a></td><td class="text-right">72</td></tr>
+       <tr><td><a href="src/Client.php.html#212"><abbr title="GuzzleHttp\Client::buildUri">buildUri</abbr></a></td><td class="text-right">56</td></tr>
+       <tr><td><a href="src/Client.php.html#283"><abbr title="GuzzleHttp\Client::prepareDefaults">prepareDefaults</abbr></a></td><td class="text-right">56</td></tr>
+       <tr><td><a href="src/Cookie/CookieJar.php.html#106"><abbr title="GuzzleHttp\Cookie\CookieJar::clear">clear</abbr></a></td><td class="text-right">56</td></tr>
+       <tr><td><a href="src/Cookie/FileCookieJar.php.html#82"><abbr title="GuzzleHttp\Cookie\FileCookieJar::load">load</abbr></a></td><td class="text-right">56</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#221"><abbr title="GuzzleHttp\Handler\CurlFactory::createRejection">createRejection</abbr></a></td><td class="text-right">56</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#332"><abbr title="GuzzleHttp\Handler\CurlFactory::applyMethod">applyMethod</abbr></a></td><td class="text-right">56</td></tr>
+       <tr><td><a href="src/Handler/CurlMultiHandler.php.html#147"><abbr title="GuzzleHttp\Handler\CurlMultiHandler::tick">tick</abbr></a></td><td class="text-right">56</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#110"><abbr title="GuzzleHttp\Handler\StreamHandler::createResponse">createResponse</abbr></a></td><td class="text-right">56</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#174"><abbr title="GuzzleHttp\Handler\StreamHandler::checkDecode">checkDecode</abbr></a></td><td class="text-right">56</td></tr>
+       <tr><td><a href="src/RedirectMiddleware.php.html#80"><abbr title="GuzzleHttp\RedirectMiddleware::checkRedirect">checkRedirect</abbr></a></td><td class="text-right">56</td></tr>
+       <tr><td><a href="src/Utils.php.html#223"><abbr title="GuzzleHttp\Utils::isHostInNoProxy">isHostInNoProxy</abbr></a></td><td class="text-right">56</td></tr>
+       <tr><td><a href="src/Utils.php.html#323"><abbr title="GuzzleHttp\Utils::idnUriConvert">idnUriConvert</abbr></a></td><td class="text-right">56</td></tr>
+       <tr><td><a href="src/Cookie/CookieJar.php.html#222"><abbr title="GuzzleHttp\Cookie\CookieJar::extractCookies">extractCookies</abbr></a></td><td class="text-right">42</td></tr>
+       <tr><td><a href="src/Cookie/CookieJar.php.html#248"><abbr title="GuzzleHttp\Cookie\CookieJar::getCookiePathFromRequest">getCookiePathFromRequest</abbr></a></td><td class="text-right">42</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#295"><abbr title="GuzzleHttp\Cookie\SetCookie::setExpires">setExpires</abbr></a></td><td class="text-right">42</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#459"><abbr title="GuzzleHttp\Cookie\SetCookie::validate">validate</abbr></a></td><td class="text-right">42</td></tr>
+       <tr><td><a href="src/Handler/MockHandler.php.html#153"><abbr title="GuzzleHttp\Handler\MockHandler::append">append</abbr></a></td><td class="text-right">42</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#500"><abbr title="GuzzleHttp\Handler\StreamHandler::add_crypto_method">add_crypto_method</abbr></a></td><td class="text-right">42</td></tr>
+       <tr><td><a href="src/Pool.php.html#41"><abbr title="GuzzleHttp\Pool::__construct">__construct</abbr></a></td><td class="text-right">42</td></tr>
+       <tr><td><a href="src/Utils.php.html#134"><abbr title="GuzzleHttp\Utils::defaultCaBundle">defaultCaBundle</abbr></a></td><td class="text-right">42</td></tr>
+       <tr><td><a href="src/Cookie/SessionCookieJar.php.html#63"><abbr title="GuzzleHttp\Cookie\SessionCookieJar::load">load</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#391"><abbr title="GuzzleHttp\Cookie\SetCookie::matchesPath">matchesPath</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#419"><abbr title="GuzzleHttp\Cookie\SetCookie::matchesDomain">matchesDomain</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="src/Exception/RequestException.php.html#63"><abbr title="GuzzleHttp\Exception\RequestException::create">create</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#152"><abbr title="GuzzleHttp\Handler\CurlFactory::finish">finish</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#304"><abbr title="GuzzleHttp\Handler\CurlFactory::getDefaultConf">getDefaultConf</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#399"><abbr title="GuzzleHttp\Handler\CurlFactory::applyHeaders">applyHeaders</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#646"><abbr title="GuzzleHttp\Handler\CurlFactory::retryFailedRewind">retryFailedRewind</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="src/Handler/CurlMultiHandler.php.html#197"><abbr title="GuzzleHttp\Handler\CurlMultiHandler::execute">execute</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="src/Handler/EasyHandle.php.html#69"><abbr title="GuzzleHttp\Handler\EasyHandle::createResponse">createResponse</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#389"><abbr title="GuzzleHttp\Handler\StreamHandler::getDefaultContext">getDefaultContext</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#519"><abbr title="GuzzleHttp\Handler\StreamHandler::add_verify">add_verify</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="src/RedirectMiddleware.php.html#50"><abbr title="GuzzleHttp\RedirectMiddleware::__invoke">__invoke</abbr></a></td><td class="text-right">30</td></tr>
+       <tr><td><a href="src/Utils.php.html#86"><abbr title="GuzzleHttp\Utils::chooseHandler">chooseHandler</abbr></a></td><td class="text-right">23</td></tr>
+       <tr><td><a href="src/Cookie/CookieJar.php.html#70"><abbr title="GuzzleHttp\Cookie\CookieJar::shouldPersist">shouldPersist</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="src/Cookie/CookieJar.php.html#88"><abbr title="GuzzleHttp\Cookie\CookieJar::getCookieByName">getCookieByName</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="src/Cookie/FileCookieJar.php.html#57"><abbr title="GuzzleHttp\Cookie\FileCookieJar::save">save</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#223"><abbr title="GuzzleHttp\Cookie\SetCookie::setDomain">setDomain</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#271"><abbr title="GuzzleHttp\Cookie\SetCookie::setMaxAge">setMaxAge</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#86"><abbr title="GuzzleHttp\Handler\CurlFactory::supportsHttp2">supportsHttp2</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#191"><abbr title="GuzzleHttp\Handler\CurlFactory::finishError">finishError</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="src/Handler/CurlMultiHandler.php.html#97"><abbr title="GuzzleHttp\Handler\CurlMultiHandler::__get">__get</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="src/Handler/CurlMultiHandler.php.html#229"><abbr title="GuzzleHttp\Handler\CurlMultiHandler::cancel">cancel</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="src/Handler/CurlMultiHandler.php.html#251"><abbr title="GuzzleHttp\Handler\CurlMultiHandler::processMessages">processMessages</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="src/Handler/HeaderProcessor.php.html#21"><abbr title="GuzzleHttp\Handler\HeaderProcessor::parseHeaders">parseHeaders</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#240"><abbr title="GuzzleHttp\Handler\StreamHandler::createResource">createResource</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="src/HandlerStack.php.html#83"><abbr title="GuzzleHttp\HandlerStack::__toString">__toString</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="src/HandlerStack.php.html#181"><abbr title="GuzzleHttp\HandlerStack::remove">remove</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="src/HandlerStack.php.html#202"><abbr title="GuzzleHttp\HandlerStack::resolve">resolve</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="src/HandlerStack.php.html#234"><abbr title="GuzzleHttp\HandlerStack::splice">splice</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="src/HandlerStack.php.html#260"><abbr title="GuzzleHttp\HandlerStack::debugCallable">debugCallable</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="src/Middleware.php.html#198"><abbr title="GuzzleHttp\Middleware::log">log</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="src/Utils.php.html#22"><abbr title="GuzzleHttp\Utils::describeType">describeType</abbr></a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="src/Client.php.html#229"><abbr title="GuzzleHttp\Client::configureDefaults">configureDefaults</abbr></a></td><td class="text-right">15</td></tr>
+       <tr><td><a href="src/Client.php.html#81"><abbr title="GuzzleHttp\Client::__call">__call</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="src/Cookie/CookieJar.php.html#30"><abbr title="GuzzleHttp\Cookie\CookieJar::__construct">__construct</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="src/Cookie/CookieJar.php.html#296"><abbr title="GuzzleHttp\Cookie\CookieJar::removeCookieIfEmpty">removeCookieIfEmpty</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="src/Cookie/SessionCookieJar.php.html#47"><abbr title="GuzzleHttp\Cookie\SessionCookieJar::save">save</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#110"><abbr title="GuzzleHttp\Handler\CurlFactory::supportsTls13">supportsTls13</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#122"><abbr title="GuzzleHttp\Handler\CurlFactory::release">release</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#283"><abbr title="GuzzleHttp\Handler\CurlFactory::sanitizeCurlError">sanitizeCurlError</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#426"><abbr title="GuzzleHttp\Handler\CurlFactory::removeHeader">removeHeader</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="src/Handler/CurlMultiHandler.php.html#275"><abbr title="GuzzleHttp\Handler\CurlMultiHandler::timeToNext">timeToNext</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#160"><abbr title="GuzzleHttp\Handler\StreamHandler::createSink">createSink</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#213"><abbr title="GuzzleHttp\Handler\StreamHandler::drain">drain</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#545"><abbr title="GuzzleHttp\Handler\StreamHandler::add_cert">add_cert</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#579"><abbr title="GuzzleHttp\Handler\StreamHandler::add_debug">add_debug</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="src/HandlerStack.php.html#220"><abbr title="GuzzleHttp\HandlerStack::findByName">findByName</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="src/Middleware.php.html#88"><abbr title="GuzzleHttp\Middleware::history">history</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="src/Middleware.php.html#135"><abbr title="GuzzleHttp\Middleware::tap">tap</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="src/Utils.php.html#46"><abbr title="GuzzleHttp\Utils::headersFromLines">headersFromLines</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="src/Utils.php.html#65"><abbr title="GuzzleHttp\Utils::debugResource">debugResource</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="src/Utils.php.html#376"><abbr title="GuzzleHttp\Utils::idnToAsci">idnToAsci</abbr></a></td><td class="text-right">12</td></tr>
+       <tr><td><a href="src/Middleware.php.html#26"><abbr title="GuzzleHttp\Middleware::cookies">cookies</abbr></a></td><td class="text-right">9</td></tr>
+       <tr><td><a href="src/Middleware.php.html#58"><abbr title="GuzzleHttp\Middleware::httpErrors">httpErrors</abbr></a></td><td class="text-right">8</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#731"><abbr title="GuzzleHttp\Handler\CurlFactory::__destruct">__destruct</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Utils.php.html#360"><abbr title="GuzzleHttp\Utils::getenv">getenv</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/BodySummarizer.php.html#22"><abbr title="GuzzleHttp\BodySummarizer::summarize">summarize</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Client.php.html#153"><abbr title="GuzzleHttp\Client::requestAsync">requestAsync</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Client.php.html#205"><abbr title="GuzzleHttp\Client::getConfig">getConfig</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Client.php.html#326"><abbr title="GuzzleHttp\Client::transfer">transfer</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Cookie/CookieJar.php.html#48"><abbr title="GuzzleHttp\Cookie\CookieJar::fromArray">fromArray</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Cookie/CookieJar.php.html#139"><abbr title="GuzzleHttp\Cookie\CookieJar::clearSessionCookies">clearSessionCookies</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Cookie/FileCookieJar.php.html#31"><abbr title="GuzzleHttp\Cookie\FileCookieJar::__construct">__construct</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#175"><abbr title="GuzzleHttp\Cookie\SetCookie::setName">setName</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#199"><abbr title="GuzzleHttp\Cookie\SetCookie::setValue">setValue</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#247"><abbr title="GuzzleHttp\Cookie\SetCookie::setPath">setPath</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#261"><abbr title="GuzzleHttp\Cookie\SetCookie::getMaxAge">getMaxAge</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#319"><abbr title="GuzzleHttp\Cookie\SetCookie::setSecure">setSecure</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#343"><abbr title="GuzzleHttp\Cookie\SetCookie::setDiscard">setDiscard</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#367"><abbr title="GuzzleHttp\Cookie\SetCookie::setHttpOnly">setHttpOnly</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Cookie/SetCookie.php.html#449"><abbr title="GuzzleHttp\Cookie\SetCookie::isExpired">isExpired</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Exception/RequestException.php.html#31"><abbr title="GuzzleHttp\Exception\RequestException::__construct">__construct</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Exception/RequestException.php.html#49"><abbr title="GuzzleHttp\Exception\RequestException::wrapException">wrapException</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#99"><abbr title="GuzzleHttp\Handler\CurlFactory::supportsTls12">supportsTls12</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Handler/CurlFactory.php.html#210"><abbr title="GuzzleHttp\Handler\CurlFactory::getCurlVersion">getCurlVersion</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Handler/CurlHandler.php.html#37"><abbr title="GuzzleHttp\Handler\CurlHandler::__invoke">__invoke</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Handler/CurlMultiHandler.php.html#186"><abbr title="GuzzleHttp\Handler\CurlMultiHandler::tickInQueue">tickInQueue</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Handler/CurlMultiHandler.php.html#210"><abbr title="GuzzleHttp\Handler\CurlMultiHandler::addRequest">addRequest</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Handler/EasyHandle.php.html#107"><abbr title="GuzzleHttp\Handler\EasyHandle::__get">__get</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Handler/MockHandler.php.html#69"><abbr title="GuzzleHttp\Handler\MockHandler::__construct">__construct</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Handler/MockHandler.php.html#200"><abbr title="GuzzleHttp\Handler\MockHandler::invokeStats">invokeStats</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#94"><abbr title="GuzzleHttp\Handler\StreamHandler::invokeStats">invokeStats</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#490"><abbr title="GuzzleHttp\Handler\StreamHandler::add_timeout">add_timeout</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#562"><abbr title="GuzzleHttp\Handler\StreamHandler::add_progress">add_progress</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#613"><abbr title="GuzzleHttp\Handler\StreamHandler::addNotification">addNotification</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Handler/StreamHandler.php.html#626"><abbr title="GuzzleHttp\Handler\StreamHandler::callArray">callArray</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/MessageFormatter.php.html#59"><abbr title="GuzzleHttp\MessageFormatter::__construct">__construct</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/MessageFormatter.php.html#190"><abbr title="GuzzleHttp\MessageFormatter::headers">headers</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Pool.php.html#111"><abbr title="GuzzleHttp\Pool::cmpCallback">cmpCallback</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/RedirectMiddleware.php.html#147"><abbr title="GuzzleHttp\RedirectMiddleware::guardMax">guardMax</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/RedirectMiddleware.php.html#211"><abbr title="GuzzleHttp\RedirectMiddleware::redirectUri">redirectUri</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/RetryMiddleware.php.html#43"><abbr title="GuzzleHttp\RetryMiddleware::__construct">__construct</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/RetryMiddleware.php.html#60"><abbr title="GuzzleHttp\RetryMiddleware::__invoke">__invoke</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/RetryMiddleware.php.html#78"><abbr title="GuzzleHttp\RetryMiddleware::onFulfilled">onFulfilled</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/RetryMiddleware.php.html#97"><abbr title="GuzzleHttp\RetryMiddleware::onRejected">onRejected</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Utils.php.html#194"><abbr title="GuzzleHttp\Utils::normalizeHeaderKeys">normalizeHeaderKeys</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Utils.php.html#273"><abbr title="GuzzleHttp\Utils::jsonDecode">jsonDecode</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Utils.php.html#294"><abbr title="GuzzleHttp\Utils::jsonEncode">jsonEncode</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Utils.php.html#313"><abbr title="GuzzleHttp\Utils::currentTime">currentTime</abbr></a></td><td class="text-right">6</td></tr>
+       <tr><td><a href="src/Client.php.html#57"><abbr title="GuzzleHttp\Client::__construct">__construct</abbr></a></td><td class="text-right">5</td></tr>
+       <tr><td><a href="src/Handler/CurlMultiHandler.php.html#69"><abbr title="GuzzleHttp\Handler\CurlMultiHandler::__construct">__construct</abbr></a></td><td class="text-right">3</td></tr>
+       <tr><td><a href="src/Handler/CurlMultiHandler.php.html#119"><abbr title="GuzzleHttp\Handler\CurlMultiHandler::__destruct">__destruct</abbr></a></td><td class="text-right">3</td></tr>
+       <tr><td><a href="src/Handler/Proxy.php.html#25"><abbr title="GuzzleHttp\Handler\Proxy::wrapSync">wrapSync</abbr></a></td><td class="text-right">2</td></tr>
+       <tr><td><a href="src/Handler/Proxy.php.html#45"><abbr title="GuzzleHttp\Handler\Proxy::wrapStreaming">wrapStreaming</abbr></a></td><td class="text-right">2</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+   </div>
+   <footer>
+    <hr/>
+    <p>
+     <small>Generated by <a href="https://github.com/sebastianbergmann/php-code-coverage" target="_top">php-code-coverage 11.0.9</a> using <a href="https://www.php.net/" target="_top">PHP 8.4.16</a> and <a href="https://phpunit.de/">PHPUnit 11.5.11</a> at Fri Apr 10 15:27:13 UTC 2026.</small>
+    </p>
+   </footer>
+  </div>
+  <script src="../../../_js/jquery.min.js?v=11.0.9" type="text/javascript"></script>
+  <script src="../../../_js/d3.min.js?v=11.0.9" type="text/javascript"></script>
+  <script src="../../../_js/nv.d3.min.js?v=11.0.9" type="text/javascript"></script>
+  <script type="text/javascript">
+$(document).ready(function() {
+  nv.addGraph(function() {
+    var chart = nv.models.multiBarChart();
+    chart.tooltips(false)
+      .showControls(false)
+      .showLegend(false)
+      .reduceXTicks(false)
+      .staggerLabels(true)
+      .yAxis.tickFormat(d3.format('d'));
+
+    d3.select('#classCoverageDistribution svg')
+      .datum(getCoverageDistributionData([19,3,3,1,0,0,0,1,0,0,0,6], "Class Coverage"))
+      .transition().duration(500).call(chart);
+
+    nv.utils.windowResize(chart.update);
+
+    return chart;
+  });
+
+  nv.addGraph(function() {
+    var chart = nv.models.multiBarChart();
+    chart.tooltips(false)
+      .showControls(false)
+      .showLegend(false)
+      .reduceXTicks(false)
+      .staggerLabels(true)
+      .yAxis.tickFormat(d3.format('d'));
+
+    d3.select('#methodCoverageDistribution svg')
+      .datum(getCoverageDistributionData([209,0,2,1,1,0,2,7,0,0,0,8], "Method Coverage"))
+      .transition().duration(500).call(chart);
+
+    nv.utils.windowResize(chart.update);
+
+    return chart;
+  });
+
+  function getCoverageDistributionData(data, label) {
+    var labels = [
+      '0%',
+      '0-10%',
+      '10-20%',
+      '20-30%',
+      '30-40%',
+      '40-50%',
+      '50-60%',
+      '60-70%',
+      '70-80%',
+      '80-90%',
+      '90-100%',
+      '100%'
+    ];
+    var values = [];
+    $.each(labels, function(key) {
+      values.push({x: labels[key], y: data[key]});
+    });
+
+    return [
+      {
+        key: label,
+        values: values,
+        color: "#4572A7"
+      }
+    ];
+  }
+  nv.addGraph(function() {
+    var chart = nv.models.scatterChart()
+      .showDistX(true)
+      .showDistY(true)
+      .showLegend(false)
+      .forceX([0, 100]);
+    chart.tooltipContent(function(graph) {
+      return '<p>' + graph.point.class + '</p>';
+    });
+
+    chart.xAxis.axisLabel('Code Coverage (in percent)');
+    chart.yAxis.axisLabel('Cyclomatic Complexity');
+
+    d3.select('#classComplexity svg')
+      .datum(getComplexityData([[0,3,"<a href=\"src\/BodySummarizer.php.html#7\">GuzzleHttp\\BodySummarizer<\/a>"],[10.982658959537572,69,"<a href=\"src\/Client.php.html#17\">GuzzleHttp\\Client<\/a>"],[0,62,"<a href=\"src\/Cookie\/CookieJar.php.html#11\">GuzzleHttp\\Cookie\\CookieJar<\/a>"],[0,14,"<a href=\"src\/Cookie\/FileCookieJar.php.html#10\">GuzzleHttp\\Cookie\\FileCookieJar<\/a>"],[0,10,"<a href=\"src\/Cookie\/SessionCookieJar.php.html#8\">GuzzleHttp\\Cookie\\SessionCookieJar<\/a>"],[0,92,"<a href=\"src\/Cookie\/SetCookie.php.html#8\">GuzzleHttp\\Cookie\\SetCookie<\/a>"],[0,3,"<a href=\"src\/Exception\/BadResponseException.php.html#11\">GuzzleHttp\\Exception\\BadResponseException<\/a>"],[100,0,"<a href=\"src\/Exception\/ClientException.php.html#8\">GuzzleHttp\\Exception\\ClientException<\/a>"],[0,3,"<a href=\"src\/Exception\/ConnectException.php.html#13\">GuzzleHttp\\Exception\\ConnectException<\/a>"],[100,0,"<a href=\"src\/Exception\/InvalidArgumentException.php.html#5\">GuzzleHttp\\Exception\\InvalidArgumentException<\/a>"],[0,13,"<a href=\"src\/Exception\/RequestException.php.html#14\">GuzzleHttp\\Exception\\RequestException<\/a>"],[100,0,"<a href=\"src\/Exception\/ServerException.php.html#8\">GuzzleHttp\\Exception\\ServerException<\/a>"],[100,0,"<a href=\"src\/Exception\/TooManyRedirectsException.php.html#5\">GuzzleHttp\\Exception\\TooManyRedirectsException<\/a>"],[100,0,"<a href=\"src\/Exception\/TransferException.php.html#5\">GuzzleHttp\\Exception\\TransferException<\/a>"],[0.5494505494505495,143,"<a href=\"src\/Handler\/CurlFactory.php.html#21\">GuzzleHttp\\Handler\\CurlFactory<\/a>"],[25,3,"<a href=\"src\/Handler\/CurlHandler.php.html#17\">GuzzleHttp\\Handler\\CurlHandler<\/a>"],[7.777777777777778,37,"<a href=\"src\/Handler\/CurlMultiHandler.php.html#21\">GuzzleHttp\\Handler\\CurlMultiHandler<\/a>"],[0,7,"<a href=\"src\/Handler\/EasyHandle.php.html#16\">GuzzleHttp\\Handler\\EasyHandle<\/a>"],[0,4,"<a href=\"src\/Handler\/HeaderProcessor.php.html#10\">GuzzleHttp\\Handler\\HeaderProcessor<\/a>"],[0,31,"<a href=\"src\/Handler\/MockHandler.php.html#20\">GuzzleHttp\\Handler\\MockHandler<\/a>"],[66.66666666666666,4,"<a href=\"src\/Handler\/Proxy.php.html#14\">GuzzleHttp\\Handler\\Proxy<\/a>"],[0,114,"<a href=\"src\/Handler\/StreamHandler.php.html#23\">GuzzleHttp\\Handler\\StreamHandler<\/a>"],[12.5,33,"<a href=\"src\/HandlerStack.php.html#15\">GuzzleHttp\\HandlerStack<\/a>"],[0,39,"<a href=\"src\/MessageFormatter.php.html#38\">GuzzleHttp\\MessageFormatter<\/a>"],[7.6190476190476195,21,"<a href=\"src\/Middleware.php.html#16\">GuzzleHttp\\Middleware<\/a>"],[0,10,"<a href=\"src\/Pool.php.html#24\">GuzzleHttp\\Pool<\/a>"],[0,19,"<a href=\"src\/PrepareBodyMiddleware.php.html#14\">GuzzleHttp\\PrepareBodyMiddleware<\/a>"],[0,29,"<a href=\"src\/RedirectMiddleware.php.html#20\">GuzzleHttp\\RedirectMiddleware<\/a>"],[100,0,"<a href=\"src\/RequestOptions.php.html#10\">GuzzleHttp\\RequestOptions<\/a>"],[0,10,"<a href=\"src\/RetryMiddleware.php.html#16\">GuzzleHttp\\RetryMiddleware<\/a>"],[0,9,"<a href=\"src\/TransferStats.php.html#13\">GuzzleHttp\\TransferStats<\/a>"],[10.714285714285714,58,"<a href=\"src\/Utils.php.html#12\">GuzzleHttp\\Utils<\/a>"],[0,12,"<a href=\"src\/ClientTrait.php.html#13\">GuzzleHttp\\ClientTrait<\/a>"]], 'Class Complexity'))
+      .transition()
+      .duration(500)
+      .call(chart);
+
+    nv.utils.windowResize(chart.update);
+
+    return chart;
+  });
+
+  nv.addGraph(function() {
+    var chart = nv.models.scatterChart()
+      .showDistX(true)
+      .showDistY(true)
+      .showLegend(false)
+      .forceX([0, 100]);
+    chart.tooltipContent(function(graph) {
+      return '<p>' + graph.point.class + '</p>';
+    });
+
+    chart.xAxis.axisLabel('Code Coverage (in percent)');
+    chart.yAxis.axisLabel('Method Complexity');
+
+    d3.select('#methodComplexity svg')
+      .datum(getComplexityData([[0,1,"<a href=\"src\/BodySummarizer.php.html#14\">GuzzleHttp\\BodySummarizer::__construct<\/a>"],[0,2,"<a href=\"src\/BodySummarizer.php.html#22\">GuzzleHttp\\BodySummarizer::summarize<\/a>"],[57.14285714285714,4,"<a href=\"src\/Client.php.html#57\">GuzzleHttp\\Client::__construct<\/a>"],[0,3,"<a href=\"src\/Client.php.html#81\">GuzzleHttp\\Client::__call<\/a>"],[0,1,"<a href=\"src\/Client.php.html#101\">GuzzleHttp\\Client::sendAsync<\/a>"],[0,1,"<a href=\"src\/Client.php.html#120\">GuzzleHttp\\Client::send<\/a>"],[0,1,"<a href=\"src\/Client.php.html#132\">GuzzleHttp\\Client::sendRequest<\/a>"],[0,2,"<a href=\"src\/Client.php.html#153\">GuzzleHttp\\Client::requestAsync<\/a>"],[0,1,"<a href=\"src\/Client.php.html#185\">GuzzleHttp\\Client::request<\/a>"],[0,2,"<a href=\"src\/Client.php.html#205\">GuzzleHttp\\Client::getConfig<\/a>"],[0,7,"<a href=\"src\/Client.php.html#212\">GuzzleHttp\\Client::buildUri<\/a>"],[62.5,10,"<a href=\"src\/Client.php.html#229\">GuzzleHttp\\Client::configureDefaults<\/a>"],[0,7,"<a href=\"src\/Client.php.html#283\">GuzzleHttp\\Client::prepareDefaults<\/a>"],[0,2,"<a href=\"src\/Client.php.html#326\">GuzzleHttp\\Client::transfer<\/a>"],[0,27,"<a href=\"src\/Client.php.html#342\">GuzzleHttp\\Client::applyOptions<\/a>"],[0,1,"<a href=\"src\/Client.php.html#475\">GuzzleHttp\\Client::invalidBody<\/a>"],[0,3,"<a href=\"src\/Cookie\/CookieJar.php.html#30\">GuzzleHttp\\Cookie\\CookieJar::__construct<\/a>"],[0,2,"<a href=\"src\/Cookie\/CookieJar.php.html#48\">GuzzleHttp\\Cookie\\CookieJar::fromArray<\/a>"],[0,4,"<a href=\"src\/Cookie\/CookieJar.php.html#70\">GuzzleHttp\\Cookie\\CookieJar::shouldPersist<\/a>"],[0,4,"<a href=\"src\/Cookie\/CookieJar.php.html#88\">GuzzleHttp\\Cookie\\CookieJar::getCookieByName<\/a>"],[0,1,"<a href=\"src\/Cookie\/CookieJar.php.html#99\">GuzzleHttp\\Cookie\\CookieJar::toArray<\/a>"],[0,7,"<a href=\"src\/Cookie\/CookieJar.php.html#106\">GuzzleHttp\\Cookie\\CookieJar::clear<\/a>"],[0,2,"<a href=\"src\/Cookie\/CookieJar.php.html#139\">GuzzleHttp\\Cookie\\CookieJar::clearSessionCookies<\/a>"],[0,13,"<a href=\"src\/Cookie\/CookieJar.php.html#149\">GuzzleHttp\\Cookie\\CookieJar::setCookie<\/a>"],[0,1,"<a href=\"src\/Cookie\/CookieJar.php.html#209\">GuzzleHttp\\Cookie\\CookieJar::count<\/a>"],[0,1,"<a href=\"src\/Cookie\/CookieJar.php.html#217\">GuzzleHttp\\Cookie\\CookieJar::getIterator<\/a>"],[0,6,"<a href=\"src\/Cookie\/CookieJar.php.html#222\">GuzzleHttp\\Cookie\\CookieJar::extractCookies<\/a>"],[0,6,"<a href=\"src\/Cookie\/CookieJar.php.html#248\">GuzzleHttp\\Cookie\\CookieJar::getCookiePathFromRequest<\/a>"],[0,9,"<a href=\"src\/Cookie\/CookieJar.php.html#268\">GuzzleHttp\\Cookie\\CookieJar::withCookieHeader<\/a>"],[0,3,"<a href=\"src\/Cookie\/CookieJar.php.html#296\">GuzzleHttp\\Cookie\\CookieJar::removeCookieIfEmpty<\/a>"],[0,2,"<a href=\"src\/Cookie\/FileCookieJar.php.html#31\">GuzzleHttp\\Cookie\\FileCookieJar::__construct<\/a>"],[0,1,"<a href=\"src\/Cookie\/FileCookieJar.php.html#45\">GuzzleHttp\\Cookie\\FileCookieJar::__destruct<\/a>"],[0,4,"<a href=\"src\/Cookie\/FileCookieJar.php.html#57\">GuzzleHttp\\Cookie\\FileCookieJar::save<\/a>"],[0,7,"<a href=\"src\/Cookie\/FileCookieJar.php.html#82\">GuzzleHttp\\Cookie\\FileCookieJar::load<\/a>"],[0,1,"<a href=\"src\/Cookie\/SessionCookieJar.php.html#28\">GuzzleHttp\\Cookie\\SessionCookieJar::__construct<\/a>"],[0,1,"<a href=\"src\/Cookie\/SessionCookieJar.php.html#39\">GuzzleHttp\\Cookie\\SessionCookieJar::__destruct<\/a>"],[0,3,"<a href=\"src\/Cookie\/SessionCookieJar.php.html#47\">GuzzleHttp\\Cookie\\SessionCookieJar::save<\/a>"],[0,5,"<a href=\"src\/Cookie\/SessionCookieJar.php.html#63\">GuzzleHttp\\Cookie\\SessionCookieJar::load<\/a>"],[0,14,"<a href=\"src\/Cookie\/SetCookie.php.html#35\">GuzzleHttp\\Cookie\\SetCookie::fromString<\/a>"],[0,15,"<a href=\"src\/Cookie\/SetCookie.php.html#85\">GuzzleHttp\\Cookie\\SetCookie::__construct<\/a>"],[0,8,"<a href=\"src\/Cookie\/SetCookie.php.html#139\">GuzzleHttp\\Cookie\\SetCookie::__toString<\/a>"],[0,1,"<a href=\"src\/Cookie\/SetCookie.php.html#155\">GuzzleHttp\\Cookie\\SetCookie::toArray<\/a>"],[0,1,"<a href=\"src\/Cookie\/SetCookie.php.html#165\">GuzzleHttp\\Cookie\\SetCookie::getName<\/a>"],[0,2,"<a href=\"src\/Cookie\/SetCookie.php.html#175\">GuzzleHttp\\Cookie\\SetCookie::setName<\/a>"],[0,1,"<a href=\"src\/Cookie\/SetCookie.php.html#189\">GuzzleHttp\\Cookie\\SetCookie::getValue<\/a>"],[0,2,"<a href=\"src\/Cookie\/SetCookie.php.html#199\">GuzzleHttp\\Cookie\\SetCookie::setValue<\/a>"],[0,1,"<a href=\"src\/Cookie\/SetCookie.php.html#213\">GuzzleHttp\\Cookie\\SetCookie::getDomain<\/a>"],[0,4,"<a href=\"src\/Cookie\/SetCookie.php.html#223\">GuzzleHttp\\Cookie\\SetCookie::setDomain<\/a>"],[0,1,"<a href=\"src\/Cookie\/SetCookie.php.html#237\">GuzzleHttp\\Cookie\\SetCookie::getPath<\/a>"],[0,2,"<a href=\"src\/Cookie\/SetCookie.php.html#247\">GuzzleHttp\\Cookie\\SetCookie::setPath<\/a>"],[0,2,"<a href=\"src\/Cookie\/SetCookie.php.html#261\">GuzzleHttp\\Cookie\\SetCookie::getMaxAge<\/a>"],[0,4,"<a href=\"src\/Cookie\/SetCookie.php.html#271\">GuzzleHttp\\Cookie\\SetCookie::setMaxAge<\/a>"],[0,1,"<a href=\"src\/Cookie\/SetCookie.php.html#285\">GuzzleHttp\\Cookie\\SetCookie::getExpires<\/a>"],[0,6,"<a href=\"src\/Cookie\/SetCookie.php.html#295\">GuzzleHttp\\Cookie\\SetCookie::setExpires<\/a>"],[0,1,"<a href=\"src\/Cookie\/SetCookie.php.html#309\">GuzzleHttp\\Cookie\\SetCookie::getSecure<\/a>"],[0,2,"<a href=\"src\/Cookie\/SetCookie.php.html#319\">GuzzleHttp\\Cookie\\SetCookie::setSecure<\/a>"],[0,1,"<a href=\"src\/Cookie\/SetCookie.php.html#333\">GuzzleHttp\\Cookie\\SetCookie::getDiscard<\/a>"],[0,2,"<a href=\"src\/Cookie\/SetCookie.php.html#343\">GuzzleHttp\\Cookie\\SetCookie::setDiscard<\/a>"],[0,1,"<a href=\"src\/Cookie\/SetCookie.php.html#357\">GuzzleHttp\\Cookie\\SetCookie::getHttpOnly<\/a>"],[0,2,"<a href=\"src\/Cookie\/SetCookie.php.html#367\">GuzzleHttp\\Cookie\\SetCookie::setHttpOnly<\/a>"],[0,5,"<a href=\"src\/Cookie\/SetCookie.php.html#391\">GuzzleHttp\\Cookie\\SetCookie::matchesPath<\/a>"],[0,5,"<a href=\"src\/Cookie\/SetCookie.php.html#419\">GuzzleHttp\\Cookie\\SetCookie::matchesDomain<\/a>"],[0,2,"<a href=\"src\/Cookie\/SetCookie.php.html#449\">GuzzleHttp\\Cookie\\SetCookie::isExpired<\/a>"],[0,6,"<a href=\"src\/Cookie\/SetCookie.php.html#459\">GuzzleHttp\\Cookie\\SetCookie::validate<\/a>"],[0,1,"<a href=\"src\/Exception\/BadResponseException.php.html#13\">GuzzleHttp\\Exception\\BadResponseException::__construct<\/a>"],[0,1,"<a href=\"src\/Exception\/BadResponseException.php.html#26\">GuzzleHttp\\Exception\\BadResponseException::hasResponse<\/a>"],[0,1,"<a href=\"src\/Exception\/BadResponseException.php.html#34\">GuzzleHttp\\Exception\\BadResponseException::getResponse<\/a>"],[0,1,"<a href=\"src\/Exception\/ConnectException.php.html#25\">GuzzleHttp\\Exception\\ConnectException::__construct<\/a>"],[0,1,"<a href=\"src\/Exception\/ConnectException.php.html#39\">GuzzleHttp\\Exception\\ConnectException::getRequest<\/a>"],[0,1,"<a href=\"src\/Exception\/ConnectException.php.html#52\">GuzzleHttp\\Exception\\ConnectException::getHandlerContext<\/a>"],[0,2,"<a href=\"src\/Exception\/RequestException.php.html#31\">GuzzleHttp\\Exception\\RequestException::__construct<\/a>"],[0,2,"<a href=\"src\/Exception\/RequestException.php.html#49\">GuzzleHttp\\Exception\\RequestException::wrapException<\/a>"],[0,5,"<a href=\"src\/Exception\/RequestException.php.html#63\">GuzzleHttp\\Exception\\RequestException::create<\/a>"],[0,1,"<a href=\"src\/Exception\/RequestException.php.html#117\">GuzzleHttp\\Exception\\RequestException::getRequest<\/a>"],[0,1,"<a href=\"src\/Exception\/RequestException.php.html#125\">GuzzleHttp\\Exception\\RequestException::getResponse<\/a>"],[0,1,"<a href=\"src\/Exception\/RequestException.php.html#133\">GuzzleHttp\\Exception\\RequestException::hasResponse<\/a>"],[0,1,"<a href=\"src\/Exception\/RequestException.php.html#146\">GuzzleHttp\\Exception\\RequestException::getHandlerContext<\/a>"],[100,1,"<a href=\"src\/Handler\/CurlFactory.php.html#43\">GuzzleHttp\\Handler\\CurlFactory::__construct<\/a>"],[0,9,"<a href=\"src\/Handler\/CurlFactory.php.html#48\">GuzzleHttp\\Handler\\CurlFactory::create<\/a>"],[0,4,"<a href=\"src\/Handler\/CurlFactory.php.html#86\">GuzzleHttp\\Handler\\CurlFactory::supportsHttp2<\/a>"],[0,2,"<a href=\"src\/Handler\/CurlFactory.php.html#99\">GuzzleHttp\\Handler\\CurlFactory::supportsTls12<\/a>"],[0,3,"<a href=\"src\/Handler\/CurlFactory.php.html#110\">GuzzleHttp\\Handler\\CurlFactory::supportsTls13<\/a>"],[0,3,"<a href=\"src\/Handler\/CurlFactory.php.html#122\">GuzzleHttp\\Handler\\CurlFactory::release<\/a>"],[0,5,"<a href=\"src\/Handler\/CurlFactory.php.html#152\">GuzzleHttp\\Handler\\CurlFactory::finish<\/a>"],[0,1,"<a href=\"src\/Handler\/CurlFactory.php.html#174\">GuzzleHttp\\Handler\\CurlFactory::invokeStats<\/a>"],[0,4,"<a href=\"src\/Handler\/CurlFactory.php.html#191\">GuzzleHttp\\Handler\\CurlFactory::finishError<\/a>"],[0,2,"<a href=\"src\/Handler\/CurlFactory.php.html#210\">GuzzleHttp\\Handler\\CurlFactory::getCurlVersion<\/a>"],[0,7,"<a href=\"src\/Handler\/CurlFactory.php.html#221\">GuzzleHttp\\Handler\\CurlFactory::createRejection<\/a>"],[0,3,"<a href=\"src\/Handler\/CurlFactory.php.html#283\">GuzzleHttp\\Handler\\CurlFactory::sanitizeCurlError<\/a>"],[0,5,"<a href=\"src\/Handler\/CurlFactory.php.html#304\">GuzzleHttp\\Handler\\CurlFactory::getDefaultConf<\/a>"],[0,7,"<a href=\"src\/Handler\/CurlFactory.php.html#332\">GuzzleHttp\\Handler\\CurlFactory::applyMethod<\/a>"],[0,9,"<a href=\"src\/Handler\/CurlFactory.php.html#360\">GuzzleHttp\\Handler\\CurlFactory::applyBody<\/a>"],[0,5,"<a href=\"src\/Handler\/CurlFactory.php.html#399\">GuzzleHttp\\Handler\\CurlFactory::applyHeaders<\/a>"],[0,3,"<a href=\"src\/Handler\/CurlFactory.php.html#426\">GuzzleHttp\\Handler\\CurlFactory::removeHeader<\/a>"],[0,54,"<a href=\"src\/Handler\/CurlFactory.php.html#437\">GuzzleHttp\\Handler\\CurlFactory::applyHandlerOptions<\/a>"],[0,5,"<a href=\"src\/Handler\/CurlFactory.php.html#646\">GuzzleHttp\\Handler\\CurlFactory::retryFailedRewind<\/a>"],[0,8,"<a href=\"src\/Handler\/CurlFactory.php.html#682\">GuzzleHttp\\Handler\\CurlFactory::createHeaderFn<\/a>"],[25,3,"<a href=\"src\/Handler\/CurlFactory.php.html#731\">GuzzleHttp\\Handler\\CurlFactory::__destruct<\/a>"],[100,1,"<a href=\"src\/Handler\/CurlHandler.php.html#31\">GuzzleHttp\\Handler\\CurlHandler::__construct<\/a>"],[0,2,"<a href=\"src\/Handler\/CurlHandler.php.html#37\">GuzzleHttp\\Handler\\CurlHandler::__invoke<\/a>"],[66.66666666666666,3,"<a href=\"src\/Handler\/CurlMultiHandler.php.html#69\">GuzzleHttp\\Handler\\CurlMultiHandler::__construct<\/a>"],[0,4,"<a href=\"src\/Handler\/CurlMultiHandler.php.html#97\">GuzzleHttp\\Handler\\CurlMultiHandler::__get<\/a>"],[33.33333333333333,2,"<a href=\"src\/Handler\/CurlMultiHandler.php.html#119\">GuzzleHttp\\Handler\\CurlMultiHandler::__destruct<\/a>"],[0,1,"<a href=\"src\/Handler\/CurlMultiHandler.php.html#127\">GuzzleHttp\\Handler\\CurlMultiHandler::__invoke<\/a>"],[0,7,"<a href=\"src\/Handler\/CurlMultiHandler.php.html#147\">GuzzleHttp\\Handler\\CurlMultiHandler::tick<\/a>"],[0,2,"<a href=\"src\/Handler\/CurlMultiHandler.php.html#186\">GuzzleHttp\\Handler\\CurlMultiHandler::tickInQueue<\/a>"],[0,5,"<a href=\"src\/Handler\/CurlMultiHandler.php.html#197\">GuzzleHttp\\Handler\\CurlMultiHandler::execute<\/a>"],[0,2,"<a href=\"src\/Handler\/CurlMultiHandler.php.html#210\">GuzzleHttp\\Handler\\CurlMultiHandler::addRequest<\/a>"],[0,4,"<a href=\"src\/Handler\/CurlMultiHandler.php.html#229\">GuzzleHttp\\Handler\\CurlMultiHandler::cancel<\/a>"],[0,4,"<a href=\"src\/Handler\/CurlMultiHandler.php.html#251\">GuzzleHttp\\Handler\\CurlMultiHandler::processMessages<\/a>"],[0,3,"<a href=\"src\/Handler\/CurlMultiHandler.php.html#275\">GuzzleHttp\\Handler\\CurlMultiHandler::timeToNext<\/a>"],[0,5,"<a href=\"src\/Handler\/EasyHandle.php.html#69\">GuzzleHttp\\Handler\\EasyHandle::createResponse<\/a>"],[0,2,"<a href=\"src\/Handler\/EasyHandle.php.html#107\">GuzzleHttp\\Handler\\EasyHandle::__get<\/a>"],[0,4,"<a href=\"src\/Handler\/HeaderProcessor.php.html#21\">GuzzleHttp\\Handler\\HeaderProcessor::parseHeaders<\/a>"],[0,1,"<a href=\"src\/Handler\/MockHandler.php.html#55\">GuzzleHttp\\Handler\\MockHandler::createWithMiddleware<\/a>"],[0,2,"<a href=\"src\/Handler\/MockHandler.php.html#69\">GuzzleHttp\\Handler\\MockHandler::__construct<\/a>"],[0,16,"<a href=\"src\/Handler\/MockHandler.php.html#80\">GuzzleHttp\\Handler\\MockHandler::__invoke<\/a>"],[0,6,"<a href=\"src\/Handler\/MockHandler.php.html#153\">GuzzleHttp\\Handler\\MockHandler::append<\/a>"],[0,1,"<a href=\"src\/Handler\/MockHandler.php.html#171\">GuzzleHttp\\Handler\\MockHandler::getLastRequest<\/a>"],[0,1,"<a href=\"src\/Handler\/MockHandler.php.html#179\">GuzzleHttp\\Handler\\MockHandler::getLastOptions<\/a>"],[0,1,"<a href=\"src\/Handler\/MockHandler.php.html#187\">GuzzleHttp\\Handler\\MockHandler::count<\/a>"],[0,1,"<a href=\"src\/Handler\/MockHandler.php.html#192\">GuzzleHttp\\Handler\\MockHandler::reset<\/a>"],[0,2,"<a href=\"src\/Handler\/MockHandler.php.html#200\">GuzzleHttp\\Handler\\MockHandler::invokeStats<\/a>"],[66.66666666666666,2,"<a href=\"src\/Handler\/Proxy.php.html#25\">GuzzleHttp\\Handler\\Proxy::wrapSync<\/a>"],[66.66666666666666,2,"<a href=\"src\/Handler\/Proxy.php.html#45\">GuzzleHttp\\Handler\\Proxy::wrapStreaming<\/a>"],[0,14,"<a href=\"src\/Handler\/StreamHandler.php.html#36\">GuzzleHttp\\Handler\\StreamHandler::__invoke<\/a>"],[0,2,"<a href=\"src\/Handler\/StreamHandler.php.html#94\">GuzzleHttp\\Handler\\StreamHandler::invokeStats<\/a>"],[0,7,"<a href=\"src\/Handler\/StreamHandler.php.html#110\">GuzzleHttp\\Handler\\StreamHandler::createResponse<\/a>"],[0,3,"<a href=\"src\/Handler\/StreamHandler.php.html#160\">GuzzleHttp\\Handler\\StreamHandler::createSink<\/a>"],[0,7,"<a href=\"src\/Handler\/StreamHandler.php.html#174\">GuzzleHttp\\Handler\\StreamHandler::checkDecode<\/a>"],[0,3,"<a href=\"src\/Handler\/StreamHandler.php.html#213\">GuzzleHttp\\Handler\\StreamHandler::drain<\/a>"],[0,4,"<a href=\"src\/Handler\/StreamHandler.php.html#240\">GuzzleHttp\\Handler\\StreamHandler::createResource<\/a>"],[0,18,"<a href=\"src\/Handler\/StreamHandler.php.html#275\">GuzzleHttp\\Handler\\StreamHandler::createStream<\/a>"],[0,9,"<a href=\"src\/Handler\/StreamHandler.php.html#363\">GuzzleHttp\\Handler\\StreamHandler::resolveHost<\/a>"],[0,5,"<a href=\"src\/Handler\/StreamHandler.php.html#389\">GuzzleHttp\\Handler\\StreamHandler::getDefaultContext<\/a>"],[0,8,"<a href=\"src\/Handler\/StreamHandler.php.html#429\">GuzzleHttp\\Handler\\StreamHandler::add_proxy<\/a>"],[0,9,"<a href=\"src\/Handler\/StreamHandler.php.html#462\">GuzzleHttp\\Handler\\StreamHandler::parse_proxy<\/a>"],[0,2,"<a href=\"src\/Handler\/StreamHandler.php.html#490\">GuzzleHttp\\Handler\\StreamHandler::add_timeout<\/a>"],[0,6,"<a href=\"src\/Handler\/StreamHandler.php.html#500\">GuzzleHttp\\Handler\\StreamHandler::add_crypto_method<\/a>"],[0,5,"<a href=\"src\/Handler\/StreamHandler.php.html#519\">GuzzleHttp\\Handler\\StreamHandler::add_verify<\/a>"],[0,3,"<a href=\"src\/Handler\/StreamHandler.php.html#545\">GuzzleHttp\\Handler\\StreamHandler::add_cert<\/a>"],[0,2,"<a href=\"src\/Handler\/StreamHandler.php.html#562\">GuzzleHttp\\Handler\\StreamHandler::add_progress<\/a>"],[0,3,"<a href=\"src\/Handler\/StreamHandler.php.html#579\">GuzzleHttp\\Handler\\StreamHandler::add_debug<\/a>"],[0,2,"<a href=\"src\/Handler\/StreamHandler.php.html#613\">GuzzleHttp\\Handler\\StreamHandler::addNotification<\/a>"],[0,2,"<a href=\"src\/Handler\/StreamHandler.php.html#626\">GuzzleHttp\\Handler\\StreamHandler::callArray<\/a>"],[100,2,"<a href=\"src\/HandlerStack.php.html#47\">GuzzleHttp\\HandlerStack::create<\/a>"],[100,1,"<a href=\"src\/HandlerStack.php.html#61\">GuzzleHttp\\HandlerStack::__construct<\/a>"],[0,1,"<a href=\"src\/HandlerStack.php.html#71\">GuzzleHttp\\HandlerStack::__invoke<\/a>"],[0,4,"<a href=\"src\/HandlerStack.php.html#83\">GuzzleHttp\\HandlerStack::__toString<\/a>"],[0,1,"<a href=\"src\/HandlerStack.php.html#114\">GuzzleHttp\\HandlerStack::setHandler<\/a>"],[0,1,"<a href=\"src\/HandlerStack.php.html#123\">GuzzleHttp\\HandlerStack::hasHandler<\/a>"],[0,1,"<a href=\"src\/HandlerStack.php.html#134\">GuzzleHttp\\HandlerStack::unshift<\/a>"],[100,1,"<a href=\"src\/HandlerStack.php.html#146\">GuzzleHttp\\HandlerStack::push<\/a>"],[0,1,"<a href=\"src\/HandlerStack.php.html#159\">GuzzleHttp\\HandlerStack::before<\/a>"],[0,1,"<a href=\"src\/HandlerStack.php.html#171\">GuzzleHttp\\HandlerStack::after<\/a>"],[0,4,"<a href=\"src\/HandlerStack.php.html#181\">GuzzleHttp\\HandlerStack::remove<\/a>"],[0,4,"<a href=\"src\/HandlerStack.php.html#202\">GuzzleHttp\\HandlerStack::resolve<\/a>"],[0,3,"<a href=\"src\/HandlerStack.php.html#220\">GuzzleHttp\\HandlerStack::findByName<\/a>"],[0,4,"<a href=\"src\/HandlerStack.php.html#234\">GuzzleHttp\\HandlerStack::splice<\/a>"],[0,4,"<a href=\"src\/HandlerStack.php.html#260\">GuzzleHttp\\HandlerStack::debugCallable<\/a>"],[0,2,"<a href=\"src\/MessageFormatter.php.html#59\">GuzzleHttp\\MessageFormatter::__construct<\/a>"],[0,35,"<a href=\"src\/MessageFormatter.php.html#71\">GuzzleHttp\\MessageFormatter::format<\/a>"],[0,2,"<a href=\"src\/MessageFormatter.php.html#190\">GuzzleHttp\\MessageFormatter::headers<\/a>"],[11.76470588235294,3,"<a href=\"src\/Middleware.php.html#26\">GuzzleHttp\\Middleware::cookies<\/a>"],[14.285714285714285,3,"<a href=\"src\/Middleware.php.html#58\">GuzzleHttp\\Middleware::httpErrors<\/a>"],[0,3,"<a href=\"src\/Middleware.php.html#88\">GuzzleHttp\\Middleware::history<\/a>"],[0,3,"<a href=\"src\/Middleware.php.html#135\">GuzzleHttp\\Middleware::tap<\/a>"],[66.66666666666666,1,"<a href=\"src\/Middleware.php.html#157\">GuzzleHttp\\Middleware::redirect<\/a>"],[0,1,"<a href=\"src\/Middleware.php.html#179\">GuzzleHttp\\Middleware::retry<\/a>"],[0,4,"<a href=\"src\/Middleware.php.html#198\">GuzzleHttp\\Middleware::log<\/a>"],[66.66666666666666,1,"<a href=\"src\/Middleware.php.html#230\">GuzzleHttp\\Middleware::prepareBody<\/a>"],[0,1,"<a href=\"src\/Middleware.php.html#244\">GuzzleHttp\\Middleware::mapRequest<\/a>"],[0,1,"<a href=\"src\/Middleware.php.html#260\">GuzzleHttp\\Middleware::mapResponse<\/a>"],[0,6,"<a href=\"src\/Pool.php.html#41\">GuzzleHttp\\Pool::__construct<\/a>"],[0,1,"<a href=\"src\/Pool.php.html#73\">GuzzleHttp\\Pool::promise<\/a>"],[0,1,"<a href=\"src\/Pool.php.html#96\">GuzzleHttp\\Pool::batch<\/a>"],[0,2,"<a href=\"src\/Pool.php.html#111\">GuzzleHttp\\Pool::cmpCallback<\/a>"],[0,1,"<a href=\"src\/PrepareBodyMiddleware.php.html#24\">GuzzleHttp\\PrepareBodyMiddleware::__construct<\/a>"],[0,9,"<a href=\"src\/PrepareBodyMiddleware.php.html#29\">GuzzleHttp\\PrepareBodyMiddleware::__invoke<\/a>"],[0,9,"<a href=\"src\/PrepareBodyMiddleware.php.html#70\">GuzzleHttp\\PrepareBodyMiddleware::addExpectHeader<\/a>"],[0,1,"<a href=\"src\/RedirectMiddleware.php.html#45\">GuzzleHttp\\RedirectMiddleware::__construct<\/a>"],[0,5,"<a href=\"src\/RedirectMiddleware.php.html#50\">GuzzleHttp\\RedirectMiddleware::__invoke<\/a>"],[0,7,"<a href=\"src\/RedirectMiddleware.php.html#80\">GuzzleHttp\\RedirectMiddleware::checkRedirect<\/a>"],[0,1,"<a href=\"src\/RedirectMiddleware.php.html#124\">GuzzleHttp\\RedirectMiddleware::withTracking<\/a>"],[0,2,"<a href=\"src\/RedirectMiddleware.php.html#147\">GuzzleHttp\\RedirectMiddleware::guardMax<\/a>"],[0,11,"<a href=\"src\/RedirectMiddleware.php.html#159\">GuzzleHttp\\RedirectMiddleware::modifyRequest<\/a>"],[0,2,"<a href=\"src\/RedirectMiddleware.php.html#211\">GuzzleHttp\\RedirectMiddleware::redirectUri<\/a>"],[0,2,"<a href=\"src\/RetryMiddleware.php.html#43\">GuzzleHttp\\RetryMiddleware::__construct<\/a>"],[0,1,"<a href=\"src\/RetryMiddleware.php.html#55\">GuzzleHttp\\RetryMiddleware::exponentialDelay<\/a>"],[0,2,"<a href=\"src\/RetryMiddleware.php.html#60\">GuzzleHttp\\RetryMiddleware::__invoke<\/a>"],[0,2,"<a href=\"src\/RetryMiddleware.php.html#78\">GuzzleHttp\\RetryMiddleware::onFulfilled<\/a>"],[0,2,"<a href=\"src\/RetryMiddleware.php.html#97\">GuzzleHttp\\RetryMiddleware::onRejected<\/a>"],[0,1,"<a href=\"src\/RetryMiddleware.php.html#113\">GuzzleHttp\\RetryMiddleware::doRetry<\/a>"],[0,1,"<a href=\"src\/TransferStats.php.html#47\">GuzzleHttp\\TransferStats::__construct<\/a>"],[0,1,"<a href=\"src\/TransferStats.php.html#61\">GuzzleHttp\\TransferStats::getRequest<\/a>"],[0,1,"<a href=\"src\/TransferStats.php.html#69\">GuzzleHttp\\TransferStats::getResponse<\/a>"],[0,1,"<a href=\"src\/TransferStats.php.html#77\">GuzzleHttp\\TransferStats::hasResponse<\/a>"],[0,1,"<a href=\"src\/TransferStats.php.html#91\">GuzzleHttp\\TransferStats::getHandlerErrorData<\/a>"],[0,1,"<a href=\"src\/TransferStats.php.html#99\">GuzzleHttp\\TransferStats::getEffectiveUri<\/a>"],[0,1,"<a href=\"src\/TransferStats.php.html#109\">GuzzleHttp\\TransferStats::getTransferTime<\/a>"],[0,1,"<a href=\"src\/TransferStats.php.html#117\">GuzzleHttp\\TransferStats::getHandlerStats<\/a>"],[0,1,"<a href=\"src\/TransferStats.php.html#129\">GuzzleHttp\\TransferStats::getHandlerStat<\/a>"],[0,4,"<a href=\"src\/Utils.php.html#22\">GuzzleHttp\\Utils::describeType<\/a>"],[0,3,"<a href=\"src\/Utils.php.html#46\">GuzzleHttp\\Utils::headersFromLines<\/a>"],[0,3,"<a href=\"src\/Utils.php.html#65\">GuzzleHttp\\Utils::debugResource<\/a>"],[53.333333333333336,11,"<a href=\"src\/Utils.php.html#86\">GuzzleHttp\\Utils::chooseHandler<\/a>"],[100,1,"<a href=\"src\/Utils.php.html#114\">GuzzleHttp\\Utils::defaultUserAgent<\/a>"],[0,6,"<a href=\"src\/Utils.php.html#134\">GuzzleHttp\\Utils::defaultCaBundle<\/a>"],[0,2,"<a href=\"src\/Utils.php.html#194\">GuzzleHttp\\Utils::normalizeHeaderKeys<\/a>"],[0,7,"<a href=\"src\/Utils.php.html#223\">GuzzleHttp\\Utils::isHostInNoProxy<\/a>"],[0,2,"<a href=\"src\/Utils.php.html#273\">GuzzleHttp\\Utils::jsonDecode<\/a>"],[0,2,"<a href=\"src\/Utils.php.html#294\">GuzzleHttp\\Utils::jsonEncode<\/a>"],[0,2,"<a href=\"src\/Utils.php.html#313\">GuzzleHttp\\Utils::currentTime<\/a>"],[0,7,"<a href=\"src\/Utils.php.html#323\">GuzzleHttp\\Utils::idnUriConvert<\/a>"],[60,5,"<a href=\"src\/Utils.php.html#360\">GuzzleHttp\\Utils::getenv<\/a>"],[0,3,"<a href=\"src\/Utils.php.html#376\">GuzzleHttp\\Utils::idnToAsci<\/a>"],[100,0,"<a href=\"src\/ClientTrait.php.html#28\">GuzzleHttp\\ClientTrait::request<\/a>"],[0,1,"<a href=\"src\/ClientTrait.php.html#42\">GuzzleHttp\\ClientTrait::get<\/a>"],[0,1,"<a href=\"src\/ClientTrait.php.html#59\">GuzzleHttp\\ClientTrait::head<\/a>"],[0,1,"<a href=\"src\/ClientTrait.php.html#76\">GuzzleHttp\\ClientTrait::put<\/a>"],[0,1,"<a href=\"src\/ClientTrait.php.html#93\">GuzzleHttp\\ClientTrait::post<\/a>"],[0,1,"<a href=\"src\/ClientTrait.php.html#110\">GuzzleHttp\\ClientTrait::patch<\/a>"],[0,1,"<a href=\"src\/ClientTrait.php.html#127\">GuzzleHttp\\ClientTrait::delete<\/a>"],[100,0,"<a href=\"src\/ClientTrait.php.html#144\">GuzzleHttp\\ClientTrait::requestAsync<\/a>"],[0,1,"<a href=\"src\/ClientTrait.php.html#157\">GuzzleHttp\\ClientTrait::getAsync<\/a>"],[0,1,"<a href=\"src\/ClientTrait.php.html#173\">GuzzleHttp\\ClientTrait::headAsync<\/a>"],[0,1,"<a href=\"src\/ClientTrait.php.html#189\">GuzzleHttp\\ClientTrait::putAsync<\/a>"],[0,1,"<a href=\"src\/ClientTrait.php.html#205\">GuzzleHttp\\ClientTrait::postAsync<\/a>"],[0,1,"<a href=\"src\/ClientTrait.php.html#221\">GuzzleHttp\\ClientTrait::patchAsync<\/a>"],[0,1,"<a href=\"src\/ClientTrait.php.html#237\">GuzzleHttp\\ClientTrait::deleteAsync<\/a>"]], 'Method Complexity'))
+      .transition()
+      .duration(500)
+      .call(chart);
+
+    nv.utils.windowResize(chart.update);
+
+    return chart;
+  });
+
+  function getComplexityData(data, label) {
+    var values = [];
+    $.each(data, function(key) {
+      var value = Math.round(data[key][0]*100) / 100;
+      values.push({
+        x: value,
+        y: data[key][1],
+        class: data[key][2],
+        size: 0.05,
+        shape: 'diamond'
+      });
+    });
+
+    return [
+      {
+        key: label,
+        values: values,
+        color: "#4572A7"
+      }
+    ];
+  }
+});
+  </script>
+ </body>
+</html>
