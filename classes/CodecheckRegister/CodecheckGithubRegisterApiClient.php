@@ -13,6 +13,7 @@ use APP\plugins\generic\codecheck\classes\Exceptions\ApiFetchException;
 use APP\plugins\generic\codecheck\classes\Exceptions\ApiCreateException;
 use APP\plugins\generic\codecheck\classes\Exceptions\GithubUrlParseException;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterIssue;
+use APP\plugins\generic\codecheck\classes\Exceptions\ApiUpdateException;
 
 // Load .env variables
 $dotenv = Dotenv::createImmutable(__DIR__ . '/../../');
@@ -176,6 +177,61 @@ class CodecheckGithubRegisterApiClient
             );
         } catch (\Throwable $e) {
             throw new ApiCreateException("Error while adding the new GitHub issue with the new Certificate Identifier: " . $certificateIdentifier->toStr() . "\n" . $e->getMessage());
+        }
+
+        return $issue;
+    }
+
+    /**
+     * Adds an Issue with the new Certificate Identifier to the CODECHECK GitHub Register
+     *
+     * @param int $issueNumber The Number of the corresponding GitHub Issue
+     * @param CertificateIdentifier $certificateIdentifier The Certificate identifier to be added
+     * @param CodecheckVenue $codecheckVenue The CODECHECK Venue that will be added as labels to the issue
+     * @param string $authorString The formatted author string e.g. `author name et al.`
+     * @param string $paperTitle The Title of the submitted paper / preprint / article
+     * @return array Returns the GitHub URL & Issue Number of the newly created issue
+     */
+    public function updateIssue(
+        int $issueNumber,
+        CertificateIdentifier $certificateIdentifier,
+        CodecheckVenue $codecheckVenue,
+        string $paperTitle,
+        string $authorString
+    ): array {
+        $token = $_ENV['CODECHECK_REGISTER_GITHUB_TOKEN'];
+
+        $this->client->authenticate($token, null, Client::AUTH_ACCESS_TOKEN);
+
+        $codecheckIssue = new CodecheckGithubRegisterIssue(
+            $this->githubRegisterRepositoryOwner,
+            $this->githubRegisterRepository,
+            $certificateIdentifier,
+            $codecheckVenue,
+            $paperTitle,
+            $this->journalName,
+            $authorString,
+            $this->submissionID
+        );
+
+        $issueContents = [
+            'title' => $codecheckIssue->getTitle(),
+            'body'  => $codecheckIssue->getBody()
+        ];
+
+        if(!$codecheckVenue->isDefault()){
+            $issueContents['labels'] = $codecheckIssue->getLabels();
+        }
+
+        try {
+            $issue = $this->client->api('issue')->update(
+                $this->githubRegisterRepositoryOwner,
+                $this->githubRegisterRepository,
+                $issueNumber,
+                $issueContents,
+            );
+        } catch (\Throwable $e) {
+            throw new ApiUpdateException("Error while updating GitHub issue #$issueNumber with the Certificate Identifier: " . $certificateIdentifier->toStr() . "\n" . $e->getMessage());
         }
 
         return $issue;

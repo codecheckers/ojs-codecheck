@@ -58,4 +58,18 @@ class CodecheckVenue
     {
         return $this->venueType;
     }
+
+    /**
+     * Checks if a CodecheckVenue wasn't set and is instead default
+     * 
+     * @return bool Is CODECHECK Venue default
+     */
+    public function isDefault(): bool
+    {
+        if($this->venueName == 'default' || $this->venueType == 'default') {
+            return true;
+        }
+
+        return false;
+    }
 }

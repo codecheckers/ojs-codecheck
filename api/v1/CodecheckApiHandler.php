@@ -85,6 +85,11 @@ class CodecheckApiHandler
                     'roles' => $this->roles,
                 ],
                 [
+                    'route' => 'issue',
+                    'handler' => [$this, 'updateGithubIssue'],
+                    'roles' => $this->roles,
+                ],
+                [
                     'route' => 'metadata',
                     'handler' => [$this, 'saveMetadata'],
                     'roles' => $this->roles,
@@ -327,7 +332,61 @@ class CodecheckApiHandler
             return;
         }
     }
-     
+
+    public function updateGithubIssue(): void
+    {
+        $postParams = json_decode(file_get_contents('php://input'), true);
+        $issue = $postParams['issue'];
+        if(!is_array($issue) || !is_int($issue['number']) || !is_string($issue['url'])) {
+            # TODO: JSON Error Response
+            return;
+        }
+        
+        // CODECHECK GitHub Issue Register API parser
+        $codecheckGithubRegisterApiClient = new CodecheckGithubRegisterApiClient(
+            'codecheckers',
+            'testing-dev-register', // Name of the GitHub Repository for the Register
+            $this->codecheckMetadataHandler->getSubmissionId(), // Submission ID
+            $this->request->getContext(), // The Journal Object of the Submission
+        );
+
+        $venueType = $postParams["venueType"];
+        $venueName = $postParams["venueName"];
+        $submissionData = $postParams["submission"];
+        $authorString = $submissionData["authorString"];
+        $articleTitle = $submissionData["title"];
+        $identifierStr = $postParams["identifier"];
+
+        if(is_string($identifierStr) && is_string($venueType) && is_string($venueName) && is_array($submissionData) && is_string($authorString) && is_string($articleTitle)) {
+            $identifier = CertificateIdentifier::fromStr($identifierStr);
+            $codecheckVenue = new CodecheckVenue($venueType, $venueName);
+            $updatedIssue = $codecheckGithubRegisterApiClient->updateIssue(
+                $issue['number'],
+                $identifier,
+                $codecheckVenue,
+                $articleTitle,
+                $authorString
+            );
+
+            # TODO: Check if the update function worked and return JSON Error if not
+
+            // return a success result
+            $this->response->response([
+                'success' => true,
+                'identifier' => $identifier->toStr(),
+                'issueUrl' => $updatedIssue['html_url'],
+                'issueNumber' => $updatedIssue['number'] ?? null,
+            ], 200);
+            return;
+        } else {
+            $this->response->response([
+                'success'   => false,
+                'error'     => "The CODECHECK Venue Type and/ or Venue Names aren't of Type string as expected.",
+            ], 400);
+            return;
+        }
+    }
+
     /**
      * This reserves a new Identifier with the GitHub API
      * 

@@ -790,6 +790,13 @@ export default {
       this.saving = true;
       this.saveMessage = '';
 
+      // Update GitHub Issue
+      try {
+        this.updateGithubIssueContents();
+      } catch {
+        // show some error message
+      }
+
       try {
         const dataToSave = {
           version: this.metadata.version,
@@ -1069,6 +1076,59 @@ export default {
           } else {
             this.showMessage(`${this.t('plugins.generic.codecheck.request.failed')}\nNo/ or wrong Reserve Identifier Mode specified.`, 'error');  
             console.error(`${this.t('plugins.generic.codecheck.request.failed')}\nNo/ or wrong Reserve Identifier Mode specified.`);
+          }
+      } catch (error) {
+          this.showMessage(`${this.t('plugins.generic.codecheck.request.failed')}\n${error}`, 'error');
+          console.error('Request failed:', error);
+      }
+    },
+
+    async updateGithubIssueContents() {
+      const authorString = this.submissionData.authors.length > 1
+        ? this.submissionData.authors[0].name + ' et al.'
+        : this.submissionData.authors[0].name;
+
+      console.log(authorString);
+      console.log(this.submissionData.codeRepository);
+      console.log(this.submissionData.dataRepository);
+      console.log(this.submissionData.doi);
+
+      const submissionId = this.submission.id;
+      let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
+
+      try {
+          const response = await fetch(`${apiUrl}/issue?submissionId=${submissionId}`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Csrf-Token': pkp.currentUser.csrfToken,
+              },
+              body: JSON.stringify({
+                venueType: this.certificateIdentifier.venueType,
+                venueName: this.certificateIdentifier.venueName,
+                submission: {
+                  authorString: authorString,
+                  codeRepository: this.submissionData.codeRepository,
+                  dataRepository: this.submissionData.dataRepository,
+                  title: this.submissionData.title,
+                  doi: this.submissionData.doi,
+                },
+                identifier: this.metadata.certificate,
+                issue: {
+                  'url': this.certificateIdentifier.issueUrl,
+                  'number': this.certificateIdentifier.issueNumber
+                }
+              }),
+          });
+          const data = await response.json();
+
+          if (data.success) {
+            
+            this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.linkExistingIdentifier.success.message')}: ${data.identifier}`, 'success');
+            console.log('The GitHub Issue was linked to OJS with the Certificate Identifier: ', data.identifier, data.issueUrl, data.issueNumber);
+          } else {
+            this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.linkExistingIdentifier.fail.message')}\n${data.error}`, 'error');
+            console.error('Error while linking an existing GitHub Issue: ', data.error);
           }
       } catch (error) {
           this.showMessage(`${this.t('plugins.generic.codecheck.request.failed')}\n${error}`, 'error');
