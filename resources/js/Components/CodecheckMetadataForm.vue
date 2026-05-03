@@ -479,9 +479,9 @@ export default {
       this.error = null;
       this.dataLoaded = false;
       
-      //console.log((this.certificateIdentifier.issue?.url ?? '').trim() !== '');
+      console.log((this.certificateIdentifier.issue?.url ?? '').trim() !== '');
       console.log(this.identifierInputEmpty);
-      //console.log((this.certificateIdentifier.issue?.url ?? '').trim() !== '' && !this.identifierInputEmpty);
+      console.log((this.certificateIdentifier.issue?.url ?? '').trim() !== '' && !this.identifierInputEmpty);
 
       try {
         if (!this.submission || !this.submission.id) {

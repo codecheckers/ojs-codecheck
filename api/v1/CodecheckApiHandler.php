@@ -204,7 +204,7 @@ class CodecheckApiHandler
             try {
                 $codecheckIssueLabels = CodecheckIssueLabels::fromApi("https://codecheck.org.uk/register/venues/index.json");
             } catch (\Throwable $e) {
-                $this->response->response([
+                JsonResponse::staticResponse([
                     'success'   => false,
                     'error'     => $e->getMessage(),
                 ], 400);
@@ -213,7 +213,7 @@ class CodecheckApiHandler
         }
 
         // Serve the getCodecheckIssueLabels API route
-        $this->response->response([
+        JsonResponse::staticResponse([
             'success' => true,
             'labels' => $codecheckIssueLabels->get()->toArray(),
         ], 200);
@@ -255,7 +255,7 @@ class CodecheckApiHandler
         $reserveIdentifierMode = $postParams['reserveIdentifierMode'];
 
         if(!is_string($reserveIdentifierMode)) {
-            $this->response->response([
+            JsonResponse::staticResponse([
                 'success'   => false,
                 'error'     => "No Reserve Identifier Mode was specified.",
             ], 400);
@@ -284,13 +284,13 @@ class CodecheckApiHandler
                 true
             );
         } catch (ApiFetchException $ae) {
-            $this->response->response([
+            JsonResponse::staticResponse([
                 'success'   => false,
                 'error'     => $ae->getMessage(),
             ], 400);
             return;
         } catch (NoMatchingIssuesFoundException $me) {
-            $this->response->response([
+            JsonResponse::staticResponse([
                 'success'   => false,
                 'error'     => $me->getMessage(),
             ], 400);
@@ -348,7 +348,7 @@ class CodecheckApiHandler
                     break;
 
                 default:
-                    $this->response->response([
+                    JsonResponse::staticResponse([
                         'success'   => false,
                         'error'     => "An unexpected mode for the reservation of the Certificate Identifier was given: " . $reserveIdentifierMode,
                     ], 400);
@@ -359,7 +359,7 @@ class CodecheckApiHandler
             if($issueGithubUrl == null) { return; }
 
             // return a success result
-            $this->response->response([
+            JsonResponse::staticResponse([
                 'success' => true,
                 'identifier' => $newIdentifier->toStr(),
                 'issueUrl' => $issueGithubUrl,
@@ -367,7 +367,7 @@ class CodecheckApiHandler
             ], 200);
             return;
         } else {
-            $this->response->response([
+            JsonResponse::staticResponse([
                 'success'   => false,
                 'error'     => "Some Parameters sent with POST to the API aren't of the expected datatype.",
             ], 400);
@@ -416,7 +416,7 @@ class CodecheckApiHandler
             # TODO: Check if the update function worked and return JSON Error if not
 
             // return a success result
-            $this->response->response([
+            JsonResponse::staticResponse([
                 'success' => true,
                 'identifier' => $identifier->toStr(),
                 'issueUrl' => $updatedIssue['html_url'],
@@ -424,7 +424,7 @@ class CodecheckApiHandler
             ], 200);
             return;
         } else {
-            $this->response->response([
+            JsonResponse::staticResponse([
                 'success'   => false,
                 'error'     => "Some Parameters sent with POST to the API aren't of the expected datatype.",
             ], 400);
@@ -459,7 +459,7 @@ class CodecheckApiHandler
             );
         } catch (ApiCreateException $e) {
             // return an error result
-            $this->response->response([
+            JsonResponse::staticResponse([
                 'success'   => false,
                 'error'     => $e->getMessage(),
             ], 400);
@@ -508,7 +508,7 @@ class CodecheckApiHandler
         $title =  "a | " . $identifierStr;
         $rawIdentifier = CertificateIdentifierList::getRawIdentifier($title);
         if($rawIdentifier == null) {
-            $this->response->response([
+            JsonResponse::staticResponse([
                 'success'   => false,
                 'identifier' => $identifierStr,
                 'error'     => "The identifier: " . $identifierStr . " isn't matching the required format (YYYY-NNN or YYYY-NNN/YYYY-NNN).",
@@ -519,7 +519,7 @@ class CodecheckApiHandler
         $issue = $certificateIdentifierList->getIssueInformationByIdentifier($identifier);
         error_log(print_r($issue, true));
         if(is_string($issue['issueUrl']) && is_int($issue['issueNumber'])) {
-            $this->response->response([
+            JsonResponse::staticResponse([
                 'success' => true,
                 'identifier' => $identifier->toStr(),
                 'issueUrl' => $issue['issueUrl'],
@@ -528,7 +528,7 @@ class CodecheckApiHandler
             return;
         }
 
-        $this->response->response([
+        JsonResponse::staticResponse([
             'success'   => false,
             'identifier' => $identifierStr,
             'error'     => "The certificate with the Identifier: ". $identifierStr . " doesn't exist in the GitHub Register.",
@@ -595,47 +595,7 @@ class CodecheckApiHandler
             JsonResponse::staticResponse($result, 404);
         }
 
-<<<<<<< HEAD
         JsonResponse::staticResponse($result, 200);
-=======
-        $publication = $submission->getCurrentPublication();
-        
-        $metadata = DB::table('codecheck_metadata')
-            ->where('submission_id', $submissionId)
-            ->first();
-
-        $response = [
-            'submissionId' => $submissionId,
-            'submission' => [
-                'id' => $submission->getId(),
-                'title' => $publication ? $publication->getLocalizedTitle() : '',
-                'authors' => $this->codecheckMetadataHandler->getAuthors($publication),
-                'doi' => $publication ? $publication->getStoredPubId('doi') : null,
-                'codeRepository' => $submission->getData('codeRepository'),
-                'dataRepository' => $submission->getData('dataRepository'),
-                'manifestFiles' => $submission->getData('manifestFiles'),
-                'dataAvailabilityStatement' => $submission->getData('dataAvailabilityStatement'),
-            ],
-            'codecheck' => $metadata ? [
-                'version' => $metadata->version ?? 'latest',
-                'publicationType' => $metadata->publication_type ?? 'doi',
-                'manifest' => json_decode($metadata->manifest ?? '[]', true),
-                'repository' => $metadata->repository,
-                'codecheckers' => json_decode($metadata->codecheckers ?? '[]', true),
-                'source' => $metadata->source,
-                'certificate' => $metadata->certificate,
-                'issue' => json_decode($metadata->issue ?? '[]', true),
-                'check_time' => $metadata->check_time,
-                'summary' => $metadata->summary,
-                'report' => $metadata->report,
-                'additionalContent' => $metadata->additional_content,
-            ] : null
-        ];
-
-        error_log("[CODECHECK API] getMetadata Response: " . json_encode($response));
-        
-        $this->response->response($response, 200);
->>>>>>> 9aee600 (Labels are now cached / saved within the OJS database #55)
     }
 
     /**
@@ -653,57 +613,7 @@ class CodecheckApiHandler
             JsonResponse::staticResponse($result, 404);
         }
 
-<<<<<<< HEAD
         JsonResponse::staticResponse($result, 200);
-=======
-        $jsonData = file_get_contents('php://input');
-        $data = json_decode($jsonData, true);
-        
-        error_log("[CODECHECK API] Received data: " . $jsonData);
-
-        $nullIfEmpty = function($value) {
-            return (is_string($value) && trim($value) === '') ? null : $value;
-        };
-        
-        $metadataData = [
-            'submission_id' => $submissionId,
-            'version' => $data['version'] ?? 'latest',
-            'publication_type' => $data['publication_type'] ?? 'doi',
-            'manifest' => json_encode($data['manifest'] ?? []),
-            'repository' => $nullIfEmpty($data['repository'] ?? null),
-            'source' => $nullIfEmpty($data['source'] ?? null),
-            'codecheckers' => json_encode($data['codecheckers'] ?? []),
-            'certificate' => $nullIfEmpty($data['certificate'] ?? null),
-            'issue' => json_encode($data['issue'] ?? ['url' => null, 'number' => null, 'labelsSelected' => []]),
-            'check_time' => $nullIfEmpty($data['check_time'] ?? null),
-            'summary' => $nullIfEmpty($data['summary'] ?? null),    
-            'report' => $nullIfEmpty($data['report'] ?? null),
-            'additional_content' => $nullIfEmpty($data['additional_content'] ?? null),
-            'updated_at' => date('Y-m-d H:i:s'),
-        ];
-
-        $exists = DB::table('codecheck_metadata')
-            ->where('submission_id', $submissionId)
-            ->exists();
-
-        if ($exists) {
-            DB::table('codecheck_metadata')
-                ->where('submission_id', $submissionId)
-                ->update($metadataData);
-            error_log("[CODECHECK API] Updated existing record");
-        } else {
-            $metadataData['created_at'] = date('Y-m-d H:i:s');
-            DB::table('codecheck_metadata')->insert($metadataData);
-            error_log("[CODECHECK Metadata] Created new record");
-        }
-
-        $this->response->response([
-            'success' => true,
-            'message' => 'CODECHECK metadata saved successfully',
-            'submissionID' => $submissionId,
-            'certificate' => $metadataData['certificate'],
-        ], 200);
->>>>>>> 9aee600 (Labels are now cached / saved within the OJS database #55)
     }
 
     /**
