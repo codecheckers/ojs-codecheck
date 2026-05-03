@@ -264,10 +264,13 @@ class CodecheckPlugin extends GenericPlugin
 
     public function setEnabled($enabled, $contextId = null)
     {
+        error_log("[CODECHECK Plugin] Plugin Enabled!");
         $result = parent::setEnabled($enabled, $contextId);
         
         if ($enabled) {
             $migration = new CodecheckSchemaMigration();
+            $migration->up();
+            $migration->down();
             $migration->up();
         }
         

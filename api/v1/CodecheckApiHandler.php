@@ -288,6 +288,7 @@ class CodecheckApiHandler
                         $authorString
                     );
                     $issueGithubUrl = $issue['html_url'];
+                    $issueNumber = $issue['number'];
                     break;
                 
                 case 'newIssueUrl':
@@ -315,6 +316,7 @@ class CodecheckApiHandler
                 'success' => true,
                 'identifier' => $newIdentifier->toStr(),
                 'issueUrl' => $issueGithubUrl,
+                'issueNumber' => $issueNumber ?? null,
             ], 200);
             return;
         } else {
@@ -403,12 +405,14 @@ class CodecheckApiHandler
             return;
         }
         $identifier = CertificateIdentifier::fromStr($rawIdentifier);
-        $issueUrl = $certificateIdentifierList->getIssueUrlByIdentifier($identifier);
-        if($issueUrl != null) {
+        $issue = $certificateIdentifierList->getIssueInformationByIdentifier($identifier);
+        error_log(print_r($issue, true));
+        if(is_string($issue['issueUrl']) && is_int($issue['issueNumber'])) {
             $this->response->response([
                 'success' => true,
                 'identifier' => $identifier->toStr(),
-                'issueUrl' => $issueUrl,
+                'issueUrl' => $issue['issueUrl'],
+                'issueNumber' => $issue['issueNumber'],
             ], 200);
             return;
         }
