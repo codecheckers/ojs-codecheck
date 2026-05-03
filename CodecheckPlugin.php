@@ -61,9 +61,19 @@ class CodecheckPlugin extends GenericPlugin
                 return $codecheckWizard->addToSubmissionWizardReviewTemplate($hookName, $params);
             });
             
+            Hook::add('Submission::updateStatus', $this->inCopyediting(...));
         }
 
         return $success;
+    }
+
+    public function inCopyediting($hookName, $args): bool
+    {
+        $submission = $args[0];
+
+        error_log("[CODECHECK Plugin] Submission Status updated.");
+
+        return false;
     }
     
     public function setupAPIHandler(string $hookName, array $args): void
