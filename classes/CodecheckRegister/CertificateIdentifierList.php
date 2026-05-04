@@ -143,7 +143,7 @@ class CertificateIdentifierList
     /**
      * Appends a raw Identifier to the list of Certificate Identifiers
      * 
-     * @param string $rawidentifier The raw Identifier to be appended
+     * @param string $rawIdentifier The raw Identifier to be appended
      * @param array $issue The GitHub Issue information of the raw Identifier to be appended
      * @return void
      */
@@ -183,7 +183,7 @@ class CertificateIdentifierList
 
         // append to all certificate identifiers
         foreach ($idRange as $identifier) {
-            if (!$this->uniqueArray->contains($identifier)) {
+            if (!$this->uniqueArray->containsIdentifier($identifier)) {
                 $this->uniqueArray->add($identifier);
             }
         }
@@ -249,8 +249,8 @@ class CertificateIdentifierList
     public function toStr(): string
     {
         $returnStr = "Certificate Identifiers:\n";
-        foreach ($this->uniqueArray as $identifier) {
-            $returnStr .= $identifier->toStr() . "\n";
+        foreach ($this->uniqueArray->toArray() as $identifierInformation) {
+            $returnStr .= $identifierInformation['identifier']->toStr() . "\n";
         }
         return $returnStr;
     }

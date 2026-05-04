@@ -4,19 +4,20 @@ namespace APP\plugins\generic\codecheck\tests;
 
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckVenueNames;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckApiClient;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckIssueLabels;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckVenueTypes;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitException;
 use PKP\tests\PKPTestCase;
 
 /**
- * @file APP/plugins/generic/codecheck/tests/unittests/CodecheckVenueNamesUnitTest.php
+ * @file APP/plugins/generic/codecheck/tests/unittests/CodecheckIssuelabelsUnitTest.php
  *
- * @class CodecheckVenueNamesUnitTest
+ * @class CodecheckIssueLabelsUnitTest
  *
- * @brief Tests for the CodecheckVenueNames class
+ * @brief Tests for the CodecheckIssueLabels class
  */
-class CodecheckVenueNamesUnitTest extends PKPTestCase
+class CodecheckIssueLabelsUnitTest extends PKPTestCase
 {
     protected function setUp(): void
 	{
@@ -35,8 +36,6 @@ class CodecheckVenueNamesUnitTest extends PKPTestCase
             ['Venue type' => 'community'],
         ]);
 
-        $venueTypes = new CodecheckVenueTypes($jsonApiMockVenueTypes);
-
         $jsonApiMockVenueNames = $this->createMock(CodecheckApiClient::class);
         $jsonApiMockVenueNames->expects($this->once())
                                 ->method('fetch')
@@ -52,7 +51,7 @@ class CodecheckVenueNamesUnitTest extends PKPTestCase
             ["Issue label" => 'development'],
         ]);
 
-        $venueNames = new CodecheckVenueNames($jsonApiMockVenueNames, $venueTypes);
+        $venueNames = CodecheckIssueLabels::fromApi('https://codecheck.org.uk/register/venues/index.json', $jsonApiMockVenueNames);
         $result = $venueNames->get()->toArray();
 
         $this->assertEquals(
@@ -72,6 +71,6 @@ class CodecheckVenueNamesUnitTest extends PKPTestCase
         $this->expectExceptionMessage(curl_error($testCurlHandle));
         $this->expectExceptionCode(curl_errno($testCurlHandle));
 
-        new CodecheckVenueNames($clientMock);
+        CodecheckIssueLabels::fromApi('https://codecheck.org.uk/register/venues/index.json', $clientMock);
     }
 }

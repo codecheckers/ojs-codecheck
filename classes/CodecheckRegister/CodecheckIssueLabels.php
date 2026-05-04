@@ -21,7 +21,7 @@ class CodecheckIssueLabels
         $this->uniqueArray = UniqueArray::from($issueLabelArray);
     }
 
-    public static function fromApi(string $url): CodecheckIssueLabels
+    public static function fromApi(string $url, ?CodecheckApiClient $apiClient): CodecheckIssueLabels
     {
         $issueLabelArray = [];
 

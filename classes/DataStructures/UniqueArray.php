@@ -69,6 +69,21 @@ class UniqueArray
     }
 
     /**
+     * This function checks if a specific Certificate Identifier exists inside the `UniqueArray`
+     * 
+     * @return bool Returns `true` if the identifier exists inside the `UniqueArray` and `false` if otherwise
+     */
+    public function containsIdentifier(array $element): bool
+    {
+        foreach ($this->array as $uniqueArrayElement) {
+            if($element["identifier"]->toStr() == $uniqueArrayElement['identifier']->toStr()){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * This function converts the `UniqueArray` to a normal array and returns this
      * 
      * @return array Returns the normal array to which the `UniqueArray` was converted
