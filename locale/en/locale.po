@@ -53,8 +53,8 @@ msgstr "opt-in by the author"
 msgid "plugins.generic.codecheck.settings.mode.opt.out"
 msgstr "opt-out by the author"
 
-msgid "plugins.generic.codecheck.settings.mode.required"
-msgstr "CODECHECK is required"
+msgid "plugins.generic.codecheck.settings.mode.mandatory"
+msgstr "CODECHECK is mandatory"
 
 msgid "plugins.generic.codecheck.settings.enableCodecheck.description"
 msgstr "Allow editors to assign codecheckers to submissions"

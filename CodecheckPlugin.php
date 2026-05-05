@@ -244,7 +244,7 @@ class CodecheckPlugin extends GenericPlugin
 
             if($codecheckMode == 'opt-out') {
                 $checkboxValue = true;
-            } elseif ($codecheckMode == 'required') {
+            } elseif ($codecheckMode == 'mandatory') {
                 $checkboxValue = true;
                 $checkboxDisabled = true;
                 $codecheckDescription = __('plugins.generic.codecheck.mandatory.description', [
