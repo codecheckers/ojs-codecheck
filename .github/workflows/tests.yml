@@ -101,6 +101,90 @@ jobs:
             ojs/plugins/generic/codecheck/tests/*.xml
           if-no-files-found: ignore
 
+  import-test-data:
+    name: Import Test Data
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: ojs_dump
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+      - name: Checkout OJS
+        uses: actions/checkout@v4
+        with:
+          repository: pkp/ojs
+          ref: stable-3_5_0
+          path: ojs
+          submodules: recursive
+
+      - name: Checkout plugin (for test data)
+        uses: actions/checkout@v4
+        with:
+          path: ojs/plugins/generic/codecheck
+
+      - name: Checkout PKP datasets
+        uses: actions/checkout@v4
+        with:
+          repository: pkp/datasets
+          path: datasets
+
+      - name: Copy test data into datasets directory
+        run: |
+          mkdir -p datasets/ojs
+          cp -r ojs/plugins/generic/codecheck/testData/stable-3_5_0-codecheck datasets/ojs/
+
+      - name: Prepare OJS files and public directories
+        run: |
+          mkdir -p ojs/files
+          mkdir -p ojs/public
+
+      - name: Import test database
+        working-directory: ojs
+        env:
+          DBTYPE: MySQL
+          DBTYPE_SYMBOLIC: mysql
+          DBUSERNAME: root
+          DBPASSWORD: root
+          DBNAME: ojs_dump
+          DBHOST: 127.0.0.1
+          APP: ojs
+          BRANCH: stable-3_5_0-codecheck
+        run: |
+          mysql -h 127.0.0.1 -u root -proot ojs_dump < ../datasets/ojs/stable-3_5_0-codecheck/mysql/database.sql
+
+      - name: Load test files
+        working-directory: ojs
+        env:
+          DBTYPE: MySQL
+          DBTYPE_SYMBOLIC: mysql
+          DBUSERNAME: root
+          DBPASSWORD: root
+          DBNAME: ojs_dump
+          DBHOST: 127.0.0.1
+          APP: ojs
+          BRANCH: stable-3_5_0-codecheck
+        run: bash ../datasets/tools/loadfiles.sh
+
+      - name: Fix database host in config.inc.php
+        working-directory: ojs
+        run: sed -i 's/host = localhost/host = 127.0.0.1/' config.inc.php
+
+      - name: Verify import
+        run: |
+          COUNT=$(mysql -h 127.0.0.1 -u root -proot ojs_dump -se "SELECT COUNT(*) FROM submissions;")
+          echo "Imported submissions: $COUNT"
+          if [ "$COUNT" -lt 8 ]; then
+            echo "ERROR: Expected at least 8 submissions, got $COUNT"
+            exit 1
+          fi
+
   component-tests:
     name: Cypress Component Tests
     runs-on: ubuntu-latest
