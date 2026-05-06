@@ -9,19 +9,19 @@ use APP\core\Request;
 use APP\plugins\generic\codecheck\classes\Exceptions\ApiCreateException;
 use APP\plugins\generic\codecheck\classes\Exceptions\ApiFetchException;
 use APP\plugins\generic\codecheck\classes\Exceptions\NoMatchingIssuesFoundException;
-use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckVenueTypes;
-use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckVenueNames;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifierList;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifier;
-use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckVenue;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterIssue;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
 
 use APP\facades\Repo;
 use \Github\Client;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitException;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckIssueLabels;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class CodecheckApiHandler
 {
@@ -57,8 +57,8 @@ class CodecheckApiHandler
         $this->endpoints = [
             'GET' => [
                 [
-                    'route' => 'venue',
-                    'handler' => [$this, 'getVenueData'],
+                    'route' => 'labels',
+                    'handler' => [$this, 'getCodecheckIssueLabels'],
                     'roles' => $this->roles,
                 ],
                 [
@@ -81,6 +81,11 @@ class CodecheckApiHandler
                 [
                     'route' => 'identifier',
                     'handler' => [$this, 'reserveIdentifier'],
+                    'roles' => $this->roles,
+                ],
+                [
+                    'route' => 'issue',
+                    'handler' => [$this, 'updateGithubIssue'],
                     'roles' => $this->roles,
                 ],
                 [
@@ -177,38 +182,66 @@ class CodecheckApiHandler
     }
 
     /**
-     * Gets Venue Types and Venue Names
+     * Gets the Issue Labels of the CODECHECK API
      * 
      * @return void
      */
-    private function getVenueData(): void
-    {   
-        try {
-            $codecheckVenueTypes = new CodecheckVenueTypes();
-        } catch (\Throwable $e) {
-            JsonResponse::staticResponse([
-                'success'   => false,
-                'error'     => "Error while fetching the Venue Types: " . $e->getMessage(),
-            ], 400);
-            return;
+    private function getCodecheckIssueLabels(): void
+    {
+        $dbLabelsOutdated = false;
+
+        $issueLabelsLastUpdated = strtotime($this->getIssueLabelsLastUpdated());
+        $now = strtotime(date('Y-m-d H:i:s'));
+        $timeDifferenceInHours = round(($now - $issueLabelsLastUpdated) / 3600);
+
+        if($timeDifferenceInHours > 6) {
+            $dbLabelsOutdated = true;
         }
 
-        try {
-            $codecheckVenueNames = new CodecheckVenueNames();
-        } catch (\Throwable $e) {
-            JsonResponse::staticResponse([
-                'success'   => false,
-                'error'     => "Error while fetching the Venue Names: " . $e->getMessage(),
-            ], 400);
-            return;
+        $codecheckIssueLabels = CodecheckIssueLabels::fromDB();
+
+        if($dbLabelsOutdated) {
+            try {
+                $codecheckIssueLabels = CodecheckIssueLabels::fromApi("https://codecheck.org.uk/register/venues/index.json");
+            } catch (\Throwable $e) {
+                JsonResponse::staticResponse([
+                    'success'   => false,
+                    'error'     => $e->getMessage(),
+                ], 400);
+                return;
+            }
         }
 
-        // Serve the getVenueData API route
+        // Serve the getCodecheckIssueLabels API route
         JsonResponse::staticResponse([
             'success' => true,
-            'venueTypes' => $codecheckVenueTypes->get()->toArray(),
-            'venueNames' => $codecheckVenueNames->get()->toArray(),
+            'labels' => $codecheckIssueLabels->get()->toArray(),
         ], 200);
+    }
+
+    /**
+     * This function gets when the Codecheck Issue Labels where last updated
+     * 
+     * @return string The Date when the issues where last updated
+     */
+    private function getIssueLabelsLastUpdated(): string
+    {
+        if (!Schema::hasTable('codecheck_issue_labels')) {
+            error_log("[CODECHECK API] The Issue Label table doesn't exist");
+        }
+
+        $labelsLastUpdated = DB::table('codecheck_issue_labels')
+            ->select(['labels_last_updated'])
+            ->first();
+
+        error_log("Labels: " . print_r(DB::table('codecheck_issue_labels')->select(['*'])->get()->toArray(), true));
+
+        // If Labels weren't updated yet, set last updated to earliest date possible, so they will definitely get updated
+        $labelsLastUpdated = $labelsLastUpdated->labels_last_updated ?? date('Y-m-d H:i:s', 0);
+
+        error_log("[CODECHECK API] Codecheck Issues Last Updated: " . json_encode($labelsLastUpdated));
+        
+        return $labelsLastUpdated;
     }
 
     /**
@@ -219,78 +252,288 @@ class CodecheckApiHandler
     public function reserveIdentifier(): void
     {
         $postParams = json_decode(file_get_contents('php://input'), true);
-        $venueType = $postParams["venueType"];
-        $venueName = $postParams["venueName"];
-        $authorString = $postParams["authorString"];
+        $reserveIdentifierMode = $postParams['reserveIdentifierMode'];
+
+        if(!is_string($reserveIdentifierMode)) {
+            JsonResponse::staticResponse([
+                'success'   => false,
+                'error'     => "No Reserve Identifier Mode was specified.",
+            ], 400);
+            return;
+        }
+
+        // CODECHECK GitHub Issue Register API parser
+        $codecheckGithubRegisterApiClient = new CodecheckGithubRegisterApiClient(
+            'codecheckers',
+            'testing-dev-register', // Name of the GitHub Repository for the Register
+            $this->codecheckMetadataHandler->getSubmissionId(), // Submission ID
+            $this->request->getContext(), // The Journal Object of the Submission
+        );
+
+        // CODECHECK Register with list of all identifiers in range
+        try {
+            if($reserveIdentifierMode == 'linkExistingIdentifier') {
+                $identifierStr = $postParams["identifier"];
+                $certificateIdentifierList = CertificateIdentifierList::fromApiWithIdentifier(
+                    $codecheckGithubRegisterApiClient,
+                    CertificateIdentifier::fromStr($identifierStr)
+                );
+            }
+            $certificateIdentifierList = CertificateIdentifierList::fromApi(
+                $codecheckGithubRegisterApiClient,
+                true
+            );
+        } catch (ApiFetchException $ae) {
+            JsonResponse::staticResponse([
+                'success'   => false,
+                'error'     => $ae->getMessage(),
+            ], 400);
+            return;
+        } catch (NoMatchingIssuesFoundException $me) {
+            JsonResponse::staticResponse([
+                'success'   => false,
+                'error'     => $me->getMessage(),
+            ], 400);
+            return;
+        }
+
+        if($reserveIdentifierMode == 'linkExistingIdentifier') {
+            $identifierStr = $postParams["identifier"];
+            $this->linkExistingIdentifier($identifierStr, $certificateIdentifierList);
+            return;
+        }
+
+        $issueLabelArray = $postParams["labels"];
+        $submissionData = $postParams["submission"];
+        $authorString = $submissionData["authorString"];
+        $articleTitle = $submissionData["title"];
+        $repositories = $postParams["repositories"];
+        $codecheckers = $postParams["codecheckers"];
 
         // check if they are of type string (If not return success false over the API)
-        if(is_string($venueType) && is_string($venueName) && is_string($authorString)) {
-            // CODECHECK GitHub Issue Register API parser
-            $codecheckGithubRegisterApiClient = new CodecheckGithubRegisterApiClient(
-                'testing-dev-register', // Name of the GitHub Repository for the Register
-                $this->codecheckMetadataHandler->getSubmissionId(), // Submission ID
-                $this->request->getContext(), // The Journal Object of the Submission
-            );
-
-            error_log(print_r($this->request->getContext(), true));
-
-            // CODECHECK Register with list of all identifiers in range
-            try {
-                $certificateIdentifierList = CertificateIdentifierList::fromApi($codecheckGithubRegisterApiClient);
-            } catch (ApiFetchException $ae) {
-                JsonResponse::staticResponse([
-                    'success'   => false,
-                    'error'     => $ae->getMessage(),
-                ], 400);
-                return;
-            } catch (NoMatchingIssuesFoundException $me) {
-                JsonResponse::staticResponse([
-                    'success'   => false,
-                    'error'     => $me->getMessage(),
-                ], 400);
-                return;
-            }
-
-            // print Certificate Identifier list
+        if(is_array($issueLabelArray) && is_array($submissionData) && is_string($authorString) && is_string($articleTitle) && is_array($repositories) && is_array($codecheckers)) {
+            // sort Certificate Identifier list descending
             $certificateIdentifierList->sortDesc();
 
             // create the new unique Identifier
-            $new_identifier = CertificateIdentifier::newUniqueIdentifier($certificateIdentifierList);
+            $newIdentifier = CertificateIdentifier::newUniqueIdentifier($certificateIdentifierList);
 
-            // create the CODECHECK Venue with the selected type and name
-            $codecheckVenue = new CodecheckVenue($venueType, $venueName);
+            // create the CODECHECK Issue Labels with the selected issue labels
+            $codecheckIssueLabels = new CodecheckIssueLabels($issueLabelArray);
 
-            // Add the new issue to the CODECHECK GtiHub Register
-            try {
-                $issueGithubUrl = $codecheckGithubRegisterApiClient->addIssue(
-                    $new_identifier,
-                    $codecheckVenue->getVenueType(),
-                    $codecheckVenue->getVenueName(),
-                    $authorString,
-                );
-            } catch (ApiCreateException $e) {
-                // return an error result
-                JsonResponse::staticResponse([
-                    'success'   => false,
-                    'error'     => $e->getMessage(),
-                ], 400);
-                return;
+            switch ($reserveIdentifierMode) {
+                case 'api':
+                    $issue = $this->reserveIdentifierWithApi(
+                        $codecheckGithubRegisterApiClient,
+                        $newIdentifier,
+                        $codecheckIssueLabels,
+                        $articleTitle,
+                        $authorString,
+                        $codecheckers,
+                        $repositories
+                    );
+                    $issueGithubUrl = $issue['html_url'];
+                    $issueNumber = $issue['number'];
+                    break;
+                
+                case 'newIssueUrl':
+                    $issueGithubUrl = $this->reserveIdentifierWithNewIssueUrl(
+                        $newIdentifier,
+                        $codecheckIssueLabels,
+                        $articleTitle,
+                        $authorString,
+                        $codecheckers,
+                        $repositories
+                    );
+                    break;
+
+                default:
+                    JsonResponse::staticResponse([
+                        'success'   => false,
+                        'error'     => "An unexpected mode for the reservation of the Certificate Identifier was given: " . $reserveIdentifierMode,
+                    ], 400);
+                    break;
             }
+
+            // check if an error happened and return if that is the case
+            if($issueGithubUrl == null) { return; }
 
             // return a success result
             JsonResponse::staticResponse([
                 'success' => true,
-                'identifier' => $new_identifier->toStr(),
+                'identifier' => $newIdentifier->toStr(),
                 'issueUrl' => $issueGithubUrl,
+                'issueNumber' => $issueNumber ?? null,
             ], 200);
             return;
         } else {
             JsonResponse::staticResponse([
                 'success'   => false,
-                'error'     => "The CODECHECK Venue Type and/ or Venue Names aren't of Type string as expected.",
+                'error'     => "Some Parameters sent with POST to the API aren't of the expected datatype.",
             ], 400);
             return;
         }
+    }
+
+    public function updateGithubIssue(): void
+    {
+        $postParams = json_decode(file_get_contents('php://input'), true);
+        $issue = $postParams['issue'];
+        if(!is_array($issue) || !is_int($issue['number']) || !is_string($issue['url'])) {
+            # TODO: JSON Error Response
+            return;
+        }
+        
+        // CODECHECK GitHub Issue Register API parser
+        $codecheckGithubRegisterApiClient = new CodecheckGithubRegisterApiClient(
+            'codecheckers',
+            'testing-dev-register', // Name of the GitHub Repository for the Register
+            $this->codecheckMetadataHandler->getSubmissionId(), // Submission ID
+            $this->request->getContext(), // The Journal Object of the Submission
+        );
+
+        $issueLabelArray = $postParams["issue"]["labelsSelected"];
+        $submissionData = $postParams["submission"];
+        $authorString = $submissionData["authorString"];
+        $articleTitle = $submissionData["title"];
+        $identifierStr = $postParams["identifier"];
+        $repositories = $postParams["repositories"];
+        $codecheckers = $postParams["codecheckers"];
+
+        if(is_string($identifierStr) && is_array($issueLabelArray) && is_array($submissionData) && is_string($authorString) && is_string($articleTitle) && is_array($repositories) && is_array($codecheckers)) {
+            $identifier = CertificateIdentifier::fromStr($identifierStr);
+            $codecheckIssueLabels = new CodecheckIssueLabels($issueLabelArray);
+            $updatedIssue = $codecheckGithubRegisterApiClient->updateIssue(
+                $issue['number'],
+                $identifier,
+                $codecheckIssueLabels,
+                $articleTitle,
+                $authorString,
+                $codecheckers,
+                $repositories
+            );
+
+            # TODO: Check if the update function worked and return JSON Error if not
+
+            // return a success result
+            JsonResponse::staticResponse([
+                'success' => true,
+                'identifier' => $identifier->toStr(),
+                'issueUrl' => $updatedIssue['html_url'],
+                'issueNumber' => $updatedIssue['number'] ?? null,
+            ], 200);
+            return;
+        } else {
+            JsonResponse::staticResponse([
+                'success'   => false,
+                'error'     => "Some Parameters sent with POST to the API aren't of the expected datatype.",
+            ], 400);
+            return;
+        }
+    }
+
+    /**
+     * This reserves a new Identifier with the GitHub API
+     * 
+     * @return ?array
+     */
+    private function reserveIdentifierWithApi(
+        CodecheckGithubRegisterApiClient $codecheckGithubRegisterApiClient,
+        CertificateIdentifier $identifier,
+        CodecheckIssueLabels $issueLabels,
+        string $articleTitle,
+        string $authorString,
+        array $codecheckers,
+        array $repositories
+    ): ?array
+    {
+        // Add the new issue to the CODECHECK GtiHub Register
+        try {
+            $issue = $codecheckGithubRegisterApiClient->addIssue(
+                $identifier,
+                $issueLabels,
+                $articleTitle,
+                $authorString,
+                $codecheckers,
+                $repositories
+            );
+        } catch (ApiCreateException $e) {
+            // return an error result
+            JsonResponse::staticResponse([
+                'success'   => false,
+                'error'     => $e->getMessage(),
+            ], 400);
+            return null;
+        }
+
+        return $issue;
+    }
+
+    /**
+     * This reserves a new Identifier with the GitHub New Issue Url
+     * 
+     * @return string
+     */
+    private function reserveIdentifierWithNewIssueUrl(
+        CertificateIdentifier $identifier,
+        CodecheckIssueLabels $issueLabels,
+        string $articleTitle,
+        string $authorString,
+        array $codecheckers,
+        array $repositories
+    ): string
+    {
+        $journalName = $this->request->getContext()?->getLocalizedName() ?? 'Unknwon Journal';
+
+        $codecheckIssue = new CodecheckGithubRegisterIssue(
+            'codecheckers',
+            'testing-dev-register',
+            $identifier,
+            $issueLabels,
+            $articleTitle,
+            $journalName,
+            $authorString,
+            $this->codecheckMetadataHandler->getSubmissionId(),
+            $codecheckers,
+            $repositories
+        );
+
+        return $codecheckIssue->getNewIssueUrl();
+    }
+
+    private function linkExistingIdentifier(
+        string $identifierStr,
+        CertificateIdentifierList $certificateIdentifierList
+    ) {
+        $title =  "a | " . $identifierStr;
+        $rawIdentifier = CertificateIdentifierList::getRawIdentifier($title);
+        if($rawIdentifier == null) {
+            JsonResponse::staticResponse([
+                'success'   => false,
+                'identifier' => $identifierStr,
+                'error'     => "The identifier: " . $identifierStr . " isn't matching the required format (YYYY-NNN or YYYY-NNN/YYYY-NNN).",
+            ], 400);
+            return;
+        }
+        $identifier = CertificateIdentifier::fromStr($rawIdentifier);
+        $issue = $certificateIdentifierList->getIssueInformationByIdentifier($identifier);
+        error_log(print_r($issue, true));
+        if(is_string($issue['issueUrl']) && is_int($issue['issueNumber'])) {
+            JsonResponse::staticResponse([
+                'success' => true,
+                'identifier' => $identifier->toStr(),
+                'issueUrl' => $issue['issueUrl'],
+                'issueNumber' => $issue['issueNumber'],
+            ], 200);
+            return;
+        }
+
+        JsonResponse::staticResponse([
+            'success'   => false,
+            'identifier' => $identifierStr,
+            'error'     => "The certificate with the Identifier: ". $identifierStr . " doesn't exist in the GitHub Register.",
+        ], 404);
+        return;
     }
 
     /**

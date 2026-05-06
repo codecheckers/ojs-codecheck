@@ -275,59 +275,68 @@
           <label class="field-label">{{ t('plugins.generic.codecheck.identifier.title') }} <span class="required">*</span></label>
           <p class="field-description">
             {{ t('plugins.generic.codecheck.identifier.description') }}
-            <span v-if="certificateIdentifier.issueUrl"> - </span>
-            <a v-if="certificateIdentifier.issueUrl" :href="certificateIdentifier.issueUrl" target="_blank">
+            <span v-if="certificateIdentifier.issue.url && certificateIdentifier.isLinked"> - </span>
+            <a v-if="certificateIdentifier.issue.url && certificateIdentifier.isLinked" :href="certificateIdentifier.issue.url" target="_blank">
               {{ t('plugins.generic.codecheck.identifier.viewGithubIssue') }}
             </a>
           </p>
           <div class="certificate-identifier-section">
             <div class="certificate-identifier-input-wrapper">
-                <input
-                    type="text"
-                    v-model="metadata.certificate"
-                    :placeholder="t('plugins.generic.codecheck.identifier.label')"
-                    class="certificate-identifier-input"
-                    readonly
-                />
-                <select
-                    v-model="certificateIdentifier.venueType"
-                    class="certificate-identifier-select certificate-identifier-venue-types"
-                    :disabled="isIdentifierReserved"
-                >
-                    <option disabled value="default" selected>{{ t('plugins.generic.codecheck.identifier.venue.type') }}</option>
-                    <option v-for="type in certificateIdentifier.venueTypes" :key="type" :value="type">
-                    {{ type }}
-                    </option>
-                </select>
-                <select
-                    v-model="certificateIdentifier.venueName"
-                    class="certificate-identifier-select certificate-identifier-venue-names"
-                    :disabled="isIdentifierReserved"
-                >
-                    <option disabled value="default" selected>{{ t('plugins.generic.codecheck.identifier.venue.name') }}</option>
-                    <option v-for="name in certificateIdentifier.venueNames" :key="name" :value="name">
-                    {{ name }}
-                    </option>
-                </select>
+              <input
+                type="text"
+                v-model="metadata.certificate"
+                :placeholder="t('plugins.generic.codecheck.identifier.label')"
+                :readonly="(this.certificateIdentifier.issue?.url ?? '').trim() !== '' && !this.identifierInputEmpty"
+                class="certificate-identifier-input"
+              />
+              <fieldset :disabled="!identifierInputEmpty || certificateIdentifier.isReserved">
+                <div class="certificate-identifier-select dropdown">
+                  <button class="dropbtn">{{ t('plugins.generic.codecheck.identifier.labels') }} ⚙</button>
+                  <div class="dropdown-content">
+                    <div class="dropdown-checkbox-input" v-for="label in certificateIdentifier.issue.labels" :key="label">   
+                      <input type="checkbox" v-model="certificateIdentifier.issue.labelsSelected" :value="label"/>
+                      <label :for="label">{{ label }}</label>
+                    </div>
+                  </div>
+                </div>
+              </fieldset>
             </div>
 
             <div class="identifier-actions" id="certificate-identifier-button-wrapper">
-                <button
-                    type="button"
-                    class="pkpButton codecheck-btn certificate-identifier-button"
-                    :class="isIdentifierReserved ? 'bg-gray' : ''"
-                    :disabled="isIdentifierReserved"
-                    @click="reserveIdentifier"
-                >
-                    {{ t('plugins.generic.codecheck.identifier.reserve') }}
-                </button>
-                <button
-                    type="button"
-                    class="pkpButton codecheck-btn pkpButton--isWarnable codecheck-btn-warning certificate-identifier-button"
-                    @click="showRemoveIdentifierModal"
-                >
-                    {{ t('plugins.generic.codecheck.identifier.remove') }}
-                </button>
+              <button
+                type="button"
+                class="pkpButton codecheck-btn certificate-identifier-button"
+                :class="!identifierInputEmpty || certificateIdentifier.isReserved ? 'bg-gray' : ''"
+                :disabled="!identifierInputEmpty || certificateIdentifier.isReserved"
+                @click="reserveIdentifier('newIssueUrl')"
+              >
+                {{ t('plugins.generic.codecheck.identifier.reserve.withNewIssueUrl') }}
+              </button>  
+              <button
+                type="button"
+                class="pkpButton codecheck-btn certificate-identifier-button"
+                :class="!identifierInputEmpty || certificateIdentifier.isReserved ? 'bg-gray' : ''"
+                :disabled="!identifierInputEmpty || certificateIdentifier.isReserved"
+                @click="reserveIdentifier('api')"
+              >
+                {{ t('plugins.generic.codecheck.identifier.reserve.withApi') }}
+              </button>
+              <button
+                type="button"
+                class="pkpButton codecheck-btn certificate-identifier-button"
+                :class="certificateIdentifier.isLinked ? 'bg-gray' : ''"
+                :disabled="certificateIdentifier.isLinked"
+                @click="reserveIdentifier('linkExistingIdentifier')"
+              >
+                {{ t('plugins.generic.codecheck.identifier.reserve.linkExistingIdentifier') }}
+              </button>
+              <button
+                type="button"
+                class="pkpButton codecheck-btn pkpButton--isWarnable codecheck-btn-warning certificate-identifier-button"
+                @click="showRemoveIdentifierModal"
+              >
+                {{ t('plugins.generic.codecheck.identifier.remove') }}
+              </button>
             </div>
           </div>
         </div>
@@ -398,13 +407,15 @@ export default {
         dataAvailabilityStatement: ''
       },
       // Further information neccesary for retrieving and reserving the Certificate Identifier
-      // rgb(208 10 108 / var(--tw-text-opacity, 1))
       certificateIdentifier: {
-        venueType: 'default',
-        venueName: 'default',
-        venueTypes: [],
-        venueNames: [],
-        issueUrl: '',
+        issue: {
+          url: '',
+          number: null,
+          labels: [],
+          labelsSelected: [],
+        },
+        isReserved: false,
+        isLinked: false
       },
       metadata: {
         version: 'latest',
@@ -439,14 +450,14 @@ export default {
       return this.t('plugins.generic.codecheck.preview.ready');
     },
     
-    // variable that stores if the Identifier was set and thus buttons should be disabled
-    isIdentifierReserved() {
-      return this.metadata.certificate.trim() !== '';
+    // variable that stores if the identifier input is empty
+    identifierInputEmpty() {
+      return this.metadata.certificate.trim() === '';
     }
   },
   mounted() {
     this.loadData();
-    this.getVenueData();
+    this.getCodecheckIssueLabels();
   },
   watch: {
     metadata: {
@@ -468,6 +479,10 @@ export default {
       this.error = null;
       this.dataLoaded = false;
       
+      console.log((this.certificateIdentifier.issue?.url ?? '').trim() !== '');
+      console.log(this.identifierInputEmpty);
+      console.log((this.certificateIdentifier.issue?.url ?? '').trim() !== '' && !this.identifierInputEmpty);
+
       try {
         if (!this.submission || !this.submission.id) {
           throw new Error('Invalid submission object');
@@ -519,6 +534,11 @@ export default {
             report: data.codecheck.report || data.codecheck.report || '',
             additionalContent: data.codecheck.additionalContent || data.codecheck.additional_content || ''
           };
+
+          this.certificateIdentifier.issue.url = data.codecheck.issue.url;
+          this.certificateIdentifier.issue.number = data.codecheck.issue.number;
+          this.certificateIdentifier.issue.labelsSelected = data.codecheck.issue.labelsSelected;
+          this.certificateIdentifier.isLinked = true ? data.codecheck.issue.url && data.codecheck.issue.number : false;
           
           if (data.codecheck.repository) {
             this.repositories = data.codecheck.repository.split(',').map(r => r.trim()).filter(r => r);
@@ -766,6 +786,15 @@ export default {
       this.saving = true;
       this.saveMessage = '';
 
+      // Update GitHub Issue
+      try {
+        this.updateGithubIssueContents();
+      } catch {
+        // show some error message
+      }
+
+      console.log(this.certificateIdentifier.issue.labelsSelected);
+
       try {
         const dataToSave = {
           version: this.metadata.version,
@@ -775,6 +804,7 @@ export default {
           source: this.metadata.source,
           codecheckers: this.metadata.codecheckers,
           certificate: this.metadata.certificate,
+          issue: this.certificateIdentifier.issue,
           check_time: this.metadata.check_time,
           summary: this.metadata.summary,
           report: this.metadata.report,
@@ -931,11 +961,11 @@ export default {
       win.document.write(html);
     },
 
-    async getVenueData() {
+    async getCodecheckIssueLabels() {
       let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
 
       try {
-          const response = await fetch(`${apiUrl}/venue`, {
+          const response = await fetch(`${apiUrl}/labels`, {
               method: 'GET',
               headers: {
               'Content-Type': 'application/json',
@@ -946,10 +976,8 @@ export default {
 
           if (data.success) {
               console.log('Success:', data.message);
-              this.certificateIdentifier.venueTypes = data.venueTypes;
-              this.certificateIdentifier.venueNames = data.venueNames;
-              console.log('Venue types:', this.certificateIdentifier.venueTypes);
-              console.log('Venue names:', this.certificateIdentifier.venueNames);
+              this.certificateIdentifier.issue.labels = data.labels;
+              console.log('CODECHECK Issue Labels:', this.certificateIdentifier.issue.labels);
           } else {
               this.showMessage(`${this.t('plugins.generic.codecheck.identifier.venue.fetch.error.curl')}\n${data.error}`, 'error');
               console.error(`${this.t('plugins.generic.codecheck.identifier.venue.fetch.error.curl')}:`, data.error);
@@ -960,17 +988,19 @@ export default {
       }
     },
 
-    async reserveIdentifier() {
-      if (this.certificateIdentifier.venueType === 'default' || this.certificateIdentifier.venueName === 'default') {
-        alert('Please select both a Venue Type and a Venue Name.');
+    async reserveIdentifier(reserveIdentifierMode) {
+      if (
+        (this.certificateIdentifier.issue.labelsSelected.length === 0)
+        &&
+        reserveIdentifierMode != 'linkExistingIdentifier'
+      ) {
+        alert('Please select at least one GitHub Issue Label.');
         return;
       }
 
       const authorString = this.submissionData.authors.length > 1
         ? this.submissionData.authors[0].name + ' et al.'
         : this.submissionData.authors[0].name;
-
-      console.log(authorString);
 
       const submissionId = this.submission.id;
       let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
@@ -979,26 +1009,109 @@ export default {
           const response = await fetch(`${apiUrl}/identifier?submissionId=${submissionId}`, {
               method: 'POST',
               headers: {
-              'Content-Type': 'application/json',
-              'X-Csrf-Token': pkp.currentUser.csrfToken,
+                'Content-Type': 'application/json',
+                'X-Csrf-Token': pkp.currentUser.csrfToken,
               },
               body: JSON.stringify({
-                venueType: this.certificateIdentifier.venueType,
-                venueName: this.certificateIdentifier.venueName,
-                authorString: authorString,
+                reserveIdentifierMode: reserveIdentifierMode,
+                labels: this.certificateIdentifier.issue.labelsSelected,
+                submission: {
+                  authorString: authorString,
+                  codeRepository: this.submissionData.codeRepository,
+                  dataRepository: this.submissionData.dataRepository,
+                  title: this.submissionData.title,
+                  doi: this.submissionData.doi,
+                },
+                identifier: this.metadata.certificate,
+                codecheckers: this.metadata.codecheckers,
+                repositories: this.repositories,
               }),
           });
           const data = await response.json();
 
-          if (data.success) {
+          if (reserveIdentifierMode == 'api') {
+            if (data.success) {
               this.metadata.certificate = data.identifier;
-              this.certificateIdentifier.issueUrl = data.issueUrl;
+              this.certificateIdentifier.issue.url = data.issueUrl;
+              this.certificateIdentifier.issue.number = data.issueNumber;
+              this.certificateIdentifier.isReserved = true;
+              this.certificateIdentifier.isLinked = true;
               this.$emit('update', this.metadata.certificate);
               this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.success.message')}: ${data.identifier}`, 'success');
-              console.log('New Certificate Identifier reserved: ', data.identifier, data.issueUrl);
-          } else {
+              console.log('New Certificate Identifier reserved: ', data.identifier, data.issueUrl, data.issueNumber);
+            } else {
               this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.fail.message')}\n${data.error}`, 'error');
               console.error('Error while reserving the Certificate Identifier:', data.error);
+            }
+          } else if (reserveIdentifierMode == 'newIssueUrl') {
+            if (data.success) {
+              this.metadata.certificate = data.identifier;
+              this.certificateIdentifier.isReserved = true;
+              this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.withNewIssueUrl.success.message')}`, 'success');
+              window.open(data.issueUrl);
+            } else {
+              this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.withNewIssueUrl.fail.message')}\n${data.error}`, 'error');
+              console.error('Error while creating the New Issue URL:', data.error);
+            }
+          } else if (reserveIdentifierMode == 'linkExistingIdentifier') {
+            if (data.success) {
+              this.certificateIdentifier.issue.url = data.issueUrl;
+              this.certificateIdentifier.issue.number = data.issueNumber;
+              this.certificateIdentifier.venueName = 'default';
+              this.certificateIdentifier.venueType = 'default';
+              this.certificateIdentifier.isLinked = true;
+              this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.linkExistingIdentifier.success.message')}: ${data.identifier}`, 'success');
+              console.log('The GitHub Issue was linked to OJS with the Certificate Identifier: ', data.identifier, data.issueUrl, data.issueNumber);
+            } else {
+              this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.linkExistingIdentifier.fail.message')}\n${data.error}`, 'error');
+              console.error('Error while linking an existing GitHub Issue: ', data.error);
+            }
+          } else {
+            this.showMessage(`${this.t('plugins.generic.codecheck.request.failed')}\nNo/ or wrong Reserve Identifier Mode specified.`, 'error');  
+            console.error(`${this.t('plugins.generic.codecheck.request.failed')}\nNo/ or wrong Reserve Identifier Mode specified.`);
+          }
+      } catch (error) {
+          this.showMessage(`${this.t('plugins.generic.codecheck.request.failed')}\n${error}`, 'error');
+          console.error('Request failed:', error);
+      }
+    },
+
+    async updateGithubIssueContents() {
+      const authorString = this.submissionData.authors.length > 1
+        ? this.submissionData.authors[0].name + ' et al.'
+        : this.submissionData.authors[0].name;
+
+      const submissionId = this.submission.id;
+      let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
+
+      try {
+          const response = await fetch(`${apiUrl}/issue?submissionId=${submissionId}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Csrf-Token': pkp.currentUser.csrfToken,
+            },
+            body: JSON.stringify({
+              venueType: this.certificateIdentifier.venueType,
+              venueName: this.certificateIdentifier.venueName,
+              submission: {
+                authorString: authorString,
+                codeRepository: this.submissionData.codeRepository,
+                dataRepository: this.submissionData.dataRepository,
+                title: this.submissionData.title,
+                doi: this.submissionData.doi,
+              },
+              identifier: this.metadata.certificate,
+              issue: this.certificateIdentifier.issue,
+              codecheckers: this.metadata.codecheckers,
+              repositories: this.repositories,
+            }),
+          });
+          const data = await response.json();
+
+          if (!data.success) {
+            this.showMessage(`${this.t('plugins.generic.codecheck.identifier.update.error.message')}\n${data.error}`, 'error');
+            console.error('Error while updating the GitHub Issue: ', data.error);
           }
       } catch (error) {
           this.showMessage(`${this.t('plugins.generic.codecheck.request.failed')}\n${error}`, 'error');
@@ -1008,7 +1121,9 @@ export default {
 
     removeIdentifier(close) {
       this.metadata.certificate = '';
-      this.certificateIdentifier.issueUrl = '';
+      this.certificateIdentifier.issue.url = '';
+      this.certificateIdentifier.isReserved = false;
+      this.certificateIdentifier.isLinked = false;
       this.$emit('update', this.metadata.certificate);
 
       close();
@@ -1051,7 +1166,7 @@ export default {
     fallbackRemoveIdentifierModal() {
       if(confirm(this.t('plugins.generic.codecheck.identifier.remove.modal.areYouSureYouWantToRemoveTheIdentifier'))) {
         this.metadata.certificate = '';
-        this.certificateIdentifier.issueUrl = '';
+        this.certificateIdentifier.issue.url = '';
         this.$emit('update', this.metadata.certificate);
       }
     },
@@ -1075,6 +1190,10 @@ export default {
         this.showMessage(this.t('plugins.generic.codecheck.validation.certificateRequired'), 'error');
         return false;
       }
+      if(!this.certificateIdentifier.isLinked && !this.certificateIdentifier.issue.url && !this.certificateIdentifier.issue.number) {
+        this.showMessage(this.t('plugins.generic.codecheck.validation.githubIssueLinkRequired'), 'error');
+        return false;
+      };
       if (!this.metadata.summary) {
         this.showMessage(this.t('plugins.generic.codecheck.validation.summaryRequired'), 'error');
         return false;
@@ -1685,24 +1804,8 @@ a {
     height: 2.5rem;
 }
 
-.certificate-identifier-select:disabled {
-    /* Centeres the Text in the select */
-    text-align: center;
-    text-align-last: center;
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    background-image: none !important; /* removes arrow background */
-    background-color: #868686;
-    color: #ffffff;
-    cursor: not-allowed;
-    pointer-events: none;
-    opacity: 0.6;
-    font-weight: 600;
-}
-
-.certificate-identifier-venue-types {
-    font-size:14px;
+.certificate-identifier-select {
+    font-size: 14px;
     padding: 6px;
     border: 1px solid #ccc;
     border-radius: 3px;
@@ -1710,21 +1813,93 @@ a {
     background: #fff;
 }
 
-.certificate-identifier-venue-names {
-    font-size:14px;
-    padding: 6px;
-    border: 1px solid #ccc;
-    border-radius: 3px;
-    height: 2.5rem;
-    background: #fff;
+/* GitHub Labels Dropdown*/
+.certificate-identifier-select.dropdown {
+  float: right;
+  overflow: hidden;
+  color: inherit;
+  padding: 0 !important;
+}
+
+fieldset:disabled .certificate-identifier-select.dropdown .dropbtn {
+  /* Centeres the Text in the select */
+  text-align: center;
+  text-align-last: center;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: none !important; /* removes arrow background */
+  background-color: #868686;
+  color: #ffffff;
+  cursor: not-allowed;
+  pointer-events: none;
+  opacity: 0.6;
+  font-weight: 600;
+}
+
+.certificate-identifier-select.dropdown .dropbtn {
+  font-size: 14px;
+  padding-left: 6px;
+  padding-right: 6px;
+  padding-bottom: 0;
+  padding-top: 0;
+  height: 100%;
+  border: none;
+  outline: none;
+  background-color: inherit;
+  font-family: inherit;
+  margin: 0;
+}
+
+.certificate-identifier-select.dropdown:hover .dropbtn {
+  background-color: #eee;
+}
+
+.certificate-identifier-select .dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: #fff;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  min-width: 160px;
+  z-index: 1;
+  padding: 10px;
+}
+
+fieldset:disabled .certificate-identifier-select .dropdown-content {
+  background-color: #868686;
+  border: 3px solid #ccc;
+  font-weight: 600;
+  color: #fff;
+}
+
+.certificate-identifier-select .dropdown-content .dropdown-checkbox-input {
+  float: none;
+  text-decoration: none;
+  display: block;
+  text-align: left;
+  outline: none;
+  border: none;
+  width: 100%;
+  padding: 0;
+}
+
+.certificate-identifier-select.dropdown:hover .dropdown-content {
+  display: block;
+}
+
+.certificate-identifier-select.dropdown .dropdown-content label {
+  font-style: italic;
+  margin-left: 5px;
+  color: inherit;
 }
 
 #certificate-identifier-button-wrapper {
-    padding-top: 0.5rem;
+  padding-top: 0.5rem;
 }
 
 .bg-blue {
-    background: #006798;
+  background: #006798;
 }
 
 .bg-blue:hover {
@@ -1732,7 +1907,7 @@ a {
 }
 
 .bg-red {
-    background: #dc3545;
+  background: #dc3545;
 }
 
 .bg-red:hover {
@@ -1750,9 +1925,9 @@ a {
 }
 
 .certificate-identifier-button:disabled {
-    opacity: 0.6 !important;
-    pointer-events: none !important;
-    cursor: not-allowed !important;
+  opacity: 0.6 !important;
+  pointer-events: none !important;
+  cursor: not-allowed !important;
 }
 
 .codecheck-metadata-form .file-link {

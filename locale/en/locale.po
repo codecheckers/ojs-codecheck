@@ -212,8 +212,29 @@ msgstr "View GitHub Issue"
 msgid "plugins.generic.codecheck.identifier.save"
 msgstr "Save Identifier"
 
-msgid "plugins.generic.codecheck.identifier.reserve"
-msgstr "Reserve Identifier"
+msgid "plugins.generic.codecheck.identifier.update.error.message"
+msgstr "Error while updating the GitHub Issue"
+
+msgid "plugins.generic.codecheck.identifier.reserve.linkExistingIdentifier"
+msgstr "Link Existing Identifier"
+
+msgid "plugins.generic.codecheck.identifier.reserve.withApi"
+msgstr "Reserve Identifier Automatically"
+
+msgid "plugins.generic.codecheck.identifier.reserve.withNewIssueUrl"
+msgstr "Reserve Identifier Manually"
+
+msgid "plugins.generic.codecheck.identifier.reserve.withNewIssueUrl.success.message"
+msgstr "Success: You are being forwarded to GitHub. Please finish the creation of the Issue there!"
+
+msgid "plugins.generic.codecheck.identifier.reserve.withNewIssueUrl.fail.message"
+msgstr "Error while creating the New Issue URL"
+
+msgid "plugins.generic.codecheck.identifier.reserve.linkExistingIdentifier.success.message"
+msgstr "The GitHub Issue was linked to OJS with the Certificate Identifier"
+
+msgid "plugins.generic.codecheck.identifier.reserve.linkExistingIdentifier.fail.message"
+msgstr "Error while linking an existing GitHub Issue"
 
 msgid "plugins.generic.codecheck.identifier.reserve.success.message"
 msgstr "You have reserved the Certificate Identifier"
@@ -235,6 +256,9 @@ msgstr "Do you want to reserve a new identifier for this CODECHECK?"
 
 msgid "plugins.generic.codecheck.identifier.removeConfirm"
 msgstr "Are you sure you want to remove this identifier?"
+
+msgid "plugins.generic.codecheck.identifier.labels"
+msgstr "GitHub Labels"
 
 msgid "plugins.generic.codecheck.previewYaml"
 msgstr "Preview CODECHECK metadata file"
@@ -362,7 +386,10 @@ msgid "plugins.generic.codecheck.validation.codecheckersRequired"
 msgstr "Please add at least one codechecker"
 
 msgid "plugins.generic.codecheck.validation.certificateRequired"
-msgstr "Please provide a certificate ID"
+msgstr "Please reserve/ input a Certificate Identifier"
+
+msgid "plugins.generic.codecheck.validation.githubIssueLinkRequired"
+msgstr "Please link the OJS form to the corresponding GitHub Issue with the same Certificate Identifier"
 
 msgid "plugins.generic.codecheck.validation.summaryRequired"
 msgstr "Please provide a summary"

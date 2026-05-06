@@ -1,6 +1,7 @@
 <?php
 namespace APP\plugins\generic\codecheck\classes\migration;
 
+use APP\plugins\generic\codecheck\classes\Submission\Schema as SubmissionSchema;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -19,6 +20,7 @@ class CodecheckSchemaMigration extends Migration
                 $table->text('source')->nullable();
                 $table->text('codecheckers')->nullable();
                 $table->string('certificate', 100)->nullable();
+                $table->string('issue', 500)->default(json_encode(['url' => null, 'number' => null, 'labelsSelected' => []]));
                 $table->timestamp('check_time')->nullable();
                 $table->text('summary')->nullable();
                 $table->string('report', 500)->nullable();
@@ -29,6 +31,17 @@ class CodecheckSchemaMigration extends Migration
         }
         
         $this->createCodecheckGenres();
+    }
+
+    public function issueLabelsUp(): void
+    {
+        if(!Schema::hasTable('codecheck_issue_labels')) {
+            error_log("[CODECHECK DB] Creating Issue Label Schema");
+            Schema::create('codecheck_issue_labels', function (Blueprint $table) {
+                $table->string('label', 200)->default('');
+                $table->string('labels_last_updated', 100)->default(date('Y-m-d H:i:s'));
+            });
+        }
     }
 
     private function createCodecheckGenres(): void
@@ -64,5 +77,10 @@ class CodecheckSchemaMigration extends Migration
     public function down(): void
     {
         Schema::dropIfExists('codecheck_metadata');
+    }
+
+    public function issueLabelsDown(): void
+    {
+        Schema::dropIfExists('codecheck_issue_labels');
     }
 }

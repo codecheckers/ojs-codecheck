@@ -29,13 +29,18 @@ class CertificateIdentifierList
      * @return CertificateIdentifierList Returns a new List containing all fetched Certificate Identifiers from GitHub
      */
     static function fromApi(
-        CodecheckGithubRegisterApiClient $codecheckGithubRegisterApiClient
+        CodecheckGithubRegisterApiClient $codecheckGithubRegisterApiClient,
+        ?bool $onlyNewestIdentifiers
     ): CertificateIdentifierList {
         $newCertificateIdentifierList = new CertificateIdentifierList();
 
         // fetch API
         try {
-            $codecheckGithubRegisterApiClient->fetchIssues();
+            if($onlyNewestIdentifiers == true) {
+                $codecheckGithubRegisterApiClient->fetchNewestIssues();
+            } else {
+                $codecheckGithubRegisterApiClient->fetchAllIssues();
+            }
         } catch (ApiFetchException $ae) {
             error_log($ae);
             throw $ae;
@@ -44,7 +49,48 @@ class CertificateIdentifierList
             throw $me;
         }
 
-        foreach ($codecheckGithubRegisterApiClient->getIssues() as $issue) {
+        return CertificateIdentifierList::createNewCertificateIdentifierList(
+            $codecheckGithubRegisterApiClient->getIssues(),
+            $newCertificateIdentifierList
+        );
+    }
+
+    /**
+     * Factory Method to create a new CertificateIdentifierList from a GitHub API fetch
+     * 
+     * @param CodecheckGithubRegisterApiClient $codecheckGithubRegisterApiClient The APIParser for the GitHub Issues
+     * @return CertificateIdentifierList Returns a new List containing all fetched Certificate Identifiers from GitHub
+     */
+    static function fromApiWithIdentifier(
+        CodecheckGithubRegisterApiClient $codecheckGithubRegisterApiClient,
+        CertificateIdentifier $certificateIdentifier
+    ): CertificateIdentifierList {
+        $newCertificateIdentifierList = new CertificateIdentifierList();
+
+        // fetch API
+        try {
+            $codecheckGithubRegisterApiClient->fetchIssueByIdentifier($certificateIdentifier);
+        } catch (ApiFetchException $ae) {
+            throw $ae;
+            error_log($ae);
+            return $newCertificateIdentifierList;
+        } catch (NoMatchingIssuesFoundException $me) {
+            throw $me;
+            error_log($me);
+            return $newCertificateIdentifierList;
+        }
+
+        return CertificateIdentifierList::createNewCertificateIdentifierList(
+            $codecheckGithubRegisterApiClient->getIssues(),
+            $newCertificateIdentifierList
+        );
+    }
+
+    private static function createNewCertificateIdentifierList(
+        array $issues,
+        CertificateIdentifierList $newCertificateIdentifierList
+    ): CertificateIdentifierList {
+        foreach ($issues as $issue) {
             // raw identifier (can still have ranges of identifiers);
             $rawIdentifier = CertificateIdentifierList::getRawIdentifier($issue['title']);
             
@@ -55,7 +101,7 @@ class CertificateIdentifierList
             }
 
             // append to all identifiers in new Register
-            $newCertificateIdentifierList->appendToCertificateIdList($rawIdentifier);
+            $newCertificateIdentifierList->appendToCertificateIdList($rawIdentifier, $issue);
         }
 
         // return the new Register
@@ -97,10 +143,11 @@ class CertificateIdentifierList
     /**
      * Appends a raw Identifier to the list of Certificate Identifiers
      * 
-     * @param string $rawidentifier The raw Identifier to be appended
+     * @param string $rawIdentifier The raw Identifier to be appended
+     * @param array $issue The GitHub Issue information of the raw Identifier to be appended
      * @return void
      */
-    public function appendToCertificateIdList(string $rawIdentifier): void
+    public function appendToCertificateIdList(string $rawIdentifier, array $issue): void
     {
         // list of certificate identifiers in range
         $idRange = [];
@@ -110,25 +157,33 @@ class CertificateIdentifierList
             // split into "fromIdStr" and "toIdStr"
             list($fromIdStr, $toIdStr) = explode('/', $rawIdentifier);
 
-            $from_identifier = CertificateIdentifier::fromStr($fromIdStr);
-            $to_identifier = CertificateIdentifier::fromStr($toIdStr);
+            $fromIdentifier = CertificateIdentifier::fromStr($fromIdStr);
+            $toIdentifier = CertificateIdentifier::fromStr($toIdStr);
 
             // append to $idRange list
-            for ($id_count = $from_identifier->getNumber(); $id_count <= $to_identifier->getNumber(); $id_count++) {
-                $new_identifier = new CertificateIdentifier($from_identifier->getYear(), $id_count);
+            for ($id_count = $fromIdentifier->getNumber(); $id_count <= $toIdentifier->getNumber(); $id_count++) {
+                $newIdentifier = new CertificateIdentifier($fromIdentifier->getYear(), $id_count);
                 // append new identifier
-                $idRange[] = $new_identifier;
+                $idRange[] = [
+                    'identifier' => $newIdentifier,
+                    'issueUrl' => $issue['html_url'],
+                    'issueNumber' => $issue['number']
+                ];
             }
         }
         // if it isn't a list then just append on identifier
         else {
-            $new_identifier = CertificateIdentifier::fromStr($rawIdentifier);
-            $idRange[] = $new_identifier;
+            $newIdentifier = CertificateIdentifier::fromStr($rawIdentifier);
+            $idRange[] = [
+                'identifier' => $newIdentifier,
+                'issueUrl' => $issue['html_url'],
+                'issueNumber' => $issue['number']
+            ];
         }
 
         // append to all certificate identifiers
         foreach ($idRange as $identifier) {
-            if (!$this->uniqueArray->contains($identifier)) {
+            if (!$this->uniqueArray->containsIdentifier($identifier)) {
                 $this->uniqueArray->add($identifier);
             }
         }
@@ -141,11 +196,11 @@ class CertificateIdentifierList
     {
         $this->uniqueArray->sort(function($a, $b) {
             // First, compare year
-            if ($a->getYear() !== $b->getYear()) {
-                return $a->getYear() <=> $b->getYear();
+            if ($a['identifier']->getYear() !== $b['identifier']->getYear()) {
+                return $a['identifier']->getYear() <=> $b['identifier']->getYear();
             }
             // If years are equal, compare ID
-            return $a->getNumber() <=> $b->getNumber();
+            return $a['identifier']->getNumber() <=> $b['identifier']->getNumber();
         });
     }
 
@@ -156,11 +211,11 @@ class CertificateIdentifierList
     {
         $this->uniqueArray->sort(function($a, $b) {
             // First, compare year descending
-            if ($a->getYear() !== $b->getYear()) {
-                return $b->getYear() <=> $a->getYear();
+            if ($a['identifier']->getYear() !== $b['identifier']->getYear()) {
+                return $b['identifier']->getYear() <=> $a['identifier']->getYear();
             }
             // If years are equal, compare ID descending
-            return $b->getNumber() <=> $a->getNumber();
+            return $b['identifier']->getNumber() <=> $a['identifier']->getNumber();
         });
     }
 
@@ -183,7 +238,7 @@ class CertificateIdentifierList
     {
         $this->sortDesc();
         // get first element of sort descending -> newest element
-        return $this->uniqueArray->at(0);
+        return $this->uniqueArray->at(0)['identifier'];
     }
 
     /**
@@ -193,10 +248,21 @@ class CertificateIdentifierList
      */
     public function toStr(): string
     {
-        $return_str = "Certificate Identifiers:\n";
-        foreach ($this->uniqueArray->toArray() as $identifier) {
-            $return_str .= $identifier->toStr() . "\n";
+        $returnStr = "Certificate Identifiers:\n";
+        foreach ($this->uniqueArray->toArray() as $identifierInformation) {
+            $returnStr .= $identifierInformation['identifier']->toStr() . "\n";
         }
-        return $return_str;
+        return $returnStr;
+    }
+
+    public function getIssueInformationByIdentifier(CertificateIdentifier $identifier): ?array
+    {
+        foreach ($this->uniqueArray->toArray() as $identifierInformation) {
+            if($identifierInformation['identifier']->toStr() == $identifier->toStr()){
+                return $identifierInformation;
+            }
+        }
+
+        return null;
     }
 }

@@ -59,13 +59,17 @@ class CertificateIdentifierUnitTest extends PKPTestCase
         $year = (int) date('Y');
         $apiParser = $this->createMock(CodecheckGithubRegisterApiClient::class);
         $apiParser->expects($this->once())
-                    ->method('fetchIssues');
+                    ->method('fetchNewestIssues');
         $apiParser->method('getIssues')
               ->willReturn([
-                    ['title' => "Example Authors et al. | $year-001/$year-003"],
+                    [
+                        'title' => "Example Authors et al. | $year-001/$year-003",
+                        'html_url' => "something",
+                        'number' => 1
+                    ],
               ]);
 
-        $identifierList = CertificateIdentifierList::fromApi($apiParser);
+        $identifierList = CertificateIdentifierList::fromApi($apiParser, true);
         $newUniqueIdentifier = CertificateIdentifier::newUniqueIdentifier($identifierList);
 
         $this->assertSame("$year-004", $newUniqueIdentifier->toStr());
@@ -74,12 +78,18 @@ class CertificateIdentifierUnitTest extends PKPTestCase
     public function testIdentifierNewUniqueIdentifierFromIdentifierListBrandNewYear()
     {
         $apiParser = $this->createMock(CodecheckGithubRegisterApiClient::class);
+        $apiParser->expects($this->once())
+                    ->method('fetchNewestIssues');
         $apiParser->method('getIssues')
               ->willReturn([
-                    ['title' => 'Example Authors et al. | 2024-001/2024-003'],
+                    [
+                        'title' => 'Example Authors et al. | 2024-001/2024-003',
+                        'html_url' => "something",
+                        'number' => 1
+                    ],
               ]);
 
-        $identifierList = CertificateIdentifierList::fromApi($apiParser);
+        $identifierList = CertificateIdentifierList::fromApi($apiParser, true);
         $newUniqueIdentifier = CertificateIdentifier::newUniqueIdentifier($identifierList);
         $currentYear = (int) date("Y");
 
