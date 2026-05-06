@@ -26,7 +26,13 @@ class Constants
     /**
      * Plugin settings keys - NEW ADDITIONS
      */
-    public const CODECHECK_ENABLED = 'enabled';
+    public const CODECHECK_ENABLED = 'codecheckEnabled';
+    public const CODECHECK_AUTHOR_ANONYMITY = 'authorAnonymity';
     public const CODECHECK_API_ENDPOINT = 'codecheckApiEndpoint';
     public const CODECHECK_API_KEY = 'codecheckApiKey';
+    public const CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN = 'githubPersonalAccessToken';
+    public const CODECHECK_GITHUB_REGISTER_ORGANIZATION = 'githubRegisterOrganization';
+    public const CODECHECK_GITHUB_REGISTER_REPOSITORY = 'githubRegisterRepository';
+    public const CODECHECK_GITHUB_CUSTOM_LABELS = 'githubCustomLabels';
+    public const CODECHECK_MODE = 'codecheckMode';
 }

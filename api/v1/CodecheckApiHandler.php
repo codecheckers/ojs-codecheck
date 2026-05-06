@@ -16,6 +16,8 @@ use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifie
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifier;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckVenue;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
+use APP\plugins\generic\codecheck\classes\Constants;
+use APP\plugins\generic\codecheck\CodecheckPlugin;
 
 use APP\facades\Repo;
 use \Github\Client;
@@ -29,6 +31,7 @@ class CodecheckApiHandler
     private array $roles;
     private array $endpoints;
     private string $route;
+    private CodecheckPlugin $plugin;
     private Request $request;
     private CodecheckMetadataHandler $codecheckMetadataHandler;
 
@@ -38,8 +41,10 @@ class CodecheckApiHandler
      * @param Request $request API Request
      * @return void
      */
-    public function __construct(Request $request)
+    public function __construct(CodecheckPlugin $plugin, Request $request)
     {
+        $this->plugin = $plugin;
+
         $this->response = new JsonResponse([
             'success' => false,
             'error' => 'No API Response was created.',
@@ -203,11 +208,16 @@ class CodecheckApiHandler
             return;
         }
 
+        // get the github custom labels specified in the plugin settings form
+        $context = $this->request->getContext();
+        $githubCustomLabels = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_CUSTOM_LABELS);
+
         // Serve the getVenueData API route
         JsonResponse::staticResponse([
             'success' => true,
             'venueTypes' => $codecheckVenueTypes->get()->toArray(),
             'venueNames' => $codecheckVenueNames->get()->toArray(),
+            'customLabels' => $githubCustomLabels,
         ], 200);
     }
 
@@ -221,18 +231,35 @@ class CodecheckApiHandler
         $postParams = json_decode(file_get_contents('php://input'), true);
         $venueType = $postParams["venueType"];
         $venueName = $postParams["venueName"];
+        $customLabels = $postParams["customLabels"];
         $authorString = $postParams["authorString"];
 
+        // get the github Register Repository specified in the plugin settings form
+        $context = $this->request->getContext();
+        $githubPersonalAccessToken = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN);
+        $githubRegisterOrganization = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION);
+        $githubRegisterRepository = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY);
+        $isAuthorStringEnabled = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_AUTHOR_ANONYMITY);
+
+        error_log("[Codecheck Api Handler] GitHub Register Repository specified in the Settings form: " . $githubRegisterRepository);
+
+        // if Authors should be Anonymous/ if no Author string was given, set it to null
+        if(!$isAuthorStringEnabled || !is_string($authorString)) {
+            $authorString = null;
+        }
+
         // check if they are of type string (If not return success false over the API)
-        if(is_string($venueType) && is_string($venueName) && is_string($authorString)) {
+        if(is_string($venueType) && is_string($venueName) && is_array($customLabels)) {
             // CODECHECK GitHub Issue Register API parser
             $codecheckGithubRegisterApiClient = new CodecheckGithubRegisterApiClient(
-                'testing-dev-register', // Name of the GitHub Repository for the Register
+                $githubPersonalAccessToken, // The GitHub PAT (classic) needed to access the Register Repository
+                $githubRegisterOrganization, // The organization owning the GitHub Register Repository
+                $githubRegisterRepository, // Name of the GitHub Repository for the Register
                 $this->codecheckMetadataHandler->getSubmissionId(), // Submission ID
-                $this->request->getContext(), // The Journal Object of the Submission
+                $context, // The Journal Object of the Submission
             );
 
-            error_log(print_r($this->request->getContext(), true));
+            //error_log(print_r($this->request->getContext(), true));
 
             // CODECHECK Register with list of all identifiers in range
             try {
@@ -266,6 +293,7 @@ class CodecheckApiHandler
                     $new_identifier,
                     $codecheckVenue->getVenueType(),
                     $codecheckVenue->getVenueName(),
+                    $customLabels,
                     $authorString,
                 );
             } catch (ApiCreateException $e) {

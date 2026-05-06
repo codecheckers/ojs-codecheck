@@ -26,6 +26,9 @@ msgstr "Request failed"
 msgid "plugins.generic.codecheck.displayName"
 msgstr "CODECHECK"
 
+msgid "plugins.generic.codecheck.infoPage.title"
+msgstr "CODECHECK"
+
 msgid "plugins.generic.codecheck.description"
 msgstr "Integrates CODECHECK code execution verification into the OJS peer review workflow"
 
@@ -33,19 +36,67 @@ msgid "plugins.generic.codecheck.settings.title"
 msgstr "CODECHECK Settings"
 
 msgid "plugins.generic.codecheck.settings.description"
-msgstr "Configure CODECHECK integration settings for this journal"
+msgstr "Configure the CODECHECK integration settings for this journal"
+
+msgid "plugins.generic.settings.button.reset"
+msgstr "Reset"
 
 msgid "plugins.generic.codecheck.settings.enableCodecheck"
 msgstr "Enable CODECHECK for this journal"
 
+msgid "plugins.generic.codecheck.settings.mode"
+msgstr "Select the CODECHECK mode used during the submission of a paper"
+
+msgid "plugins.generic.codecheck.settings.mode.opt.in"
+msgstr "opt-in by the author"
+
+msgid "plugins.generic.codecheck.settings.mode.opt.out"
+msgstr "opt-out by the author"
+
+msgid "plugins.generic.codecheck.settings.mode.mandatory"
+msgstr "CODECHECK is mandatory"
+
 msgid "plugins.generic.codecheck.settings.enableCodecheck.description"
 msgstr "Allow editors to assign codecheckers to submissions"
+
+msgid "plugins.generic.codecheck.settings.authorAnonymity"
+msgstr "Author anonymity"
+
+msgid "plugins.generic.codecheck.settings.authorAnonymity.description"
+msgstr "Include the author names in the GitHub register issue"
+
+msgid "plugins.generic.codecheck.settings.github.personalAccessToken"
+msgstr "GitHub Personal Access Token (classic)"
+
+msgid "plugins.generic.codecheck.settings.github.personalAccessToken.description"
+msgstr "Provide your GitHub Personal Access Token (classic), so the CODECHECK plugin can create new GitHub issues.<br>Here is how you can create a PAT (NOTE: please select "public_repo"): "
+
+msgid "plugins.generic.codecheck.settings.github.registerRepository"
+msgstr "GitHub Repository used as the CODECHECK register"
+
+msgid "plugins.generic.codecheck.settings.github.registerRepository.description"
+msgstr "default: https://github.com/codecheckers/register"
+
+msgid "plugins.generic.codecheck.settings.github.labels"
+msgstr "GitHub Register Labels"
+
+msgid "plugins.generic.codecheck.settings.github.labels.description"
+msgstr "Add custom Labels that can be displayed in the GitHub CODECHECK Register"
+
+msgid "plugins.generic.codecheck.settings.github.labels.button.add"
+msgstr "+ Label"
+
+msgid "plugins.generic.codecheck.settings.github.labels.emptyState"
+msgstr "No custom journal labels added yet"
 
 msgid "plugins.generic.codecheck.title"
 msgstr "CODECHECK"
 
 msgid "plugins.generic.codecheck.optIn.description"
 msgstr "Yes, I want my paper to be codechecked. See: {$codecheckLink}"
+
+msgid "plugins.generic.codecheck.mandatory.description"
+msgstr "I understand that as part of the mandatory {$codecheckLink}, the code of my submission will be checked to see if it's reproducible."
 
 msgid "plugins.generic.codecheck.submission.label"
 msgstr "CODECHECK Information"
@@ -205,6 +256,9 @@ msgstr "Venue Type"
 
 msgid "plugins.generic.codecheck.identifier.venue.name"
 msgstr "Venue Name"
+
+msgid "plugins.generic.codecheck.identifier.customLabels"
+msgstr "Custom Labels"
 
 msgid "plugins.generic.codecheck.identifier.viewGithubIssue"
 msgstr "View GitHub Issue"
