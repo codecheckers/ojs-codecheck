@@ -542,25 +542,23 @@ class CodecheckApiHandler
         $postParams = json_decode(file_get_contents('php://input'), true);
         $yamlContent = $postParams["yaml"];
 
-        error_log("[CODECHECK Api Handler] YAML structure will be validated now.");
-
         $yamlValidator = new CodecheckYamlValidator($yamlContent);
-        $yamlValidator->validateYaml();
 
-        error_log("[CODECHECK Api Handler] Is valid YAML: " . $yamlValidator->isValidYaml());
+        try {
+            $yamlValidator->validateYaml();
+        } catch (\Throwable $e) {
+            error_log("[CODECHECK Api Handler] YAML Parse Exception: " . $e->getMessage());
 
-        if($yamlValidator->isValidYaml()) {
             JsonResponse::staticResponse([
-                'success' => true,
-            ], 200);
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], $e->getCode());
         }
-        
-        $error_msg = $yamlValidator->getYamlParseException()->getMessage();
-        error_log("[CODECHECK Api Handler] YAML Parse Exception: " . $error_msg);
+
+        error_log("[CODECHECK Api Handler] The generated YAML content is structurally valid!");
 
         JsonResponse::staticResponse([
-            'success' => false,
-            'error' => $error_msg,
-        ], 500);
+            'success' => true,
+        ], 200);
     }
 }

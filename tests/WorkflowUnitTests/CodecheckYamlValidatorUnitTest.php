@@ -3,6 +3,7 @@
 namespace APP\plugins\generic\codecheck\tests;
 
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckYamlValidator;
+use Symfony\Component\Yaml\Exception\ParseException;
 use PKP\tests\PKPTestCase;
 
 /**
@@ -25,14 +26,6 @@ class CodecheckYamlValidatorUnitTest extends PKPTestCase
         $this->codecheckYamlValidator = new CodecheckYamlValidator("example: {yaml: true}");
 	}
 
-    public function testYamlValidatorContstructor()
-    {
-        $expectedExceptionMessage = "The Yaml File wasn't validated yet.";
-        $actualException = $this->codecheckYamlValidator->getYamlParseException();
-        $this->assertFalse($this->codecheckYamlValidator->isValidYaml());
-        $this->assertEquals($actualException->getMessage(), $expectedExceptionMessage);
-    }
-
     public function testYamlValidatorStructurallyValidYaml()
     {
         $validYamlContent = "this:
@@ -43,10 +36,7 @@ class CodecheckYamlValidatorUnitTest extends PKPTestCase
 ";
         $this->codecheckYamlValidator = new CodecheckYamlValidator($validYamlContent);
         $this->codecheckYamlValidator->validateYaml();
-        $expectedExceptionMessage = "";
-        $actualException = $this->codecheckYamlValidator->getYamlParseException();
-        $this->assertTrue($this->codecheckYamlValidator->isValidYaml());
-        $this->assertEquals($actualException->getMessage(), $expectedExceptionMessage);
+        $this->expectNotToPerformAssertions();
     }
 
     public function testYamlValidatorStructurallyInvalidYaml()
@@ -57,11 +47,10 @@ class CodecheckYamlValidatorUnitTest extends PKPTestCase
             yaml
             content.
 ";
+        $expectedExceptionMessage = 'The reserved indicator ">" cannot start a plain scalar; you need to quote the scalar at line 2 (near ">is:").';
+        $this->expectException(ParseException::class);
+        $this->expectExceptionMessage($expectedExceptionMessage);
         $this->codecheckYamlValidator = new CodecheckYamlValidator($invalidYamlContent);
         $this->codecheckYamlValidator->validateYaml();
-        $expectedExceptionMessage = 'The reserved indicator ">" cannot start a plain scalar; you need to quote the scalar at line 2 (near ">is:").';
-        $actualException = $this->codecheckYamlValidator->getYamlParseException();
-        $this->assertFalse($this->codecheckYamlValidator->isValidYaml());
-        $this->assertEquals($actualException->getMessage(), $expectedExceptionMessage);
     }
 }

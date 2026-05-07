@@ -835,6 +835,7 @@ export default {
         return yamlContent;
         
       } catch (error) {
+        console.error('Yaml generation error:', error);
         throw error;
       }
     },
@@ -857,7 +858,7 @@ export default {
         
       } catch (error) {
         console.error('Preview error:', error);
-        this.showMessage(this.t('plugins.generic.codecheck.yamlPreviewFailed'), 'error');
+        this.showMessage(`${this.t('plugins.generic.codecheck.yamlPreviewFailed')}\n${error}`, 'error');
       }
     },
     
@@ -1130,7 +1131,7 @@ export default {
         }
       } catch (error) {
         console.error('Structural Validation API fetch error:', error);
-        this.showMessage(this.t('plugins.generic.codecheck.yaml.invalid'), 'error');
+        this.showMessage(`${this.t('plugins.generic.codecheck.yaml.invalid')}\n${error}`, 'error');
         return false;
       }
     },
