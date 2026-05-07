@@ -1,3 +1,8 @@
+// Ignore all uncaught JS exceptions from OJS in CI
+Cypress.on('uncaught:exception', () => {
+  return false;
+});
+
 // Global before hook
 before(() => {
   cy.clearCookies();

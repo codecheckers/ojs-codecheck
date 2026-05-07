@@ -8,6 +8,9 @@ export default defineConfig({
     i18nExtractKeys(),
     vue()
   ],
+  css: {
+    postcss: {}
+  },
   define: {
     'process.env': {},
     '__VUE_OPTIONS_API__': true,
