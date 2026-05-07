@@ -237,6 +237,7 @@
             class="pkpFormField__input pkpFormField__input--textarea full-width"
             rows="6"
             :placeholder="t('plugins.generic.codecheck.certificate.summaryPlaceholder')"
+            data-testid="summary-textarea"
           ></textarea>
         </div>
 

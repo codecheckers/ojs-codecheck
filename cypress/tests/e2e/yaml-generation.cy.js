@@ -105,7 +105,7 @@ describe('YAML Generation Consistency', () => {
       .should('not.be.disabled');
     
     // Edit field
-    cy.get('textarea').contains('summary').parents('.field-group').find('textarea')
+    cy.get('[data-testid="summary-textarea"]')
       .clear()
       .type('Modified summary');
     
