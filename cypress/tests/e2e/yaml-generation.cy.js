@@ -105,7 +105,9 @@ describe('YAML Generation Consistency', () => {
       .should('not.be.disabled');
     
     // Edit field
-    cy.get('[data-testid="summary-textarea"]')
+    cy.contains('label', 'Summary of the CODECHECK')
+      .parent()
+      .find('textarea')
       .clear()
       .type('Modified summary');
     
