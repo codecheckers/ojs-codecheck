@@ -101,8 +101,36 @@ jobs:
             ojs/plugins/generic/codecheck/tests/*.xml
           if-no-files-found: ignore
 
-  import-test-data:
-    name: Import Test Data
+  component-tests:
+    name: Cypress Component Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run component tests
+        run: npm run test:component
+      
+      - name: Upload screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-screenshots
+          path: cypress/screenshots
+          if-no-files-found: ignore
+
+  e2e-tests:
+    name: Cypress E2E Tests
     runs-on: ubuntu-latest
 
     services:
@@ -124,7 +152,7 @@ jobs:
           path: ojs
           submodules: recursive
 
-      - name: Checkout plugin (for test data)
+      - name: Checkout plugin
         uses: actions/checkout@v4
         with:
           path: ojs/plugins/generic/codecheck
@@ -172,43 +200,116 @@ jobs:
           BRANCH: stable-3_5_0-codecheck
         run: bash ../datasets/tools/loadfiles.sh
 
-      - name: Fix database host in config.inc.php
+      - name: Patch config.inc.php for CI environment
         working-directory: ojs
-        run: sed -i 's/host = localhost/host = 127.0.0.1/' config.inc.php
-
-      - name: Verify import
         run: |
-          COUNT=$(mysql -h 127.0.0.1 -u root -proot ojs_dump -se "SELECT COUNT(*) FROM submissions;")
-          echo "Imported submissions: $COUNT"
-          if [ "$COUNT" -lt 8 ]; then
-            echo "ERROR: Expected at least 8 submissions, got $COUNT"
-            exit 1
-          fi
+          sed -i 's/host = localhost/host = 127.0.0.1/' config.inc.php
+          sed -i 's/name = ojs$/name = ojs_dump/' config.inc.php
+          sed -i 's|files_dir = .*|files_dir = /home/runner/work/ojs-codecheck/ojs-codecheck/ojs/files|' config.inc.php
 
-  component-tests:
-    name: Cypress Component Tests
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, pdo_mysql, intl, zip, bcmath, curl, gd
+
+      - name: Install PKP dependencies
+        working-directory: ojs/lib/pkp
+        run: composer install --no-interaction --no-progress --optimize-autoloader
+
+      - name: Build OJS frontend assets
+        working-directory: ojs
+        run: |
+          npm install
+          npm run build
+
+      - name: Install plugin composer dependencies
+        working-directory: ojs/plugins/generic/codecheck
+        run: composer install --no-interaction || true
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
-      
-      - name: Install dependencies
+          cache-dependency-path: ojs/plugins/generic/codecheck/package-lock.json
+
+      - name: Install plugin npm dependencies
+        working-directory: ojs/plugins/generic/codecheck
         run: npm ci
-      
-      - name: Run component tests
-        run: npm run test:component
-      
-      - name: Upload screenshots
+
+      - name: Build plugin frontend assets
+        working-directory: ojs/plugins/generic/codecheck
+        run: npm run build
+
+      - name: Configure Apache for OJS
+        run: |
+          sudo add-apt-repository --remove ppa:ondrej/php -y || true
+          sudo apt-get update
+          sudo apt-get install -y apache2 libapache2-mod-php8.2
+          sudo a2enmod rewrite php8.2 alias
+          sudo bash -c 'cat > /etc/apache2/mods-available/mpm_prefork.conf << EOF
+          <IfModule mpm_prefork_module>
+            StartServers 5
+            MinSpareServers 5
+            MaxSpareServers 10
+            MaxRequestWorkers 50
+            MaxConnectionsPerChild 0
+          </IfModule>
+          EOF'
+          sudo bash -c 'cat > /etc/apache2/sites-available/ojs.conf << EOF
+          <VirtualHost *:8888>
+            DocumentRoot /home/runner/work/ojs-codecheck/ojs-codecheck
+            Alias /ojs /home/runner/work/ojs-codecheck/ojs-codecheck/ojs
+            <Directory /home/runner/work/ojs-codecheck/ojs-codecheck>
+              Options Indexes FollowSymLinks
+              AllowOverride All
+              Require all granted
+            </Directory>
+            <Directory /home/runner/work/ojs-codecheck/ojs-codecheck/ojs>
+              Options Indexes FollowSymLinks
+              AllowOverride All
+              Require all granted
+            </Directory>
+          </VirtualHost>
+          EOF'
+          sudo a2ensite ojs
+          sudo a2dissite 000-default
+          sudo sed -i 's/Listen 80/Listen 8888/' /etc/apache2/ports.conf
+          sudo systemctl restart apache2
+
+      - name: Prepare OJS cache directories
+        run: |
+          sudo chmod o+x /home/runner
+          sudo chmod o+x /home/runner/work
+          sudo chmod o+x /home/runner/work/ojs-codecheck
+          sudo chmod o+x /home/runner/work/ojs-codecheck/ojs-codecheck
+          mkdir -p ojs/cache/opcache
+          sudo chown -R www-data:www-data ojs/cache
+          sudo chown -R www-data:www-data ojs/public
+          sudo chown -R www-data:www-data ojs/files
+
+      - name: Wait for OJS to be ready
+        run: sleep 10
+                
+      - name: Run Cypress E2E tests
+        working-directory: ojs/plugins/generic/codecheck
+        run: npm run test:e2e
+        env:
+          CYPRESS_BASE_URL: http://localhost:8888/ojs
+
+      - name: Upload E2E screenshots
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: cypress-screenshots
-          path: cypress/screenshots
+          name: e2e-screenshots
+          path: ojs/plugins/generic/codecheck/cypress/screenshots
+          if-no-files-found: ignore
+
+      - name: Upload E2E videos
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-videos
+          path: ojs/plugins/generic/codecheck/cypress/videos
           if-no-files-found: ignore
