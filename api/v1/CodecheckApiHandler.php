@@ -16,6 +16,7 @@ use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifie
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifier;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckVenue;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
+use APP\plugins\generic\codecheck\classes\Workflow\CodecheckYamlValidator;
 
 use APP\facades\Repo;
 use \Github\Client;
@@ -96,6 +97,11 @@ class CodecheckApiHandler
                 [
                     'route' => 'repository',
                     'handler' => [$this, 'loadMetadataFromRepository'],
+                    'roles' => $this->roles,
+                ],
+                [
+                    'route' => 'yaml/validate',
+                    'handler' => [$this, 'validateYamlStructure'],
                     'roles' => $this->roles,
                 ],
             ],
@@ -524,5 +530,35 @@ class CodecheckApiHandler
         }
 
         JsonResponse::staticResponse($result, 200);
+    }
+
+    /**
+     * This function validates the structure of a Yaml file
+     * 
+     * @return void
+     */
+    public function validateYamlStructure(): void
+    {
+        $postParams = json_decode(file_get_contents('php://input'), true);
+        $yamlContent = $postParams["yaml"];
+
+        $yamlValidator = new CodecheckYamlValidator($yamlContent);
+
+        try {
+            $yamlValidator->validateYaml();
+        } catch (\Throwable $e) {
+            error_log("[CODECHECK Api Handler] YAML Parse Exception: " . $e->getMessage());
+
+            JsonResponse::staticResponse([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], $e->getCode());
+        }
+
+        error_log("[CODECHECK Api Handler] The generated YAML content is structurally valid!");
+
+        JsonResponse::staticResponse([
+            'success' => true,
+        ], 200);
     }
 }

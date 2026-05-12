@@ -811,7 +811,7 @@ export default {
       }
     },
 
-    async previewYaml() {
+    async generateYamlContent() {
       try {
         const submissionId = this.submission.id;
         let apiUrl = pkp.context.apiBaseUrl;
@@ -832,6 +832,24 @@ export default {
         const data = await response.json();
         const yamlContent = data.yaml;
         
+        return yamlContent;
+        
+      } catch (error) {
+        console.error('Yaml generation error:', error);
+        throw error;
+      }
+    },
+
+    async previewYaml() {
+      try {
+        const yamlContent = await this.generateYamlContent();
+        
+        let isValidYaml = await this.validateGeneratedYamlFile(yamlContent);
+
+        if (!isValidYaml) {
+          return;
+        }
+
         if (this.canUsePkpModal()) {
           this.showYamlModal(yamlContent);
         } else {
@@ -840,7 +858,7 @@ export default {
         
       } catch (error) {
         console.error('Preview error:', error);
-        this.showMessage(this.t('plugins.generic.codecheck.yamlPreviewFailed'), 'error');
+        this.showMessage(`${this.t('plugins.generic.codecheck.yamlPreviewFailed')}\n${error}`, 'error');
       }
     },
     
@@ -1080,6 +1098,42 @@ export default {
         return false;
       }
       return true;
+    },
+
+    async validateGeneratedYamlFile(yamlContent) {
+      try {
+        console.log('Validating the created codecheck.yml file');
+        
+        let apiUrl = pkp.context.apiBaseUrl;
+        apiUrl += 'codecheck';
+        apiUrl = `${apiUrl}/yaml/validate`;
+        
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Csrf-Token': pkp.currentUser.csrfToken
+          },
+          body: JSON.stringify({
+            yaml: yamlContent,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            console.log(this.t('plugins.generic.codecheck.yaml.valid'), 'success');
+            return true;
+        } else {
+            console.error('Structural Validation error:', data.error);
+            this.showMessage(`${this.t('plugins.generic.codecheck.yaml.invalid')}\n${this.t('plugins.generic.codecheck.error')}: ${data.error}`, 'error');
+            return false;
+        }
+      } catch (error) {
+        console.error('Structural Validation API fetch error:', error);
+        this.showMessage(`${this.t('plugins.generic.codecheck.yaml.invalid')}\n${error}`, 'error');
+        return false;
+      }
     },
 
     showMessage(message, type) {

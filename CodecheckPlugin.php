@@ -60,7 +60,6 @@ class CodecheckPlugin extends GenericPlugin
             Hook::add('Template::SubmissionWizard::Section::Review', function($hookName, $params) use ($codecheckWizard) {
                 return $codecheckWizard->addToSubmissionWizardReviewTemplate($hookName, $params);
             });
-            
         }
 
         return $success;

@@ -6,7 +6,7 @@ use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckVenue;
 use PKP\tests\PKPTestCase;
 
 /**
- * @file APP/plugins/generic/codecheck/tests/unittests/CodecheckVenueUnitTest.php
+ * @file APP/plugins/generic/codecheck/tests/RetrieveReserveIdentifiersUnitTests/CodecheckVenueUnitTest.php
  *
  * @class CodecheckVenueUnitTest
  *

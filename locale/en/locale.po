@@ -26,6 +26,9 @@ msgstr "Request failed"
 msgid "plugins.generic.codecheck.displayName"
 msgstr "CODECHECK"
 
+msgid "plugins.generic.codecheck.error"
+msgstr "Error"
+
 msgid "plugins.generic.codecheck.description"
 msgstr "Integrates CODECHECK code execution verification into the OJS peer review workflow"
 
@@ -239,6 +242,12 @@ msgstr "Are you sure you want to remove this identifier?"
 msgid "plugins.generic.codecheck.previewYaml"
 msgstr "Preview CODECHECK metadata file"
 
+msgid "plugins.generic.codecheck.yaml.valid"
+msgstr "codecheck.yml is valid."
+
+msgid "plugins.generic.codecheck.yaml.invalid"
+msgstr "CODECHECK metadata creates a structurally invalid codecheck.yml file. Please check the detailed error message below."
+
 msgid "plugins.generic.codecheck.savedSuccessfully"
 msgstr "CODECHECK metadata saved successfully"
 
@@ -354,6 +363,9 @@ msgstr "YAML Preview"
 
 msgid "plugins.generic.codecheck.yamlPreviewFailed"
 msgstr "Failed to generate preview"
+
+msgid "plugins.generic.codecheck.yamlGenerationFailed"
+msgstr "Failed to generate YAML Content"
 
 msgid "plugins.generic.codecheck.validation.manifestRequired"
 msgstr "Please add at least one manifest file"
