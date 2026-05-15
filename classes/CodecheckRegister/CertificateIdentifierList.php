@@ -7,6 +7,7 @@ use APP\plugins\generic\codecheck\classes\Exceptions\NoMatchingIssuesFoundExcept
 use APP\plugins\generic\codecheck\classes\DataStructures\UniqueArray;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifier;
+use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 
 class CertificateIdentifierList
 {
@@ -37,10 +38,10 @@ class CertificateIdentifierList
         try {
             $codecheckGithubRegisterApiClient->fetchIssues();
         } catch (ApiFetchException $ae) {
-            error_log($ae);
+            CodecheckLogger::error($ae->getMessage());
             throw $ae;
         } catch (NoMatchingIssuesFoundException $me) {
-            error_log($me);
+            CodecheckLogger::error($me->getMessage());
             throw $me;
         }
 

@@ -6,6 +6,7 @@ use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckVenueTypes;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitException;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckApiClient;
+use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 
 class CodecheckVenueNames
 {
@@ -27,11 +28,11 @@ class CodecheckVenueNames
             $codecheckApiClient->fetch("https://codecheck.org.uk/register/venues/index.json");
         } catch (CurlInitException $curlInitException) {
             // TODO: Implement that the user gets notified, that the fetching of the Labels didn't work
-            error_log("CurlInit Exception: " . $curlInitException);
+            CodecheckLogger::error('CurlInit Exception: ' . $curlInitException->getMessage());
             throw $curlInitException;
         } catch (CurlReadException $curlReadException) {
             // TODO: Implement that the user gets notified, that the fetching of the Labels didn't work
-            error_log("CurlInit Exception: " . $curlReadException);
+            CodecheckLogger::error('CurlRead Exception: ' . $curlReadException->getMessage());
             throw $curlReadException;
         }
         // get json Data from API call
