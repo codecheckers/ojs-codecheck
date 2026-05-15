@@ -9,6 +9,7 @@ use APP\plugins\generic\codecheck\classes\Settings\Manage;
 use APP\plugins\generic\codecheck\classes\migration\CodecheckSchemaMigration;
 use APP\plugins\generic\codecheck\classes\Submission\Schema;
 use APP\plugins\generic\codecheck\classes\Submission\SubmissionWizardHandler;
+use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use PKP\plugins\GenericPlugin;
 use PKP\plugins\Hook;
 use PKP\components\forms\FieldOptions;
@@ -20,7 +21,7 @@ class CodecheckPlugin extends GenericPlugin
 {
     public function register($category, $path, $mainContextId = null): bool
     {
-        error_log('[CodecheckPlugin] register() called, path=' . $path);
+        CodecheckLogger::debug('register() called, path=' . $path);
 
         $success = parent::register($category, $path);
 
@@ -75,9 +76,9 @@ class CodecheckPlugin extends GenericPlugin
         }
 
         if (str_contains($request->getRequestPath(), 'api/v1/codecheck')) {
-            error_log("[CODECHECK Plugin] Instanciating the CODECHECK APIHandler");
+            CodecheckLogger::debug('Instantiating the CODECHECK APIHandler');
             $apiHandler = new CodecheckApiHandler($request);
-            error_log("[CODECHECK Plugin] API request: " . $request->getRequestPath() . "\n");
+            CodecheckLogger::debug('API request: ' . $request->getRequestPath());
         }
 
         if (!isset($apiHandler)) {
