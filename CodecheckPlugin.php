@@ -9,19 +9,24 @@ use APP\plugins\generic\codecheck\classes\Settings\Manage;
 use APP\plugins\generic\codecheck\classes\migration\CodecheckSchemaMigration;
 use APP\plugins\generic\codecheck\classes\Submission\Schema;
 use APP\plugins\generic\codecheck\classes\Submission\SubmissionWizardHandler;
+use APP\plugins\generic\codecheck\classes\Orcid\OrcidAuthHandler;
+use APP\plugins\generic\codecheck\classes\Orcid\OrcidDepositService;
+use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use PKP\plugins\GenericPlugin;
 use PKP\plugins\Hook;
 use PKP\components\forms\FieldOptions;
 use APP\facades\Repo;
 use APP\plugins\generic\codecheck\api\v1\CodecheckApiHandler;
 use PKP\core\JSONMessage;
+use APP\plugins\generic\codecheck\classes\Constants;
+use APP\plugins\generic\codecheck\controllers\page\CodecheckPageHandler;
 
 class CodecheckPlugin extends GenericPlugin
 {
+    private CodecheckSchemaMigration $migration;
+
     public function register($category, $path, $mainContextId = null): bool
     {
-        error_log('[CodecheckPlugin] register() called, path=' . $path);
-
         $success = parent::register($category, $path);
 
         if ($success && $this->getEnabled()) {
@@ -40,6 +45,8 @@ class CodecheckPlugin extends GenericPlugin
             Hook::add('Submission::validate', $this->saveWizardFieldsFromRequest(...));
             // Add hook for Ajax API calls
             Hook::add('Dispatcher::dispatch', [$this, 'setupAPIHandler']);
+            // Add hook for the custom CODECHECK Pages
+            Hook::add('LoadHandler', $this->setCodecheckPageHandler(...));
             // Add hook for the Template Manager
             Hook::add('TemplateManager::display', $this->callbackTemplateManagerDisplay(...));
             
@@ -60,32 +67,99 @@ class CodecheckPlugin extends GenericPlugin
             Hook::add('Template::SubmissionWizard::Section::Review', function($hookName, $params) use ($codecheckWizard) {
                 return $codecheckWizard->addToSubmissionWizardReviewTemplate($hookName, $params);
             });
+
+            // ORCID: automatically deposit when an article is published
+            Hook::add('Publication::publish', $this->onPublicationPublish(...));
         }
 
         return $success;
     }
+
+    /**
+     * Triggered when an editor publishes an article.
+     */
+    public function onPublicationPublish(string $hookName, array $args): bool
+    {
+        $publication = $args[0];
+        $submission = Repo::submission()->get($publication->getData('submissionId'));
+
+        if (!$submission) return false;
+        if (!$submission->getData('codecheckOptIn')) return false;
+
+        $context = Application::get()->getRequest()->getContext();
+        if (!$this->getSetting($context->getId(), Constants::ORCID_ENABLED)) return false;
+
+        try {
+            $depositService = new OrcidDepositService($this);
+            $results = $depositService->depositForSubmission($submission->getId());
+            foreach ($results as $result) {
+                if ($result['status'] === 'success') {
+                    CodecheckLogger::info('ORCID deposited for ' . $result['orcidId'] . ' put-code=' . $result['putCode']);
+                } else {
+                    CodecheckLogger::error('ORCID deposit failed for ' . $result['orcidId'] . ': ' . ($result['error'] ?? 'unknown'));
+                }
+            }
+        } catch (\Throwable $e) {
+            CodecheckLogger::error('ORCID deposit exception on publish: ' . $e->getMessage());
+        }
+
+        return false;
+    }
     
+    /**
+     * Setup the CodecheckApiHandler.
+     * The constructor handles the request and exits — no need to set a router handler.
+     */
     public function setupAPIHandler(string $hookName, array $args): void
     {
         $request = $args[0];
-        $router = $request->getRouter();
+        $router  = $request->getRouter();
 
-        if (!($router instanceof \PKP\core\APIRouter)) {
-            return;
-        }
+        if (!($router instanceof \PKP\core\APIRouter)) return;
 
         if (str_contains($request->getRequestPath(), 'api/v1/codecheck')) {
-            error_log("[CODECHECK Plugin] Instanciating the CODECHECK APIHandler");
-            $apiHandler = new CodecheckApiHandler($request);
-            error_log("[CODECHECK Plugin] API request: " . $request->getRequestPath() . "\n");
+            CodecheckLogger::debug('API request: ' . $request->getRequestPath());
+            new CodecheckApiHandler($this, $request);
+            // Constructor handles the response and exits internally
+        }
+    }
+
+    /**
+     * Declare the handler function to process the actual page PATH.
+     */
+    public function setCodecheckPageHandler($hookName, $args)
+    {
+        $request = Application::get()->getRequest();
+
+        $page    = &$args[0];
+        $op      = &$args[1];
+        $handler = &$args[3];
+
+        $path = $page;
+        if ($op !== 'index') {
+            $path .= "/{$op}";
+        }
+        if ($ops = $request->getRequestedArgs()) {
+            $path .= '/' . implode('/', $ops);
         }
 
-        if (!isset($apiHandler)) {
-            return;
+        // ORCID OAuth routes
+        if ($page === 'codecheck' && $op === 'orcid') {
+            $subOp = $request->getRequestedArgs()[0] ?? '';
+            if (in_array($subOp, ['startAuth', 'callback'], true)) {
+                $handler = new OrcidAuthHandler($this);
+                $args[1] = $subOp;
+                return true;
+            }
         }
 
-        $router->setHandler($apiHandler);
-        exit;
+        if ($page = 'codecheck' && $op == 'info') {
+            $page = 'pages';
+            $op = 'view';
+            $handler = new CodecheckPageHandler($this);
+            return true;
+        }
+        return false;
     }
 
     private function addAssets(): void
@@ -121,12 +195,36 @@ class CodecheckPlugin extends GenericPlugin
     {
         $templateMgr = $args[0];
         $request = Application::get()->getRequest();
-        
-        if ($request->getRequestedOp() == 'workflow') {
+
+        // ----------------------------------------------------------------
+        // Editor workflow page
+        // ----------------------------------------------------------------
+        if ($request->getRequestedOp() == 'editorial' && $request->getRequestedPage() == 'dashboard') {
+            $context = $request->getContext();
+            $contextId = $context->getId();
+
+            $orcidAuthUrl = $request->getBaseUrl() . '/index.php/' . $context->getPath() . '/codecheck/orcid/startAuth';
+
+            $orcidConfig = json_encode([
+                'enabled' => (bool) $this->getSetting($contextId, Constants::ORCID_ENABLED),
+                'authUrl' => $orcidAuthUrl,
+                'apiType' => $this->getSetting($contextId, Constants::ORCID_API_TYPE)
+                            ?? Constants::ORCID_API_TYPE_SANDBOX,
+                'apiBaseUrl' => $request->getBaseUrl() . '/index.php/' . $context->getPath(),
+            ]);
+
+            $templateMgr->addJavaScript(
+                'codecheck-orcid-config',
+                'window.codecheckOrcidConfig = ' . $orcidConfig . ';',
+                [
+                    'inline' => true,
+                    'contexts' => ['backend'],
+                    'priority' => TemplateManager::STYLE_SEQUENCE_LAST
+                ]
+            );
+
             $submission = $request->getRouter()->getHandler()->getAuthorizedContextObject(ASSOC_TYPE_SUBMISSION);
-            
             if ($submission) {
-                $publication = $submission->getCurrentPublication();
                 $templateMgr->setState([
                     'codecheckSubmission' => [
                         'id' => $submission->getId(),
@@ -136,12 +234,57 @@ class CodecheckPlugin extends GenericPlugin
                         'dataRepository' => $submission->getData('dataRepository'),
                         'manifestFiles' => $submission->getData('manifestFiles'),
                         'dataAvailabilityStatement' => $submission->getData('dataAvailabilityStatement'),
-                    ]
+                    ],
                 ]);
             }
         }
-        
+
+        // ----------------------------------------------------------------
+        // Reviewer page — inject submission data + ORCID config for Vue
+        // ----------------------------------------------------------------
+        if ($request->getRequestedPage() == 'reviewer' && $request->getRequestedOp() == 'submission') {
+            $requestArgs  = $request->getRequestedArgs();
+            $submissionId = (int) ($requestArgs[0] ?? 0);
+
+            if ($submissionId) {
+                $context    = $request->getContext();
+                $contextId  = $context->getId();
+                $submission = Repo::submission()->get($submissionId);
+
+                if ($submission && $submission->getData('codecheckOptIn')) {
+                    $orcidAuthUrl = $request->getBaseUrl() . '/index.php/' . $context->getPath() . '/codecheck/orcid/startAuth';
+
+                    $reviewerData = json_encode([
+                        'submissionId'   => $submission->getId(),
+                        'codecheckOptIn' => true,
+                        'orcid'          => [
+                            'enabled'    => (bool) $this->getSetting($contextId, Constants::ORCID_ENABLED),
+                            'authUrl'    => $orcidAuthUrl,
+                            'apiType'    => $this->getSetting($contextId, Constants::ORCID_API_TYPE) ?? Constants::ORCID_API_TYPE_SANDBOX,
+                            'apiBaseUrl' => $request->getBaseUrl() . '/index.php/' . $context->getPath(),
+                        ],
+                    ]);
+
+                    $templateMgr->addJavaScript(
+                        'codecheck-reviewer-data',
+                        'window.codecheckReviewerData = ' . $reviewerData . ';',
+                        [
+                            'inline'   => true,
+                            'contexts' => ['backend'],
+                            'priority' => TemplateManager::STYLE_SEQUENCE_LAST,
+                        ]
+                    );
+                }
+            }
+        }
+
         return false;
+    }
+
+    public function getUrlPageRoute(string $page): string
+    {
+        $request = Application::get()->getRequest();
+        return $request->getDispatcher()->url($request, ROUTE_PAGE, null, $page);
     }
 
     public function addOptInToSchema(string $hookName, array $args): bool
@@ -166,6 +309,15 @@ class CodecheckPlugin extends GenericPlugin
     public function addOptInCheckbox(string $hookName, \PKP\components\forms\FormComponent $form): bool
     {
         if ($form->id === 'submitStart' || $form->id === 'submissionStart' || str_contains($form->id, 'start')) {
+            $request = Application::get()->getRequest();
+            $context = $request->getContext();
+            $codecheckMode = $this->getSetting($context->getId(), Constants::CODECHECK_MODE);
+            $checkboxValue = false;
+
+            if ($codecheckMode == 'opt-out') {
+                $checkboxValue = true;
+            }
+
             $form->addField(new FieldOptions('codecheckOptIn', [
                 'label' => __('plugins.generic.codecheck.displayName'),
                 'type' => 'checkbox',
@@ -173,11 +325,11 @@ class CodecheckPlugin extends GenericPlugin
                     [
                         'value' => 1, 
                         'label' => __('plugins.generic.codecheck.optIn.description', [
-                            'codecheckLink' => '<a href="https://codecheck.org.uk/" target="_blank">CODECHECK</a>'
+                            'codecheckLink' => "<a href='{$this->getUrlPageRoute("codecheck")}/info' target='_blank'>CODECHECK</a>"
                         ])
                     ]
                 ],
-                'value' => false,
+                'value' => $checkboxValue,
                 'groupId' => 'default'
             ]));
             
@@ -202,10 +354,7 @@ class CodecheckPlugin extends GenericPlugin
     public function saveWizardFieldsFromRequest(string $hookName, array $params): bool
     {
         $submission = $params[1];
-        
-        if (!$submission) {
-            return false;
-        }
+        if (!$submission) return false;
         
         $request = Application::get()->getRequest();
         
@@ -248,13 +397,6 @@ class CodecheckPlugin extends GenericPlugin
         return $actions->execute($request, $actionArgs, parent::getActions($request, $actionArgs));
     }
 
-    /**
-     * Load a form when the `settings` button is clicked and
-     * save the form when the user saves it.
-     *
-     * @param array $args
-     * @param Request $request
-     */
     public function manage($args, $request): JSONMessage
     {
         $manage = new Manage($this);
@@ -266,11 +408,18 @@ class CodecheckPlugin extends GenericPlugin
         $result = parent::setEnabled($enabled, $contextId);
         
         if ($enabled) {
-            $migration = new CodecheckSchemaMigration();
-            $migration->up();
+            $this->migration = new CodecheckSchemaMigration();
+            $this->migration->up();
         }
         
         return $result;
+    }
+
+    public function resetSchema(): void
+    {
+        $this->migration = new CodecheckSchemaMigration();
+        $this->migration->down();
+        $this->migration->up();
     }
 }
 

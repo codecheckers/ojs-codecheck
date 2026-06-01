@@ -27,6 +27,24 @@ class CodecheckSchemaMigration extends Migration
                 $table->index('submission_id');
             });
         }
+
+        if (!Schema::hasTable('codecheck_orcid_tokens')) {
+            Schema::create('codecheck_orcid_tokens', function (Blueprint $table) {
+                $table->bigIncrements('id');
+                $table->bigInteger('submission_id')->unsigned();
+                $table->string('orcid_id', 20)->nullable();
+                $table->string('access_token', 255)->nullable();
+                $table->string('refresh_token', 255)->nullable();
+                $table->timestamp('token_expires_at')->nullable();
+                $table->string('put_code', 50)->nullable();
+                $table->enum('deposit_status', ['pending', 'success', 'failed'])->default('pending');
+                $table->text('error_message')->nullable();
+                $table->timestamp('deposited_at')->nullable();
+                $table->timestamps();
+                $table->index('submission_id');
+                $table->index(['submission_id', 'orcid_id']);
+            });
+        }
         
         $this->createCodecheckGenres();
     }
@@ -63,6 +81,7 @@ class CodecheckSchemaMigration extends Migration
 
     public function down(): void
     {
+        Schema::dropIfExists('codecheck_orcid_tokens');
         Schema::dropIfExists('codecheck_metadata');
     }
 }

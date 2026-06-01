@@ -1,0 +1,3272 @@
+diff --git a/CodecheckPlugin.php b/CodecheckPlugin.php
+index 3b039a8..3ed1ac6 100644
+--- a/CodecheckPlugin.php
++++ b/CodecheckPlugin.php
+@@ -9,15 +9,21 @@ use APP\plugins\generic\codecheck\classes\Settings\Manage;
+ use APP\plugins\generic\codecheck\classes\migration\CodecheckSchemaMigration;
+ use APP\plugins\generic\codecheck\classes\Submission\Schema;
+ use APP\plugins\generic\codecheck\classes\Submission\SubmissionWizardHandler;
++use APP\plugins\generic\codecheck\classes\Orcid\OrcidAuthHandler;
++use APP\plugins\generic\codecheck\classes\Orcid\OrcidDepositService;
+ use PKP\plugins\GenericPlugin;
+ use PKP\plugins\Hook;
+ use PKP\components\forms\FieldOptions;
+ use APP\facades\Repo;
+ use APP\plugins\generic\codecheck\api\v1\CodecheckApiHandler;
+ use PKP\core\JSONMessage;
++use APP\plugins\generic\codecheck\classes\Constants;
++use APP\plugins\generic\codecheck\controllers\page\CodecheckPageHandler;
+ 
+ class CodecheckPlugin extends GenericPlugin
+ {
++    private CodecheckSchemaMigration $migration;
++
+     public function register($category, $path, $mainContextId = null): bool
+     {
+         error_log('[CodecheckPlugin] register() called, path=' . $path);
+@@ -40,6 +46,8 @@ class CodecheckPlugin extends GenericPlugin
+             Hook::add('Submission::validate', $this->saveWizardFieldsFromRequest(...));
+             // Add hook for Ajax API calls
+             Hook::add('Dispatcher::dispatch', [$this, 'setupAPIHandler']);
++            // Add hook for the custom CODECHECK Pages
++            Hook::add('LoadHandler', $this->setCodecheckPageHandler(...));
+             // Add hook for the Template Manager
+             Hook::add('TemplateManager::display', $this->callbackTemplateManagerDisplay(...));
+             
+@@ -60,32 +68,100 @@ class CodecheckPlugin extends GenericPlugin
+             Hook::add('Template::SubmissionWizard::Section::Review', function($hookName, $params) use ($codecheckWizard) {
+                 return $codecheckWizard->addToSubmissionWizardReviewTemplate($hookName, $params);
+             });
++
++            // ORCID: automatically deposit when an article is published
++            Hook::add('Publication::publish', $this->onPublicationPublish(...));
+         }
+ 
+         return $success;
+     }
++
++    /**
++     * Triggered when an editor publishes an article.
++     */
++    public function onPublicationPublish(string $hookName, array $args): bool
++    {
++        $publication = $args[0];
++        $submission = Repo::submission()->get($publication->getData('submissionId'));
++
++        if (!$submission) return false;
++        if (!$submission->getData('codecheckOptIn')) return false;
++
++        $context = Application::get()->getRequest()->getContext();
++        if (!$this->getSetting($context->getId(), Constants::ORCID_ENABLED)) return false;
++
++        try {
++            $depositService = new OrcidDepositService($this);
++            $results = $depositService->depositForSubmission($submission->getId());
++            foreach ($results as $result) {
++                if ($result['status'] === 'success') {
++                    error_log('[CODECHECK ORCID] Deposited for ' . $result['orcidId'] . ' put-code=' . $result['putCode']);
++                } else {
++                    error_log('[CODECHECK ORCID] Failed for ' . $result['orcidId'] . ': ' . ($result['error'] ?? 'unknown'));
++                }
++            }
++        } catch (\Throwable $e) {
++            error_log('[CODECHECK ORCID] Deposit exception on publish: ' . $e->getMessage());
++        }
++
++        return false;
++    }
+     
++    /**
++     * Setup the CodecheckApiHandler.
++     * The constructor handles the request and exits — no need to set a router handler.
++     */
+     public function setupAPIHandler(string $hookName, array $args): void
+     {
+         $request = $args[0];
+-        $router = $request->getRouter();
++        $router  = $request->getRouter();
+ 
+-        if (!($router instanceof \PKP\core\APIRouter)) {
+-            return;
+-        }
++        if (!($router instanceof \PKP\core\APIRouter)) return;
+ 
+         if (str_contains($request->getRequestPath(), 'api/v1/codecheck')) {
+             error_log("[CODECHECK Plugin] Instanciating the CODECHECK APIHandler");
+-            $apiHandler = new CodecheckApiHandler($request);
+             error_log("[CODECHECK Plugin] API request: " . $request->getRequestPath() . "\n");
++            new CodecheckApiHandler($this, $request);
++            // Constructor handles the response and exits internally
++        }
++    }
++
++    /**
++     * Declare the handler function to process the actual page PATH.
++     */
++    public function setCodecheckPageHandler($hookName, $args)
++    {
++        $request = Application::get()->getRequest();
++
++        $page    = &$args[0];
++        $op      = &$args[1];
++        $handler = &$args[3];
++
++        $path = $page;
++        if ($op !== 'index') {
++            $path .= "/{$op}";
++        }
++        if ($ops = $request->getRequestedArgs()) {
++            $path .= '/' . implode('/', $ops);
+         }
+ 
+-        if (!isset($apiHandler)) {
+-            return;
++        // ORCID OAuth routes
++        if ($page === 'codecheck' && $op === 'orcid') {
++            $subOp = $request->getRequestedArgs()[0] ?? '';
++            if (in_array($subOp, ['startAuth', 'callback'], true)) {
++                $handler = new OrcidAuthHandler($this);
++                $args[1] = $subOp;
++                return true;
++            }
+         }
+ 
+-        $router->setHandler($apiHandler);
+-        exit;
++        if ($page = 'codecheck' && $op == 'info') {
++            $page = 'pages';
++            $op = 'view';
++            $handler = new CodecheckPageHandler($this);
++            return true;
++        }
++        return false;
+     }
+ 
+     private function addAssets(): void
+@@ -121,12 +197,36 @@ class CodecheckPlugin extends GenericPlugin
+     {
+         $templateMgr = $args[0];
+         $request = Application::get()->getRequest();
+-        
+-        if ($request->getRequestedOp() == 'workflow') {
++
++        // ----------------------------------------------------------------
++        // Editor workflow page
++        // ----------------------------------------------------------------
++        if ($request->getRequestedOp() == 'editorial' && $request->getRequestedPage() == 'dashboard') {
++            $context = $request->getContext();
++            $contextId = $context->getId();
++
++            $orcidAuthUrl = $request->getBaseUrl() . '/index.php/' . $context->getPath() . '/codecheck/orcid/startAuth';
++
++            $orcidConfig = json_encode([
++                'enabled' => (bool) $this->getSetting($contextId, Constants::ORCID_ENABLED),
++                'authUrl' => $orcidAuthUrl,
++                'apiType' => $this->getSetting($contextId, Constants::ORCID_API_TYPE)
++                            ?? Constants::ORCID_API_TYPE_SANDBOX,
++                'apiBaseUrl' => $request->getBaseUrl() . '/index.php/' . $context->getPath(),
++            ]);
++
++            $templateMgr->addJavaScript(
++                'codecheck-orcid-config',
++                'window.codecheckOrcidConfig = ' . $orcidConfig . ';',
++                [
++                    'inline' => true,
++                    'contexts' => ['backend'],
++                    'priority' => TemplateManager::STYLE_SEQUENCE_LAST
++                ]
++            );
++
+             $submission = $request->getRouter()->getHandler()->getAuthorizedContextObject(ASSOC_TYPE_SUBMISSION);
+-            
+             if ($submission) {
+-                $publication = $submission->getCurrentPublication();
+                 $templateMgr->setState([
+                     'codecheckSubmission' => [
+                         'id' => $submission->getId(),
+@@ -136,14 +236,59 @@ class CodecheckPlugin extends GenericPlugin
+                         'dataRepository' => $submission->getData('dataRepository'),
+                         'manifestFiles' => $submission->getData('manifestFiles'),
+                         'dataAvailabilityStatement' => $submission->getData('dataAvailabilityStatement'),
+-                    ]
++                    ],
+                 ]);
+             }
+         }
+-        
++
++        // ----------------------------------------------------------------
++        // Reviewer page — inject submission data + ORCID config for Vue
++        // ----------------------------------------------------------------
++        if ($request->getRequestedPage() == 'reviewer' && $request->getRequestedOp() == 'submission') {
++            $requestArgs  = $request->getRequestedArgs();
++            $submissionId = (int) ($requestArgs[0] ?? 0);
++
++            if ($submissionId) {
++                $context    = $request->getContext();
++                $contextId  = $context->getId();
++                $submission = Repo::submission()->get($submissionId);
++
++                if ($submission && $submission->getData('codecheckOptIn')) {
++                    $orcidAuthUrl = $request->getBaseUrl() . '/index.php/' . $context->getPath() . '/codecheck/orcid/startAuth';
++
++                    $reviewerData = json_encode([
++                        'submissionId'   => $submission->getId(),
++                        'codecheckOptIn' => true,
++                        'orcid'          => [
++                            'enabled'    => (bool) $this->getSetting($contextId, Constants::ORCID_ENABLED),
++                            'authUrl'    => $orcidAuthUrl,
++                            'apiType'    => $this->getSetting($contextId, Constants::ORCID_API_TYPE) ?? Constants::ORCID_API_TYPE_SANDBOX,
++                            'apiBaseUrl' => $request->getBaseUrl() . '/index.php/' . $context->getPath(),
++                        ],
++                    ]);
++
++                    $templateMgr->addJavaScript(
++                        'codecheck-reviewer-data',
++                        'window.codecheckReviewerData = ' . $reviewerData . ';',
++                        [
++                            'inline'   => true,
++                            'contexts' => ['backend'],
++                            'priority' => TemplateManager::STYLE_SEQUENCE_LAST,
++                        ]
++                    );
++                }
++            }
++        }
++
+         return false;
+     }
+ 
++    public function getUrlPageRoute(string $page): string
++    {
++        $request = Application::get()->getRequest();
++        return $request->getDispatcher()->url($request, ROUTE_PAGE, null, $page);
++    }
++
+     public function addOptInToSchema(string $hookName, array $args): bool
+     {
+         $schema = $args[0];
+@@ -166,6 +311,16 @@ class CodecheckPlugin extends GenericPlugin
+     public function addOptInCheckbox(string $hookName, \PKP\components\forms\FormComponent $form): bool
+     {
+         if ($form->id === 'submitStart' || $form->id === 'submissionStart' || str_contains($form->id, 'start')) {
++            $request = Application::get()->getRequest();
++            $context = $request->getContext();
++            $codecheckMode = $this->getSetting($context->getId(), Constants::CODECHECK_MODE);
++            error_log($codecheckMode);
++            $checkboxValue = false;
++
++            if($codecheckMode == 'opt-out') {
++                $checkboxValue = true;
++            }
++
+             $form->addField(new FieldOptions('codecheckOptIn', [
+                 'label' => __('plugins.generic.codecheck.displayName'),
+                 'type' => 'checkbox',
+@@ -173,11 +328,11 @@ class CodecheckPlugin extends GenericPlugin
+                     [
+                         'value' => 1, 
+                         'label' => __('plugins.generic.codecheck.optIn.description', [
+-                            'codecheckLink' => '<a href="https://codecheck.org.uk/" target="_blank">CODECHECK</a>'
++                            'codecheckLink' => "<a href='{$this->getUrlPageRoute("codecheck")}/info' target='_blank'>CODECHECK</a>"
+                         ])
+                     ]
+                 ],
+-                'value' => false,
++                'value' => $checkboxValue,
+                 'groupId' => 'default'
+             ]));
+             
+@@ -202,10 +357,7 @@ class CodecheckPlugin extends GenericPlugin
+     public function saveWizardFieldsFromRequest(string $hookName, array $params): bool
+     {
+         $submission = $params[1];
+-        
+-        if (!$submission) {
+-            return false;
+-        }
++        if (!$submission) return false;
+         
+         $request = Application::get()->getRequest();
+         
+@@ -248,13 +400,6 @@ class CodecheckPlugin extends GenericPlugin
+         return $actions->execute($request, $actionArgs, parent::getActions($request, $actionArgs));
+     }
+ 
+-    /**
+-     * Load a form when the `settings` button is clicked and
+-     * save the form when the user saves it.
+-     *
+-     * @param array $args
+-     * @param Request $request
+-     */
+     public function manage($args, $request): JSONMessage
+     {
+         $manage = new Manage($this);
+@@ -266,12 +411,19 @@ class CodecheckPlugin extends GenericPlugin
+         $result = parent::setEnabled($enabled, $contextId);
+         
+         if ($enabled) {
+-            $migration = new CodecheckSchemaMigration();
+-            $migration->up();
++            $this->migration = new CodecheckSchemaMigration();
++            $this->migration->up();
+         }
+         
+         return $result;
+     }
++
++    public function resetSchema(): void
++    {
++        $this->migration = new CodecheckSchemaMigration();
++        $this->migration->down();
++        $this->migration->up();
++    }
+ }
+ 
+ if (!PKP_STRICT_MODE) {
+diff --git a/api/v1/CodecheckApiHandler.php b/api/v1/CodecheckApiHandler.php
+index 60ca972..6d34e7d 100644
+--- a/api/v1/CodecheckApiHandler.php
++++ b/api/v1/CodecheckApiHandler.php
+@@ -5,6 +5,8 @@ namespace APP\plugins\generic\codecheck\api\v1;
+ use PKP\security\Role;
+ use APP\plugins\generic\codecheck\api\v1\JsonResponse;
+ use APP\core\Request;
++use \Github\Client;
++use APP\plugins\generic\codecheck\api\v1\CurlApiClient;
+ 
+ use APP\plugins\generic\codecheck\classes\Exceptions\ApiCreateException;
+ use APP\plugins\generic\codecheck\classes\Exceptions\ApiFetchException;
+@@ -17,11 +19,12 @@ use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifie
+ use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckVenue;
+ use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
+ use APP\plugins\generic\codecheck\classes\Workflow\CodecheckYamlValidator;
++use APP\plugins\generic\codecheck\classes\Orcid\OrcidTokenDAO;
++use APP\plugins\generic\codecheck\classes\Orcid\OrcidDepositService;
++use APP\plugins\generic\codecheck\classes\Constants;
++use APP\plugins\generic\codecheck\CodecheckPlugin;
+ 
+ use APP\facades\Repo;
+-use \Github\Client;
+-use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitException;
+-use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
+ use Illuminate\Support\Facades\DB;
+ 
+ class CodecheckApiHandler
+@@ -30,29 +33,31 @@ class CodecheckApiHandler
+     private array $roles;
+     private array $endpoints;
+     private string $route;
++    private CodecheckPlugin $plugin;
+     private Request $request;
+     private CodecheckMetadataHandler $codecheckMetadataHandler;
+ 
+     /**
+      * Initialize the Codecheck APIHandler class
+-     * 
++     *
++     * @param CodecheckPlugin $plugin
+      * @param Request $request API Request
+      * @return void
+      */
+-    public function __construct(Request $request)
++    public function __construct(CodecheckPlugin $plugin, Request $request)
+     {
+-        $this->response = new JsonResponse([
+-            'success' => false,
+-            'error' => 'No API Response was created.',
+-        ], 500);
++        $this->plugin = $plugin;
++
++        $this->response = new JsonResponse();
+ 
+-        $this->codecheckMetadataHandler = new CodecheckMetadataHandler($request, new Client(), new CurlApiClient());
++        $this->codecheckMetadataHandler = new CodecheckMetadataHandler($request, new \Github\Client(), new CurlApiClient());
+ 
+         $this->roles = [
+             Role::ROLE_ID_MANAGER,
+             Role::ROLE_ID_SUB_EDITOR,
+             Role::ROLE_ID_ASSISTANT,
+-            Role::ROLE_ID_AUTHOR
++            Role::ROLE_ID_AUTHOR,
++            Role::ROLE_ID_REVIEWER,
+         ];
+ 
+         $this->endpoints = [
+@@ -77,6 +82,11 @@ class CodecheckApiHandler
+                     'handler' => [$this, 'generateYaml'],
+                     'roles' => $this->roles,
+                 ],
++                [
++                    'route' => 'orcid-status',
++                    'handler' => [$this, 'getOrcidStatus'],
++                    'roles' => $this->roles,
++                ],
+             ],
+             'POST' => [
+                 [
+@@ -104,6 +114,11 @@ class CodecheckApiHandler
+                     'handler' => [$this, 'validateYamlStructure'],
+                     'roles' => $this->roles,
+                 ],
++                [
++                    'route' => 'orcid-deposit',
++                    'handler' => [$this, 'depositToOrcid'],
++                    'roles' => $this->roles,
++                ],
+             ],
+         ];
+ 
+@@ -111,38 +126,32 @@ class CodecheckApiHandler
+ 
+         $this->authorize();
+ 
+-        // Get the API Route that was called from the request
+         $this->route = $this->getRouteFromRequest();
+-        // Serve the Request
+         $this->serveRequest();
+     }
+ 
+     /**
+      * Authorize the API connection
+-     * 
+-     * @return void
+      */
+     public function authorize()
+     {
+-        // Check if the CSRF Token is present and valid
+         $csrfInHeader = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? null;
+ 
+-        if(!($csrfInHeader && $csrfInHeader === $this->request->getSession()->token())) {
+-            JsonResponse::staticResponse([
+-                'success'   => false,
+-                'error'     => 'No or wrong CSRF Token'
++        if (!($csrfInHeader && $csrfInHeader === $this->request->getSession()->token())) {
++            $this->response->response([
++                'success' => false,
++                'error'   => 'No or wrong CSRF Token',
+             ], 400);
+             return;
+         }
+ 
+-        // Check if the user that accesses this resource has at least one valid Role and if user exists
+-        $user = $this->request->getUser() ?? null;
++        $user      = $this->request->getUser() ?? null;
+         $contextId = $this->request->getContext()->getId();
+ 
+-        if(!($user && $user->hasRole($this->roles, $contextId))) {
+-            JsonResponse::staticResponse([
+-                'success'   => false,
+-                'error'     => "User has no assigned Role or doesn't have the right roles assigned to access this resource"
++        if (!($user && $user->hasRole($this->roles, $contextId))) {
++            $this->response->response([
++                'success' => false,
++                'error'   => "User has no assigned Role or doesn't have the right roles assigned to access this resource",
+             ], 400);
+             return;
+         }
+@@ -150,32 +159,26 @@ class CodecheckApiHandler
+ 
+     /**
+      * Gets the route from the entire API Request
+-     * 
+-     * @return ?string If Request is correct, this returns the route and else it returns `null`
+      */
+     private function getRouteFromRequest(): ?string
+     {
+         if (preg_match('#api/v1/codecheck/(.*)#', $this->request->getRequestPath(), $matches)) {
+             return $matches[1];
+-        } else {
+-            return null;
+         }
++        return null;
+     }
+ 
+     /**
+-     * Serves the API request -> calls the function based on the called endpoint in the route
+-     * 
+-     * @return void
++     * Serves the API request
+      */
+     private function serveRequest(): void
+     {
+-        // get the request Method like POST or GET
+         $method = $this->request->getRequestMethod();
+ 
+         error_log("Method: " . $method);
+ 
+         foreach ($this->endpoints[$method] as $endpoint) {
+-            if($this->route == $endpoint['route']) {
++            if ($this->route == $endpoint['route']) {
+                 call_user_func($endpoint['handler']);
+                 return;
+             }
+@@ -183,363 +186,359 @@ class CodecheckApiHandler
+     }
+ 
+     /**
+-     * Gets Venue Types and Venue Names
+-     * 
+-     * @return void
++     * Gets Venue Types, Venue Names and custom labels
+      */
+     private function getVenueData(): void
+-    {   
++    {
+         try {
+             $codecheckVenueTypes = new CodecheckVenueTypes();
+-        } catch (\Throwable $e) {
+-            JsonResponse::staticResponse([
+-                'success'   => false,
+-                'error'     => "Error while fetching the Venue Types: " . $e->getMessage(),
++        } catch (ApiFetchException $e) {
++            $this->response->response([
++                'success' => false,
++                'error'   => $e->getMessage(),
+             ], 400);
+             return;
+         }
+ 
+         try {
+             $codecheckVenueNames = new CodecheckVenueNames();
+-        } catch (\Throwable $e) {
+-            JsonResponse::staticResponse([
+-                'success'   => false,
+-                'error'     => "Error while fetching the Venue Names: " . $e->getMessage(),
++        } catch (ApiFetchException $e) {
++            $this->response->response([
++                'success' => false,
++                'error'   => $e->getMessage(),
+             ], 400);
+             return;
+         }
+ 
+-        // Serve the getVenueData API route
+-        JsonResponse::staticResponse([
+-            'success' => true,
+-            'venueTypes' => $codecheckVenueTypes->get()->toArray(),
+-            'venueNames' => $codecheckVenueNames->get()->toArray(),
++        $context          = $this->request->getContext();
++        $githubCustomLabels = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_CUSTOM_LABELS);
++
++        $this->response->response([
++            'success'      => true,
++            'venueTypes'   => $codecheckVenueTypes->get()->toArray(),
++            'venueNames'   => $codecheckVenueNames->get()->toArray(),
++            'customLabels' => $githubCustomLabels,
+         ], 200);
+     }
+ 
+     /**
+-     * This reserves a new Identifier
+-     * 
+-     * @return void
++     * Reserve a new certificate identifier
+      */
+     public function reserveIdentifier(): void
+     {
+-        $postParams = json_decode(file_get_contents('php://input'), true);
+-        $venueType = $postParams["venueType"];
+-        $venueName = $postParams["venueName"];
++        $postParams  = json_decode(file_get_contents('php://input'), true);
++        $venueType   = $postParams["venueType"];
++        $venueName   = $postParams["venueName"];
++        $customLabels = $postParams["customLabels"];
+         $authorString = $postParams["authorString"];
+ 
+-        // check if they are of type string (If not return success false over the API)
+-        if(is_string($venueType) && is_string($venueName) && is_string($authorString)) {
+-            // CODECHECK GitHub Issue Register API parser
++        $context                  = $this->request->getContext();
++        $githubPersonalAccessToken = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN);
++        $githubRegisterOrganization = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION);
++        $githubRegisterRepository  = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY);
++        $isAuthorStringEnabled     = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_AUTHOR_ANONYMITY);
++
++        if (!$isAuthorStringEnabled || !is_string($authorString)) {
++            $authorString = null;
++        }
++
++        if (is_string($venueType) && is_string($venueName) && is_array($customLabels)) {
+             $codecheckGithubRegisterApiClient = new CodecheckGithubRegisterApiClient(
+-                'testing-dev-register', // Name of the GitHub Repository for the Register
+-                $this->codecheckMetadataHandler->getSubmissionId(), // Submission ID
+-                $this->request->getContext(), // The Journal Object of the Submission
++                $githubPersonalAccessToken,
++                $githubRegisterOrganization,
++                $githubRegisterRepository,
++                $this->codecheckMetadataHandler->getSubmissionId(),
++                $context,
+             );
+ 
+-            error_log(print_r($this->request->getContext(), true));
+-
+-            // CODECHECK Register with list of all identifiers in range
+             try {
+                 $certificateIdentifierList = CertificateIdentifierList::fromApi($codecheckGithubRegisterApiClient);
+             } catch (ApiFetchException $ae) {
+-                JsonResponse::staticResponse([
+-                    'success'   => false,
+-                    'error'     => $ae->getMessage(),
+-                ], 400);
++                $this->response->response(['success' => false, 'error' => $ae->getMessage()], 400);
+                 return;
+             } catch (NoMatchingIssuesFoundException $me) {
+-                JsonResponse::staticResponse([
+-                    'success'   => false,
+-                    'error'     => $me->getMessage(),
+-                ], 400);
++                $this->response->response(['success' => false, 'error' => $me->getMessage()], 400);
+                 return;
+             }
+ 
+-            // print Certificate Identifier list
+             $certificateIdentifierList->sortDesc();
++            $new_identifier  = CertificateIdentifier::newUniqueIdentifier($certificateIdentifierList);
++            $codecheckVenue  = new CodecheckVenue($venueType, $venueName);
+ 
+-            // create the new unique Identifier
+-            $new_identifier = CertificateIdentifier::newUniqueIdentifier($certificateIdentifierList);
+-
+-            // create the CODECHECK Venue with the selected type and name
+-            $codecheckVenue = new CodecheckVenue($venueType, $venueName);
+-
+-            // Add the new issue to the CODECHECK GtiHub Register
+             try {
+                 $issueGithubUrl = $codecheckGithubRegisterApiClient->addIssue(
+                     $new_identifier,
+                     $codecheckVenue->getVenueType(),
+                     $codecheckVenue->getVenueName(),
++                    $customLabels,
+                     $authorString,
+                 );
+             } catch (ApiCreateException $e) {
+-                // return an error result
+-                JsonResponse::staticResponse([
+-                    'success'   => false,
+-                    'error'     => $e->getMessage(),
+-                ], 400);
++                $this->response->response(['success' => false, 'error' => $e->getMessage()], 400);
+                 return;
+             }
+ 
+-            // return a success result
+-            JsonResponse::staticResponse([
+-                'success' => true,
++            $this->response->response([
++                'success'    => true,
+                 'identifier' => $new_identifier->toStr(),
+-                'issueUrl' => $issueGithubUrl,
++                'issueUrl'   => $issueGithubUrl,
+             ], 200);
+-            return;
+         } else {
+-            JsonResponse::staticResponse([
+-                'success'   => false,
+-                'error'     => "The CODECHECK Venue Type and/ or Venue Names aren't of Type string as expected.",
++            $this->response->response([
++                'success' => false,
++                'error'   => "The CODECHECK Venue Type and/ or Venue Names aren't of Type string as expected.",
+             ], 400);
+-            return;
+         }
+     }
+ 
+     /**
+-     * This function loads the Codecheck Metadata from an existing `codecheck.yml` in an existing Code Repository
+-     * 
+-     * @return void
++     * Load metadata from a remote repository (Zenodo, GitHub, OSF, GitLab)
+      */
+     public function loadMetadataFromRepository(): void
+     {
+         $postParams = json_decode(file_get_contents('php://input'), true);
+         $repository = $postParams["repository"];
+ 
+-        // Check if the repository is a Zenodo Repository
+         if (preg_match('#^https://zenodo\.org/records/\d{8}/?$#', $repository)) {
+-            // Remove trailing / if it exists
+-            $repository = rtrim($repository, '/');
++            $repository  = rtrim($repository, '/');
+             $yamlResponse = $this->codecheckMetadataHandler->importMetadataFromZenodo($repository);
+             $yamlResponse->constructResponse();
+-
+-        } elseif (preg_match('#^https://github\.com/codecheckers/#', $repository))
+-        // Check if the Repository is a GitHub Repository
+-        {
++        } elseif (preg_match('#^https://github\.com/codecheckers/#', $repository)) {
+             $yamlResponse = $this->codecheckMetadataHandler->importMetadataFromGitHub($repository);
+             $yamlResponse->constructResponse();
+-        } elseif (preg_match('#^https://osf\.io/([A-Za-z0-9]{5})/?$#', $repository, $matches))
+-        // Check if the Repository is an OSF Repository
+-        {
+-            $osf_node_id = $matches[1];
+-            $yamlResponse = $this->codecheckMetadataHandler->importMetadataFromOSF($osf_node_id);
++        } elseif (preg_match('#^https://osf\.io/([A-Za-z0-9]{5})/?$#', $repository, $matches)) {
++            $yamlResponse = $this->codecheckMetadataHandler->importMetadataFromOSF($matches[1]);
+             $yamlResponse->constructResponse();
+-        } elseif (preg_match('#^https://gitlab\.com/cdchck/community-codechecks/([^/]+)/?$#', $repository))
+-        // Check if the Repository is a GitLab Repository
+-        {
+-            // Remove trailing / if it exists
+-            $repository = rtrim($repository, '/');
++        } elseif (preg_match('#^https://gitlab\.com/cdchck/community-codechecks/([^/]+)/?$#', $repository)) {
++            $repository  = rtrim($repository, '/');
+             $yamlResponse = $this->codecheckMetadataHandler->importMetadataFromGitLab($repository);
+             $yamlResponse->constructResponse();
+         } else {
+-            JsonResponse::staticResponse([
+-                'success' => false,
++            $this->response->response([
++                'success'    => false,
+                 'repository' => $repository,
+-                'error' => "The repository (" . $repository . ") isn't of the required format.",
++                'error'      => "The repository (" . $repository . ") isn't of the required format.",
+             ], 400);
+         }
+     }
+ 
+     /**
+-     * This function gets all the Codecheck Metadata
+-     * 
+-     * @return void
++     * Get CODECHECK metadata for a submission
+      */
+     public function getMetadata(): void
+     {
+         $submissionId = $this->codecheckMetadataHandler->getSubmissionId();
+-        $result = $this->codecheckMetadataHandler->getMetadata($this->request, $submissionId);
+ 
+-        if(isset($result['error'])) {
+-            $result = array_merge($result, ['submissionID' => $submissionId]);
+-            JsonResponse::staticResponse($result, 404);
++        $submission = Repo::submission()->get($submissionId);
++        if (!$submission) {
++            $this->response->response(['success' => false, 'error' => 'Submission not found'], 404);
++            return;
+         }
+ 
+-        JsonResponse::staticResponse($result, 200);
++        $publication = $submission->getCurrentPublication();
++        $metadata    = DB::table('codecheck_metadata')->where('submission_id', $submissionId)->first();
++
++        $this->response->response([
++            'submissionId' => $submissionId,
++            'submission'   => [
++                'id'                       => $submission->getId(),
++                'title'                    => $publication ? $publication->getLocalizedTitle() : '',
++                'authors'                  => $this->codecheckMetadataHandler->getAuthors($publication),
++                'doi'                      => $publication ? $publication->getStoredPubId('doi') : null,
++                'codeRepository'           => $submission->getData('codeRepository'),
++                'dataRepository'           => $submission->getData('dataRepository'),
++                'manifestFiles'            => $submission->getData('manifestFiles'),
++                'dataAvailabilityStatement' => $submission->getData('dataAvailabilityStatement'),
++            ],
++            'codecheck' => $metadata ? [
++                'version'           => $metadata->version ?? 'latest',
++                'publicationType'   => $metadata->publication_type ?? 'doi',
++                'manifest'          => json_decode($metadata->manifest ?? '[]', true),
++                'repository'        => $metadata->repository,
++                'codecheckers'      => json_decode($metadata->codecheckers ?? '[]', true),
++                'source'            => $metadata->source,
++                'certificate'       => $metadata->certificate,
++                'check_time'        => $metadata->check_time,
++                'summary'           => $metadata->summary,
++                'report'            => $metadata->report,
++                'additionalContent' => $metadata->additional_content,
++            ] : null,
++        ], 200);
+     }
+ 
+     /**
+-     * Save the CODECHECK Metadata for a submission
+-     * 
+-     * @return void
++     * Save CODECHECK metadata for a submission
+      */
+     public function saveMetadata(): void
+     {
+         $submissionId = $this->codecheckMetadataHandler->getSubmissionId();
+-        $result = $this->codecheckMetadataHandler->saveMetadata($this->request, $submissionId);
+ 
+-        if(isset($result['error'])) {
+-            $result = array_merge($result, ['submissionID' => $submissionId]);
+-            JsonResponse::staticResponse($result, 404);
++        $submission = Repo::submission()->get($submissionId);
++        if (!$submission) {
++            $this->response->response(['success' => false, 'error' => 'Submission not found'], 404);
++            return;
++        }
++
++        $data = json_decode(file_get_contents('php://input'), true);
++
++        $nullIfEmpty = function ($value) {
++            return (is_string($value) && trim($value) === '') ? null : $value;
++        };
++
++        $metadataData = [
++            'submission_id'    => $submissionId,
++            'version'          => $data['version'] ?? 'latest',
++            'publication_type' => $data['publication_type'] ?? 'doi',
++            'manifest'         => json_encode($data['manifest'] ?? []),
++            'repository'       => $nullIfEmpty($data['repository'] ?? null),
++            'source'           => $nullIfEmpty($data['source'] ?? null),
++            'codecheckers'     => json_encode($data['codecheckers'] ?? []),
++            'certificate'      => $nullIfEmpty($data['certificate'] ?? null),
++            'check_time'       => $nullIfEmpty($data['check_time'] ?? null),
++            'summary'          => $nullIfEmpty($data['summary'] ?? null),
++            'report'           => $nullIfEmpty($data['report'] ?? null),
++            'additional_content' => $nullIfEmpty($data['additional_content'] ?? null),
++            'updated_at'       => date('Y-m-d H:i:s'),
++        ];
++
++        $exists = DB::table('codecheck_metadata')->where('submission_id', $submissionId)->exists();
++
++        if ($exists) {
++            DB::table('codecheck_metadata')->where('submission_id', $submissionId)->update($metadataData);
++        } else {
++            $metadataData['created_at'] = date('Y-m-d H:i:s');
++            DB::table('codecheck_metadata')->insert($metadataData);
+         }
+ 
+-        JsonResponse::staticResponse($result, 200);
++        $this->response->response([
++            'success'      => true,
++            'message'      => 'CODECHECK metadata saved successfully',
++            'submissionID' => $submissionId,
++            'certificate'  => $metadataData['certificate'],
++        ], 200);
+     }
+ 
+     /**
+      * Upload a file for the CODECHECK manifest
+-     * 
+-     * @return void
+      */
+     public function uploadFile(): void
+     {
+-        // get submissionId
+         $submissionId = $this->codecheckMetadataHandler->getSubmissionId();
++        $submission   = Repo::submission()->get($submissionId);
+ 
+-        error_log("[CODECHECK] Upload file for submission: $submissionId");
+-        
+-        $submission = Repo::submission()->get($submissionId);
+-        
+         if (!$submission) {
+-            JsonResponse::staticResponse([
+-                'success' => false,
+-                'error' => 'Submission not found',
+-                'submissionID' => $submissionId,
+-            ], 400);
++            $this->response->response(['success' => false, 'error' => 'Submission not found', 'submissionID' => $submissionId], 400);
+             return;
+         }
+ 
+         if (!isset($_FILES['file'])) {
+-            JsonResponse::staticResponse([
+-                'success' => false,
+-                'error' => 'No file uploaded'
+-            ], 400);
++            $this->response->response(['success' => false, 'error' => 'No file uploaded'], 400);
+             return;
+         }
+ 
+         $file = $_FILES['file'];
+ 
+-        error_log("[CODECHECK API] File: " . $file['name']);
+-        
+-        // Validate file
+         if ($file['error'] !== UPLOAD_ERR_OK) {
+-            JsonResponse::staticResponse([
+-                'success' => false,
+-                'error' => 'Upload error: ' . $file['error']
+-            ], 400);
++            $this->response->response(['success' => false, 'error' => 'Upload error: ' . $file['error']], 400);
+             return;
+         }
+ 
+-        // Create directory for codecheck files
+-        $context = $this->request->getContext();
+-        error_log("[CODECHECK API] Request Context ID: " . $context->getId());
+-        $basePath = \PKP\core\Core::getBaseDir();
++        $context   = $this->request->getContext();
++        $basePath  = \PKP\core\Core::getBaseDir();
+         $uploadDir = $basePath . '/files/journals/' . $context->getId() . '/codecheck/' . $submissionId;
+-        
+-        if (!file_exists($uploadDir)) {
+-            if (!mkdir($uploadDir, 0755, true)) {
+-                JsonResponse::staticResponse([
+-                    'success' => false,
+-                    'error' => 'Failed to create directory'
+-                ], 500);
+-                return;
+-            }
++
++        if (!file_exists($uploadDir) && !mkdir($uploadDir, 0755, true)) {
++            $this->response->response(['success' => false, 'error' => 'Failed to create directory'], 500);
++            return;
+         }
+ 
+-        // Generate safe filename
+         $originalName = basename($file['name']);
+-        $filename = preg_replace('/[^a-zA-Z0-9._-]/', '_', $originalName);
+-        $filename = time() . '_' . $filename; // Add timestamp to avoid conflicts
+-        $filepath = $uploadDir . '/' . $filename;
+-        
+-        // Move uploaded file
++        $filename     = time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $originalName);
++        $filepath     = $uploadDir . '/' . $filename;
++
+         if (!move_uploaded_file($file['tmp_name'], $filepath)) {
+-            JsonResponse::staticResponse([
+-                'success' => false,
+-                'error' => 'Failed to save file'
+-            ], 500);
++            $this->response->response(['success' => false, 'error' => 'Failed to save file'], 500);
+             return;
+         }
+ 
+-        error_log("[CODECHECK] File saved: $filepath");
+-
+-        // Return relative path for storage
+         $relativePath = 'files/journals/' . $context->getId() . '/codecheck/' . $submissionId . '/' . $filename;
+ 
+-        JsonResponse::staticResponse([
+-            'success' => true,
++        $this->response->response([
++            'success'  => true,
+             'filePath' => $relativePath,
+             'filename' => $originalName,
+-            'size' => $file['size']
++            'size'     => $file['size'],
+         ], 200);
+     }
+ 
+     /**
+      * Download a file from the CODECHECK manifest
+-     * 
+-     * @return void
+      */
+     public function downloadFile(): void
+     {
+         $filePath = $this->request->getUserVar('file');
+-        
++
+         if (!$filePath) {
+-            JsonResponse::staticResponse([
+-                'success' => false,
+-                'error' => 'No file specified'
+-            ], 400);
++            $this->response->response(['success' => false, 'error' => 'No file specified'], 400);
+             return;
+         }
+ 
+         $basePath = \PKP\core\Core::getBaseDir();
+         $fullPath = $basePath . '/' . $filePath;
+-        
+-        error_log("[CODECHECK] Download request: $fullPath");
+-        
+-        // Security: ensure file is in codecheck directory
++
+         if (strpos($filePath, 'codecheck') === false || !file_exists($fullPath)) {
+-            JsonResponse::staticResponse([
+-                'success' => false,
+-                'error' => 'File not found'
+-            ], 404);
++            $this->response->response(['success' => false, 'error' => 'File not found'], 404);
+             return;
+         }
+ 
+-        // Get original filename (remove timestamp prefix)
+-        $filename = basename($fullPath);
+-        $filename = preg_replace('/^\d+_/', '', $filename); // Remove timestamp
+-        
+-        // Set headers for download
++        $filename = preg_replace('/^\d+_/', '', basename($fullPath));
++
+         header('Content-Type: application/octet-stream');
+         header('Content-Disposition: attachment; filename="' . $filename . '"');
+         header('Content-Length: ' . filesize($fullPath));
+         header('Cache-Control: must-revalidate');
+         header('Pragma: public');
+-        
+-        // Output file
++
+         readfile($fullPath);
+         exit;
+     }
+ 
+     /**
+      * Generate the CODECHECK YAML file for a submission
+-     * 
+-     * @return void
+      */
+     public function generateYaml(): void
+     {
+         $submissionId = $this->codecheckMetadataHandler->getSubmissionId();
+-        $result = $this->codecheckMetadataHandler->generateYaml($this->request, $submissionId);
++        $submission   = Repo::submission()->get($submissionId);
++
++        if (!$submission) {
++            $this->response->response(['success' => false, 'error' => 'Submission not found', 'submissionID' => $submissionId], 404);
++            return;
++        }
+ 
+-        if(isset($result['error'])) {
+-            $result = array_merge($result, ['submissionID' => $submissionId]);
+-            JsonResponse::staticResponse($result, 404);
++        $publication = $submission->getCurrentPublication();
++        $metadata    = DB::table('codecheck_metadata')->where('submission_id', $submissionId)->first();
++
++        if (!$metadata) {
++            $this->response->response(['success' => false, 'error' => 'No CODECHECK metadata found', 'submissionID' => $submissionId], 404);
++            return;
+         }
+ 
+-        JsonResponse::staticResponse($result, 200);
++        $yaml = $this->codecheckMetadataHandler->buildYaml($publication, $metadata);
++
++        $this->response->response([
++            'success'  => true,
++            'yaml'     => $yaml,
++            'filename' => 'codecheck.yml',
++        ], 200);
+     }
+ 
+     /**
+-     * This function validates the structure of a Yaml file
+-     * 
+-     * @return void
++     * Validate YAML structure
+      */
+     public function validateYamlStructure(): void
+     {
+-        $postParams = json_decode(file_get_contents('php://input'), true);
++        $postParams  = json_decode(file_get_contents('php://input'), true);
+         $yamlContent = $postParams["yaml"];
+ 
+         $yamlValidator = new CodecheckYamlValidator($yamlContent);
+@@ -548,17 +547,116 @@ class CodecheckApiHandler
+             $yamlValidator->validateYaml();
+         } catch (\Throwable $e) {
+             error_log("[CODECHECK Api Handler] YAML Parse Exception: " . $e->getMessage());
++            $this->response->response(['success' => false, 'error' => $e->getMessage()], $e->getCode());
++            return;
++        }
+ 
+-            JsonResponse::staticResponse([
+-                'success' => false,
+-                'error' => $e->getMessage(),
+-            ], $e->getCode());
++        $this->response->response(['success' => true], 200);
++    }
++
++    /**
++     * GET api/v1/codecheck/orcid-status?submissionId=XX
++     */
++    public function getOrcidStatus(): void
++    {
++        $submissionId = (int) $this->request->getUserVar('submissionId');
++
++        if (!$submissionId) {
++            $this->response->response(['success' => false, 'error' => 'Missing submissionId'], 400);
++            return;
++        }
++
++        $submission = Repo::submission()->get($submissionId);
++        if (!$submission) {
++            $this->response->response(['success' => false, 'error' => 'Submission not found'], 404);
++            return;
+         }
+ 
+-        error_log("[CODECHECK Api Handler] The generated YAML content is structurally valid!");
++        $metadata = DB::table('codecheck_metadata')->where('submission_id', $submissionId)->first();
+ 
+-        JsonResponse::staticResponse([
+-            'success' => true,
++        $codecheckerNames = [];
++        if ($metadata && $metadata->codecheckers) {
++            $decoded = json_decode($metadata->codecheckers, true);
++            if (is_array($decoded)) {
++                $codecheckerNames = $decoded;
++            }
++        }
++
++        $tokenDAO  = new OrcidTokenDAO();
++        $tokenRows = $tokenDAO->getAllBySubmission($submissionId);
++
++        $tokensByOrcid = [];
++        foreach ($tokenRows as $row) {
++            if ($row->orcid_id) {
++                $tokensByOrcid[$row->orcid_id] = $row;
++            }
++        }
++
++        $codecheckers = [];
++
++        if (!empty($codecheckerNames)) {
++            foreach ($codecheckerNames as $cc) {
++                $name    = is_array($cc) ? ($cc['name'] ?? '') : (string) $cc;
++                $orcidId = is_array($cc) ? ($cc['orcid'] ?? $cc['ORCID'] ?? null) : null;
++                $tokenRow = $orcidId ? ($tokensByOrcid[$orcidId] ?? null) : null;
++
++                $codecheckers[] = [
++                    'name'          => $name,
++                    'orcidId'       => $tokenRow->orcid_id ?? null,
++                    'depositStatus' => $tokenRow->deposit_status ?? null,
++                    'putCode'       => $tokenRow->put_code ?? null,
++                    'depositedAt'   => $tokenRow->deposited_at ?? null,
++                    'errorMessage'  => $tokenRow->error_message ?? null,
++                ];
++            }
++        } else {
++            foreach ($tokenRows as $row) {
++                $codecheckers[] = [
++                    'name'          => $row->orcid_id ?? 'Unknown',
++                    'orcidId'       => $row->orcid_id,
++                    'depositStatus' => $row->deposit_status,
++                    'putCode'       => $row->put_code,
++                    'depositedAt'   => $row->deposited_at,
++                    'errorMessage'  => $row->error_message,
++                ];
++            }
++        }
++
++        $this->response->response([
++            'success'      => true,
++            'submissionId' => $submissionId,
++            'codecheckers' => $codecheckers,
+         ], 200);
+     }
++
++    /**
++     * POST api/v1/codecheck/orcid-deposit
++     */
++    public function depositToOrcid(): void
++    {
++        $postParams   = json_decode(file_get_contents('php://input'), true);
++        $submissionId = (int) ($postParams['submissionId'] ?? 0);
++
++        if (!$submissionId) {
++            $this->response->response(['success' => false, 'error' => 'Missing submissionId'], 400);
++            return;
++        }
++
++        $context = $this->request->getContext();
++
++        if (!$this->plugin->getSetting($context->getId(), Constants::ORCID_ENABLED)) {
++            $this->response->response(['success' => false, 'error' => 'ORCID deposition is not enabled for this journal.'], 400);
++            return;
++        }
++
++        try {
++            $depositService = new OrcidDepositService($this->plugin);
++            $results        = $depositService->depositForSubmission($submissionId);
++
++            $this->response->response(['success' => true, 'results' => $results], 200);
++        } catch (\Throwable $e) {
++            error_log('[CODECHECK ORCID] depositToOrcid API error: ' . $e->getMessage());
++            $this->response->response(['success' => false, 'error' => $e->getMessage()], 500);
++        }
++    }
+ }
+\ No newline at end of file
+diff --git a/api/v1/JsonResponse.php b/api/v1/JsonResponse.php
+index 81d9616..4136a49 100644
+--- a/api/v1/JsonResponse.php
++++ b/api/v1/JsonResponse.php
+@@ -8,22 +8,17 @@ class JsonResponse
+     private int $httpResponseCode;
+ 
+     /**
+-     * The JSON Response with an array as payload and a HTTP Response Code
+-     * 
+-     * @param $json_array The array that will be json encoded into the response
+-     * @param $responseState The HTTP Response Code that will be set accordingly
+-     * @return void
++     * @param array $json_array The array that will be json encoded into the response
++     * @param int $httpResponseCode The HTTP Response Code
+      */
+-    public function __construct(array $json_array, int $httpResponseCode)
++    public function __construct(array $json_array = [], int $httpResponseCode = 200)
+     {
+         $this->payload = json_encode($json_array);
+         $this->httpResponseCode = $httpResponseCode;
+     }
+ 
+     /**
+-     * This function returns the Payload of the JSON Response
+-     * 
+-     * @return string The Payload of the JSON Response
++     * Returns the Payload of the JSON Response
+      */
+     public function getPayload(): string
+     {
+@@ -31,9 +26,7 @@ class JsonResponse
+     }
+ 
+     /**
+-     * This function returns the HTTP Response Code of the JSON Response
+-     * 
+-     * @return int The HTTP Response Code of the JSON Response
++     * Returns the HTTP Response Code of the JSON Response
+      */
+     public function getHttpResponseCode(): int
+     {
+@@ -41,15 +34,10 @@ class JsonResponse
+     }
+ 
+     /**
+-     * This function creates a new JSON Response, echoes it to the HTML page it was calles upon and sets the according HTTP Response Code
+-     * 
+-     * @param $json_array The array that will be json encoded into the response
+-     * @param $responseState The HTTP Response Code that will be set accordingly
+-     * @return void
++     * Echoes the response and exits.
+      */
+     public function constructResponse(): void
+     {
+-        // header for AJAX calls
+         define('INDEX_FILE_STARTED', true);
+         header('Content-Type: application/json');
+         http_response_code($this->httpResponseCode);
+@@ -58,15 +46,23 @@ class JsonResponse
+     }
+ 
+     /**
+-     * This function creates a new JSON Response, echoes it to the HTML page it was calles upon and sets the according HTTP Response Code
+-     * 
+-     * @param $json_array The array that will be json encoded into the response
+-     * @param $responseState The HTTP Response Code that will be set accordingly
+-     * @return void
++     * Convenience instance method used by CodecheckApiHandler.
++     * Immediately sends the response and exits.
++     */
++    public function response(array $json_array, int $httpResponseCode): void
++    {
++        header('Content-Type: application/json');
++        http_response_code($httpResponseCode);
++        echo json_encode($json_array);
++        exit;
++    }
++
++    /**
++     * Static helper to create and send a response immediately.
+      */
+     public static function staticResponse(array $json_array, int $httpResponseCode): void
+     {
+         $jsonResponse = new JsonResponse($json_array, $httpResponseCode);
+         $jsonResponse->constructResponse();
+     }
+-}
++}
+\ No newline at end of file
+diff --git a/classes/Constants.php b/classes/Constants.php
+index db2d1d9..3906dcd 100644
+--- a/classes/Constants.php
++++ b/classes/Constants.php
+@@ -26,7 +26,37 @@ class Constants
+     /**
+      * Plugin settings keys - NEW ADDITIONS
+      */
+-    public const CODECHECK_ENABLED = 'enabled';
++    public const CODECHECK_ENABLED = 'codecheckEnabled';
++    public const CODECHECK_AUTHOR_ANONYMITY = 'authorAnonymity';
+     public const CODECHECK_API_ENDPOINT = 'codecheckApiEndpoint';
+     public const CODECHECK_API_KEY = 'codecheckApiKey';
++    public const CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN = 'githubPersonalAccessToken';
++    public const CODECHECK_GITHUB_REGISTER_ORGANIZATION = 'githubRegisterOrganization';
++    public const CODECHECK_GITHUB_REGISTER_REPOSITORY = 'githubRegisterRepository';
++    public const CODECHECK_GITHUB_CUSTOM_LABELS = 'githubCustomLabels';
++    public const CODECHECK_MODE = 'codecheckMode';
++
++    // ORCID integration settings
++    public const ORCID_ENABLED = 'orcidEnabled';
++    public const ORCID_API_TYPE = 'orcidApiType';
++    public const ORCID_CLIENT_ID = 'orcidClientId';
++    public const ORCID_CLIENT_SECRET = 'orcidClientSecret';
++
++    // ORCID API type values
++    public const ORCID_API_TYPE_SANDBOX = 'memberSandbox';
++    public const ORCID_API_TYPE_PRODUCTION = 'member';
++
++    // ORCID API base URLs
++    public const ORCID_URL_SANDBOX = 'https://sandbox.orcid.org';
++    public const ORCID_URL_PRODUCTION = 'https://orcid.org';
++    public const ORCID_API_URL_SANDBOX = 'https://api.sandbox.orcid.org/v3.0';
++    public const ORCID_API_URL_PRODUCTION = 'https://api.orcid.org/v3.0';
++
++    // OAuth scope needed to deposit peer-review items
++    public const ORCID_ACTIVITIES_SCOPE = '/activities/update';
++
++    // Deposit status values stored in codecheck_orcid_tokens
++    public const ORCID_DEPOSIT_STATUS_PENDING = 'pending';
++    public const ORCID_DEPOSIT_STATUS_SUCCESS = 'success';
++    public const ORCID_DEPOSIT_STATUS_FAILED = 'failed';
+ }
+\ No newline at end of file
+diff --git a/classes/migration/CodecheckSchemaMigration.php b/classes/migration/CodecheckSchemaMigration.php
+index fda9712..97a7bed 100644
+--- a/classes/migration/CodecheckSchemaMigration.php
++++ b/classes/migration/CodecheckSchemaMigration.php
+@@ -27,6 +27,24 @@ class CodecheckSchemaMigration extends Migration
+                 $table->index('submission_id');
+             });
+         }
++
++        if (!Schema::hasTable('codecheck_orcid_tokens')) {
++            Schema::create('codecheck_orcid_tokens', function (Blueprint $table) {
++                $table->bigIncrements('id');
++                $table->bigInteger('submission_id')->unsigned();
++                $table->string('orcid_id', 20)->nullable();
++                $table->string('access_token', 255)->nullable();
++                $table->string('refresh_token', 255)->nullable();
++                $table->timestamp('token_expires_at')->nullable();
++                $table->string('put_code', 50)->nullable();
++                $table->enum('deposit_status', ['pending', 'success', 'failed'])->default('pending');
++                $table->text('error_message')->nullable();
++                $table->timestamp('deposited_at')->nullable();
++                $table->timestamps();
++                $table->index('submission_id');
++                $table->index(['submission_id', 'orcid_id']);
++            });
++        }
+         
+         $this->createCodecheckGenres();
+     }
+@@ -63,6 +81,7 @@ class CodecheckSchemaMigration extends Migration
+ 
+     public function down(): void
+     {
++        Schema::dropIfExists('codecheck_orcid_tokens');
+         Schema::dropIfExists('codecheck_metadata');
+     }
+ }
+\ No newline at end of file
+diff --git a/locale/en/locale.po b/locale/en/locale.po
+index cedf4ab..802e4c0 100644
+--- a/locale/en/locale.po
++++ b/locale/en/locale.po
+@@ -36,7 +36,10 @@ msgid "plugins.generic.codecheck.settings.title"
+ msgstr "CODECHECK Settings"
+ 
+ msgid "plugins.generic.codecheck.settings.description"
+-msgstr "Configure CODECHECK integration settings for this journal"
++msgstr "Configure the CODECHECK integration settings for this journal"
++
++msgid "plugins.generic.settings.button.reset"
++msgstr "Reset"
+ 
+ msgid "plugins.generic.codecheck.settings.enableCodecheck"
+ msgstr "Enable CODECHECK for this journal"
+@@ -44,6 +47,48 @@ msgstr "Enable CODECHECK for this journal"
+ msgid "plugins.generic.codecheck.settings.enableCodecheck.description"
+ msgstr "Allow editors to assign codecheckers to submissions"
+ 
++msgid "plugins.generic.codecheck.settings.mode"
++msgstr "Select the CODECHECK mode used during the submission of a paper"
++
++msgid "plugins.generic.codecheck.settings.mode.opt.in"
++msgstr "opt-in by the author"
++
++msgid "plugins.generic.codecheck.settings.mode.opt.out"
++msgstr "opt-out by the author"
++
++msgid "plugins.generic.codecheck.settings.mode.confirmationButton"
++msgstr "confirmation button for required checks"
++
++msgid "plugins.generic.codecheck.settings.authorAnonymity"
++msgstr "Author anonymity"
++
++msgid "plugins.generic.codecheck.settings.authorAnonymity.description"
++msgstr "Include the author names in the GitHub register issue"
++
++msgid "plugins.generic.codecheck.settings.github.personalAccessToken"
++msgstr "GitHub Personal Access Token (classic)"
++
++msgid "plugins.generic.codecheck.settings.github.personalAccessToken.description"
++msgstr "Provide your GitHub Personal Access Token (classic), so the CODECHECK plugin can create new GitHub issues.<br>Here is how you can create a PAT (NOTE: please select "public_repo"): "
++
++msgid "plugins.generic.codecheck.settings.github.registerRepository"
++msgstr "GitHub Repository used as the CODECHECK register"
++
++msgid "plugins.generic.codecheck.settings.github.registerRepository.description"
++msgstr "default: https://github.com/codecheckers/register"
++
++msgid "plugins.generic.codecheck.settings.github.labels"
++msgstr "GitHub Register Labels"
++
++msgid "plugins.generic.codecheck.settings.github.labels.description"
++msgstr "Add custom Labels that can be displayed in the GitHub CODECHECK Register"
++
++msgid "plugins.generic.codecheck.settings.github.labels.button.add"
++msgstr "+ Label"
++
++msgid "plugins.generic.codecheck.settings.github.labels.emptyState"
++msgstr "No custom journal labels added yet"
++
+ msgid "plugins.generic.codecheck.title"
+ msgstr "CODECHECK"
+ 
+@@ -72,7 +117,7 @@ msgid "plugins.generic.codecheck.dataSoftwareAvailability"
+ msgstr "Data and Software Availability"
+ 
+ msgid "plugins.generic.codecheck.dataSoftwareAvailability.description"
+-msgstr "Describe where your data, code, and documentation is available and under what conditions, e.g., copyright, licenses, sensitivity limitations, or access procedures for protected data. The information should be concise and ideally comprises (a) for code, a minimal description of the workflow environment and main tools including versions, and (b) for data, persistent links to repositories for code and data using Digital Object Identifiers (DOI), but may also be plain URLs with last access dates or even a description of data access steps. Remove links for anonymity during peer review (“xxx”), or share anonymized links if your repository supports them. Used data, software and (third-party) tools should be cited."
++msgstr "Describe where your data, code, and documentation is available and under what conditions, e.g., copyright, licenses, sensitivity limitations, or access procedures for protected data. The information should be concise and ideally comprises (a) for code, a minimal description of the workflow environment and main tools including versions, and (b) for data, persistent links to repositories for code and data using Digital Object Identifiers (DOI), but may also be plain URLs with last access dates or even a description of data access steps. Remove links for anonymity during peer review ("xxx"), or share anonymized links if your repository supports them. Used data, software and (third-party) tools should be cited."
+ 
+ msgid "plugins.generic.codecheck.manifestFiles.label"
+ msgstr "Expected Output Files"
+@@ -86,6 +131,9 @@ msgstr "Data and Software Availability"
+ msgid "plugins.generic.codecheck.dataAvailability.description"
+ msgstr "Copy from your manuscript's data availability section"
+ 
++msgid "plugins.generic.codecheck.dataAvailability.placeholder"
++msgstr "Describe how your data and code are available..."
++
+ msgid "plugins.generic.codecheck.manifestFiles.filenamePlaceholder"
+ msgstr "Filename (e.g., figures/figure1.png)"
+ 
+@@ -95,12 +143,27 @@ msgstr "Comment (e.g., Main result visualization)"
+ msgid "plugins.generic.codecheck.manifestFiles.addFile"
+ msgstr "+ Add File"
+ 
++msgid "plugins.generic.codecheck.manifestFiles.addButton"
++msgstr "+ Add File"
++
++msgid "plugins.generic.codecheck.manifestFiles.removeConfirm"
++msgstr "Remove this file from the manifest?"
++
+ msgid "plugins.generic.codecheck.repository.placeholder"
+ msgstr "Repository URL (e.g., https://github.com/username/repo)"
+ 
+ msgid "plugins.generic.codecheck.repository.add"
+ msgstr "+ Add Repository"
+ 
++msgid "plugins.generic.codecheck.repository.addButton"
++msgstr "+ Add URL"
++
++msgid "plugins.generic.codecheck.repository.validation.protocol"
++msgstr "URL must start with http:// or https://"
++
++msgid "plugins.generic.codecheck.repository.validation.invalid"
++msgstr "Please enter a valid URL"
++
+ msgid "plugins.generic.codecheck.review.status"
+ msgstr "Status"
+ 
+@@ -110,6 +173,12 @@ msgstr "This submission will be codechecked"
+ msgid "plugins.generic.codecheck.workflow.title"
+ msgstr "WORKFLOW: CODECHECK"
+ 
++msgid "plugins.generic.codecheck.workflow.label"
++msgstr "CODECHECK"
++
++msgid "plugins.generic.codecheck.workflow.description"
++msgstr "Complete the following fields to document the CODECHECK process."
++
+ msgid "plugins.generic.codecheck.configVersion"
+ msgstr "CODECHECK config version"
+ 
+@@ -131,6 +200,12 @@ msgstr "Output File"
+ msgid "plugins.generic.codecheck.manifest.description"
+ msgstr "Description"
+ 
++msgid "plugins.generic.codecheck.manifest.emptyState"
++msgstr "No manifest files added yet. Click \"+ Add File\" to add files."
++
++msgid "plugins.generic.codecheck.manifest.removeConfirm"
++msgstr "Remove this file from the manifest?"
++
+ msgid "plugins.generic.codecheck.paperMetadata.title"
+ msgstr "Paper Metadata"
+ 
+@@ -149,6 +224,18 @@ msgstr "Enter the DOI or URL of the preprint"
+ msgid "plugins.generic.codecheck.paperMetadata.source"
+ msgstr "Source of the checked material"
+ 
++msgid "plugins.generic.codecheck.paperMetadata.readOnlyNotice"
++msgstr "This information comes from the original submission and cannot be edited here."
++
++msgid "plugins.generic.codecheck.paperMetadata.readonlyDescription"
++msgstr "These fields are automatically populated from the submission and cannot be edited here."
++
++msgid "plugins.generic.codecheck.paperMetadata.fieldReadonly"
++msgstr "This field is read-only"
++
++msgid "plugins.generic.codecheck.paperMetadata.noAuthors"
++msgstr "No authors found"
++
+ msgid "plugins.generic.codecheck.codecheckers.title"
+ msgstr "CODECHECKers"
+ 
+@@ -158,6 +245,18 @@ msgstr "+ CODECHECKer"
+ msgid "plugins.generic.codecheck.codecheckers.addCodechecker"
+ msgstr "Add CODECHECKer"
+ 
++msgid "plugins.generic.codecheck.codecheckers.emptyState"
++msgstr "No codecheckers added yet"
++
++msgid "plugins.generic.codecheck.codecheckers.enterName"
++msgstr "Enter codechecker name:"
++
++msgid "plugins.generic.codecheck.codecheckers.enterOrcid"
++msgstr "Enter ORCID (optional):"
++
++msgid "plugins.generic.codecheck.codecheckers.removeConfirm"
++msgstr "Remove this codechecker?"
++
+ msgid "plugins.generic.codecheck.certificate.title"
+ msgstr "CODECHECK Certificate"
+ 
+@@ -176,12 +275,60 @@ msgstr "Upload Certificate"
+ msgid "plugins.generic.codecheck.certificate.summary"
+ msgstr "Summary of the CODECHECK"
+ 
++msgid "plugins.generic.codecheck.certificate.summaryDescription"
++msgstr "Describe the CODECHECK process and any notable findings."
++
++msgid "plugins.generic.codecheck.certificate.summaryPlaceholder"
++msgstr "Successfully reproduced all main figures..."
++
++msgid "plugins.generic.codecheck.certificate.report"
++msgstr "Report URL"
++
++msgid "plugins.generic.codecheck.certificate.reportDescription"
++msgstr "Link to the published CODECHECK report (e.g., Zenodo)."
++
++msgid "plugins.generic.codecheck.certificate.generateId"
++msgstr "Generate ID"
++
++msgid "plugins.generic.codecheck.certificate.prefix"
++msgstr "CODECHECK"
++
++msgid "plugins.generic.codecheck.certificate.viewLink"
++msgstr "View Certificate"
++
+ msgid "plugins.generic.codecheck.repositories.title"
+ msgstr "Repositories"
+ 
+ msgid "plugins.generic.codecheck.repositories.add"
+ msgstr "+ Repository"
+ 
++msgid "plugins.generic.codecheck.repositories.description"
++msgstr "URL of the forked/archived repository used for the CODECHECK."
++
++msgid "plugins.generic.codecheck.repositories.emptyState"
++msgstr "No repositories added yet"
++
++msgid "plugins.generic.codecheck.repositories.removeConfirm"
++msgstr "Remove this repository?"
++
++msgid "plugins.generic.codecheck.repositories.infoTitle"
++msgstr "Repositories Info"
++
++msgid "plugins.generic.codecheck.repositories.infoTextOne"
++msgstr "If you desire, you can directly load the metadata from the codecheck.yml of the provided CODECHECK Repository, if it contains a valid codecheck.yml."
++
++msgid "plugins.generic.codecheck.repositories.infoTextTwo"
++msgstr "The supported CODECHECK Repository Sites are GitHub, OSF, Zenodo and GitLab."
++
++msgid "plugins.generic.codecheck.repositories.infoTextNote"
++msgstr "Note that loading the data from a remote repository will overwrite, but not save, the values in the current form."
++
++msgid "plugins.generic.codecheck.repositories.infoTextMoreInformation"
++msgstr "More Information: "
++
++msgid "plugins.generic.codecheck.repositories.infoTextLinkToAllowedRepositories"
++msgstr "https://github.com/codecheckers/register/blob/master/README.md#editing-the-register"
++
+ msgid "plugins.generic.codecheck.completionTime.title"
+ msgstr "Time the CODECHECK was completed"
+ 
+@@ -197,17 +344,20 @@ msgstr "CODECHECK Certificate ID, Venue Type and Venue Name"
+ msgid "plugins.generic.codecheck.identifier.label"
+ msgstr "ID of the CODECHECK certificate - e.g.: 2025-001"
+ 
++msgid "plugins.generic.codecheck.identifier.venue.type"
++msgstr "Venue Type"
++
++msgid "plugins.generic.codecheck.identifier.venue.name"
++msgstr "Venue Name"
++
+ msgid "plugins.generic.codecheck.identifier.venue.fetch.error.curl"
+ msgstr "Venue Data Error"
+ 
+ msgid "plugins.generic.codecheck.identifier.venue.fetch.error.codecheckAPI"
+ msgstr "Failed to fetch venue data"
+ 
+-msgid "plugins.generic.codecheck.identifier.venue.type"
+-msgstr "Venue Type"
+-
+-msgid "plugins.generic.codecheck.identifier.venue.name"
+-msgstr "Venue Name"
++msgid "plugins.generic.codecheck.identifier.customLabels"
++msgstr "Custom Labels"
+ 
+ msgid "plugins.generic.codecheck.identifier.viewGithubIssue"
+ msgstr "View GitHub Issue"
+@@ -215,9 +365,18 @@ msgstr "View GitHub Issue"
+ msgid "plugins.generic.codecheck.identifier.save"
+ msgstr "Save Identifier"
+ 
++msgid "plugins.generic.codecheck.identifier.saved"
++msgstr "Identifier \"{$identifier}\" saved!"
++
++msgid "plugins.generic.codecheck.identifier.enterFirst"
++msgstr "Please enter an identifier first."
++
+ msgid "plugins.generic.codecheck.identifier.reserve"
+ msgstr "Reserve Identifier"
+ 
++msgid "plugins.generic.codecheck.identifier.reserved"
++msgstr "New identifier reserved: {$identifier}"
++
+ msgid "plugins.generic.codecheck.identifier.reserve.success.message"
+ msgstr "You have reserved the Certificate Identifier"
+ 
+@@ -239,21 +398,66 @@ msgstr "Do you want to reserve a new identifier for this CODECHECK?"
+ msgid "plugins.generic.codecheck.identifier.removeConfirm"
+ msgstr "Are you sure you want to remove this identifier?"
+ 
++msgid "plugins.generic.codecheck.source.label"
++msgstr "Source"
++
++msgid "plugins.generic.codecheck.source.description"
++msgstr "Description or URL of the source material (use when material comes from multiple sources)"
++
++msgid "plugins.generic.codecheck.source.placeholder"
++msgstr "e.g., Code from GitHub, data from Zenodo and OSF"
++
++msgid "plugins.generic.codecheck.additionalContent.label"
++msgstr "Additional YAML Content (Optional)"
++
++msgid "plugins.generic.codecheck.additionalContent.description"
++msgstr "Add custom YAML fields for specific use cases. This content will be appended at the end of the generated YAML file. For advanced users only."
++
++msgid "plugins.generic.codecheck.additionalContent.placeholder"
++msgstr "Example:\npublishing_inc_identifier: 12345\npublishing_inc_handler: Ed Editor\n\nTheBestRepository:\n  recordId: 1a2b3c\n  checksum: abc123..."
++
++msgid "plugins.generic.codecheck.additionalContent.frontendLabel"
++msgstr "Additional information"
++
+ msgid "plugins.generic.codecheck.previewYaml"
+ msgstr "Preview CODECHECK metadata file"
+ 
++msgid "plugins.generic.codecheck.yamlPreview"
++msgstr "YAML Preview"
++
++msgid "plugins.generic.codecheck.yamlPreviewFailed"
++msgstr "Failed to generate preview"
++
++msgid "plugins.generic.codecheck.yamlGenerationFailed"
++msgstr "Failed to generate YAML Content"
++
+ msgid "plugins.generic.codecheck.yaml.valid"
+ msgstr "codecheck.yml is valid."
+ 
+ msgid "plugins.generic.codecheck.yaml.invalid"
+ msgstr "CODECHECK metadata creates a structurally invalid codecheck.yml file. Please check the detailed error message below."
+ 
++msgid "plugins.generic.codecheck.yaml.download"
++msgstr "Download"
++
++msgid "plugins.generic.codecheck.yaml.close"
++msgstr "Close"
++
++msgid "plugins.generic.codecheck.yaml.previewTitle"
++msgstr "CODECHECK Metadata Preview (codecheck.yml)"
++
+ msgid "plugins.generic.codecheck.savedSuccessfully"
+ msgstr "CODECHECK metadata saved successfully"
+ 
+ msgid "plugins.generic.codecheck.saveFailed"
+ msgstr "Failed to save CODECHECK metadata. Please try again."
+ 
++msgid "plugins.generic.codecheck.loadError"
++msgstr "Failed to load CODECHECK data"
++
++msgid "plugins.generic.codecheck.noDataFound"
++msgstr "No CODECHECK data found."
++
+ msgid "plugins.generic.codecheck.reviewTitle"
+ msgstr "CODECHECK Information"
+ 
+@@ -262,38 +466,12 @@ msgstr "Status"
+ 
+ msgid "plugins.generic.codecheck.status.complete"
+ msgstr "Complete"
+-msgid "plugins.generic.codecheck.dataAvailability.placeholder"
+-msgstr "Describe how your data and code are available..."
+-
+-msgid "plugins.generic.codecheck.review.title"
+-msgstr "CODECHECK Information"
+ 
+ msgid "plugins.generic.codecheck.status.pending"
+ msgstr "Pending"
+ 
+-msgid "plugins.generic.codecheck.notYetAssigned"
+-msgstr "Not yet assigned"
+-
+-msgid "plugins.generic.codecheck.viewFullMetadata"
+-msgstr "View Full CODECHECK Metadata"
+-
+-msgid "plugins.generic.codecheck.notOptedIn"
+-msgstr "This submission has not opted in for CODECHECK"
+-
+-msgid "plugins.generic.codecheck.workflow.label"
+-msgstr "CODECHECK"
+-
+-msgid "plugins.generic.codecheck.codecheckStatus"
+-msgstr "CODECHECK Status"
+-
+-msgid "plugins.generic.codecheck.markAsOutput"
+-msgstr "Mark as CODECHECK Output"
+-
+-msgid "plugins.generic.codecheck.markAsOutputTitle"
+-msgstr "Mark as CODECHECK Output"
+-
+-msgid "plugins.generic.codecheck.markAsOutputConfirm"
+-msgstr "Do you want to mark \"{$fileName}\" as a CODECHECK output file?"
++msgid "plugins.generic.codecheck.status.inProgress"
++msgstr "In Progress"
+ 
+ msgid "plugins.generic.codecheck.status.marked"
+ msgstr "Marked"
+@@ -301,71 +479,44 @@ msgstr "Marked"
+ msgid "plugins.generic.codecheck.status.notMarked"
+ msgstr "Not Marked"
+ 
+-msgid "plugins.generic.codecheck.paperMetadata.readOnlyNotice"
+-msgstr "This information comes from the original submission and cannot be edited here."
+-
+-msgid "plugins.generic.codecheck.paperMetadata.noAuthors"
+-msgstr "No authors found"
+-
+-msgid "plugins.generic.codecheck.workflow.description"
+-msgstr "Complete the following fields to document the CODECHECK process."
+-
+-msgid "plugins.generic.codecheck.manifest.emptyState"
+-msgstr "No manifest files added yet. Click \"+ Add File\" to add files."
+-
+-msgid "plugins.generic.codecheck.manifest.removeConfirm"
+-msgstr "Remove this file from the manifest?"
+-
+-msgid "plugins.generic.codecheck.repositories.description"
+-msgstr "URL of the forked/archived repository used for the CODECHECK."
++msgid "plugins.generic.codecheck.status.verificationInProgress"
++msgstr "Code verification is currently in progress."
+ 
+-msgid "plugins.generic.codecheck.codecheckers.emptyState"
+-msgstr "No codecheckers added yet"
++msgid "plugins.generic.codecheck.review.title"
++msgstr "CODECHECK Information"
+ 
+-msgid "plugins.generic.codecheck.codecheckers.enterName"
+-msgstr "Enter codechecker name:"
++msgid "plugins.generic.codecheck.review.configVersion"
++msgstr "Config Version"
+ 
+-msgid "plugins.generic.codecheck.codecheckers.enterOrcid"
+-msgstr "Enter ORCID (optional):"
++msgid "plugins.generic.codecheck.review.publicationType"
++msgstr "Publication Type"
+ 
+-msgid "plugins.generic.codecheck.codecheckers.removeConfirm"
+-msgstr "Remove this codechecker?"
++msgid "plugins.generic.codecheck.review.publicationType.doi"
++msgstr "DOI (e.g., Zenodo)"
+ 
+-msgid "plugins.generic.codecheck.certificate.generateId"
+-msgstr "Generate ID"
++msgid "plugins.generic.codecheck.review.publicationType.separate"
++msgstr "Separate Journal Section"
+ 
+-msgid "plugins.generic.codecheck.certificate.summaryDescription"
+-msgstr "Describe the CODECHECK process and any notable findings."
++msgid "plugins.generic.codecheck.review.manifestFiles"
++msgstr "Manifest Files"
+ 
+-msgid "plugins.generic.codecheck.certificate.summaryPlaceholder"
+-msgstr "Successfully reproduced all main figures..."
++msgid "plugins.generic.codecheck.review.codecheckers"
++msgstr "Codecheckers"
+ 
+-msgid "plugins.generic.codecheck.certificate.report"
++msgid "plugins.generic.codecheck.review.report"
+ msgstr "Report URL"
+ 
+-msgid "plugins.generic.codecheck.certificate.reportDescription"
+-msgstr "Link to the published CODECHECK report (e.g., Zenodo)."
+-
+-msgid "plugins.generic.codecheck.identifier.saved"
+-msgstr "Identifier \"{$identifier}\" saved!"
+-
+-msgid "plugins.generic.codecheck.identifier.enterFirst"
+-msgstr "Please enter an identifier first."
+-
+-msgid "plugins.generic.codecheck.identifier.reserved"
+-msgstr "New identifier reserved: {$identifier}"
+-
+-msgid "plugins.generic.codecheck.loadError"
+-msgstr "Failed to load CODECHECK data"
++msgid "plugins.generic.codecheck.review.reportUrl"
++msgstr "Report URL"
+ 
+-msgid "plugins.generic.codecheck.yamlPreview"
+-msgstr "YAML Preview"
++msgid "plugins.generic.codecheck.modal.cancel"
++msgstr "Cancel"
+ 
+-msgid "plugins.generic.codecheck.yamlPreviewFailed"
+-msgstr "Failed to generate preview"
++msgid "plugins.generic.codecheck.modal.add"
++msgstr "Add"
+ 
+-msgid "plugins.generic.codecheck.yamlGenerationFailed"
+-msgstr "Failed to generate YAML Content"
++msgid "plugins.generic.codecheck.modal.close"
++msgstr "Close"
+ 
+ msgid "plugins.generic.codecheck.validation.manifestRequired"
+ msgstr "Please add at least one manifest file"
+@@ -379,152 +530,116 @@ msgstr "Please provide a certificate ID"
+ msgid "plugins.generic.codecheck.validation.summaryRequired"
+ msgstr "Please provide a summary"
+ 
+-msgid "plugins.generic.codecheck.repositories.emptyState"
+-msgstr "No repositories added yet"
+-
+-msgid "plugins.generic.codecheck.repositories.infoTitle"
+-msgstr "Repositories Info"
+-
+-msgid "plugins.generic.codecheck.repositories.infoTextOne"
+-msgstr "If you desire, you can directly load the metadata from the codecheck.yml of the provided CODECHECK Repository, if it contains a valid codecheck.yml."
+-
+-msgid "plugins.generic.codecheck.repositories.infoTextTwo"
+-msgstr "The supported CODECHECK Repository Sites are GitHub, OSF, Zenodo and GitLab."
+-
+-msgid "plugins.generic.codecheck.repositories.infoTextNote"
+-msgstr "Note that loading the data from a remote repository will overwrite, but not save, the values in the current form."
+-
+-msgid "plugins.generic.codecheck.repositories.infoTextMoreInformation"
+-msgstr "More Information: "
+-
+-msgid "plugins.generic.codecheck.repositories.infoTextLinkToAllowedRepositories"
+-msgstr "https://github.com/codecheckers/register/blob/master/README.md#editing-the-register"
+-
+-msgid "plugins.generic.codecheck.repositories.removeConfirm"
+-msgstr "Remove this repository?"
+-
+-msgid "plugins.generic.codecheck.manifestFiles.removeConfirm"
+-msgstr "Remove this file from the manifest?"
+-
+-msgid "plugins.generic.codecheck.yaml.download"
+-msgstr "Download"
+-
+-msgid "plugins.generic.codecheck.yaml.close"
+-msgstr "Close"
+-
+-msgid "plugins.generic.codecheck.yaml.previewTitle"
+-msgstr "CODECHECK Metadata Preview (codecheck.yml)"
+-
+-msgid "plugins.generic.codecheck.modal.close"
+-msgstr "Close"
++msgid "plugins.generic.codecheck.preview.saveFirst"
++msgstr "Please save your changes before previewing"
+ 
+-msgid "plugins.generic.codecheck.modal.cancel"
+-msgstr "Cancel"
++msgid "plugins.generic.codecheck.preview.missingRequired"
++msgstr "Please complete all required fields (manifest, codecheckers, certificate)"
+ 
+-msgid "plugins.generic.codecheck.modal.add"
+-msgstr "Add"
++msgid "plugins.generic.codecheck.preview.ready"
++msgstr "Click to preview YAML metadata"
+ 
+-msgid "plugins.generic.codecheck.review.configVersion"
+-msgstr "Config Version"
++msgid "plugins.generic.codecheck.notYetAssigned"
++msgstr "Not yet assigned"
+ 
+-msgid "plugins.generic.codecheck.review.publicationType"
+-msgstr "Publication Type"
++msgid "plugins.generic.codecheck.viewFullMetadata"
++msgstr "View Full CODECHECK Metadata"
+ 
+-msgid "plugins.generic.codecheck.review.publicationType.doi"
+-msgstr "DOI (e.g., Zenodo)"
++msgid "plugins.generic.codecheck.notOptedIn"
++msgstr "This submission has not opted in for CODECHECK"
+ 
+-msgid "plugins.generic.codecheck.review.publicationType.separate"
+-msgstr "Separate Journal Section"
++msgid "plugins.generic.codecheck.viewCertificate"
++msgstr "View CODECHECK Certificate"
+ 
+-msgid "plugins.generic.codecheck.review.manifestFiles"
+-msgstr "Manifest Files"
++msgid "plugins.generic.codecheck.badge.altText"
++msgstr "CODE WORKS"
+ 
+-msgid "plugins.generic.codecheck.review.codecheckers"
+-msgstr "Codecheckers"
++msgid "plugins.generic.codecheck.codecheckStatus"
++msgstr "CODECHECK Status"
+ 
+-msgid "plugins.generic.codecheck.review.report"
+-msgstr "Report URL"
++msgid "plugins.generic.codecheck.markAsOutput"
++msgstr "Mark as CODECHECK Output"
+ 
+-msgid "plugins.generic.codecheck.paperMetadata.readonlyDescription"
+-msgstr "These fields are automatically populated from the submission and cannot be edited here."
++msgid "plugins.generic.codecheck.markAsOutputTitle"
++msgstr "Mark as CODECHECK Output"
+ 
+-msgid "plugins.generic.codecheck.paperMetadata.fieldReadonly"
+-msgstr "This field is read-only"
++msgid "plugins.generic.codecheck.markAsOutputConfirm"
++msgstr "Do you want to mark \"{$fileName}\" as a CODECHECK output file?"
+ 
+-msgid "plugins.generic.codecheck.source.label"
+-msgstr "Source"
++msgid "plugins.generic.codecheck.moreDetails"
++msgstr "More details"
+ 
+-msgid "plugins.generic.codecheck.source.description"
+-msgstr "Description or URL of the source material (use when material comes from multiple sources)"
++msgid "plugins.generic.codecheck.hideDetails"
++msgstr "Hide details"
+ 
+-msgid "plugins.generic.codecheck.source.placeholder"
+-msgstr "e.g., Code from GitHub, data from Zenodo and OSF"
++msgid "plugins.generic.codecheck.checkDate"
++msgstr "Check date"
+ 
+-msgid "plugins.generic.codecheck.additionalContent.label"
+-msgstr "Additional YAML Content (Optional)"
++msgid "plugins.generic.codecheck.orcid.settingsTitle"
++msgstr "ORCID Deposition"
+ 
+-msgid "plugins.generic.codecheck.additionalContent.description"
+-msgstr "Add custom YAML fields for specific use cases. This content will be appended at the end of the generated YAML file. For advanced users only."
++msgid "plugins.generic.codecheck.orcid.settingsDescription"
++msgstr "Deposit CODECHECK activity to codecheckers' ORCID profiles using the ORCID Member API. The journal must register a Member API Client at orcid.org. Start with the sandbox API during development."
+ 
+-msgid "plugins.generic.codecheck.additionalContent.placeholder"
+-msgstr "Example:\npublishing_inc_identifier: 12345\npublishing_inc_handler: Ed Editor\n\nTheBestRepository:\n  recordId: 1a2b3c\n  checksum: abc123..."
++msgid "plugins.generic.codecheck.orcid.enable"
++msgstr "Enable ORCID deposition for CODECHECKs"
+ 
+-msgid "plugins.generic.codecheck.viewCertificate"
+-msgstr "View CODECHECK Certificate"
++msgid "plugins.generic.codecheck.orcid.apiType"
++msgstr "ORCID API"
+ 
+-msgid "plugins.generic.codecheck.badge.altText"
+-msgstr "CODE WORKS"
++msgid "plugins.generic.codecheck.orcid.apiType.sandbox"
++msgstr "Member Sandbox (development/testing)"
+ 
+-msgid "plugins.generic.codecheck.certificate.prefix"
+-msgstr "CODECHECK"
++msgid "plugins.generic.codecheck.orcid.apiType.production"
++msgstr "Member API (production)"
+ 
+-msgid "plugins.generic.codecheck.certificate.viewLink"
+-msgstr "View Certificate"
++msgid "plugins.generic.codecheck.orcid.clientId"
++msgstr "Client ID"
+ 
+-msgid "plugins.generic.codecheck.noDataFound"
+-msgstr "No CODECHECK data found."
++msgid "plugins.generic.codecheck.orcid.clientIdDescription"
++msgstr "Your ORCID Member API Client ID, e.g. APP-XXXXXXXXXXXX"
+ 
+-msgid "plugins.generic.codecheck.repository.placeholder"
+-msgstr "https://github.com/organization/repo"
++msgid "plugins.generic.codecheck.orcid.clientSecret"
++msgstr "Client Secret"
+ 
+-msgid "plugins.generic.codecheck.repository.addButton"
+-msgstr "+ Add URL"
++msgid "plugins.generic.codecheck.orcid.clientSecretDescription"
++msgstr "Your ORCID Member API Client Secret. Leave blank to keep the current value."
+ 
+-msgid "plugins.generic.codecheck.repository.validation.protocol"
+-msgstr "URL must start with http:// or https://"
++msgid "plugins.generic.codecheck.orcid.sectionTitle"
++msgstr "ORCID Deposition"
+ 
+-msgid "plugins.generic.codecheck.repository.validation.invalid"
+-msgstr "Please enter a valid URL"
++msgid "plugins.generic.codecheck.orcid.sectionDescription"
++msgstr "Codecheckers must authorise this journal to deposit their CODECHECK activity to their ORCID profile. Once authorised, deposition happens automatically on publication or can be triggered manually below."
+ 
+-msgid "plugins.generic.codecheck.manifestFiles.filenamePlaceholder"
+-msgstr "Filename (e.g., figures/figure1.png)"
++msgid "plugins.generic.codecheck.orcid.noCodecheckers"
++msgstr "No codecheckers have been assigned yet."
+ 
+-msgid "plugins.generic.codecheck.manifestFiles.commentPlaceholder"
+-msgstr "Comment (e.g., Main result visualization)"
++msgid "plugins.generic.codecheck.orcid.authorise"
++msgstr "Authorise ORCID"
+ 
+-msgid "plugins.generic.codecheck.manifestFiles.addButton"
+-msgstr "+ Add File"
++msgid "plugins.generic.codecheck.orcid.reAuthorise"
++msgstr "Re-authorise ORCID"
+ 
+-msgid "plugins.generic.codecheck.preview.saveFirst"
+-msgstr "Please save your changes before previewing"
++msgid "plugins.generic.codecheck.orcid.deposit"
++msgstr "Deposit to ORCID"
+ 
+-msgid "plugins.generic.codecheck.preview.missingRequired"
+-msgstr "Please complete all required fields (manifest, codecheckers, certificate)"
++msgid "plugins.generic.codecheck.orcid.reDeposit"
++msgstr "Re-deposit to ORCID"
+ 
+-msgid "plugins.generic.codecheck.preview.ready"
+-msgstr "Click to preview YAML metadata"
++msgid "plugins.generic.codecheck.orcid.depositAll"
++msgstr "Deposit to all authorised ORCID profiles"
+ 
+-msgid "plugins.generic.codecheck.moreDetails"
+-msgstr "More details"
++msgid "plugins.generic.codecheck.orcid.viewOnOrcid"
++msgstr "View on ORCID"
+ 
+-msgid "plugins.generic.codecheck.hideDetails"
+-msgstr "Hide details"
++msgid "plugins.generic.codecheck.orcid.status.notAuthorised"
++msgstr "Not authorised"
+ 
+-msgid "plugins.generic.codecheck.checkDate"
+-msgstr "Check date"
++msgid "plugins.generic.codecheck.orcid.status.pending"
++msgstr "Pending deposit"
+ 
+-msgid "plugins.generic.codecheck.status.verificationInProgress"
+-msgstr "Code verification is currently in progress."
++msgid "plugins.generic.codecheck.orcid.status.deposited"
++msgstr "Deposited"
+ 
+-msgid "plugins.generic.codecheck.additionalContent.frontendLabel"
+-msgstr "Additional information"
+\ No newline at end of file
++msgid "plugins.generic.codecheck.orcid.status.failed"
++msgstr "Deposit failed"
+\ No newline at end of file
+diff --git a/package-lock.json b/package-lock.json
+index 22f959a..4f45b08 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -17,9 +17,9 @@
+       }
+     },
+     "node_modules/@babel/helper-string-parser": {
+-      "version": "7.27.1",
+-      "resolved": "https://registry.npmjs.org/@babel/helper-string-parser/-/helper-string-parser-7.27.1.tgz",
+-      "integrity": "sha512-qMlSxKbpRlAridDExk92nSobyDdpPijUq2DW6oDnUqd0iOGxmQjyqhMIihI9+zv4LPyZdRje2cavWPbCbWm3eA==",
++      "version": "7.29.7",
++      "resolved": "https://registry.npmjs.org/@babel/helper-string-parser/-/helper-string-parser-7.29.7.tgz",
++      "integrity": "sha512-Pb5ijPrZ89GDH8223L4UP8i6QApWxs04RbPQJTeWDV0/keR2E36MeKnyr6LYmUUvqRRI+Iv87SuF1W6ErINzYw==",
+       "dev": true,
+       "license": "MIT",
+       "engines": {
+@@ -27,9 +27,9 @@
+       }
+     },
+     "node_modules/@babel/helper-validator-identifier": {
+-      "version": "7.28.5",
+-      "resolved": "https://registry.npmjs.org/@babel/helper-validator-identifier/-/helper-validator-identifier-7.28.5.tgz",
+-      "integrity": "sha512-qSs4ifwzKJSV39ucNjsvc6WVHs6b7S03sOh2OcHF9UHfVPqWWALUsNUVzhSBiItjRZoLHx7nIarVjqKVusUZ1Q==",
++      "version": "7.29.7",
++      "resolved": "https://registry.npmjs.org/@babel/helper-validator-identifier/-/helper-validator-identifier-7.29.7.tgz",
++      "integrity": "sha512-qehxGkRj55h/ff8EMaJ+cYhyaKlHIxqYDn682wQD7RNp9UujOQsHog2uS0r2vzr4pW+sXf90NeeayjcNaX3fFg==",
+       "dev": true,
+       "license": "MIT",
+       "engines": {
+@@ -37,13 +37,13 @@
+       }
+     },
+     "node_modules/@babel/parser": {
+-      "version": "7.29.2",
+-      "resolved": "https://registry.npmjs.org/@babel/parser/-/parser-7.29.2.tgz",
+-      "integrity": "sha512-4GgRzy/+fsBa72/RZVJmGKPmZu9Byn8o4MoLpmNe1m8ZfYnz5emHLQz3U4gLud6Zwl0RZIcgiLD7Uq7ySFuDLA==",
++      "version": "7.29.7",
++      "resolved": "https://registry.npmjs.org/@babel/parser/-/parser-7.29.7.tgz",
++      "integrity": "sha512-hnORnjP/1P/zFEndoeX+n+t1RwWRJiJpM/jO7FW32Kn9r5+sJB2JWOdYo4L6k78j15eCwY3Gm/7364B1EMwtNg==",
+       "dev": true,
+       "license": "MIT",
+       "dependencies": {
+-        "@babel/types": "^7.29.0"
++        "@babel/types": "^7.29.7"
+       },
+       "bin": {
+         "parser": "bin/babel-parser.js"
+@@ -53,14 +53,14 @@
+       }
+     },
+     "node_modules/@babel/types": {
+-      "version": "7.29.0",
+-      "resolved": "https://registry.npmjs.org/@babel/types/-/types-7.29.0.tgz",
+-      "integrity": "sha512-LwdZHpScM4Qz8Xw2iKSzS+cfglZzJGvofQICy7W7v4caru4EaAmyUuO6BGrbyQ2mYV11W0U8j5mBhd14dd3B0A==",
++      "version": "7.29.7",
++      "resolved": "https://registry.npmjs.org/@babel/types/-/types-7.29.7.tgz",
++      "integrity": "sha512-4zBIxpPzowiZpusoFkyGVwakdRJUyuH5PxQ/PrqghfdFWWasvnCdPfQXHrenDai+gyLARulZjZowCOj6fjT4pA==",
+       "dev": true,
+       "license": "MIT",
+       "dependencies": {
+-        "@babel/helper-string-parser": "^7.27.1",
+-        "@babel/helper-validator-identifier": "^7.28.5"
++        "@babel/helper-string-parser": "^7.29.7",
++        "@babel/helper-validator-identifier": "^7.29.7"
+       },
+       "engines": {
+         "node": ">=6.9.0"
+@@ -97,9 +97,9 @@
+       }
+     },
+     "node_modules/@cypress/vue": {
+-      "version": "6.0.2",
+-      "resolved": "https://registry.npmjs.org/@cypress/vue/-/vue-6.0.2.tgz",
+-      "integrity": "sha512-To+Ik4CnhTPMmDh7VGpl5k0Z1LuE0xrI0j6LF7QyjROY2bkQwUE50WTmVPCz/Dvez9WrVpkJjRmflR5KlVmGiQ==",
++      "version": "6.0.3",
++      "resolved": "https://registry.npmjs.org/@cypress/vue/-/vue-6.0.3.tgz",
++      "integrity": "sha512-nJyjzvEaqD7i8NZ0mXudlwkth7+26OCM27x3SC9swFsN4NELe8+6yNch3z/Ja5Bq+tSwpP8LsF0O7zDHN2Q7zQ==",
+       "dev": true,
+       "license": "MIT",
+       "engines": {
+@@ -536,9 +536,9 @@
+       "license": "MIT"
+     },
+     "node_modules/@rollup/rollup-android-arm-eabi": {
+-      "version": "4.60.1",
+-      "resolved": "https://registry.npmjs.org/@rollup/rollup-android-arm-eabi/-/rollup-android-arm-eabi-4.60.1.tgz",
+-      "integrity": "sha512-d6FinEBLdIiK+1uACUttJKfgZREXrF0Qc2SmLII7W2AD8FfiZ9Wjd+rD/iRuf5s5dWrr1GgwXCvPqOuDquOowA==",
++      "version": "4.60.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-android-arm-eabi/-/rollup-android-arm-eabi-4.60.4.tgz",
++      "integrity": "sha512-F5QXMSiFebS9hKZj02XhWLLnRpJ3B3AROP0tWbFBSj+6kCbg5m9j5JoHKd4mmSVy5mS/IMQloYgYxCuJC0fxEQ==",
+       "cpu": [
+         "arm"
+       ],
+@@ -550,9 +550,9 @@
+       ]
+     },
+     "node_modules/@rollup/rollup-android-arm64": {
+-      "version": "4.60.1",
+-      "resolved": "https://registry.npmjs.org/@rollup/rollup-android-arm64/-/rollup-android-arm64-4.60.1.tgz",
+-      "integrity": "sha512-YjG/EwIDvvYI1YvYbHvDz/BYHtkY4ygUIXHnTdLhG+hKIQFBiosfWiACWortsKPKU/+dUwQQCKQM3qrDe8c9BA==",
++      "version": "4.60.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-android-arm64/-/rollup-android-arm64-4.60.4.tgz",
++      "integrity": "sha512-GxxTKApUpzRhof7poWvCJHRF51C67u1R7D6DiluBE8wKU1u5GWE8t+v81JvJYtbawoBFX1hLv5Ei4eVjkWokaw==",
+       "cpu": [
+         "arm64"
+       ],
+@@ -564,9 +564,9 @@
+       ]
+     },
+     "node_modules/@rollup/rollup-darwin-arm64": {
+-      "version": "4.60.1",
+-      "resolved": "https://registry.npmjs.org/@rollup/rollup-darwin-arm64/-/rollup-darwin-arm64-4.60.1.tgz",
+-      "integrity": "sha512-mjCpF7GmkRtSJwon+Rq1N8+pI+8l7w5g9Z3vWj4T7abguC4Czwi3Yu/pFaLvA3TTeMVjnu3ctigusqWUfjZzvw==",
++      "version": "4.60.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-darwin-arm64/-/rollup-darwin-arm64-4.60.4.tgz",
++      "integrity": "sha512-tua0TaJxMOB1R0V0RS1jFZ/RpURFDJIOR2A6jWwQeawuFyS4gBW+rntLRaQd0EQ4bd6Vp44Z2rXW+YYDBsj6IA==",
+       "cpu": [
+         "arm64"
+       ],
+@@ -578,9 +578,9 @@
+       ]
+     },
+     "node_modules/@rollup/rollup-darwin-x64": {
+-      "version": "4.60.1",
+-      "resolved": "https://registry.npmjs.org/@rollup/rollup-darwin-x64/-/rollup-darwin-x64-4.60.1.tgz",
+-      "integrity": "sha512-haZ7hJ1JT4e9hqkoT9R/19XW2QKqjfJVv+i5AGg57S+nLk9lQnJ1F/eZloRO3o9Scy9CM3wQ9l+dkXtcBgN5Ew==",
++      "version": "4.60.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-darwin-x64/-/rollup-darwin-x64-4.60.4.tgz",
++      "integrity": "sha512-CSKq7MsP+5PFIcydhAiR1K0UhEI1A2jWXVKHPCBZ151yOutENwvnPocgVHkivu2kviURtCEB6zUQw0vs8RrhMg==",
+       "cpu": [
+         "x64"
+       ],
+@@ -592,9 +592,9 @@
+       ]
+     },
+     "node_modules/@rollup/rollup-freebsd-arm64": {
+-      "version": "4.60.1",
+-      "resolved": "https://registry.npmjs.org/@rollup/rollup-freebsd-arm64/-/rollup-freebsd-arm64-4.60.1.tgz",
+-      "integrity": "sha512-czw90wpQq3ZsAVBlinZjAYTKduOjTywlG7fEeWKUA7oCmpA8xdTkxZZlwNJKWqILlq0wehoZcJYfBvOyhPTQ6w==",
++      "version": "4.60.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-freebsd-arm64/-/rollup-freebsd-arm64-4.60.4.tgz",
++      "integrity": "sha512-+O8OkVdyvXMtJEciu2wS/pzm1IxntEEQx3z5TAVy4l32G0etZn+RsA48ARRrFm6Ri8fvqPQfgrvNxSjKAbnd3g==",
+       "cpu": [
+         "arm64"
+       ],
+@@ -606,9 +606,9 @@
+       ]
+     },
+     "node_modules/@rollup/rollup-freebsd-x64": {
+-      "version": "4.60.1",
+-      "resolved": "https://registry.npmjs.org/@rollup/rollup-freebsd-x64/-/rollup-freebsd-x64-4.60.1.tgz",
+-      "integrity": "sha512-KVB2rqsxTHuBtfOeySEyzEOB7ltlB/ux38iu2rBQzkjbwRVlkhAGIEDiiYnO2kFOkJp+Z7pUXKyrRRFuFUKt+g==",
++      "version": "4.60.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-freebsd-x64/-/rollup-freebsd-x64-4.60.4.tgz",
++      "integrity": "sha512-Iw3oMskH3AfNuhU0MSN7vNbdi4me/NiYo2azqPz/Le16zHSa+3RRmliCMWWQmh4lcndccU40xcJuTYJZxNo/lw==",
+       "cpu": [
+         "x64"
+       ],
+@@ -620,9 +620,9 @@
+       ]
+     },
+     "node_modules/@rollup/rollup-linux-arm-gnueabihf": {
+-      "version": "4.60.1",
+-      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-arm-gnueabihf/-/rollup-linux-arm-gnueabihf-4.60.1.tgz",
+-      "integrity": "sha512-L+34Qqil+v5uC0zEubW7uByo78WOCIrBvci69E7sFASRl0X7b/MB6Cqd1lky/CtcSVTydWa2WZwFuWexjS5o6g==",
++      "version": "4.60.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-arm-gnueabihf/-/rollup-linux-arm-gnueabihf-4.60.4.tgz",
++      "integrity": "sha512-EIPRXTVQpHyF8WOo219AD2yEltPehLTcTMz2fn6JsatLYSzQf00hj3rulF+yauOlF9/FtM2WpkT/hJh/KJFGhA==",
+       "cpu": [
+         "arm"
+       ],
+@@ -634,9 +634,9 @@
+       ]
+     },
+     "node_modules/@rollup/rollup-linux-arm-musleabihf": {
+-      "version": "4.60.1",
+-      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-arm-musleabihf/-/rollup-linux-arm-musleabihf-4.60.1.tgz",
+-      "integrity": "sha512-n83O8rt4v34hgFzlkb1ycniJh7IR5RCIqt6mz1VRJD6pmhRi0CXdmfnLu9dIUS6buzh60IvACM842Ffb3xd6Gg==",
++      "version": "4.60.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-arm-musleabihf/-/rollup-linux-arm-musleabihf-4.60.4.tgz",
++      "integrity": "sha512-J3Yh9PzzF1Ovah2At+lHiGQdsYgArxBbXv/zHfSyaiFQEqvNv7DcW98pCrmdjCZBrqBiKrKKe2V+aaSGWuBe/w==",
+       "cpu": [
+         "arm"
+       ],
+@@ -648,9 +648,9 @@
+       ]
+     },
+     "node_modules/@rollup/rollup-linux-arm64-gnu": {
+-      "version": "4.60.1",
+-      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-arm64-gnu/-/rollup-linux-arm64-gnu-4.60.1.tgz",
+-      "integrity": "sha512-Nql7sTeAzhTAja3QXeAI48+/+GjBJ+QmAH13snn0AJSNL50JsDqotyudHyMbO2RbJkskbMbFJfIJKWA6R1LCJQ==",
++      "version": "4.60.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-arm64-gnu/-/rollup-linux-arm64-gnu-4.60.4.tgz",
++      "integrity": "sha512-BFDEZMYfUvLn37ONE1yMBojPxnMlTFsdyNoqncT0qFq1mAfllL+ATMMJd8TeuVMiX84s1KbcxcZbXInmcO2mRg==",
+       "cpu": [
+         "arm64"
+       ],
+@@ -662,9 +662,9 @@
+       ]
+     },
+     "node_modules/@rollup/rollup-linux-arm64-musl": {
+-      "version": "4.60.1",
+-      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-arm64-musl/-/rollup-linux-arm64-musl-4.60.1.tgz",
+-      "integrity": "sha512-+pUymDhd0ys9GcKZPPWlFiZ67sTWV5UU6zOJat02M1+PiuSGDziyRuI/pPue3hoUwm2uGfxdL+trT6Z9rxnlMA==",
++      "version": "4.60.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-arm64-musl/-/rollup-linux-arm64-musl-4.60.4.tgz",
++      "integrity": "sha512-pc9EYOSlOgdQ2uPl1o9PF6/kLSgaUosia7gOuS8mB69IxJvlclko1MECXysjs5ryez1/5zjYqx3+xYU0TU6R1A==",
+       "cpu": [
+         "arm64"
+       ],
+@@ -676,9 +676,9 @@
+       ]
+     },
+     "node_modules/@rollup/rollup-linux-loong64-gnu": {
+-      "version": "4.60.1",
+-      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-loong64-gnu/-/rollup-linux-loong64-gnu-4.60.1.tgz",
+-      "integrity": "sha512-VSvgvQeIcsEvY4bKDHEDWcpW4Yw7BtlKG1GUT4FzBUlEKQK0rWHYBqQt6Fm2taXS+1bXvJT6kICu5ZwqKCnvlQ==",
++      "version": "4.60.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-loong64-gnu/-/rollup-linux-loong64-gnu-4.60.4.tgz",
++      "integrity": "sha512-NxnomyxYerDh5n4iLrNa+sH+Z+U4BMEE46V2PgQ/hoB909i8gV1M5wPojWg9fk1jWpO3IQnOs20K4wyZuFLEFQ==",
+       "cpu": [
+         "loong64"
+       ],
+@@ -690,9 +690,9 @@
+       ]
+     },
+     "node_modules/@rollup/rollup-linux-loong64-musl": {
+-      "version": "4.60.1",
+-      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-loong64-musl/-/rollup-linux-loong64-musl-4.60.1.tgz",
+-      "integrity": "sha512-4LqhUomJqwe641gsPp6xLfhqWMbQV04KtPp7/dIp0nzPxAkNY1AbwL5W0MQpcalLYk07vaW9Kp1PBhdpZYYcEw==",
++      "version": "4.60.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-loong64-musl/-/rollup-linux-loong64-musl-4.60.4.tgz",
++      "integrity": "sha512-nbJnQ8a3z1mtmrwImCYhc6BGpThAyYVRQxw9uKSKG4wR6aAYno9sVjJ0zaZcW9BPJX1GbrDPf+SvdWjgTuDmnw==",
+       "cpu": [
+         "loong64"
+       ],
+@@ -704,9 +704,9 @@
+       ]
+     },
+     "node_modules/@rollup/rollup-linux-ppc64-gnu": {
+-      "version": "4.60.1",
+-      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-ppc64-gnu/-/rollup-linux-ppc64-gnu-4.60.1.tgz",
+-      "integrity": "sha512-tLQQ9aPvkBxOc/EUT6j3pyeMD6Hb8QF2BTBnCQWP/uu1lhc9AIrIjKnLYMEroIz/JvtGYgI9dF3AxHZNaEH0rw==",
++      "version": "4.60.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-ppc64-gnu/-/rollup-linux-ppc64-gnu-4.60.4.tgz",
++      "integrity": "sha512-2EU6acNrQLd8tYvo/LXW535wupT3m6fo7HKo6lr7ktQoItxTyOL1ZCR/GfGCuXl2vR+zmfI6eRXkSemafv+iVg==",
+       "cpu": [
+         "ppc64"
+       ],
+@@ -718,9 +718,9 @@
+       ]
+     },
+     "node_modules/@rollup/rollup-linux-ppc64-musl": {
+-      "version": "4.60.1",
+-      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-ppc64-musl/-/rollup-linux-ppc64-musl-4.60.1.tgz",
+-      "integrity": "sha512-RMxFhJwc9fSXP6PqmAz4cbv3kAyvD1etJFjTx4ONqFP9DkTkXsAMU4v3Vyc5BgzC+anz7nS/9tp4obsKfqkDHg==",
++      "version": "4.60.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-ppc64-musl/-/rollup-linux-ppc64-musl-4.60.4.tgz",
++      "integrity": "sha512-WeBtoMuaMxiiIrO2IYP3xs6GMWkJP2C0EoT8beTLkUPmzV1i/UcOSVw1d5r9KBODtHKilG5yFxsGRnBbK3wJ4A==",
+       "cpu": [
+         "ppc64"
+       ],
+@@ -732,9 +732,9 @@
+       ]
+     },
+     "node_modules/@rollup/rollup-linux-riscv64-gnu": {
+-      "version": "4.60.1",
+-      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-riscv64-gnu/-/rollup-linux-riscv64-gnu-4.60.1.tgz",
+-      "integrity": "sha512-QKgFl+Yc1eEk6MmOBfRHYF6lTxiiiV3/z/BRrbSiW2I7AFTXoBFvdMEyglohPj//2mZS4hDOqeB0H1ACh3sBbg==",
++      "version": "4.60.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-riscv64-gnu/-/rollup-linux-riscv64-gnu-4.60.4.tgz",
++      "integrity": "sha512-FJHFfqpKUI3A10WrWKiFbBZ7yVbGT4q4B5o1qKFFojqpaYoh9LrQgqWCmmcxQzVSXYtyB5bzkXrYzlHTs21MYA==",
+       "cpu": [
+         "riscv64"
+       ],
+@@ -746,9 +746,9 @@
+       ]
+     },
+     "node_modules/@rollup/rollup-linux-riscv64-musl": {
+-      "version": "4.60.1",
+-      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-riscv64-musl/-/rollup-linux-riscv64-musl-4.60.1.tgz",
+-      "integrity": "sha512-RAjXjP/8c6ZtzatZcA1RaQr6O1TRhzC+adn8YZDnChliZHviqIjmvFwHcxi4JKPSDAt6Uhf/7vqcBzQJy0PDJg==",
++      "version": "4.60.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-riscv64-musl/-/rollup-linux-riscv64-musl-4.60.4.tgz",
++      "integrity": "sha512-mcEl6CUT5IAUmQf1m9FYSmVqCJlpQ8r8eyftFUHG8i9OhY7BkBXSUdnLH5DOf0wCOjcP9v/QO93zpmF1SptCCw==",
+       "cpu": [
+         "riscv64"
+       ],
+@@ -760,9 +760,9 @@
+       ]
+     },
+     "node_modules/@rollup/rollup-linux-s390x-gnu": {
+-      "version": "4.60.1",
+-      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-s390x-gnu/-/rollup-linux-s390x-gnu-4.60.1.tgz",
+-      "integrity": "sha512-wcuocpaOlaL1COBYiA89O6yfjlp3RwKDeTIA0hM7OpmhR1Bjo9j31G1uQVpDlTvwxGn2nQs65fBFL5UFd76FcQ==",
++      "version": "4.60.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-s390x-gnu/-/rollup-linux-s390x-gnu-4.60.4.tgz",
++      "integrity": "sha512-ynt3JxVd2w2buzoKDWIyiV1pJW93xlQic1THVLXilz429oijRpSHivZAgp65KBu+cMcgf1eVVjdnTLvPxgCuoQ==",
+       "cpu": [
+         "s390x"
+       ],
+@@ -774,9 +774,9 @@
+       ]
+     },
+     "node_modules/@rollup/rollup-linux-x64-gnu": {
+-      "version": "4.60.1",
+-      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-x64-gnu/-/rollup-linux-x64-gnu-4.60.1.tgz",
+-      "integrity": "sha512-77PpsFQUCOiZR9+LQEFg9GClyfkNXj1MP6wRnzYs0EeWbPcHs02AXu4xuUbM1zhwn3wqaizle3AEYg5aeoohhg==",
++      "version": "4.60.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-x64-gnu/-/rollup-linux-x64-gnu-4.60.4.tgz",
++      "integrity": "sha512-Boiz5+MsaROEWDf+GGEwF8VMHGhlUoQMtIPjOgA5fv4osupqTVnJteQNKJwUcnUog2G55jYXH7KZFFiJe0TEzQ==",
+       "cpu": [
+         "x64"
+       ],
+@@ -788,9 +788,9 @@
+       ]
+     },
+     "node_modules/@rollup/rollup-linux-x64-musl": {
+-      "version": "4.60.1",
+-      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-x64-musl/-/rollup-linux-x64-musl-4.60.1.tgz",
+-      "integrity": "sha512-5cIATbk5vynAjqqmyBjlciMJl1+R/CwX9oLk/EyiFXDWd95KpHdrOJT//rnUl4cUcskrd0jCCw3wpZnhIHdD9w==",
++      "version": "4.60.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-linux-x64-musl/-/rollup-linux-x64-musl-4.60.4.tgz",
++      "integrity": "sha512-+qfSY27qIrFfI/Hom04KYFw3GKZSGU4lXus51wsb5EuySfFlWRwjkKWoE9emgRw/ukoT4Udsj4W/+xxG8VbPKg==",
+       "cpu": [
+         "x64"
+       ],
+@@ -802,9 +802,9 @@
+       ]
+     },
+     "node_modules/@rollup/rollup-openbsd-x64": {
+-      "version": "4.60.1",
+-      "resolved": "https://registry.npmjs.org/@rollup/rollup-openbsd-x64/-/rollup-openbsd-x64-4.60.1.tgz",
+-      "integrity": "sha512-cl0w09WsCi17mcmWqqglez9Gk8isgeWvoUZ3WiJFYSR3zjBQc2J5/ihSjpl+VLjPqjQ/1hJRcqBfLjssREQILw==",
++      "version": "4.60.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-openbsd-x64/-/rollup-openbsd-x64-4.60.4.tgz",
++      "integrity": "sha512-VpTfOPHgVXEBeeR8hZ2O0F3aSso+JDWqTWmTmzcQKted54IAdUVbxE+j/MVxUsKa8L20HJhv3vUezVPoquqWjA==",
+       "cpu": [
+         "x64"
+       ],
+@@ -816,9 +816,9 @@
+       ]
+     },
+     "node_modules/@rollup/rollup-openharmony-arm64": {
+-      "version": "4.60.1",
+-      "resolved": "https://registry.npmjs.org/@rollup/rollup-openharmony-arm64/-/rollup-openharmony-arm64-4.60.1.tgz",
+-      "integrity": "sha512-4Cv23ZrONRbNtbZa37mLSueXUCtN7MXccChtKpUnQNgF010rjrjfHx3QxkS2PI7LqGT5xXyYs1a7LbzAwT0iCA==",
++      "version": "4.60.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-openharmony-arm64/-/rollup-openharmony-arm64-4.60.4.tgz",
++      "integrity": "sha512-IPOsh5aRYuLv/nkU51X10Bf75Bsf6+gZdx1X+QP5QM6lIJFHHqbHLG0uJn/hWthzo13UAc2umiUorqZy3axoZg==",
+       "cpu": [
+         "arm64"
+       ],
+@@ -830,9 +830,9 @@
+       ]
+     },
+     "node_modules/@rollup/rollup-win32-arm64-msvc": {
+-      "version": "4.60.1",
+-      "resolved": "https://registry.npmjs.org/@rollup/rollup-win32-arm64-msvc/-/rollup-win32-arm64-msvc-4.60.1.tgz",
+-      "integrity": "sha512-i1okWYkA4FJICtr7KpYzFpRTHgy5jdDbZiWfvny21iIKky5YExiDXP+zbXzm3dUcFpkEeYNHgQ5fuG236JPq0g==",
++      "version": "4.60.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-win32-arm64-msvc/-/rollup-win32-arm64-msvc-4.60.4.tgz",
++      "integrity": "sha512-4QzE9E81OohJ/HKzHhsqU+zcYYojVOXlFMs1DdyMT6qXl/niOH7AVElmmEdUNHHS/oRkc++d5k6Vy85zFs0DEw==",
+       "cpu": [
+         "arm64"
+       ],
+@@ -844,9 +844,9 @@
+       ]
+     },
+     "node_modules/@rollup/rollup-win32-ia32-msvc": {
+-      "version": "4.60.1",
+-      "resolved": "https://registry.npmjs.org/@rollup/rollup-win32-ia32-msvc/-/rollup-win32-ia32-msvc-4.60.1.tgz",
+-      "integrity": "sha512-u09m3CuwLzShA0EYKMNiFgcjjzwqtUMLmuCJLeZWjjOYA3IT2Di09KaxGBTP9xVztWyIWjVdsB2E9goMjZvTQg==",
++      "version": "4.60.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-win32-ia32-msvc/-/rollup-win32-ia32-msvc-4.60.4.tgz",
++      "integrity": "sha512-zTPgT1YuHHcd+Tmx7h8aml0FWFVelV5N54oHow9SLj+GfoDy/huQ+UV396N/C7KpMDMiPspRktzM1/0r1usYEA==",
+       "cpu": [
+         "ia32"
+       ],
+@@ -858,9 +858,9 @@
+       ]
+     },
+     "node_modules/@rollup/rollup-win32-x64-gnu": {
+-      "version": "4.60.1",
+-      "resolved": "https://registry.npmjs.org/@rollup/rollup-win32-x64-gnu/-/rollup-win32-x64-gnu-4.60.1.tgz",
+-      "integrity": "sha512-k+600V9Zl1CM7eZxJgMyTUzmrmhB/0XZnF4pRypKAlAgxmedUA+1v9R+XOFv56W4SlHEzfeMtzujLJD22Uz5zg==",
++      "version": "4.60.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-win32-x64-gnu/-/rollup-win32-x64-gnu-4.60.4.tgz",
++      "integrity": "sha512-DRS4G7mi9lJxqEDezIkKCaUIKCrLUUDCUaCsTPCi/rtqaC6D/jjwslMQyiDU50Ka0JKpeXeRBFBAXwArY52vBw==",
+       "cpu": [
+         "x64"
+       ],
+@@ -872,9 +872,9 @@
+       ]
+     },
+     "node_modules/@rollup/rollup-win32-x64-msvc": {
+-      "version": "4.60.1",
+-      "resolved": "https://registry.npmjs.org/@rollup/rollup-win32-x64-msvc/-/rollup-win32-x64-msvc-4.60.1.tgz",
+-      "integrity": "sha512-lWMnixq/QzxyhTV6NjQJ4SFo1J6PvOX8vUx5Wb4bBPsEb+8xZ89Bz6kOXpfXj9ak9AHTQVQzlgzBEc1SyM27xQ==",
++      "version": "4.60.4",
++      "resolved": "https://registry.npmjs.org/@rollup/rollup-win32-x64-msvc/-/rollup-win32-x64-msvc-4.60.4.tgz",
++      "integrity": "sha512-QVTUovf40zgTqlFVrKA1uXMVvU2QWEFWfAH8Wdc48IxLvrJMQVMBRjuQyUpzZCDkakImib9eVazbWlC6ksWtJw==",
+       "cpu": [
+         "x64"
+       ],
+@@ -893,14 +893,14 @@
+       "license": "MIT"
+     },
+     "node_modules/@types/node": {
+-      "version": "25.5.2",
+-      "resolved": "https://registry.npmjs.org/@types/node/-/node-25.5.2.tgz",
+-      "integrity": "sha512-tO4ZIRKNC+MDWV4qKVZe3Ql/woTnmHDr5JD8UI5hn2pwBrHEwOEMZK7WlNb5RKB6EoJ02gwmQS9OrjuFnZYdpg==",
++      "version": "25.9.1",
++      "resolved": "https://registry.npmjs.org/@types/node/-/node-25.9.1.tgz",
++      "integrity": "sha512-xfrlY7UD5rMJk3ZVJP8BNzS28J36YJg+xp+LPXV1TdWxr8uMH5A860QNxYDGQe/ylDSgjxE52Q9VnO7p75tJxg==",
+       "dev": true,
+       "license": "MIT",
+       "optional": true,
+       "dependencies": {
+-        "undici-types": "~7.18.0"
++        "undici-types": ">=7.24.0 <7.24.7"
+       }
+     },
+     "node_modules/@types/sinonjs__fake-timers": {
+@@ -943,57 +943,57 @@
+       }
+     },
+     "node_modules/@vue/compiler-core": {
+-      "version": "3.5.32",
+-      "resolved": "https://registry.npmjs.org/@vue/compiler-core/-/compiler-core-3.5.32.tgz",
+-      "integrity": "sha512-4x74Tbtqnda8s/NSD6e1Dr5p1c8HdMU5RWSjMSUzb8RTcUQqevDCxVAitcLBKT+ie3o0Dl9crc/S/opJM7qBGQ==",
++      "version": "3.5.35",
++      "resolved": "https://registry.npmjs.org/@vue/compiler-core/-/compiler-core-3.5.35.tgz",
++      "integrity": "sha512-BUmHaR1J+O+CKZ9uJucdVTEr1LHsdyvv7vG3eNRhK3CczEHeMd/LtsHAuD7PbrxvI2envCY2v7HI1vC1aBRzKw==",
+       "dev": true,
+       "license": "MIT",
+       "dependencies": {
+-        "@babel/parser": "^7.29.2",
+-        "@vue/shared": "3.5.32",
++        "@babel/parser": "^7.29.3",
++        "@vue/shared": "3.5.35",
+         "entities": "^7.0.1",
+         "estree-walker": "^2.0.2",
+         "source-map-js": "^1.2.1"
+       }
+     },
+     "node_modules/@vue/compiler-dom": {
+-      "version": "3.5.32",
+-      "resolved": "https://registry.npmjs.org/@vue/compiler-dom/-/compiler-dom-3.5.32.tgz",
+-      "integrity": "sha512-ybHAu70NtiEI1fvAUz3oXZqkUYEe5J98GjMDpTGl5iHb0T15wQYLR4wE3h9xfuTNA+Cm2f4czfe8B4s+CCH57Q==",
++      "version": "3.5.35",
++      "resolved": "https://registry.npmjs.org/@vue/compiler-dom/-/compiler-dom-3.5.35.tgz",
++      "integrity": "sha512-k+bprkXxuqhVajgTx5mUHuir7TwQzUKOWR40ng1ncAqQRPnrLngGGgqVEEhOnTMlc8btHYVKmrP8s5Qyg0hvYA==",
+       "dev": true,
+       "license": "MIT",
+       "dependencies": {
+-        "@vue/compiler-core": "3.5.32",
+-        "@vue/shared": "3.5.32"
++        "@vue/compiler-core": "3.5.35",
++        "@vue/shared": "3.5.35"
+       }
+     },
+     "node_modules/@vue/compiler-sfc": {
+-      "version": "3.5.32",
+-      "resolved": "https://registry.npmjs.org/@vue/compiler-sfc/-/compiler-sfc-3.5.32.tgz",
+-      "integrity": "sha512-8UYUYo71cP/0YHMO814TRZlPuUUw3oifHuMR7Wp9SNoRSrxRQnhMLNlCeaODNn6kNTJsjFoQ/kqIj4qGvya4Xg==",
++      "version": "3.5.35",
++      "resolved": "https://registry.npmjs.org/@vue/compiler-sfc/-/compiler-sfc-3.5.35.tgz",
++      "integrity": "sha512-G5VPMcXTSywXBgtFOZOnHKBxKSrwXUcvY1iaF5/hRcy7t0J6CH/d8ha9F4nzi00Fax1eLV0QHM7v4mQu68jydw==",
+       "dev": true,
+       "license": "MIT",
+       "dependencies": {
+-        "@babel/parser": "^7.29.2",
+-        "@vue/compiler-core": "3.5.32",
+-        "@vue/compiler-dom": "3.5.32",
+-        "@vue/compiler-ssr": "3.5.32",
+-        "@vue/shared": "3.5.32",
++        "@babel/parser": "^7.29.3",
++        "@vue/compiler-core": "3.5.35",
++        "@vue/compiler-dom": "3.5.35",
++        "@vue/compiler-ssr": "3.5.35",
++        "@vue/shared": "3.5.35",
+         "estree-walker": "^2.0.2",
+         "magic-string": "^0.30.21",
+-        "postcss": "^8.5.8",
++        "postcss": "^8.5.15",
+         "source-map-js": "^1.2.1"
+       }
+     },
+     "node_modules/@vue/compiler-ssr": {
+-      "version": "3.5.32",
+-      "resolved": "https://registry.npmjs.org/@vue/compiler-ssr/-/compiler-ssr-3.5.32.tgz",
+-      "integrity": "sha512-Gp4gTs22T3DgRotZ8aA/6m2jMR+GMztvBXUBEUOYOcST+giyGWJ4WvFd7QLHBkzTxkfOt8IELKNdpzITLbA2rw==",
++      "version": "3.5.35",
++      "resolved": "https://registry.npmjs.org/@vue/compiler-ssr/-/compiler-ssr-3.5.35.tgz",
++      "integrity": "sha512-rGhAeXgdM7/ffTJGXT69rCCdTmjDewnFuUZfBQQHTdcEBeWdT5HCGY60y2ytLJr9/Dsu7IntUi5z/w0h6Rjnzw==",
+       "dev": true,
+       "license": "MIT",
+       "dependencies": {
+-        "@vue/compiler-dom": "3.5.32",
+-        "@vue/shared": "3.5.32"
++        "@vue/compiler-dom": "3.5.35",
++        "@vue/shared": "3.5.35"
+       }
+     },
+     "node_modules/@vue/devtools-api": {
+@@ -1033,57 +1033,57 @@
+       }
+     },
+     "node_modules/@vue/reactivity": {
+-      "version": "3.5.32",
+-      "resolved": "https://registry.npmjs.org/@vue/reactivity/-/reactivity-3.5.32.tgz",
+-      "integrity": "sha512-/ORasxSGvZ6MN5gc+uE364SxFdJ0+WqVG0CENXaGW58TOCdrAW76WWaplDtECeS1qphvtBZtR+3/o1g1zL4xPQ==",
++      "version": "3.5.35",
++      "resolved": "https://registry.npmjs.org/@vue/reactivity/-/reactivity-3.5.35.tgz",
++      "integrity": "sha512-tVc+SsHConvh/Lz64qq1pP3rYArBmK42xonovEcxY74SQtvctZodG/zhq54P5dr38cVuw25d27cPNRdlMidpGQ==",
+       "dev": true,
+       "license": "MIT",
+       "dependencies": {
+-        "@vue/shared": "3.5.32"
++        "@vue/shared": "3.5.35"
+       }
+     },
+     "node_modules/@vue/runtime-core": {
+-      "version": "3.5.32",
+-      "resolved": "https://registry.npmjs.org/@vue/runtime-core/-/runtime-core-3.5.32.tgz",
+-      "integrity": "sha512-pDrXCejn4UpFDFmMd27AcJEbHaLemaE5o4pbb7sLk79SRIhc6/t34BQA7SGNgYtbMnvbF/HHOftYBgFJtUoJUQ==",
++      "version": "3.5.35",
++      "resolved": "https://registry.npmjs.org/@vue/runtime-core/-/runtime-core-3.5.35.tgz",
++      "integrity": "sha512-A/xFNX9loIcWDygeQuNCfKuh0CoYBzxhqEMNah5TSFg9Z53DrFYEN2qi5CU9necjM1OWYegYREUTHmXTmhfXtg==",
+       "dev": true,
+       "license": "MIT",
+       "dependencies": {
+-        "@vue/reactivity": "3.5.32",
+-        "@vue/shared": "3.5.32"
++        "@vue/reactivity": "3.5.35",
++        "@vue/shared": "3.5.35"
+       }
+     },
+     "node_modules/@vue/runtime-dom": {
+-      "version": "3.5.32",
+-      "resolved": "https://registry.npmjs.org/@vue/runtime-dom/-/runtime-dom-3.5.32.tgz",
+-      "integrity": "sha512-1CDVv7tv/IV13V8Nip1k/aaObVbWqRlVCVezTwx3K07p7Vxossp5JU1dcPNhJk3w347gonIUT9jQOGutyJrSVQ==",
++      "version": "3.5.35",
++      "resolved": "https://registry.npmjs.org/@vue/runtime-dom/-/runtime-dom-3.5.35.tgz",
++      "integrity": "sha512-odrJ1C391dbGnyDRh8U+rnP7J2amIEzfmRk5vXy7xi3aZhEXofTvpi0T4HJb6jlNqQZTNPR5MPHSB3RHNkIORA==",
+       "dev": true,
+       "license": "MIT",
+       "dependencies": {
+-        "@vue/reactivity": "3.5.32",
+-        "@vue/runtime-core": "3.5.32",
+-        "@vue/shared": "3.5.32",
++        "@vue/reactivity": "3.5.35",
++        "@vue/runtime-core": "3.5.35",
++        "@vue/shared": "3.5.35",
+         "csstype": "^3.2.3"
+       }
+     },
+     "node_modules/@vue/server-renderer": {
+-      "version": "3.5.32",
+-      "resolved": "https://registry.npmjs.org/@vue/server-renderer/-/server-renderer-3.5.32.tgz",
+-      "integrity": "sha512-IOjm2+JQwRFS7W28HNuJeXQle9KdZbODFY7hFGVtnnghF51ta20EWAZJHX+zLGtsHhaU6uC9BGPV52KVpYryMQ==",
++      "version": "3.5.35",
++      "resolved": "https://registry.npmjs.org/@vue/server-renderer/-/server-renderer-3.5.35.tgz",
++      "integrity": "sha512-NkebSOYdB97wi8OQcO3HqzZSlymJi/aWsN/7h74OSVhRTm6qGs3Jp3e0rCXynmWwSlKeRrnlIug+ilYoHBmQDA==",
+       "dev": true,
+       "license": "MIT",
+       "dependencies": {
+-        "@vue/compiler-ssr": "3.5.32",
+-        "@vue/shared": "3.5.32"
++        "@vue/compiler-ssr": "3.5.35",
++        "@vue/shared": "3.5.35"
+       },
+       "peerDependencies": {
+-        "vue": "3.5.32"
++        "vue": "3.5.35"
+       }
+     },
+     "node_modules/@vue/shared": {
+-      "version": "3.5.32",
+-      "resolved": "https://registry.npmjs.org/@vue/shared/-/shared-3.5.32.tgz",
+-      "integrity": "sha512-ksNyrmRQzWJJ8n3cRDuSF7zNNontuJg1YHnmWRJd2AMu8Ij2bqwiiri2lH5rHtYPZjj4STkNcgcmiQqlOjiYGg==",
++      "version": "3.5.35",
++      "resolved": "https://registry.npmjs.org/@vue/shared/-/shared-3.5.35.tgz",
++      "integrity": "sha512-zSbjL7gRXwks2ZQLRGCajBtBXEOXW9Ddhn/HvSdrGkE2dqGnumzW8XtusRrxrE9LvqtiqDXQ+A60Hp6mvdYxfA==",
+       "dev": true,
+       "license": "MIT"
+     },
+@@ -1698,9 +1698,9 @@
+       }
+     },
+     "node_modules/dayjs": {
+-      "version": "1.11.20",
+-      "resolved": "https://registry.npmjs.org/dayjs/-/dayjs-1.11.20.tgz",
+-      "integrity": "sha512-YbwwqR/uYpeoP4pu043q+LTDLFBLApUP6VxRihdfNTqu4ubqMlGDLd6ErXhEgsyvY0K6nCs7nggYumAN+9uEuQ==",
++      "version": "1.11.21",
++      "resolved": "https://registry.npmjs.org/dayjs/-/dayjs-1.11.21.tgz",
++      "integrity": "sha512-98IT+HOahAisibz/yjKbzuOBwYcjJ7BCLPzARyHiyEBmRz4fatF+KPJszEHXsGYjUG234aH/cOjW1wwTbKUZlA==",
+       "dev": true,
+       "license": "MIT"
+     },
+@@ -1823,9 +1823,9 @@
+       }
+     },
+     "node_modules/es-object-atoms": {
+-      "version": "1.1.1",
+-      "resolved": "https://registry.npmjs.org/es-object-atoms/-/es-object-atoms-1.1.1.tgz",
+-      "integrity": "sha512-FGgH2h8zKNim9ljj7dankFPcICIK9Cp5bm+c2gQSYePhpaG5+esrLODihIorn+Pe6FGJzWhXQotPv73jTaldXA==",
++      "version": "1.1.2",
++      "resolved": "https://registry.npmjs.org/es-object-atoms/-/es-object-atoms-1.1.2.tgz",
++      "integrity": "sha512-HWcBoN6NileqtSydK2FqHbS/LoDd2pqrnQHLyJzBj4kOp/ky2MWMN694xOfkK8/SnUsW2DH7EfyVlydKCsm1Zw==",
+       "dev": true,
+       "license": "MIT",
+       "dependencies": {
+@@ -2251,9 +2251,9 @@
+       }
+     },
+     "node_modules/hasown": {
+-      "version": "2.0.2",
+-      "resolved": "https://registry.npmjs.org/hasown/-/hasown-2.0.2.tgz",
+-      "integrity": "sha512-0hJU9SCPvmMzIBdZFqNPXWa6dqh7WdH0cII9y+CyS8rG3nL48Bclra9HmKhVVUHyPWNH5Y7xDwAB7bfgSjkUMQ==",
++      "version": "2.0.4",
++      "resolved": "https://registry.npmjs.org/hasown/-/hasown-2.0.4.tgz",
++      "integrity": "sha512-T2UbfbBEF32wiepXIsMlTW9+dDYC6wMh/t/vYA4tuOMKqWz/n3vr1NFSxQiyP+zk2mXsoMA/i/7qV6LKut1t1A==",
+       "dev": true,
+       "license": "MIT",
+       "dependencies": {
+@@ -2455,9 +2455,9 @@
+       "license": "ISC"
+     },
+     "node_modules/jsonfile": {
+-      "version": "6.2.0",
+-      "resolved": "https://registry.npmjs.org/jsonfile/-/jsonfile-6.2.0.tgz",
+-      "integrity": "sha512-FGuPw30AdOIUTRMC2OMRtQV+jkVj2cfPqSeWXv1NEAJ1qZ5zb1X6z1mFhbfOB/iy3ssJCD+3KuZ8r8C3uVFlAg==",
++      "version": "6.2.1",
++      "resolved": "https://registry.npmjs.org/jsonfile/-/jsonfile-6.2.1.tgz",
++      "integrity": "sha512-zwOTdL3rFQ/lRdBnntKVOX6k5cKJwEc1HdilT71BWEu7J41gXIB2MRp+vxduPSwZJPWBxEzv4yH1wYLJGUHX4Q==",
+       "dev": true,
+       "license": "MIT",
+       "dependencies": {
+@@ -2689,9 +2689,9 @@
+       "license": "MIT"
+     },
+     "node_modules/nanoid": {
+-      "version": "3.3.11",
+-      "resolved": "https://registry.npmjs.org/nanoid/-/nanoid-3.3.11.tgz",
+-      "integrity": "sha512-N8SpfPUnUp1bK+PMYW8qSWdl9U+wwNWI4QKxOYDy9JAro3WMX7p2OeVRF9v+347pnakNevPmiHhNmZ2HbFA76w==",
++      "version": "3.3.12",
++      "resolved": "https://registry.npmjs.org/nanoid/-/nanoid-3.3.12.tgz",
++      "integrity": "sha512-ZB9RH/39qpq5Vu6Y+NmUaFhQR6pp+M2Xt76XBnEwDaGcVAqhlvxrl3B2bKS5D3NH3QR76v3aSrKaF/Kiy7lEtQ==",
+       "dev": true,
+       "funding": [
+         {
+@@ -2853,9 +2853,9 @@
+       }
+     },
+     "node_modules/postcss": {
+-      "version": "8.5.8",
+-      "resolved": "https://registry.npmjs.org/postcss/-/postcss-8.5.8.tgz",
+-      "integrity": "sha512-OW/rX8O/jXnm82Ey1k44pObPtdblfiuWnrd8X7GJ7emImCOstunGbXUpp7HdBrFQX6rJzn3sPT397Wp5aCwCHg==",
++      "version": "8.5.15",
++      "resolved": "https://registry.npmjs.org/postcss/-/postcss-8.5.15.tgz",
++      "integrity": "sha512-FfR8sjd4em2T6fb3I2MwAJU7HWVMr9zba+enmQeeWFfCbm+UOC/0X4DS8XtpUTMwWMGbjKYP7xjfNekzyGmB3A==",
+       "dev": true,
+       "funding": [
+         {
+@@ -2873,7 +2873,7 @@
+       ],
+       "license": "MIT",
+       "dependencies": {
+-        "nanoid": "^3.3.11",
++        "nanoid": "^3.3.12",
+         "picocolors": "^1.1.1",
+         "source-map-js": "^1.2.1"
+       },
+@@ -2970,9 +2970,9 @@
+       "license": "MIT"
+     },
+     "node_modules/rollup": {
+-      "version": "4.60.1",
+-      "resolved": "https://registry.npmjs.org/rollup/-/rollup-4.60.1.tgz",
+-      "integrity": "sha512-VmtB2rFU/GroZ4oL8+ZqXgSA38O6GR8KSIvWmEFv63pQ0G6KaBH9s07PO8XTXP4vI+3UJUEypOfjkGfmSBBR0w==",
++      "version": "4.60.4",
++      "resolved": "https://registry.npmjs.org/rollup/-/rollup-4.60.4.tgz",
++      "integrity": "sha512-WHeFSbZYsPu3+bLoNRUuAO+wavNlocOPf3wSHTP7hcFKVnJeWsYlCDbr3mTS14FCizf9ccIxXA8sGL8zKeQN3g==",
+       "dev": true,
+       "license": "MIT",
+       "dependencies": {
+@@ -2986,31 +2986,31 @@
+         "npm": ">=8.0.0"
+       },
+       "optionalDependencies": {
+-        "@rollup/rollup-android-arm-eabi": "4.60.1",
+-        "@rollup/rollup-android-arm64": "4.60.1",
+-        "@rollup/rollup-darwin-arm64": "4.60.1",
+-        "@rollup/rollup-darwin-x64": "4.60.1",
+-        "@rollup/rollup-freebsd-arm64": "4.60.1",
+-        "@rollup/rollup-freebsd-x64": "4.60.1",
+-        "@rollup/rollup-linux-arm-gnueabihf": "4.60.1",
+-        "@rollup/rollup-linux-arm-musleabihf": "4.60.1",
+-        "@rollup/rollup-linux-arm64-gnu": "4.60.1",
+-        "@rollup/rollup-linux-arm64-musl": "4.60.1",
+-        "@rollup/rollup-linux-loong64-gnu": "4.60.1",
+-        "@rollup/rollup-linux-loong64-musl": "4.60.1",
+-        "@rollup/rollup-linux-ppc64-gnu": "4.60.1",
+-        "@rollup/rollup-linux-ppc64-musl": "4.60.1",
+-        "@rollup/rollup-linux-riscv64-gnu": "4.60.1",
+-        "@rollup/rollup-linux-riscv64-musl": "4.60.1",
+-        "@rollup/rollup-linux-s390x-gnu": "4.60.1",
+-        "@rollup/rollup-linux-x64-gnu": "4.60.1",
+-        "@rollup/rollup-linux-x64-musl": "4.60.1",
+-        "@rollup/rollup-openbsd-x64": "4.60.1",
+-        "@rollup/rollup-openharmony-arm64": "4.60.1",
+-        "@rollup/rollup-win32-arm64-msvc": "4.60.1",
+-        "@rollup/rollup-win32-ia32-msvc": "4.60.1",
+-        "@rollup/rollup-win32-x64-gnu": "4.60.1",
+-        "@rollup/rollup-win32-x64-msvc": "4.60.1",
++        "@rollup/rollup-android-arm-eabi": "4.60.4",
++        "@rollup/rollup-android-arm64": "4.60.4",
++        "@rollup/rollup-darwin-arm64": "4.60.4",
++        "@rollup/rollup-darwin-x64": "4.60.4",
++        "@rollup/rollup-freebsd-arm64": "4.60.4",
++        "@rollup/rollup-freebsd-x64": "4.60.4",
++        "@rollup/rollup-linux-arm-gnueabihf": "4.60.4",
++        "@rollup/rollup-linux-arm-musleabihf": "4.60.4",
++        "@rollup/rollup-linux-arm64-gnu": "4.60.4",
++        "@rollup/rollup-linux-arm64-musl": "4.60.4",
++        "@rollup/rollup-linux-loong64-gnu": "4.60.4",
++        "@rollup/rollup-linux-loong64-musl": "4.60.4",
++        "@rollup/rollup-linux-ppc64-gnu": "4.60.4",
++        "@rollup/rollup-linux-ppc64-musl": "4.60.4",
++        "@rollup/rollup-linux-riscv64-gnu": "4.60.4",
++        "@rollup/rollup-linux-riscv64-musl": "4.60.4",
++        "@rollup/rollup-linux-s390x-gnu": "4.60.4",
++        "@rollup/rollup-linux-x64-gnu": "4.60.4",
++        "@rollup/rollup-linux-x64-musl": "4.60.4",
++        "@rollup/rollup-openbsd-x64": "4.60.4",
++        "@rollup/rollup-openharmony-arm64": "4.60.4",
++        "@rollup/rollup-win32-arm64-msvc": "4.60.4",
++        "@rollup/rollup-win32-ia32-msvc": "4.60.4",
++        "@rollup/rollup-win32-x64-gnu": "4.60.4",
++        "@rollup/rollup-win32-x64-msvc": "4.60.4",
+         "fsevents": "~2.3.2"
+       }
+     },
+@@ -3053,9 +3053,9 @@
+       "license": "MIT"
+     },
+     "node_modules/semver": {
+-      "version": "7.7.4",
+-      "resolved": "https://registry.npmjs.org/semver/-/semver-7.7.4.tgz",
+-      "integrity": "sha512-vFKC2IEtQnVhpT78h1Yp8wzwrf8CM+MzKMHGJZfBtzhZNycRFnXsHk6E5TxIkkMsgNS7mdX3AGB7x2QM2di4lA==",
++      "version": "7.8.1",
++      "resolved": "https://registry.npmjs.org/semver/-/semver-7.8.1.tgz",
++      "integrity": "sha512-rkVq3IXh+4FDGch+KwzX3aV9W3kO54GyEgpvBzSyctDA6Xtd7RJQV1xmXbeQp5v7+VzLOfVqiutSE6GICgPFvg==",
+       "dev": true,
+       "license": "ISC",
+       "bin": {
+@@ -3109,14 +3109,14 @@
+       }
+     },
+     "node_modules/side-channel-list": {
+-      "version": "1.0.0",
+-      "resolved": "https://registry.npmjs.org/side-channel-list/-/side-channel-list-1.0.0.tgz",
+-      "integrity": "sha512-FCLHtRD/gnpCiCHEiJLOwdmFP+wzCmDEkc9y7NsYxeF4u7Btsn1ZuwgwJGxImImHicJArLP4R0yX4c2KCrMrTA==",
++      "version": "1.0.1",
++      "resolved": "https://registry.npmjs.org/side-channel-list/-/side-channel-list-1.0.1.tgz",
++      "integrity": "sha512-mjn/0bi/oUURjc5Xl7IaWi/OJJJumuoJFQJfDDyO46+hBWsfaVM65TBHq2eoZBhzl9EchxOijpkbRC8SVBQU0w==",
+       "dev": true,
+       "license": "MIT",
+       "dependencies": {
+         "es-errors": "^1.3.0",
+-        "object-inspect": "^1.13.3"
++        "object-inspect": "^1.13.4"
+       },
+       "engines": {
+         "node": ">= 0.4"
+@@ -3337,9 +3337,9 @@
+       "license": "MIT"
+     },
+     "node_modules/tmp": {
+-      "version": "0.2.5",
+-      "resolved": "https://registry.npmjs.org/tmp/-/tmp-0.2.5.tgz",
+-      "integrity": "sha512-voyz6MApa1rQGUxT3E+BK7/ROe8itEx7vD8/HEvt4xwXucvQ5G5oeEiHkmHZJuBO21RpOf+YYm9MOivj709jow==",
++      "version": "0.2.7",
++      "resolved": "https://registry.npmjs.org/tmp/-/tmp-0.2.7.tgz",
++      "integrity": "sha512-e0votIpp4Uo2AJYSzVHV6xCcawuiez3DzqDAbrTc3YxBkplN6e+dM13ZeIcZnDg/QpSuU2zfZ3rzwY8ukEnaXw==",
+       "dev": true,
+       "license": "MIT",
+       "engines": {
+@@ -3407,9 +3407,9 @@
+       }
+     },
+     "node_modules/undici-types": {
+-      "version": "7.18.2",
+-      "resolved": "https://registry.npmjs.org/undici-types/-/undici-types-7.18.2.tgz",
+-      "integrity": "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w==",
++      "version": "7.24.6",
++      "resolved": "https://registry.npmjs.org/undici-types/-/undici-types-7.24.6.tgz",
++      "integrity": "sha512-WRNW+sJgj5OBN4/0JpHFqtqzhpbnV0GuB+OozA9gCL7a993SmU+1JBZCzLNxYsbMfIeDL+lTsphD5jN5N+n0zg==",
+       "dev": true,
+       "license": "MIT",
+       "optional": true
+@@ -3438,6 +3438,7 @@
+       "version": "8.3.2",
+       "resolved": "https://registry.npmjs.org/uuid/-/uuid-8.3.2.tgz",
+       "integrity": "sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==",
++      "deprecated": "uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).",
+       "dev": true,
+       "license": "MIT",
+       "bin": {
+@@ -3520,17 +3521,17 @@
+       }
+     },
+     "node_modules/vue": {
+-      "version": "3.5.32",
+-      "resolved": "https://registry.npmjs.org/vue/-/vue-3.5.32.tgz",
+-      "integrity": "sha512-vM4z4Q9tTafVfMAK7IVzmxg34rSzTFMyIe0UUEijUCkn9+23lj0WRfA83dg7eQZIUlgOSGrkViIaCfqSAUXsMw==",
++      "version": "3.5.35",
++      "resolved": "https://registry.npmjs.org/vue/-/vue-3.5.35.tgz",
++      "integrity": "sha512-cx89fnr+0kVGHiNFG6y6s0bdjypJRFNZn6x3WPstNdQR1bi1mbB7h4v5IBGTsPJU3nK1+0Iqj3Zf+hZWMieR4Q==",
+       "dev": true,
+       "license": "MIT",
+       "dependencies": {
+-        "@vue/compiler-dom": "3.5.32",
+-        "@vue/compiler-sfc": "3.5.32",
+-        "@vue/runtime-dom": "3.5.32",
+-        "@vue/server-renderer": "3.5.32",
+-        "@vue/shared": "3.5.32"
++        "@vue/compiler-dom": "3.5.35",
++        "@vue/compiler-sfc": "3.5.35",
++        "@vue/runtime-dom": "3.5.35",
++        "@vue/server-renderer": "3.5.35",
++        "@vue/shared": "3.5.35"
+       },
+       "peerDependencies": {
+         "typescript": "*"
+diff --git a/registry/uiLocaleKeysBackend.json b/registry/uiLocaleKeysBackend.json
+index c46fc31..9f0a390 100644
+--- a/registry/uiLocaleKeysBackend.json
++++ b/registry/uiLocaleKeysBackend.json
+@@ -72,6 +72,19 @@
+   "plugins.generic.codecheck.no",
+   "plugins.generic.codecheck.noDataFound",
+   "plugins.generic.codecheck.notOptedIn",
++  "plugins.generic.codecheck.orcid.authorise",
++  "plugins.generic.codecheck.orcid.deposit",
++  "plugins.generic.codecheck.orcid.depositAll",
++  "plugins.generic.codecheck.orcid.noCodecheckers",
++  "plugins.generic.codecheck.orcid.reAuthorise",
++  "plugins.generic.codecheck.orcid.reDeposit",
++  "plugins.generic.codecheck.orcid.sectionDescription",
++  "plugins.generic.codecheck.orcid.sectionTitle",
++  "plugins.generic.codecheck.orcid.status.deposited",
++  "plugins.generic.codecheck.orcid.status.failed",
++  "plugins.generic.codecheck.orcid.status.notAuthorised",
++  "plugins.generic.codecheck.orcid.status.pending",
++  "plugins.generic.codecheck.orcid.viewOnOrcid",
+   "plugins.generic.codecheck.paperMetadata.authors",
+   "plugins.generic.codecheck.paperMetadata.fieldReadonly",
+   "plugins.generic.codecheck.paperMetadata.noAuthors",
+diff --git a/resources/js/main.js b/resources/js/main.js
+index 1c52bca..5cd5ae3 100644
+--- a/resources/js/main.js
++++ b/resources/js/main.js
+@@ -4,12 +4,14 @@ import CodecheckRepositoryList from "./Components/CodecheckRepositoryList.vue";
+ import CodecheckReviewDisplay from "./Components/CodecheckReviewDisplay.vue";
+ import CodecheckMetadataForm from "./Components/CodecheckMetadataForm.vue";
+ import CodecheckDataAndSoftwareAvailability from "./Components/CodecheckDataAndSoftwareAvailability.vue";
++import CodecheckOrcidSection from "./Components/CodecheckOrcidSection.vue";
+ 
+ pkp.registry.registerComponent("CodecheckReviewDisplay", CodecheckReviewDisplay);
+ pkp.registry.registerComponent("CodecheckMetadataForm", CodecheckMetadataForm);
+ pkp.registry.registerComponent("CodecheckManifestFiles", CodecheckManifestFiles);
+ pkp.registry.registerComponent("CodecheckRepositoryList", CodecheckRepositoryList);
+ pkp.registry.registerComponent("CodecheckDataAndSoftwareAvailability", CodecheckDataAndSoftwareAvailability);
++pkp.registry.registerComponent("CodecheckOrcidSection", CodecheckOrcidSection);
+ 
+ const { useLocalize } = pkp.modules.useLocalize;
+ const { t } = useLocalize();
+@@ -55,12 +57,14 @@ pkp.registry.storeExtend("workflow", (piniaContext) => {
+ 
+   workflowStore.extender.extendFn("getPrimaryItems", (primaryItems, args) => {
+     const submission = args?.submission;
+-        
++
+     if (
+       args?.selectedMenuState?.primaryMenuItem === "workflow" &&
+       args?.selectedMenuState?.stageId === 999
+     ) {
+-      return [
++      const orcidConfig = window.codecheckOrcidConfig ?? {};
++
++      const items = [
+         {
+           title: "WORKFLOW: CODECHECK",
+           component: "CodecheckMetadataForm",
+@@ -70,6 +74,20 @@ pkp.registry.storeExtend("workflow", (piniaContext) => {
+           },
+         }
+       ];
++
++      if (orcidConfig.enabled) {
++        items.push({
++          component: "CodecheckOrcidSection",
++          props: {
++            submission: submission,
++            orcidEnabled: orcidConfig.enabled,
++            orcidAuthUrl: orcidConfig.authUrl,
++            orcidApiType: orcidConfig.apiType,
++          },
++        });
++      }
++
++      return items;
+     }
+     
+     if (
+@@ -153,7 +171,9 @@ pkp.registry.storeExtend("fileManager_SUBMISSION_FILES", (piniaContext) => {
+   });
+ });
+ 
+-// Submission wizard field management
++// -----------------------------------------------------------------------
++// Submission wizard: save/load field data via API
++// -----------------------------------------------------------------------
+ class CodecheckWizardManager {
+   constructor() {
+     this.textareas = {};
+@@ -238,8 +258,6 @@ class CodecheckWizardManager {
+     document.addEventListener('click', (e) => {
+       const button = e.target.closest('button');
+       if (!button) return;
+-      
+-      // Save on any button click except cancel
+       if (button.id !== 'cancelSubmission') {
+         this.saveData();
+       }
+@@ -252,7 +270,9 @@ class CodecheckWizardManager {
+   }
+ }
+ 
+-// Review section refresher
++// -----------------------------------------------------------------------
++// Submission wizard: refresh review panel data
++// -----------------------------------------------------------------------
+ class CodecheckReviewRefresher {
+   constructor() {
+     this.refreshedPanels = new Set();
+@@ -272,50 +292,31 @@ class CodecheckReviewRefresher {
+       }
+     });
+ 
+-    observer.observe(document.body, { 
+-      childList: true, 
+-      subtree: true 
+-    });
++    observer.observe(document.body, { childList: true, subtree: true });
+   }
+ 
+   isOnReviewStep() {
+-    // Find the review step container
+     const allSteps = document.querySelectorAll('.pkpStep');
+-    
+     for (const step of allSteps) {
+-      // Check if this step contains review panels AND is not hidden
+       const hasReviewPanels = step.querySelectorAll('.submissionWizard__reviewPanel').length >= 3;
+       const isVisible = !step.hasAttribute('hidden');
+-      
+-      if (hasReviewPanels && isVisible) {
+-        return true;
+-      }
++      if (hasReviewPanels && isVisible) return true;
+     }
+-    
+     return false;
+   }
+ 
+   checkForReviewPanel() {
+     const allH3s = document.querySelectorAll('.submissionWizard__reviewPanel h3');
+-    
+     for (const h3 of allH3s) {
+       if (h3.textContent.includes('CODECHECK')) {
+         const panel = h3.closest('.submissionWizard__reviewPanel');
+-        
+         if (!panel) continue;
+-        
+         const rect = panel.getBoundingClientRect();
+         if (rect.width === 0 || rect.height === 0) continue;
+-        
+         const panelContent = panel.innerHTML.substring(0, 100);
+-        
+         if (!this.refreshedPanels.has(panelContent)) {
+           this.refreshedPanels.add(panelContent);
+-          
+-          setTimeout(() => {
+-            this.refreshReviewData(panel);
+-          }, 200);
+-          
++          setTimeout(() => { this.refreshReviewData(panel); }, 200);
+           return;
+         }
+       }
+@@ -329,7 +330,6 @@ class CodecheckReviewRefresher {
+     try {
+       const response = await fetch(`${pkp.context.apiBaseUrl}/submissions/${submissionId}`);
+       const submission = await response.json();
+-      
+       const publication = submission.publications?.find(p => p.id === submission.currentPublicationId);
+       if (!publication) return;
+ 
+@@ -337,65 +337,26 @@ class CodecheckReviewRefresher {
+       if (!body) return;
+ 
+       body.innerHTML = '';
+-      
+       let hasData = false;
+-      
++
+       if (publication.codeRepository) {
+         hasData = true;
+-        body.innerHTML += `
+-          <div class="submissionWizard__reviewPanel__item">
+-            <h4>${this.escapeHtml(t('plugins.generic.codecheck.codeRepository'))}</h4>
+-            <div class="review-value">
+-              <p>${this.escapeHtml(publication.codeRepository).replace(/\n/g, '<br>')}</p>
+-            </div>
+-          </div>
+-        `;
++        body.innerHTML += `<div class="submissionWizard__reviewPanel__item"><h4>${this.escapeHtml(t('plugins.generic.codecheck.codeRepository'))}</h4><div class="review-value"><p>${this.escapeHtml(publication.codeRepository).replace(/\n/g, '<br>')}</p></div></div>`;
+       }
+-      
+       if (publication.dataRepository) {
+         hasData = true;
+-        body.innerHTML += `
+-          <div class="submissionWizard__reviewPanel__item">
+-            <h4>${this.escapeHtml(t('plugins.generic.codecheck.dataRepository'))}</h4>
+-            <div class="review-value">
+-              <p>${this.escapeHtml(publication.dataRepository).replace(/\n/g, '<br>')}</p>
+-            </div>
+-          </div>
+-        `;
++        body.innerHTML += `<div class="submissionWizard__reviewPanel__item"><h4>${this.escapeHtml(t('plugins.generic.codecheck.dataRepository'))}</h4><div class="review-value"><p>${this.escapeHtml(publication.dataRepository).replace(/\n/g, '<br>')}</p></div></div>`;
+       }
+-      
+       if (publication.manifestFiles) {
+         hasData = true;
+-        body.innerHTML += `
+-          <div class="submissionWizard__reviewPanel__item">
+-            <h4>${this.escapeHtml(t('plugins.generic.codecheck.manifestFiles.label'))}</h4>
+-            <div class="review-value">
+-              <pre>${this.escapeHtml(publication.manifestFiles)}</pre>
+-            </div>
+-          </div>
+-        `;
++        body.innerHTML += `<div class="submissionWizard__reviewPanel__item"><h4>${this.escapeHtml(t('plugins.generic.codecheck.manifestFiles.label'))}</h4><div class="review-value"><pre>${this.escapeHtml(publication.manifestFiles)}</pre></div></div>`;
+       }
+-      
+       if (publication.dataAvailabilityStatement) {
+         hasData = true;
+-        body.innerHTML += `
+-          <div class="submissionWizard__reviewPanel__item">
+-            <h4>${this.escapeHtml(t('plugins.generic.codecheck.dataAvailability'))}</h4>
+-            <div class="review-value">
+-              <div>${publication.dataAvailabilityStatement}</div>
+-            </div>
+-          </div>
+-        `;
++        body.innerHTML += `<div class="submissionWizard__reviewPanel__item"><h4>${this.escapeHtml(t('plugins.generic.codecheck.dataAvailability'))}</h4><div class="review-value"><div>${publication.dataAvailabilityStatement}</div></div></div>`;
+       }
+-      
+       if (!hasData) {
+-        body.innerHTML = `
+-          <div class="submissionWizard__reviewPanel__item">
+-            <p class="description" style="color: #d00a0a;">
+-              <em>${this.escapeHtml(t('plugins.generic.codecheck.noDataFound'))}</em>
+-            </p>
+-          </div>
+-        `;
++        body.innerHTML = `<div class="submissionWizard__reviewPanel__item"><p class="description" style="color: #d00a0a;"><em>${this.escapeHtml(t('plugins.generic.codecheck.noDataFound'))}</em></p></div>`;
+       }
+     } catch (error) {
+       console.error('CODECHECK: Failed to refresh review data', error);
+@@ -415,20 +376,106 @@ class CodecheckReviewRefresher {
+   }
+ }
+ 
+-// Initialize — mount Vue components only after WizardManager has loaded saved data
+-// into textareas, so components receive the correct initial values
++// -----------------------------------------------------------------------
++// Initialization
++// -----------------------------------------------------------------------
+ window.addEventListener('DOMContentLoaded', () => {
+-  setTimeout(() => {
+-    new CodecheckReviewRefresher();
+-  }, 200);
+-
++  // Submission wizard: initialize manager and mount Vue components
+   setTimeout(async () => {
+     const manager = new CodecheckWizardManager();
+     await manager.init();
+     mountCodecheckVueComponents();
+   }, 100);
++
++  setTimeout(() => {
++    new CodecheckReviewRefresher();
++
++    // Add CODECHECK badge to tab 3 on reviewer page
++    if (window.codecheckReviewerData) {
++      const tab3Link = document.querySelector('#reviewTabs ul li:nth-child(3) a');
++      if (tab3Link) {
++        const badge = document.createElement('span');
++        badge.style.cssText = 'margin-left: 0.4rem; font-size: 0.7rem; background: #008033; color: white; padding: 0.1rem 0.3rem; border-radius: 3px; vertical-align: middle;';
++        badge.textContent = 'CODECHECK';
++        tab3Link.appendChild(badge);
++      }
++    }
++  }, 1000);
++
++  // MutationObserver: mount CODECHECK form when tab 3 content loads via AJAX
++  const observer = new MutationObserver(() => {
++    const step3 = document.querySelector('#reviewStep3');
++    if (step3 && step3.children.length > 0 && !document.querySelector('#codecheck-reviewer-form')) {
++      window.mountCodecheckReviewerForm();
++    }
++  });
++
++  observer.observe(document.body, { childList: true, subtree: true });
+ });
+ 
++// -----------------------------------------------------------------------
++// Reviewer page: mount CODECHECK form inside tab 3 (Download & Review).
++// -----------------------------------------------------------------------
++function mountCodecheckReviewerForm() {
++  if (!window.codecheckReviewerData) return;
++
++  const step3 = document.querySelector('#reviewStep3');
++  if (!step3) return;
++  if (document.querySelector('#codecheck-reviewer-form')) return;
++  if (step3.children.length === 0) return;
++
++  const reviewerData = window.codecheckReviewerData;
++  const submission = {
++    id: reviewerData.submissionId,
++    codecheckOptIn: reviewerData.codecheckOptIn,
++  };
++
++  const details = document.createElement('details');
++  details.id = 'codecheck-reviewer-form';
++  details.style.cssText = 'margin-top: 2rem; border: 1px solid #ddd; border-radius: 4px; background: #fff;';
++
++  const summary = document.createElement('summary');
++  summary.style.cssText = 'padding: 1rem; font-weight: 600; font-size: 1rem; cursor: pointer; list-style: none; display: flex; align-items: center; gap: 0.5rem; background: #f8f8f8; border-radius: 4px;';
++  summary.innerHTML = '<span style="color: #008033;">&#10003;</span> CODECHECK Documentation';
++
++  const content = document.createElement('div');
++  content.style.cssText = 'padding: 1rem;';
++
++  details.appendChild(summary);
++  details.appendChild(content);
++
++  const form = document.querySelector('#reviewStep3Form');
++  if (form) {
++    form.after(details);
++  } else {
++    step3.appendChild(details);
++  }
++
++  const metadataDiv = document.createElement('div');
++  content.appendChild(metadataDiv);
++  createApp(CodecheckMetadataForm, {
++    submission: submission,
++    canEdit: true,
++  }).mount(metadataDiv);
++
++  const orcid = reviewerData.orcid ?? {};
++  if (orcid.enabled) {
++    window.codecheckOrcidConfig = orcid;
++    const orcidDiv = document.createElement('div');
++    content.appendChild(orcidDiv);
++    createApp(CodecheckOrcidSection, {
++      submission: submission,
++      orcidEnabled: orcid.enabled,
++      orcidAuthUrl: orcid.authUrl,
++      orcidApiType: orcid.apiType,
++    }).mount(orcidDiv);
++  }
++}
++window.mountCodecheckReviewerForm = mountCodecheckReviewerForm;
++
++// -----------------------------------------------------------------------
++// Submission wizard: mount Vue components into textareas
++// -----------------------------------------------------------------------
+ function mountCodecheckVueComponents() {
+   const manifestContainer = document.querySelector('textarea[name="manifestFiles"]')?.parentElement;
+   if (manifestContainer) {
+@@ -532,6 +579,4 @@ const CodecheckFileStatus = {
+   }
+ };
+ 
+-pkp.registry.registerComponent("CodecheckFileStatus", CodecheckFileStatus);
+-
+-console.log("CODECHECK plugin initialized successfully");
+\ No newline at end of file
++pkp.registry.registerComponent("CodecheckFileStatus", CodecheckFileStatus);
+\ No newline at end of file
