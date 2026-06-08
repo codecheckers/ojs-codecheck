@@ -2,7 +2,7 @@
 /**
  * @file classes/Orcid/OrcidTokenDAO.php
  *
- * Copyright (c) 2025 CODECHECK Initiative
+ * Copyright (c) 2026 CODECHECK Initiative
  * Distributed under the GNU GPL v3. For full terms see the file docs/COPYING.
  *
  * @class OrcidTokenDAO

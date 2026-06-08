@@ -12,6 +12,7 @@
 namespace APP\plugins\generic\codecheck\classes\Settings;
 
 use APP\core\Request;
+use APP\plugins\generic\codecheck\classes\migration\CodecheckSchemaMigration;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
 use PKP\core\JSONMessage;
 
@@ -54,8 +55,27 @@ class Manage
                     $form->execute();
                     return new JSONMessage(true);
                 }
+                break;
+            
+            case 'resetSchema':
+                $user = $request->getUser();
+                if (!$user || !$request->getContext()) {
+                    return new JSONMessage(false);
+                }
+                if (!$this->plugin->getEnabled()) {
+                    return new JSONMessage(false);
+                }
+
+                $this->resetSchema();
+                return new JSONMessage(true);
+                break;
         }
 
         return new JSONMessage(false);
+    }
+
+    public function resetSchema(): void
+    {
+        $this->plugin->resetSchema();
     }
 }

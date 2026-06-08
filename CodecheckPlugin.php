@@ -105,7 +105,7 @@ class CodecheckPlugin extends GenericPlugin
 
         return false;
     }
-    
+
     /**
      * Setup the CodecheckApiHandler.
      * The constructor handles the request and exits — no need to set a router handler.
@@ -312,10 +312,20 @@ class CodecheckPlugin extends GenericPlugin
             $request = Application::get()->getRequest();
             $context = $request->getContext();
             $codecheckMode = $this->getSetting($context->getId(), Constants::CODECHECK_MODE);
-            $checkboxValue = false;
+            $checkboxValue    = false;
+            $checkboxDisabled = false;
+            $codecheckDescription = __('plugins.generic.codecheck.optIn.description', [
+                'codecheckLink' => "<a href='{$this->getUrlPageRoute("codecheck")}/info' target='_blank'>" . __('plugins.generic.codecheck.displayName') . "</a>"
+            ]);
 
             if ($codecheckMode == 'opt-out') {
                 $checkboxValue = true;
+            } elseif ($codecheckMode == 'mandatory') {
+                $checkboxValue    = true;
+                $checkboxDisabled = true;
+                $codecheckDescription = __('plugins.generic.codecheck.mandatory.description', [
+                    'codecheckLink' => "<a href='{$this->getUrlPageRoute("codecheck")}/info' target='_blank'>" . __('plugins.generic.codecheck.displayName') . "</a>"
+                ]);
             }
 
             $form->addField(new FieldOptions('codecheckOptIn', [
@@ -323,13 +333,12 @@ class CodecheckPlugin extends GenericPlugin
                 'type' => 'checkbox',
                 'options' => [
                     [
-                        'value' => 1, 
-                        'label' => __('plugins.generic.codecheck.optIn.description', [
-                            'codecheckLink' => "<a href='{$this->getUrlPageRoute("codecheck")}/info' target='_blank'>CODECHECK</a>"
-                        ])
+                        'value'    => 1,
+                        'label'    => $codecheckDescription,
+                        'disabled' => $checkboxDisabled,
                     ]
                 ],
-                'value' => $checkboxValue,
+                'value'   => $checkboxValue,
                 'groupId' => 'default'
             ]));
             
@@ -381,16 +390,25 @@ class CodecheckPlugin extends GenericPlugin
         return false;
     }
 
+    /**
+     * Provide a name for this plugin
+     */
     public function getDisplayName(): string
     {
         return __('plugins.generic.codecheck.displayName');
     }
 
+    /**
+     * Provide a description for this plugin
+     */
     public function getDescription(): string
     {
         return __('plugins.generic.codecheck.description');
     }
 
+    /**
+     * Add a settings action to the plugin's entry in the plugins list.
+     */
     public function getActions($request, $actionArgs): array
     {
         $actions = new Actions($this);

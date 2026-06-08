@@ -79,10 +79,11 @@ pkp.registry.storeExtend("workflow", (piniaContext) => {
         items.push({
           component: "CodecheckOrcidSection",
           props: {
-            submission: submission,
+            submission:   submission,
             orcidEnabled: orcidConfig.enabled,
             orcidAuthUrl: orcidConfig.authUrl,
             orcidApiType: orcidConfig.apiType,
+            canAuthorise: false, // editors monitor status and trigger deposit; auth is done by the codechecker
           },
         });
       }
@@ -380,7 +381,6 @@ class CodecheckReviewRefresher {
 // Initialization
 // -----------------------------------------------------------------------
 window.addEventListener('DOMContentLoaded', () => {
-  // Submission wizard: initialize manager and mount Vue components
   setTimeout(async () => {
     const manager = new CodecheckWizardManager();
     await manager.init();
@@ -390,7 +390,6 @@ window.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
     new CodecheckReviewRefresher();
 
-    // Add CODECHECK badge to tab 3 on reviewer page
     if (window.codecheckReviewerData) {
       const tab3Link = document.querySelector('#reviewTabs ul li:nth-child(3) a');
       if (tab3Link) {
@@ -402,7 +401,6 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   }, 1000);
 
-  // MutationObserver: mount CODECHECK form when tab 3 content loads via AJAX
   const observer = new MutationObserver(() => {
     const step3 = document.querySelector('#reviewStep3');
     if (step3 && step3.children.length > 0 && !document.querySelector('#codecheck-reviewer-form')) {
@@ -453,22 +451,27 @@ function mountCodecheckReviewerForm() {
 
   const metadataDiv = document.createElement('div');
   content.appendChild(metadataDiv);
-  createApp(CodecheckMetadataForm, {
+  const metadataApp = createApp(CodecheckMetadataForm, {
     submission: submission,
     canEdit: true,
-  }).mount(metadataDiv);
+  });
+  metadataApp.component('pkp-button', pkp.registry.getComponent('PkpButton'));
+  metadataApp.mount(metadataDiv);
 
   const orcid = reviewerData.orcid ?? {};
   if (orcid.enabled) {
     window.codecheckOrcidConfig = orcid;
     const orcidDiv = document.createElement('div');
     content.appendChild(orcidDiv);
-    createApp(CodecheckOrcidSection, {
-      submission: submission,
+    const orcidApp = createApp(CodecheckOrcidSection, {
+      submission:   submission,
       orcidEnabled: orcid.enabled,
       orcidAuthUrl: orcid.authUrl,
       orcidApiType: orcid.apiType,
-    }).mount(orcidDiv);
+      canAuthorise: true, // codechecker authorises from their reviewer form
+    });
+    orcidApp.component('pkp-button', pkp.registry.getComponent('PkpButton'));
+    orcidApp.mount(orcidDiv);
   }
 }
 window.mountCodecheckReviewerForm = mountCodecheckReviewerForm;

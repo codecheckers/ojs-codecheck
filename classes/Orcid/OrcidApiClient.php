@@ -2,7 +2,7 @@
 /**
  * @file classes/Orcid/OrcidApiClient.php
  *
- * Copyright (c) 2025 CODECHECK Initiative
+ * Copyright (c) 2026 CODECHECK Initiative
  * Distributed under the GNU GPL v3. For full terms see the file docs/COPYING.
  *
  * @class OrcidApiClient
@@ -12,6 +12,7 @@
 namespace APP\plugins\generic\codecheck\classes\Orcid;
 
 use APP\plugins\generic\codecheck\classes\Constants;
+use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 
 class OrcidApiClient
 {
@@ -88,7 +89,6 @@ class OrcidApiClient
 
     /**
      * Get a client credentials token (2-legged OAuth) for group-id management.
-     * This uses the client ID + secret directly, no user involvement needed.
      *
      * @throws \RuntimeException on failure
      */
@@ -121,8 +121,6 @@ class OrcidApiClient
 
     /**
      * Create a group-id record in ORCID using client credentials.
-     * The group-id must exist before peer-reviews can reference it.
-     *
      * Returns the put-code of the created group, or null if it already exists.
      *
      * @throws \RuntimeException on failure
@@ -140,7 +138,7 @@ class OrcidApiClient
 
         $url = $this->orcidApiUrl . '/group-id-record';
 
-        error_log('[CODECHECK ORCID] Creating group-id: ' . $groupId);
+        CodecheckLogger::debug('Creating ORCID group-id: ' . $groupId);
 
         $response = $this->httpPost($url, $payload, [
             'Accept: application/vnd.orcid+json',
@@ -148,16 +146,15 @@ class OrcidApiClient
             'Authorization: Bearer ' . $clientToken,
         ]);
 
-        // 201 = created, 409 = already exists (both are fine)
         if ($response['status'] === 201) {
             $putCode = $this->extractPutCodeFromLocation($response['headers']['location'] ?? '');
-            error_log('[CODECHECK ORCID] Group-id created with put-code: ' . $putCode);
+            CodecheckLogger::info('ORCID group-id created with put-code: ' . $putCode);
             return $putCode;
         }
 
         if ($response['status'] === 409) {
-            error_log('[CODECHECK ORCID] Group-id already exists: ' . $groupId);
-            return null; // already exists, that is fine
+            CodecheckLogger::debug('ORCID group-id already exists: ' . $groupId);
+            return null;
         }
 
         throw new \RuntimeException(
@@ -176,8 +173,7 @@ class OrcidApiClient
         $url  = $this->orcidApiUrl . '/' . $orcidId . '/peer-review';
         $json = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
-        error_log('[CODECHECK ORCID] POST peer-review to: ' . $url);
-        error_log('[CODECHECK ORCID] Payload: ' . $json);
+        CodecheckLogger::debug('POST peer-review to ORCID: ' . $orcidId);
 
         $response = $this->httpPost($url, $json, [
             'Accept: application/vnd.orcid+json',
@@ -186,10 +182,10 @@ class OrcidApiClient
         ]);
 
         if ($response['status'] === 409) {
-            // Already exists — extract the existing put-code and treat as success
             $body = json_decode($response['body'], true);
-            $msg = $body['developer-message'] ?? '';
+            $msg  = $body['developer-message'] ?? '';
             if (preg_match('/put-code\s+(\d+)/', $msg, $matches)) {
+                CodecheckLogger::info('ORCID peer-review already exists, reusing put-code: ' . $matches[1]);
                 return $matches[1];
             }
         }
@@ -206,6 +202,8 @@ class OrcidApiClient
             throw new \RuntimeException('ORCID peer-review POST succeeded but put-code could not be parsed.');
         }
 
+        CodecheckLogger::info('ORCID peer-review deposited, put-code: ' . $putCode);
+
         return $putCode;
     }
 
@@ -221,6 +219,8 @@ class OrcidApiClient
         $url  = $this->orcidApiUrl . '/' . $orcidId . '/peer-review/' . $putCode;
         $json = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
+        CodecheckLogger::debug('PUT peer-review to ORCID: ' . $orcidId . ' put-code: ' . $putCode);
+
         $response = $this->httpPut($url, $json, [
             'Accept: application/vnd.orcid+json',
             'Content-Type: application/vnd.orcid+json',
@@ -232,6 +232,8 @@ class OrcidApiClient
                 'ORCID peer-review PUT failed (HTTP ' . $response['status'] . '): ' . $response['body']
             );
         }
+
+        CodecheckLogger::info('ORCID peer-review updated, put-code: ' . $putCode);
     }
 
     // ------------------------------------------------------------------
@@ -284,7 +286,6 @@ class OrcidApiClient
             throw new \RuntimeException('cURL error: ' . $error);
         }
 
-        // Use strrpos to find the LAST \r\n\r\n — handles redirect responses correctly
         $headerSize = strrpos($raw, "\r\n\r\n");
         $rawHeaders = substr($raw, 0, $headerSize);
         $body       = substr($raw, $headerSize + 4);

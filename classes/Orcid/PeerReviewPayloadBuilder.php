@@ -2,7 +2,7 @@
 /**
  * @file classes/Orcid/PeerReviewPayloadBuilder.php
  *
- * Copyright (c) 2025 CODECHECK Initiative
+ * Copyright (c) 2026 CODECHECK Initiative
  * Distributed under the GNU GPL v3. For full terms see the file docs/COPYING.
  *
  * @class PeerReviewPayloadBuilder
@@ -34,7 +34,6 @@ class PeerReviewPayloadBuilder
         $certificateDoi = !empty($meta['certificate']) ? $meta['certificate'] : null;
         $articleDoi     = $publication ? ($publication->getData('pub-id::doi') ?? null) : null;
 
-        // review-group-id must match pattern (ringgold:|issn:|orcid-generated:|fundref:|publons:)[2+ chars]
         $issn = !empty($journal['issn']) ? trim($journal['issn']) : '';
         if (!empty($issn)) {
             $groupId = 'issn:' . $issn;
@@ -53,7 +52,6 @@ class PeerReviewPayloadBuilder
             'subject-name'           => ['title' => ['value' => $submissionTitle]],
         ];
 
-        // Only add optional fields when they have a non-empty value
         if ($certificateDoi) {
             $payload['review-url'] = str_starts_with(ltrim($certificateDoi, '/'), '10.')
                 ? 'https://doi.org/' . ltrim($certificateDoi, '/')
@@ -81,9 +79,6 @@ class PeerReviewPayloadBuilder
         ];
     }
 
-    /**
-     * ORCID v3 API: review-identifiers must be { "external-id": [ {...} ] }
-     */
     private function buildReviewIdentifiers(?string $certificateDoi): array
     {
         if (!$certificateDoi) {
@@ -123,31 +118,42 @@ class PeerReviewPayloadBuilder
 
     /**
      * Build convening-organization.
-     * ORCID requires name and city to be non-empty strings.
-     * We fall back to safe defaults so the deposit never fails on missing journal settings.
+     *
+     * ORCID requires name and country. City is optional — OJS does not
+     * expose a publisher city field so we include it only when available.
+     *
+     * @throws \InvalidArgumentException if name or country are missing
      */
     private function buildConveningOrganization(array $journal): array
     {
-        // Use journal name as publisher name if publisherName not set
         $publisherName = !empty($journal['publisherName'])
             ? trim($journal['publisherName'])
-            : (!empty($journal['name']) ? trim($journal['name']) : 'CODECHECK Journal');
+            : (!empty($journal['name']) ? trim($journal['name']) : '');
 
-        $city    = !empty($journal['publisherCity'])    ? trim($journal['publisherCity'])    : 'Unknown';
-        $country = !empty($journal['publisherCountry']) ? trim($journal['publisherCountry']) : 'XX';
+        $country = !empty($journal['publisherCountry']) ? trim($journal['publisherCountry']) : '';
 
-        // Ensure none are empty strings (ORCID rejects them)
-        if (empty($publisherName)) $publisherName = 'CODECHECK Journal';
-        if (empty($city))          $city           = 'Unknown';
-        if (empty($country))       $country        = 'XX';
+        $missing = [];
+        if (empty($publisherName)) $missing[] = 'Publisher Name (Journal Settings → Masthead → Publisher)';
+        if (empty($country))       $missing[] = 'Country (Journal Settings → Masthead → Country)';
+
+        if (!empty($missing)) {
+            throw new \InvalidArgumentException(
+                'ORCID deposition requires the following journal metadata to be configured: ' .
+                implode(', ', $missing) . '.'
+            );
+        }
 
         $org = [
             'name'    => $publisherName,
             'address' => [
-                'city'    => $city,
                 'country' => $country,
             ],
         ];
+
+        $city = !empty($journal['publisherCity']) ? trim($journal['publisherCity']) : '';
+        if (!empty($city)) {
+            $org['address']['city'] = $city;
+        }
 
         if (!empty($journal['ringgoldId'])) {
             $org['disambiguated-organization'] = [

@@ -2,7 +2,7 @@
 /**
  * @file classes/Orcid/OrcidAuthHandler.php
  *
- * Copyright (c) 2025 CODECHECK Initiative
+ * Copyright (c) 2026 CODECHECK Initiative
  * Distributed under the GNU GPL v3. For full terms see the file docs/COPYING.
  *
  * @class OrcidAuthHandler
@@ -19,7 +19,9 @@ use APP\handler\Handler;
 use APP\core\Application;
 use APP\facades\Repo;
 use APP\plugins\generic\codecheck\classes\Constants;
+use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
+use Illuminate\Support\Facades\DB;
 
 class OrcidAuthHandler extends Handler
 {
@@ -37,21 +39,31 @@ class OrcidAuthHandler extends Handler
      */
     public function startAuth($args, $request): void
     {
-        $context = $request->getContext();
+        $context   = $request->getContext();
         $contextId = $context->getId();
 
         if (!$this->plugin->getSetting($contextId, Constants::ORCID_ENABLED)) {
-            $this->showError('ORCID integration is not enabled for this journal.');
+            $this->sendPopupError('ORCID integration is not enabled for this journal.');
+            return;
+        }
+
+        $clientId     = $this->plugin->getSetting($contextId, Constants::ORCID_CLIENT_ID);
+        $clientSecret = $this->plugin->getSetting($contextId, Constants::ORCID_CLIENT_SECRET);
+
+        if (!$clientId || !$clientSecret) {
+            $this->sendPopupError(
+                'ORCID credentials are not configured. Please ask the journal manager to set ' .
+                'the Client ID and Client Secret in the CODECHECK plugin settings.'
+            );
             return;
         }
 
         $submissionId = (int) $request->getUserVar('submissionId');
         if (!$submissionId) {
-            $this->showError('Missing submissionId parameter.');
+            $this->sendPopupError('Missing submissionId parameter.');
             return;
         }
 
-        // Generate a nonce and store it in the session for CSRF validation
         $nonce = bin2hex(random_bytes(16));
         $request->getSession()->put('orcid_nonce_' . $submissionId, $nonce);
 
@@ -74,11 +86,10 @@ class OrcidAuthHandler extends Handler
      */
     public function callback($args, $request): void
     {
-        // Handle denial
         $error = $request->getUserVar('error');
         if ($error) {
             $desc = $request->getUserVar('error_description') ?? 'Access denied.';
-            $this->showError('ORCID authorisation denied: ' . $desc);
+            $this->sendPopupError('ORCID authorisation denied: ' . $desc);
             return;
         }
 
@@ -86,7 +97,7 @@ class OrcidAuthHandler extends Handler
         $state = $request->getUserVar('state');
 
         if (!$code || !$state) {
-            $this->showError('Invalid ORCID callback: missing code or state.');
+            $this->sendPopupError('Invalid ORCID callback: missing code or state.');
             return;
         }
 
@@ -96,23 +107,20 @@ class OrcidAuthHandler extends Handler
         $contextPath  = $stateData['contextPath'] ?? 'index';
 
         if (!$submissionId) {
-            $this->showError('Invalid state parameter.');
+            $this->sendPopupError('Invalid state parameter.');
             return;
         }
 
-        // Validate nonce (CSRF protection)
         $sessionNonce = $request->getSession()->get('orcid_nonce_' . $submissionId);
         if (!$sessionNonce || !hash_equals($sessionNonce, $nonce)) {
-            $this->showError('Security check failed. Please try again.');
+            $this->sendPopupError('Security check failed. Please try again.');
             return;
         }
         $request->getSession()->forget('orcid_nonce_' . $submissionId);
 
-        // Get contextId from the submission — context may be null on the
-        // callback URL since it routes through /index/ not the journal path
         $submission = Repo::submission()->get($submissionId);
         if (!$submission) {
-            $this->showError('Submission not found.');
+            $this->sendPopupError('Submission not found.');
             return;
         }
         $contextId = $submission->getData('contextId');
@@ -125,20 +133,47 @@ class OrcidAuthHandler extends Handler
             $orcidId      = $tokenData['orcid'];
             $accessToken  = $tokenData['access_token'];
             $refreshToken = $tokenData['refresh_token'] ?? null;
-            // ORCID Member API tokens last ~20 years, no need to store expiry
-            $expiresAt = null;
+            $expiresAt    = null;
+
+            // Verify the authenticated ORCID iD belongs to one of the
+            // codecheckers assigned to this submission. If stored ORCIDs
+            // exist and none match, reject the authorisation.
+            $metadata = DB::table('codecheck_metadata')
+                ->where('submission_id', $submissionId)
+                ->first();
+
+            if ($metadata && $metadata->codecheckers) {
+                $codecheckers = json_decode($metadata->codecheckers, true);
+                if (is_array($codecheckers)) {
+                    $storedOrcids = array_filter(array_map(
+                        fn($cc) => $cc['orcid'] ?? $cc['ORCID'] ?? null,
+                        $codecheckers
+                    ));
+
+                    if (!empty($storedOrcids) && !in_array($orcidId, $storedOrcids)) {
+                        CodecheckLogger::error(
+                            'ORCID iD mismatch for submission ' . $submissionId .
+                            ': authenticated as ' . $orcidId . ' but not in codechecker list'
+                        );
+                        $this->sendPopupError(
+                            'The ORCID iD you authenticated with (' . $orcidId . ') ' .
+                            'does not match any codechecker ORCID on record for this submission. ' .
+                            'Please sign in with the correct ORCID account.'
+                        );
+                        return;
+                    }
+                }
+            }
 
             $tokenDAO = new OrcidTokenDAO();
             $tokenDAO->upsertToken($submissionId, $orcidId, $accessToken, $refreshToken, $expiresAt);
 
-            error_log('[CODECHECK ORCID] Token stored for ' . $orcidId . ' / submission ' . $submissionId);
+            CodecheckLogger::info('ORCID token stored for ' . $orcidId . ' / submission ' . $submissionId);
 
-            // Build workflow URL using the context path we stored in state
             $workflowUrl = $request->getBaseUrl()
                 . '/index.php/' . $contextPath
                 . '/dashboard/editorial?workflowSubmissionId=' . $submissionId;
 
-            // Close the popup and notify the parent window
             echo '<html><body>';
             echo '<script>';
             echo 'if (window.opener) {';
@@ -152,14 +187,10 @@ class OrcidAuthHandler extends Handler
             echo '</body></html>';
 
         } catch (\Throwable $e) {
-            error_log('[CODECHECK ORCID] Token exchange failed: ' . $e->getMessage());
-            $this->showError('ORCID token exchange failed: ' . $e->getMessage());
+            CodecheckLogger::error('ORCID token exchange failed: ' . $e->getMessage());
+            $this->sendPopupError('ORCID token exchange failed: ' . $e->getMessage());
         }
     }
-
-    // ------------------------------------------------------------------
-    // Helpers
-    // ------------------------------------------------------------------
 
     private function buildApiClient(int $contextId): OrcidApiClient
     {
@@ -170,21 +201,27 @@ class OrcidAuthHandler extends Handler
         );
     }
 
-    /**
-     * Build the redirect URI — must match exactly what is registered
-     * in the ORCID sandbox developer tools:
-     * http://localhost:8888/ojs/index.php/index/codecheck/orcid/callback
-     */
     private function buildRedirectUri($request): string
     {
         return $request->getBaseUrl()
             . '/index.php/index/codecheck/orcid/callback';
     }
 
-    private function showError(string $message): void
+    private function sendPopupError(string $message): void
     {
-        error_log('[CODECHECK ORCID] Auth error: ' . $message);
+        CodecheckLogger::error('ORCID auth error: ' . $message);
         echo '<html><body>';
+        echo '<script>';
+        echo 'if (window.opener) {';
+        echo '  window.opener.postMessage({ type: "orcidAuthError", message: ' . json_encode($message) . ' }, "*");';
+        echo '  window.close();';
+        echo '} else {';
+        echo '  document.write(' . json_encode(
+            '<p>Error: ' . htmlspecialchars($message) . '</p>' .
+            '<p><a href="javascript:window.close()">Close this window</a></p>'
+        ) . ');';
+        echo '}';
+        echo '</script>';
         echo '<p>Error: ' . htmlspecialchars($message) . '</p>';
         echo '<p><a href="javascript:window.close()">Close this window</a></p>';
         echo '</body></html>';

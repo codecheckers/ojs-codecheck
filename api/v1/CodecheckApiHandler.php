@@ -19,6 +19,7 @@ use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifie
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckVenue;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckYamlValidator;
+use APP\plugins\generic\codecheck\classes\Orcid\OrcidApiClient;
 use APP\plugins\generic\codecheck\classes\Orcid\OrcidTokenDAO;
 use APP\plugins\generic\codecheck\classes\Orcid\OrcidDepositService;
 use APP\plugins\generic\codecheck\classes\Constants;
@@ -86,6 +87,11 @@ class CodecheckApiHandler
                 [
                     'route' => 'orcid-status',
                     'handler' => [$this, 'getOrcidStatus'],
+                    'roles' => $this->roles,
+                ],
+                [
+                    'route' => 'orcid-test',
+                    'handler' => [$this, 'testOrcidSetup'],
                     'roles' => $this->roles,
                 ],
             ],
@@ -231,11 +237,11 @@ class CodecheckApiHandler
         $customLabels = $postParams["customLabels"];
         $authorString = $postParams["authorString"];
 
-        $context                     = $this->request->getContext();
-        $githubPersonalAccessToken   = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN);
-        $githubRegisterOrganization  = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION);
-        $githubRegisterRepository    = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY);
-        $isAuthorStringEnabled       = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_AUTHOR_ANONYMITY);
+        $context                    = $this->request->getContext();
+        $githubPersonalAccessToken  = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN);
+        $githubRegisterOrganization = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION);
+        $githubRegisterRepository   = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY);
+        $isAuthorStringEnabled      = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_AUTHOR_ANONYMITY);
 
         if (!$isAuthorStringEnabled || !is_string($authorString)) {
             $authorString = null;
@@ -308,7 +314,7 @@ class CodecheckApiHandler
         } elseif (preg_match('#^https://osf\.io/([A-Za-z0-9]{5})/?$#', $repository, $matches)) {
             $yamlResponse = $this->codecheckMetadataHandler->importMetadataFromOSF($matches[1]);
             $yamlResponse->constructResponse();
-        } elseif (preg_match('#^https://gitlab\.com/cdchck/community-codechecks/([^/]+)/?$#', $repository)) {
+        } elseif (preg_match('#^https://gitlab\.com/cdchck/community-codecheckers/([^/]+)/?$#', $repository)) {
             $repository   = rtrim($repository, '/');
             $yamlResponse = $this->codecheckMetadataHandler->importMetadataFromGitLab($repository);
             $yamlResponse->constructResponse();
@@ -621,10 +627,19 @@ class CodecheckApiHandler
             }
         }
 
+        $journalConfigError = null;
+        try {
+            $depositService = new OrcidDepositService($this->plugin);
+            $depositService->getValidatedJournalInfo($this->request->getContext()->getId());
+        } catch (\InvalidArgumentException $e) {
+            $journalConfigError = $e->getMessage();
+        }
+
         $this->response->response([
-            'success'      => true,
-            'submissionId' => $submissionId,
-            'codecheckers' => $codecheckers,
+            'success'            => true,
+            'submissionId'       => $submissionId,
+            'codecheckers'       => $codecheckers,
+            'journalConfigError' => $journalConfigError,
         ], 200);
     }
 
@@ -657,5 +672,63 @@ class CodecheckApiHandler
             CodecheckLogger::error('ORCID depositToOrcid API error: ' . $e->getMessage());
             $this->response->response(['success' => false, 'error' => $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * GET api/v1/codecheck/orcid-test
+     *
+     * Tests the ORCID setup without writing any data:
+     * 1. Validates required journal metadata
+     * 2. Makes an authenticated token request to verify credentials
+     */
+    public function testOrcidSetup(): void
+    {
+        $context   = $this->request->getContext();
+        $contextId = $context->getId();
+
+        // Step 1: validate journal metadata
+        try {
+            $depositService = new OrcidDepositService($this->plugin);
+            $depositService->getValidatedJournalInfo($contextId);
+        } catch (\InvalidArgumentException $e) {
+            $this->response->response([
+                'success' => false,
+                'step'    => 'metadata',
+                'error'   => $e->getMessage(),
+            ], 400);
+            return;
+        }
+
+        // Step 2: verify credentials with a dry-run token request
+        $clientId     = $this->plugin->getSetting($contextId, Constants::ORCID_CLIENT_ID);
+        $clientSecret = $this->plugin->getSetting($contextId, Constants::ORCID_CLIENT_SECRET);
+        $apiType      = $this->plugin->getSetting($contextId, Constants::ORCID_API_TYPE)
+                        ?? Constants::ORCID_API_TYPE_SANDBOX;
+
+        if (!$clientId || !$clientSecret) {
+            $this->response->response([
+                'success' => false,
+                'step'    => 'credentials',
+                'error'   => __('plugins.generic.codecheck.orcid.test.error.noCredentials'),
+            ], 400);
+            return;
+        }
+
+        try {
+            $client = new OrcidApiClient($clientId, $clientSecret, $apiType);
+            $client->getClientCredentialsToken();
+        } catch (\Throwable $e) {
+            $this->response->response([
+                'success' => false,
+                'step'    => 'credentials',
+                'error'   => __('plugins.generic.codecheck.orcid.test.error.credentialsFailed') . ' ' . $e->getMessage(),
+            ], 400);
+            return;
+        }
+
+        $this->response->response([
+            'success' => true,
+            'message' => __('plugins.generic.codecheck.orcid.test.success'),
+        ], 200);
     }
 }

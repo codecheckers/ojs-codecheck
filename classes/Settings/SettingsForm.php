@@ -63,6 +63,30 @@ class SettingsForm extends Form
         );
 
         $this->setData(
+            Constants::CODECHECK_MODE,
+            $this->plugin->getSetting(
+                $context->getId(),
+                Constants::CODECHECK_MODE
+            )
+        );
+
+        $this->setData(
+            Constants::CODECHECK_AUTHOR_ANONYMITY,
+            $this->plugin->getSetting(
+                $context->getId(),
+                Constants::CODECHECK_AUTHOR_ANONYMITY
+            )
+        );
+
+        $this->setData(
+            Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN,
+            $this->plugin->getSetting(
+                $context->getId(),
+                Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN
+            )
+        );
+
+        $this->setData(
             Constants::CODECHECK_API_ENDPOINT,
             $this->plugin->getSetting(
                 $context->getId(),
@@ -78,6 +102,63 @@ class SettingsForm extends Form
             )
         );
 
+        $this->setData(
+            Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION,
+            $this->plugin->getSetting(
+                $context->getId(),
+                Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION
+            )
+        );
+
+        $this->setData(
+            Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY,
+            $this->plugin->getSetting(
+                $context->getId(),
+                Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY
+            )
+        );
+
+        $this->setData(
+            Constants::CODECHECK_GITHUB_CUSTOM_LABELS,
+            $this->plugin->getSetting(
+                $context->getId(),
+                Constants::CODECHECK_GITHUB_CUSTOM_LABELS
+            ) ?? []
+        );
+
+        // ORCID integration settings
+        $this->setData(
+            Constants::ORCID_ENABLED,
+            $this->plugin->getSetting(
+                $context->getId(),
+                Constants::ORCID_ENABLED
+            )
+        );
+
+        $this->setData(
+            Constants::ORCID_API_TYPE,
+            $this->plugin->getSetting(
+                $context->getId(),
+                Constants::ORCID_API_TYPE
+            ) ?? Constants::ORCID_API_TYPE_SANDBOX
+        );
+
+        $this->setData(
+            Constants::ORCID_CLIENT_ID,
+            $this->plugin->getSetting(
+                $context->getId(),
+                Constants::ORCID_CLIENT_ID
+            )
+        );
+
+        $this->setData(
+            Constants::ORCID_CLIENT_SECRET,
+            $this->plugin->getSetting(
+                $context->getId(),
+                Constants::ORCID_CLIENT_SECRET
+            )
+        );
+
         parent::initData();
     }
 
@@ -88,8 +169,18 @@ class SettingsForm extends Form
     {
         $this->readUserVars([
             Constants::CODECHECK_ENABLED,
+            Constants::CODECHECK_MODE,
+            Constants::CODECHECK_AUTHOR_ANONYMITY,
+            Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN,
             Constants::CODECHECK_API_ENDPOINT,
-            Constants::CODECHECK_API_KEY
+            Constants::CODECHECK_API_KEY,
+            Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION,
+            Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY,
+            Constants::CODECHECK_GITHUB_CUSTOM_LABELS,
+            Constants::ORCID_ENABLED,
+            Constants::ORCID_API_TYPE,
+            Constants::ORCID_CLIENT_ID,
+            Constants::ORCID_CLIENT_SECRET,
         ]);
 
         parent::readInputData();
@@ -106,6 +197,19 @@ class SettingsForm extends Form
     {
         $templateMgr = TemplateManager::getManager($request);
         $templateMgr->assign('pluginName', $this->plugin->getName());
+        $templateMgr->assign(
+            'githubCustomLabels',
+            $this->getData(Constants::CODECHECK_GITHUB_CUSTOM_LABELS) ?? []
+        );
+        $templateMgr->assign('codecheckModes', [
+            'opt-in'    => __('plugins.generic.codecheck.settings.mode.opt.in'),
+            'opt-out'   => __('plugins.generic.codecheck.settings.mode.opt.out'),
+            'mandatory' => __('plugins.generic.codecheck.settings.mode.mandatory'),
+        ]);
+        $templateMgr->assign('orcidApiTypes', [
+            Constants::ORCID_API_TYPE_SANDBOX    => __('plugins.generic.codecheck.orcid.apiType.sandbox'),
+            Constants::ORCID_API_TYPE_PRODUCTION => __('plugins.generic.codecheck.orcid.apiType.production'),
+        ]);
 
         return parent::fetch($request, $template, $display);
     }
@@ -129,6 +233,24 @@ class SettingsForm extends Form
 
         $this->plugin->updateSetting(
             $context->getId(),
+            Constants::CODECHECK_MODE,
+            $this->getData(Constants::CODECHECK_MODE)
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_AUTHOR_ANONYMITY,
+            $this->getData(Constants::CODECHECK_AUTHOR_ANONYMITY)
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN,
+            $this->getData(Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN)
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
             Constants::CODECHECK_API_ENDPOINT,
             $this->getData(Constants::CODECHECK_API_ENDPOINT)
         );
@@ -138,6 +260,56 @@ class SettingsForm extends Form
             Constants::CODECHECK_API_KEY,
             $this->getData(Constants::CODECHECK_API_KEY)
         );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION,
+            $this->getData(Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION)
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY,
+            $this->getData(Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY)
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_GITHUB_CUSTOM_LABELS,
+            array_values(array_filter(
+                (array) $this->getData(Constants::CODECHECK_GITHUB_CUSTOM_LABELS),
+                fn ($label) => !empty($label)
+            ))
+        );
+
+        // Save ORCID integration settings
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::ORCID_ENABLED,
+            $this->getData(Constants::ORCID_ENABLED)
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::ORCID_API_TYPE,
+            $this->getData(Constants::ORCID_API_TYPE)
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::ORCID_CLIENT_ID,
+            $this->getData(Constants::ORCID_CLIENT_ID)
+        );
+
+        // Only update secret if a new value was provided
+        $newSecret = $this->getData(Constants::ORCID_CLIENT_SECRET);
+        if (!empty($newSecret)) {
+            $this->plugin->updateSetting(
+                $context->getId(),
+                Constants::ORCID_CLIENT_SECRET,
+                $newSecret
+            );
+        }
 
         $notificationMgr = new NotificationManager();
         $notificationMgr->createTrivialNotification(

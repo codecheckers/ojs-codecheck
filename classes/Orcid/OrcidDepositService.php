@@ -2,7 +2,7 @@
 /**
  * @file classes/Orcid/OrcidDepositService.php
  *
- * Copyright (c) 2025 CODECHECK Initiative
+ * Copyright (c) 2026 CODECHECK Initiative
  * Distributed under the GNU GPL v3. For full terms see the file docs/COPYING.
  *
  * @class OrcidDepositService
@@ -13,6 +13,7 @@ namespace APP\plugins\generic\codecheck\classes\Orcid;
 
 use APP\core\Application;
 use APP\plugins\generic\codecheck\classes\Constants;
+use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
 use APP\facades\Repo;
 use Illuminate\Support\Facades\DB;
@@ -32,6 +33,8 @@ class OrcidDepositService
 
     /**
      * Deposit for every authorised codechecker of a submission.
+     *
+     * @throws \InvalidArgumentException if required journal metadata is missing
      */
     public function depositForSubmission(int $submissionId): array
     {
@@ -44,45 +47,39 @@ class OrcidDepositService
                         ?? Constants::ORCID_API_TYPE_SANDBOX;
 
         if (empty($clientId) || empty($clientSecret)) {
-            error_log('[CODECHECK ORCID] Deposit skipped: no credentials configured.');
+            CodecheckLogger::error('ORCID deposit skipped: no credentials configured.');
             return [];
         }
 
-        $client     = new OrcidApiClient($clientId, $clientSecret, $apiType);
         $submission = Repo::submission()->get($submissionId);
-
         if (!$submission) {
             return [];
         }
 
-        $meta    = $this->loadCodecheckMeta($submissionId);
         $journal = $this->loadJournalInfo($contextId);
 
+        // Validate required journal metadata before attempting any deposit.
+        // Throws InvalidArgumentException with a clear message if missing.
+        $this->validateJournalInfo($journal);
+
+        $client = new OrcidApiClient($clientId, $clientSecret, $apiType);
+        $meta   = $this->loadCodecheckMeta($submissionId);
+
         // Ensure the group-id exists in ORCID before depositing peer-reviews.
-        // ORCID requires group-ids to be pre-registered using client credentials.
-        // This is a one-time operation per journal — it is safe to call every
-        // time as ORCID returns 409 (already exists) which we handle gracefully.
         $issn = !empty($journal['issn']) ? trim($journal['issn']) : '';
         if (!empty($issn)) {
             $groupId   = 'issn:' . $issn;
-            $groupName = !empty($journal['name']) ? $journal['name'] : 'CODECHECK Journal';
-            try {
-                $client->createGroupId($groupId, $groupName, 'journal');
-            } catch (\Throwable $e) {
-                // Log but do not block — the ISSN group-id may already exist
-                // in ORCID's global registry (ISSNs are pre-loaded by ORCID)
-                error_log('[CODECHECK ORCID] Group-id registration note: ' . $e->getMessage());
-            }
-        }
-        // For orcid-generated group-ids we must create them ourselves
-        else {
+            $groupName = !empty($journal['name']) ? $journal['name'] : $journal['publisherName'];
+        } else {
             $groupId   = 'orcid-generated:codecheck-ojs';
-            $groupName = !empty($journal['name']) ? $journal['name'] : 'CODECHECK Journal';
-            try {
-                $client->createGroupId($groupId, $groupName, 'journal');
-            } catch (\Throwable $e) {
-                error_log('[CODECHECK ORCID] Group-id registration note: ' . $e->getMessage());
-            }
+            $groupName = !empty($journal['name']) ? $journal['name'] : $journal['publisherName'];
+        }
+
+        try {
+            $client->createGroupId($groupId, $groupName, 'journal');
+        } catch (\Throwable $e) {
+            // Log but do not block — the group-id may already exist
+            CodecheckLogger::debug('ORCID group-id registration note: ' . $e->getMessage());
         }
 
         $tokenRows = $this->tokenDAO->getAuthorizedBySubmission($submissionId);
@@ -93,6 +90,42 @@ class OrcidDepositService
         }
 
         return $results;
+    }
+
+    /**
+     * Validate that all required journal metadata for ORCID deposition is present.
+     * OJS does not have a publisher city field, so only name and country are required.
+     *
+     * @throws \InvalidArgumentException with a descriptive message listing missing fields
+     */
+    public function validateJournalInfo(array $journal): void
+    {
+        $publisherName = !empty($journal['publisherName'])
+            ? trim($journal['publisherName'])
+            : (!empty($journal['name']) ? trim($journal['name']) : '');
+
+        $country = !empty($journal['publisherCountry']) ? trim($journal['publisherCountry']) : '';
+
+        $missing = [];
+        if (empty($publisherName)) $missing[] = 'Publisher Name (Journal Settings → Masthead → Publisher)';
+        if (empty($country))       $missing[] = 'Country (Journal Settings → Masthead → Country)';
+
+        if (!empty($missing)) {
+            throw new \InvalidArgumentException(
+                'ORCID deposition requires the following journal metadata to be configured: ' .
+                implode(', ', $missing) . '.'
+            );
+        }
+    }
+
+    /**
+     * Load journal info and validate it — convenience method for API handler.
+     */
+    public function getValidatedJournalInfo(int $contextId): array
+    {
+        $journal = $this->loadJournalInfo($contextId);
+        $this->validateJournalInfo($journal);
+        return $journal;
     }
 
     private function depositOneCodechecker(
@@ -120,7 +153,7 @@ class OrcidDepositService
             }
         } catch (\Throwable $e) {
             $error = $e->getMessage();
-            error_log('[CODECHECK ORCID] Deposit failed for ' . $orcidId . ': ' . $error);
+            CodecheckLogger::error('ORCID deposit failed for ' . $orcidId . ': ' . $error);
             $this->tokenDAO->markFailed((int) $row->id, $error);
             return ['orcidId' => $orcidId, 'status' => 'failed', 'error' => $error];
         }
@@ -141,8 +174,8 @@ class OrcidDepositService
             'name'             => $context->getLocalizedName() ?? '',
             'issn'             => $context->getData('onlineIssn') ?? $context->getData('printIssn') ?? '',
             'publisherName'    => $context->getData('publisherInstitution') ?? '',
-            'publisherCity'    => $context->getData('location') ?? '',
-            'publisherCountry' => $context->getData('country') ?? 'XX',
+            'publisherCity'    => '', // OJS has no publisher city field
+            'publisherCountry' => $context->getData('country') ?? '',
             'ringgoldId'       => $context->getData('ringgoldId') ?? null,
         ];
     }

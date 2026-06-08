@@ -29,6 +29,9 @@ msgstr "CODECHECK"
 msgid "plugins.generic.codecheck.error"
 msgstr "Error"
 
+msgid "plugins.generic.codecheck.infoPage.title"
+msgstr "CODECHECK"
+
 msgid "plugins.generic.codecheck.description"
 msgstr "Integrates CODECHECK code execution verification into the OJS peer review workflow"
 
@@ -43,6 +46,18 @@ msgstr "Reset"
 
 msgid "plugins.generic.codecheck.settings.enableCodecheck"
 msgstr "Enable CODECHECK for this journal"
+
+msgid "plugins.generic.codecheck.settings.mode"
+msgstr "Select the CODECHECK mode used during the submission of a paper"
+
+msgid "plugins.generic.codecheck.settings.mode.opt.in"
+msgstr "opt-in by the author"
+
+msgid "plugins.generic.codecheck.settings.mode.opt.out"
+msgstr "opt-out by the author"
+
+msgid "plugins.generic.codecheck.settings.mode.mandatory"
+msgstr "CODECHECK is mandatory"
 
 msgid "plugins.generic.codecheck.settings.enableCodecheck.description"
 msgstr "Allow editors to assign codecheckers to submissions"
@@ -69,7 +84,7 @@ msgid "plugins.generic.codecheck.settings.github.personalAccessToken"
 msgstr "GitHub Personal Access Token (classic)"
 
 msgid "plugins.generic.codecheck.settings.github.personalAccessToken.description"
-msgstr "Provide your GitHub Personal Access Token (classic), so the CODECHECK plugin can create new GitHub issues.<br>Here is how you can create a PAT (NOTE: please select "public_repo"): "
+msgstr "Provide your GitHub Personal Access Token (classic), so the CODECHECK plugin can create new GitHub issues.<br><a href='{$patGuideUrl}'>Here</a> is how you can create a PAT (NOTE: please select "public_repo")"
 
 msgid "plugins.generic.codecheck.settings.github.registerRepository"
 msgstr "GitHub Repository used as the CODECHECK register"
@@ -94,6 +109,9 @@ msgstr "CODECHECK"
 
 msgid "plugins.generic.codecheck.optIn.description"
 msgstr "Yes, I want my paper to be codechecked. See: {$codecheckLink}"
+
+msgid "plugins.generic.codecheck.mandatory.description"
+msgstr "I understand that as part of the mandatory {$codecheckLink}, the code of my submission will be checked to see if it's reproducible."
 
 msgid "plugins.generic.codecheck.submission.label"
 msgstr "CODECHECK Information"
@@ -355,6 +373,9 @@ msgstr "Venue Data Error"
 
 msgid "plugins.generic.codecheck.identifier.venue.fetch.error.codecheckAPI"
 msgstr "Failed to fetch venue data"
+
+msgid "plugins.generic.codecheck.identifier.customLabels"
+msgstr "Custom Labels"
 
 msgid "plugins.generic.codecheck.identifier.customLabels"
 msgstr "Custom Labels"
@@ -643,3 +664,24 @@ msgstr "Deposited"
 
 msgid "plugins.generic.codecheck.orcid.status.failed"
 msgstr "Deposit failed"
+
+msgid "plugins.generic.codecheck.orcid.test.title"
+msgstr "Test ORCID Setup"
+
+msgid "plugins.generic.codecheck.orcid.test.description"
+msgstr "Verify that journal metadata and ORCID credentials are correctly configured. This makes an authenticated request to ORCID without writing any data."
+
+msgid "plugins.generic.codecheck.orcid.test.button"
+msgstr "Test ORCID Setup"
+
+msgid "plugins.generic.codecheck.orcid.test.success"
+msgstr "ORCID setup is correctly configured. Journal metadata and credentials are valid."
+
+msgid "plugins.generic.codecheck.orcid.test.error.noCredentials"
+msgstr "Client ID and Client Secret are not configured in plugin settings."
+
+msgid "plugins.generic.codecheck.orcid.test.error.credentialsFailed"
+msgstr "ORCID credentials test failed:"
+
+msgid "plugins.generic.codecheck.orcid.authoriseByCodechecker"
+msgstr "Must be authorised by the codechecker."

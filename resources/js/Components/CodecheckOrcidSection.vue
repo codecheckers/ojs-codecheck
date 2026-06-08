@@ -2,7 +2,7 @@
   <div class="codecheck-orcid-section">
     <h4 class="codecheck-orcid-section__title">
       <img
-        src="https://orcid.org/sites/default/files/images/orcid_16x16.png"
+        :src="orcidIconUrl"
         alt="ORCID"
         width="16"
         height="16"
@@ -13,6 +13,17 @@
     <p class="codecheck-orcid-section__description">
       {{ t('plugins.generic.codecheck.orcid.sectionDescription') }}
     </p>
+
+    <!-- Journal config error warning -->
+    <div v-if="journalConfigError" class="codecheck-orcid-section__warning-banner">
+      ⚠ {{ journalConfigError }}
+    </div>
+
+    <!-- Auth error banner -->
+    <div v-if="authError" class="codecheck-orcid-section__error-banner">
+      <span>⚠ {{ authError }}</span>
+      <button class="codecheck-orcid-section__error-close" @click="authError = null">✕</button>
+    </div>
 
     <div v-if="isLoading">{{ t('common.loading') }}</div>
 
@@ -31,7 +42,7 @@
           <strong>{{ cc.name }}</strong>
           <span v-if="cc.orcidId" class="codecheck-orcid-row__orcid-id">
             <img
-              src="https://orcid.org/sites/default/files/images/orcid_16x16.png"
+              :src="orcidIconUrl"
               alt="ORCID iD"
               width="14"
               height="14"
@@ -60,18 +71,24 @@
 
         <!-- Actions -->
         <div class="codecheck-orcid-row__actions">
-          <pkp-button v-if="!cc.orcidId" :is-link="true" class="codecheck-orcid-btn" @click="startAuth(cc)">
-            {{ t('plugins.generic.codecheck.orcid.authorise') }}
-          </pkp-button>
+          <!-- Auth buttons: only shown to the codechecker, not to editors -->
+          <template v-if="canAuthorise">
+            <pkp-button v-if="!cc.orcidId" :is-link="true" class="codecheck-orcid-btn" @click="startAuth(cc)">
+              {{ t('plugins.generic.codecheck.orcid.authorise') }}
+            </pkp-button>
+            <pkp-button v-else-if="cc.depositStatus !== 'success'" :is-link="true" class="codecheck-orcid-btn" @click="startAuth(cc)">
+              {{ t('plugins.generic.codecheck.orcid.reAuthorise') }}
+            </pkp-button>
+          </template>
+          <span v-else-if="!cc.orcidId" class="codecheck-orcid-row__auth-note">
+            {{ t('plugins.generic.codecheck.orcid.authoriseByCodechecker') }}
+          </span>
 
-          <pkp-button v-else-if="cc.depositStatus !== 'success'" :is-link="true" class="codecheck-orcid-btn" @click="startAuth(cc)">
-            {{ t('plugins.generic.codecheck.orcid.reAuthorise') }}
-          </pkp-button>
-
+          <!-- Deposit button: only shown to editors who can trigger deposition -->
           <pkp-button
             v-if="cc.orcidId"
             :is-primary="cc.depositStatus !== 'success'"
-            :disabled="isDepositing"
+            :disabled="isDepositing || !!journalConfigError"
             class="codecheck-orcid-btn"
             @click="deposit(cc)"
           >
@@ -83,16 +100,20 @@
           </pkp-button>
         </div>
 
-        <!-- Error message -->
+        <!-- Deposit error message -->
         <div v-if="cc.depositStatus === 'failed' && cc.errorMessage" class="codecheck-orcid-row__error">
           {{ cc.errorMessage }}
         </div>
       </div>
     </div>
 
-    <!-- Deposit all button -->
-    <div v-if="hasAuthorised" class="codecheck-orcid-section__footer">
-      <pkp-button :disabled="isDepositing" class="codecheck-orcid-btn" @click="depositAll">
+    <!-- Deposit all button: only for editors -->
+    <div v-if="hasAuthorised && !canAuthorise" class="codecheck-orcid-section__footer">
+      <pkp-button
+        :disabled="isDepositing || !!journalConfigError"
+        class="codecheck-orcid-btn"
+        @click="depositAll"
+      >
         {{ t('plugins.generic.codecheck.orcid.depositAll') }}
       </pkp-button>
     </div>
@@ -104,10 +125,11 @@ export default {
   name: 'CodecheckOrcidSection',
 
   props: {
-    submission: { type: Object, required: true },
+    submission:   { type: Object,  required: true },
     orcidEnabled: { type: Boolean, default: false },
-    orcidAuthUrl: { type: String, required: true },
-    orcidApiType: { type: String, default: 'memberSandbox' },
+    orcidAuthUrl: { type: String,  required: true },
+    orcidApiType: { type: String,  default: 'memberSandbox' },
+    canAuthorise: { type: Boolean, default: false },
   },
 
   data() {
@@ -115,6 +137,8 @@ export default {
       codecheckers: [],
       isLoading: true,
       isDepositing: false,
+      authError: null,
+      journalConfigError: null,
     };
   },
 
@@ -129,6 +153,10 @@ export default {
     },
     ojsApiBaseUrl() {
       return window.codecheckOrcidConfig?.apiBaseUrl ?? '';
+    },
+    orcidIconUrl() {
+      const base = this.ojsApiBaseUrl.replace(/\/index\.php.*/, '');
+      return base + '/plugins/generic/codecheck/assets/img/orcid.svg';
     },
   },
 
@@ -157,7 +185,8 @@ export default {
         );
         if (response.ok) {
           const data = await response.json();
-          this.codecheckers = data.codecheckers ?? [];
+          this.codecheckers       = data.codecheckers ?? [];
+          this.journalConfigError = data.journalConfigError ?? null;
         }
       } catch (err) {
         console.error('[CODECHECK ORCID] Load error', err);
@@ -167,6 +196,7 @@ export default {
     },
 
     startAuth(cc) {
+      this.authError = null;
       const url = this.orcidAuthUrl + '?submissionId=' + this.submission.id;
       const popup = window.open(url, 'orcid_auth', 'width=700,height=600,scrollbars=yes');
       const timer = setInterval(() => {
@@ -224,7 +254,11 @@ export default {
     },
 
     onOAuthMessage(event) {
-      if (event.data && event.data.type === 'orcidAuthSuccess') {
+      if (event.data?.type === 'orcidAuthSuccess') {
+        this.authError = null;
+        this.loadTokenStatus();
+      } else if (event.data?.type === 'orcidAuthError') {
+        this.authError = event.data.message;
         this.loadTokenStatus();
       }
     },
@@ -275,10 +309,48 @@ export default {
   font-weight: 600;
   margin-bottom: 0.5rem;
 }
+.codecheck-orcid-section__title img,
+.codecheck-orcid-row__orcid-id img {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
 .codecheck-orcid-section__description {
   color: #555;
   font-size: 0.875rem;
   margin-bottom: 1rem;
+}
+.codecheck-orcid-section__warning-banner {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffc107;
+  border-radius: 4px;
+  padding: 0.6rem 0.8rem;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+.codecheck-orcid-section__error-banner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  padding: 0.6rem 0.8rem;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+.codecheck-orcid-section__error-close {
+  background: none;
+  border: none;
+  color: #721c24;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0;
+  flex-shrink: 0;
 }
 .codecheck-orcid-row {
   display: grid;
@@ -304,6 +376,11 @@ export default {
 .badge--pending { background: #fff3cd; color: #856404; }
 .badge--none    { background: #e2e3e5; color: #383d41; }
 .codecheck-orcid-row__actions { display: flex; gap: 0.5rem; align-items: center; }
+.codecheck-orcid-row__auth-note {
+  font-size: 0.8rem;
+  color: #777;
+  font-style: italic;
+}
 .codecheck-orcid-row__error {
   grid-column: 1 / -1;
   font-size: 0.8rem;
@@ -313,12 +390,10 @@ export default {
   border-radius: 3px;
 }
 .codecheck-orcid-section__footer { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #eee; }
-
-/* Ensure all ORCID action buttons show pointer cursor */
 .codecheck-orcid-btn,
 .codecheck-orcid-btn button,
 .codecheck-orcid-row__actions button,
 .codecheck-orcid-row__actions .pkpButton {
   cursor: pointer !important;
 }
-</style>  
+</style>
