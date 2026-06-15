@@ -2,12 +2,8 @@
 
 namespace APP\plugins\generic\codecheck\api\v1;
 
-use PKP\security\Role;
 use APP\plugins\generic\codecheck\api\v1\JsonResponse;
 use APP\core\Request;
-use \Github\Client;
-use APP\plugins\generic\codecheck\api\v1\CurlApiClient;
-
 use APP\plugins\generic\codecheck\classes\Exceptions\ApiCreateException;
 use APP\plugins\generic\codecheck\classes\Exceptions\ApiFetchException;
 use APP\plugins\generic\codecheck\classes\Exceptions\NoMatchingIssuesFoundException;
@@ -25,14 +21,16 @@ use APP\plugins\generic\codecheck\classes\Orcid\OrcidDepositService;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
-
 use APP\facades\Repo;
+use \Github\Client;
+use APP\plugins\generic\codecheck\classes\CodecheckRoles\CodecheckRoleManager;
+use APP\plugins\generic\codecheck\classes\Exceptions\RoleExceptions\RoleNotFoundException;
 use Illuminate\Support\Facades\DB;
 
 class CodecheckApiHandler
 {
     private JsonResponse $response;
-    private array $roles;
+    private CodecheckRoleManager $roles;
     private array $endpoints;
     private string $route;
     private CodecheckPlugin $plugin;
@@ -44,9 +42,10 @@ class CodecheckApiHandler
      *
      * @param CodecheckPlugin $plugin
      * @param Request $request API Request
+     * @param CodecheckRoleManager $roles The CODECHECK roles for `read`, `write` and `standard` access to the API routes
      * @return void
      */
-    public function __construct(CodecheckPlugin $plugin, Request $request)
+    public function __construct(CodecheckPlugin $plugin, Request $request, CodecheckRoleManager $roles)
     {
         $this->plugin = $plugin;
 
@@ -54,87 +53,90 @@ class CodecheckApiHandler
 
         $this->codecheckMetadataHandler = new CodecheckMetadataHandler($request, new \Github\Client(), new CurlApiClient());
 
-        $this->roles = [
-            Role::ROLE_ID_MANAGER,
-            Role::ROLE_ID_SUB_EDITOR,
-            Role::ROLE_ID_ASSISTANT,
-            Role::ROLE_ID_AUTHOR,
-            Role::ROLE_ID_REVIEWER,
-        ];
+        $this->roles = $roles;
 
         $this->endpoints = [
             'GET' => [
                 [
-                    'route' => 'venue',
+                    'route'   => 'venue',
                     'handler' => [$this, 'getVenueData'],
-                    'roles' => $this->roles,
+                    'roles'   => $roles->readMetadata(),
                 ],
                 [
-                    'route' => 'metadata',
+                    'route'   => 'metadata',
                     'handler' => [$this, 'getMetadata'],
-                    'roles' => $this->roles,
+                    'roles'   => $roles->readMetadata(),
                 ],
                 [
-                    'route' => 'download',
+                    'route'   => 'download',
                     'handler' => [$this, 'downloadFile'],
-                    'roles' => $this->roles,
+                    'roles'   => $roles->readMetadata(),
                 ],
                 [
-                    'route' => 'yaml',
+                    'route'   => 'yaml',
                     'handler' => [$this, 'generateYaml'],
-                    'roles' => $this->roles,
+                    'roles'   => $roles->readMetadata(),
                 ],
                 [
-                    'route' => 'orcid-status',
+                    'route'   => 'orcid-status',
                     'handler' => [$this, 'getOrcidStatus'],
-                    'roles' => $this->roles,
+                    'roles'   => $roles->readMetadata(),
                 ],
                 [
-                    'route' => 'orcid-test',
+                    'route'   => 'orcid-test',
                     'handler' => [$this, 'testOrcidSetup'],
-                    'roles' => $this->roles,
+                    'roles'   => $roles->admin(),
                 ],
             ],
             'POST' => [
                 [
-                    'route' => 'identifier',
+                    'route'   => 'identifier',
                     'handler' => [$this, 'reserveIdentifier'],
-                    'roles' => $this->roles,
+                    'roles'   => $roles->editMetadata(),
                 ],
                 [
-                    'route' => 'metadata',
+                    'route'   => 'metadata',
                     'handler' => [$this, 'saveMetadata'],
-                    'roles' => $this->roles,
+                    'roles'   => $roles->editMetadata(),
                 ],
                 [
-                    'route' => 'upload',
+                    'route'   => 'upload',
                     'handler' => [$this, 'uploadFile'],
-                    'roles' => $this->roles,
+                    'roles'   => $roles->editMetadata(),
                 ],
                 [
-                    'route' => 'repository',
+                    'route'   => 'repository',
                     'handler' => [$this, 'loadMetadataFromRepository'],
-                    'roles' => $this->roles,
+                    'roles'   => $roles->editMetadata(),
                 ],
                 [
-                    'route' => 'yaml/validate',
+                    'route'   => 'yaml/validate',
                     'handler' => [$this, 'validateYamlStructure'],
-                    'roles' => $this->roles,
+                    'roles'   => $roles->readMetadata(),
                 ],
                 [
-                    'route' => 'orcid-deposit',
+                    'route'   => 'orcid-deposit',
                     'handler' => [$this, 'depositToOrcid'],
-                    'roles' => $this->roles,
+                    'roles'   => $roles->editMetadata(),
                 ],
             ],
         ];
 
         $this->request = $request;
 
+        // Get the API Route that was called from the request
+        $this->route = $this->getRouteFromRequest();
+
         $this->authorize();
 
-        $this->route = $this->getRouteFromRequest();
+        // Serve the Request
         $this->serveRequest();
+    }
+
+    private function getEndpoint(): ApiEndpoint
+    {
+        $requestMethod = $this->request->getRequestMethod();
+        return new ApiEndpoint($this->endpoints, $this->route, $requestMethod);
     }
 
     /**
@@ -152,14 +154,26 @@ class CodecheckApiHandler
             return;
         }
 
-        $user      = $this->request->getUser() ?? null;
-        $contextId = $this->request->getContext()->getId();
+        $user        = $this->request->getUser() ?? null;
+        $contextId   = $this->request->getContext()->getId();
+        $apiEndpoint = $this->getEndpoint();
+        $codecheckRole = $apiEndpoint->getRoles();
 
-        if (!($user && $user->hasRole($this->roles, $contextId))) {
-            $this->response->response([
+        try {
+            $pkpRoles = $codecheckRole->getRoles();
+
+            if (!($user && $user->hasRole($pkpRoles, $contextId))) {
+                JsonResponse::staticResponse([
+                    'success' => false,
+                    'error'   => "User has no assigned Role or doesn't have the right roles assigned to access this resource",
+                ], 400);
+                return;
+            }
+        } catch (RoleNotFoundException $roleNotFoundException) {
+            JsonResponse::staticResponse([
                 'success' => false,
-                'error'   => "User has no assigned Role or doesn't have the right roles assigned to access this resource",
-            ], 400);
+                'error'   => $roleNotFoundException->getMessage(),
+            ], $roleNotFoundException->getCode());
             return;
         }
     }
@@ -180,14 +194,13 @@ class CodecheckApiHandler
      */
     private function serveRequest(): void
     {
-        $method = $this->request->getRequestMethod();
+        $requestMethod = $this->request->getRequestMethod();
 
-        foreach ($this->endpoints[$method] as $endpoint) {
-            if ($this->route == $endpoint['route']) {
-                call_user_func($endpoint['handler']);
-                return;
-            }
-        }
+        CodecheckLogger::debug('Method: ' . $requestMethod);
+
+        $apiEndpoint = $this->getEndpoint();
+
+        call_user_func($apiEndpoint->getHandler());
     }
 
     /**
@@ -334,41 +347,14 @@ class CodecheckApiHandler
     {
         $submissionId = $this->codecheckMetadataHandler->getSubmissionId();
 
-        $submission = Repo::submission()->get($submissionId);
-        if (!$submission) {
-            $this->response->response(['success' => false, 'error' => 'Submission not found'], 404);
+        $result = $this->codecheckMetadataHandler->getMetadata($submissionId);
+
+        if (isset($result['error'])) {
+            JsonResponse::staticResponse(array_merge($result, ['success' => false, 'submissionID' => $submissionId]), 404);
             return;
         }
 
-        $publication = $submission->getCurrentPublication();
-        $metadata    = DB::table('codecheck_metadata')->where('submission_id', $submissionId)->first();
-
-        $this->response->response([
-            'submissionId' => $submissionId,
-            'submission'   => [
-                'id'                        => $submission->getId(),
-                'title'                     => $publication ? $publication->getLocalizedTitle() : '',
-                'authors'                   => $this->codecheckMetadataHandler->getAuthors($publication),
-                'doi'                       => $publication ? $publication->getStoredPubId('doi') : null,
-                'codeRepository'            => $submission->getData('codeRepository'),
-                'dataRepository'            => $submission->getData('dataRepository'),
-                'manifestFiles'             => $submission->getData('manifestFiles'),
-                'dataAvailabilityStatement' => $submission->getData('dataAvailabilityStatement'),
-            ],
-            'codecheck' => $metadata ? [
-                'version'           => $metadata->version ?? 'latest',
-                'publicationType'   => $metadata->publication_type ?? 'doi',
-                'manifest'          => json_decode($metadata->manifest ?? '[]', true),
-                'repository'        => $metadata->repository,
-                'codecheckers'      => json_decode($metadata->codecheckers ?? '[]', true),
-                'source'            => $metadata->source,
-                'certificate'       => $metadata->certificate,
-                'check_time'        => $metadata->check_time,
-                'summary'           => $metadata->summary,
-                'report'            => $metadata->report,
-                'additionalContent' => $metadata->additional_content,
-            ] : null,
-        ], 200);
+        JsonResponse::staticResponse(array_merge($result, ['success' => true]), 200);
     }
 
     /**
@@ -378,49 +364,14 @@ class CodecheckApiHandler
     {
         $submissionId = $this->codecheckMetadataHandler->getSubmissionId();
 
-        $submission = Repo::submission()->get($submissionId);
-        if (!$submission) {
-            $this->response->response(['success' => false, 'error' => 'Submission not found'], 404);
+        $result = $this->codecheckMetadataHandler->saveMetadata($submissionId);
+
+        if (isset($result['error'])) {
+            JsonResponse::staticResponse(array_merge($result, ['success' => false, 'submissionID' => $submissionId]), 404);
             return;
         }
 
-        $data = json_decode(file_get_contents('php://input'), true);
-
-        $nullIfEmpty = function ($value) {
-            return (is_string($value) && trim($value) === '') ? null : $value;
-        };
-
-        $metadataData = [
-            'submission_id'      => $submissionId,
-            'version'            => $data['version'] ?? 'latest',
-            'publication_type'   => $data['publication_type'] ?? 'doi',
-            'manifest'           => json_encode($data['manifest'] ?? []),
-            'repository'         => $nullIfEmpty($data['repository'] ?? null),
-            'source'             => $nullIfEmpty($data['source'] ?? null),
-            'codecheckers'       => json_encode($data['codecheckers'] ?? []),
-            'certificate'        => $nullIfEmpty($data['certificate'] ?? null),
-            'check_time'         => $nullIfEmpty($data['check_time'] ?? null),
-            'summary'            => $nullIfEmpty($data['summary'] ?? null),
-            'report'             => $nullIfEmpty($data['report'] ?? null),
-            'additional_content' => $nullIfEmpty($data['additional_content'] ?? null),
-            'updated_at'         => date('Y-m-d H:i:s'),
-        ];
-
-        $exists = DB::table('codecheck_metadata')->where('submission_id', $submissionId)->exists();
-
-        if ($exists) {
-            DB::table('codecheck_metadata')->where('submission_id', $submissionId)->update($metadataData);
-        } else {
-            $metadataData['created_at'] = date('Y-m-d H:i:s');
-            DB::table('codecheck_metadata')->insert($metadataData);
-        }
-
-        $this->response->response([
-            'success'      => true,
-            'message'      => 'CODECHECK metadata saved successfully',
-            'submissionID' => $submissionId,
-            'certificate'  => $metadataData['certificate'],
-        ], 200);
+        JsonResponse::staticResponse(array_merge($result, ['success' => true]), 200);
     }
 
     /**
@@ -514,28 +465,15 @@ class CodecheckApiHandler
     public function generateYaml(): void
     {
         $submissionId = $this->codecheckMetadataHandler->getSubmissionId();
-        $submission   = Repo::submission()->get($submissionId);
 
-        if (!$submission) {
-            $this->response->response(['success' => false, 'error' => 'Submission not found', 'submissionID' => $submissionId], 404);
+        $result = $this->codecheckMetadataHandler->generateYaml($submissionId);
+
+        if (isset($result['error'])) {
+            JsonResponse::staticResponse(array_merge($result, ['success' => false, 'submissionID' => $submissionId]), 404);
             return;
         }
 
-        $publication = $submission->getCurrentPublication();
-        $metadata    = DB::table('codecheck_metadata')->where('submission_id', $submissionId)->first();
-
-        if (!$metadata) {
-            $this->response->response(['success' => false, 'error' => 'No CODECHECK metadata found', 'submissionID' => $submissionId], 404);
-            return;
-        }
-
-        $yaml = $this->codecheckMetadataHandler->buildYaml($publication, $metadata);
-
-        $this->response->response([
-            'success'  => true,
-            'yaml'     => $yaml,
-            'filename' => 'codecheck.yml',
-        ], 200);
+        JsonResponse::staticResponse(array_merge($result, ['success' => true]), 200);
     }
 
     /**

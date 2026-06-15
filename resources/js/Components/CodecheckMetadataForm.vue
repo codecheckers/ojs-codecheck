@@ -498,11 +498,11 @@ export default {
           }
         });
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
         const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(`[HTTP ${response.status}] ${data.error}`);
+        }
         
         this.submissionData = {
           id: data.submission?.id || submissionId,
@@ -810,15 +810,17 @@ export default {
           body: JSON.stringify(dataToSave)
         });
 
-        if (!response.ok) {
-          throw new Error('Failed to save');
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(`[HTTP ${response.status}] ${data.error}`);
         }
 
         this.hasUnsavedChanges = false;
         this.showMessage(this.t('plugins.generic.codecheck.savedSuccessfully'), 'success');
       } catch (error) {
         console.error('Save error:', error);
-        this.showMessage(this.t('plugins.generic.codecheck.saveFailed'), 'error');
+        this.showMessage(this.t('plugins.generic.codecheck.saveFailed') + ': ' + error.message, 'error');
       } finally {
         this.saving = false;
       }

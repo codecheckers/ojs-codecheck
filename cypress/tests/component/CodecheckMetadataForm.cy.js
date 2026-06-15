@@ -7,6 +7,7 @@ describe('CodecheckMetadataForm Component', () => {
     cy.intercept('GET', '**/codecheck/metadata*', {
       statusCode: 200,
       body: {
+        success: true,
         submissionId: 1,
         submission: {
           id: 1,
