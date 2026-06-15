@@ -19,16 +19,11 @@ use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifie
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckVenue;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckYamlValidator;
-<<<<<<< HEAD
 use APP\plugins\generic\codecheck\classes\Orcid\OrcidApiClient;
 use APP\plugins\generic\codecheck\classes\Orcid\OrcidTokenDAO;
 use APP\plugins\generic\codecheck\classes\Orcid\OrcidDepositService;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
-=======
-use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
-use APP\plugins\generic\codecheck\classes\Constants;
->>>>>>> origin/main
 use APP\plugins\generic\codecheck\CodecheckPlugin;
 
 use APP\facades\Repo;
@@ -54,14 +49,6 @@ class CodecheckApiHandler
     public function __construct(CodecheckPlugin $plugin, Request $request)
     {
         $this->plugin = $plugin;
-<<<<<<< HEAD
-=======
-
-        $this->response = new JsonResponse([
-            'success' => false,
-            'error' => 'No API Response was created.',
-        ], 500);
->>>>>>> origin/main
 
         $this->response = new JsonResponse();
 
@@ -195,11 +182,6 @@ class CodecheckApiHandler
     {
         $method = $this->request->getRequestMethod();
 
-<<<<<<< HEAD
-=======
-        CodecheckLogger::debug('Method: ' . $method);
-
->>>>>>> origin/main
         foreach ($this->endpoints[$method] as $endpoint) {
             if ($this->route == $endpoint['route']) {
                 call_user_func($endpoint['handler']);
@@ -233,7 +215,6 @@ class CodecheckApiHandler
             return;
         }
 
-<<<<<<< HEAD
         $context            = $this->request->getContext();
         $githubCustomLabels = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_CUSTOM_LABELS);
 
@@ -241,17 +222,6 @@ class CodecheckApiHandler
             'success'      => true,
             'venueTypes'   => $codecheckVenueTypes->get()->toArray(),
             'venueNames'   => $codecheckVenueNames->get()->toArray(),
-=======
-        // get the github custom labels specified in the plugin settings form
-        $context = $this->request->getContext();
-        $githubCustomLabels = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_CUSTOM_LABELS);
-
-        // Serve the getVenueData API route
-        JsonResponse::staticResponse([
-            'success' => true,
-            'venueTypes' => $codecheckVenueTypes->get()->toArray(),
-            'venueNames' => $codecheckVenueNames->get()->toArray(),
->>>>>>> origin/main
             'customLabels' => $githubCustomLabels,
         ], 200);
     }
@@ -261,7 +231,6 @@ class CodecheckApiHandler
      */
     public function reserveIdentifier(): void
     {
-<<<<<<< HEAD
         $postParams   = json_decode(file_get_contents('php://input'), true);
         $venueType    = $postParams["venueType"];
         $venueName    = $postParams["venueName"];
@@ -287,42 +256,6 @@ class CodecheckApiHandler
                 $context,
             );
 
-=======
-        $postParams = json_decode(file_get_contents('php://input'), true);
-        $venueType = $postParams["venueType"];
-        $venueName = $postParams["venueName"];
-        $customLabels = $postParams["customLabels"];
-        $authorString = $postParams["authorString"];
-
-        // get the github Register Repository specified in the plugin settings form
-        $context = $this->request->getContext();
-        $githubPersonalAccessToken = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN);
-        $githubRegisterOrganization = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION);
-        $githubRegisterRepository = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY);
-        $isAuthorStringEnabled = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_AUTHOR_ANONYMITY);
-
-        error_log("[Codecheck Api Handler] GitHub Register Repository specified in the Settings form: " . $githubRegisterRepository);
-
-        // if Authors should be Anonymous/ if no Author string was given, set it to null
-        if(!$isAuthorStringEnabled || !is_string($authorString)) {
-            $authorString = null;
-        }
-
-        // check if they are of type string (If not return success false over the API)
-        if(is_string($venueType) && is_string($venueName) && is_array($customLabels)) {
-            // CODECHECK GitHub Issue Register API parser
-            $codecheckGithubRegisterApiClient = new CodecheckGithubRegisterApiClient(
-                $githubPersonalAccessToken, // The GitHub PAT (classic) needed to access the Register Repository
-                $githubRegisterOrganization, // The organization owning the GitHub Register Repository
-                $githubRegisterRepository, // Name of the GitHub Repository for the Register
-                $this->codecheckMetadataHandler->getSubmissionId(), // Submission ID
-                $context, // The Journal Object of the Submission
-            );
-
-            CodecheckLogger::debug(print_r($this->request->getContext(), true));
-
-            // CODECHECK Register with list of all identifiers in range
->>>>>>> origin/main
             try {
                 $certificateIdentifierList = CertificateIdentifierList::fromApi($codecheckGithubRegisterApiClient);
             } catch (ApiFetchException $ae) {
@@ -498,13 +431,6 @@ class CodecheckApiHandler
         $submissionId = $this->codecheckMetadataHandler->getSubmissionId();
         $submission   = Repo::submission()->get($submissionId);
 
-<<<<<<< HEAD
-=======
-        CodecheckLogger::info('Upload file for submission: ' . $submissionId);
-        
-        $submission = Repo::submission()->get($submissionId);
-        
->>>>>>> origin/main
         if (!$submission) {
             $this->response->response(['success' => false, 'error' => 'Submission not found', 'submissionID' => $submissionId], 400);
             return;
@@ -517,26 +443,13 @@ class CodecheckApiHandler
 
         $file = $_FILES['file'];
 
-<<<<<<< HEAD
-=======
-        CodecheckLogger::debug('File: ' . $file['name']);
-        
-        // Validate file
->>>>>>> origin/main
         if ($file['error'] !== UPLOAD_ERR_OK) {
             $this->response->response(['success' => false, 'error' => 'Upload error: ' . $file['error']], 400);
             return;
         }
 
-<<<<<<< HEAD
         $context   = $this->request->getContext();
         $basePath  = \PKP\core\Core::getBaseDir();
-=======
-        // Create directory for codecheck files
-        $context = $this->request->getContext();
-        CodecheckLogger::debug('Request Context ID: ' . $context->getId());
-        $basePath = \PKP\core\Core::getBaseDir();
->>>>>>> origin/main
         $uploadDir = $basePath . '/files/journals/' . $context->getId() . '/codecheck/' . $submissionId;
 
         if (!file_exists($uploadDir) && !mkdir($uploadDir, 0755, true)) {
@@ -544,7 +457,6 @@ class CodecheckApiHandler
             return;
         }
 
-<<<<<<< HEAD
         $originalName = basename($file['name']);
         $filename     = time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $originalName);
         $filepath     = $uploadDir . '/' . $filename;
@@ -553,9 +465,6 @@ class CodecheckApiHandler
             $this->response->response(['success' => false, 'error' => 'Failed to save file'], 500);
             return;
         }
-=======
-        CodecheckLogger::info('File saved: ' . $filepath);
->>>>>>> origin/main
 
         $relativePath = 'files/journals/' . $context->getId() . '/codecheck/' . $submissionId . '/' . $filename;
 
@@ -581,14 +490,7 @@ class CodecheckApiHandler
 
         $basePath = \PKP\core\Core::getBaseDir();
         $fullPath = $basePath . '/' . $filePath;
-<<<<<<< HEAD
 
-=======
-        
-        CodecheckLogger::info('Download request: ' . $fullPath);
-        
-        // Security: ensure file is in codecheck directory
->>>>>>> origin/main
         if (strpos($filePath, 'codecheck') === false || !file_exists($fullPath)) {
             $this->response->response(['success' => false, 'error' => 'File not found'], 404);
             return;
@@ -649,7 +551,6 @@ class CodecheckApiHandler
         try {
             $yamlValidator->validateYaml();
         } catch (\Throwable $e) {
-<<<<<<< HEAD
             CodecheckLogger::error('YAML parse exception: ' . $e->getMessage());
             $this->response->response(['success' => false, 'error' => $e->getMessage()], $e->getCode());
             return;
@@ -657,17 +558,6 @@ class CodecheckApiHandler
 
         $this->response->response(['success' => true], 200);
     }
-=======
-            CodecheckLogger::error('YAML Parse Exception: ' . $e->getMessage());
-
-            JsonResponse::staticResponse([
-                'success' => false,
-                'error' => $e->getMessage(),
-            ], $e->getCode());
-        }
-
-        CodecheckLogger::info('The generated YAML content is structurally valid');
->>>>>>> origin/main
 
     /**
      * GET api/v1/codecheck/orcid-status?submissionId=XX
@@ -796,7 +686,6 @@ class CodecheckApiHandler
         $context   = $this->request->getContext();
         $contextId = $context->getId();
 
-        // Step 1: validate journal metadata
         try {
             $depositService = new OrcidDepositService($this->plugin);
             $depositService->getValidatedJournalInfo($contextId);
@@ -809,7 +698,6 @@ class CodecheckApiHandler
             return;
         }
 
-        // Step 2: verify credentials with a dry-run token request
         $clientId     = $this->plugin->getSetting($contextId, Constants::ORCID_CLIENT_ID);
         $clientSecret = $this->plugin->getSetting($contextId, Constants::ORCID_CLIENT_SECRET);
         $apiType      = $this->plugin->getSetting($contextId, Constants::ORCID_API_TYPE)
