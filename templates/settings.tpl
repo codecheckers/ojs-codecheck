@@ -13,6 +13,14 @@
 	{rdelim});
 </script>
 
+<style>
+	.badge-options { display: flex; flex-direction: column; gap: 0.50rem; margin-top: 0.5rem; }
+	.badge-option { display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer; }
+	.badge-option input[type="radio"] { margin-top: 3px; flex-shrink: 0; }
+	.badge-options label { font-weight: normal; font-size: 0.9rem; }
+	.badge-hint { display: block; font-size: 12px; color: #666; font-style: italic; margin-top: 2px; }
+</style>
+
 {literal}
 <script>
 	$(function () {
@@ -70,6 +78,12 @@
 			);
 		});
 	});
+	
+	function toggleCustomBadgeUrl() {
+		var selected = document.querySelector('input[name="codecheckBadgeType"]:checked');
+		var section = document.getElementById('customBadgeUrlSection');
+		section.style.display = (selected && selected.value === 'custom') ? 'block' : 'none';
+	}
 </script>
 {/literal}
 
@@ -236,5 +250,57 @@
 		{* - Email template settings *}
 		
 	{/fbvFormArea}
+
+	{* Badge / Logo setting *}
+	{fbvFormSection list=true}
+		<div class="field-header">
+			<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.badge.title"}</label>
+		</div>
+		<p class="description">{translate key="plugins.generic.codecheck.settings.badge.description"}</p>
+
+		<div class="badge-options">
+			<div class="badge-option">
+				<input type="radio" id="badgeCodeworks" name="codecheckBadgeType" value="codeworks"
+					{if $codecheckBadgeType == 'codeworks' || !$codecheckBadgeType}checked{/if}
+					onchange="toggleCustomBadgeUrl()" />
+				<label for="badgeCodeworks">{translate key="plugins.generic.codecheck.settings.badge.codeworks"}</label>
+			</div>
+
+			<div class="badge-option">
+				<input type="radio" id="badgeCodecheckLogo" name="codecheckBadgeType" value="codecheck_logo"
+					{if $codecheckBadgeType == 'codecheck_logo'}checked{/if}
+					onchange="toggleCustomBadgeUrl()" />
+				<label for="badgeCodecheckLogo">{translate key="plugins.generic.codecheck.settings.badge.codecheck_logo"}</label>
+			</div>
+
+			<div class="badge-option">
+				<input type="radio" id="badgeCustom" name="codecheckBadgeType" value="custom"
+					{if $codecheckBadgeType == 'custom'}checked{/if}
+					onchange="toggleCustomBadgeUrl()" />
+				<div>
+					<label for="badgeCustom">{translate key="plugins.generic.codecheck.settings.badge.custom"}</label>
+					<span class="badge-hint">{translate key="plugins.generic.codecheck.settings.badge.custom.hint"}</span>
+				</div>
+			</div>
+
+			<div class="badge-option">
+				<input type="radio" id="badgeNone" name="codecheckBadgeType" value="none"
+					{if $codecheckBadgeType == 'none'}checked{/if}
+					onchange="toggleCustomBadgeUrl()" />
+				<label for="badgeNone">{translate key="plugins.generic.codecheck.settings.badge.none"}</label>
+			</div>
+		</div>
+
+		<div id="customBadgeUrlSection" style="{if $codecheckBadgeType == 'custom'}display:block{else}display:none{/if}; margin-top:0.75rem;">
+			<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.badge.custom.url.label"}</label>
+			<input
+				type="url"
+				name="codecheckBadgeCustomUrl"
+				class="pkpFormField__input"
+				value="{$codecheckBadgeCustomUrl|escape}"
+				placeholder="https://example.com/your-badge.png"
+			/>
+		</div>
+	{/fbvFormSection}
 	{fbvFormButtons submitText="common.save"}
 </form>

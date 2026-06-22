@@ -582,3 +582,30 @@ msgstr "Code verification is currently in progress."
 
 msgid "plugins.generic.codecheck.additionalContent.frontendLabel"
 msgstr "Additional information"
+
+msgid "plugins.generic.codecheck.settings.badge.title"
+msgstr "Badge / Logo"
+
+msgid "plugins.generic.codecheck.settings.badge.description"
+msgstr "Choose the image displayed as the CODECHECK badge on the article landing page sidebar and in the issue table of contents."
+
+msgid "plugins.generic.codecheck.settings.badge.codeworks"
+msgstr "CODE WORKS badge"
+
+msgid "plugins.generic.codecheck.settings.badge.codecheck_logo"
+msgstr "CODECHECK logo"
+
+msgid "plugins.generic.codecheck.settings.badge.custom"
+msgstr "Own image (custom URL)"
+
+msgid "plugins.generic.codecheck.settings.badge.custom.hint"
+msgstr "Enter a URL to your hosted image. Recommended: approx. 134×24px. The same image is used on the article landing page sidebar and the issue table of contents."
+
+msgid "plugins.generic.codecheck.settings.badge.custom.url.label"
+msgstr "Custom badge URL"
+
+msgid "plugins.generic.codecheck.settings.badge.none"
+msgstr "No badge (text only)"
+
+msgid "plugins.generic.codecheck.badge.textOnly"
+msgstr "CODECHECK"

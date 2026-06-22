@@ -126,6 +126,16 @@ class SettingsForm extends Form
             ) ?? []
         );
 
+        $this->setData(
+            Constants::CODECHECK_BADGE_TYPE,
+            $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_TYPE) ?? 'codeworks'
+        );
+
+        $this->setData(
+            Constants::CODECHECK_BADGE_CUSTOM_URL,
+            $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_CUSTOM_URL)
+        );
+
         parent::initData();
     }
 
@@ -144,6 +154,8 @@ class SettingsForm extends Form
             Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION,
             Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY,
             Constants::CODECHECK_GITHUB_CUSTOM_LABELS,
+            Constants::CODECHECK_BADGE_TYPE,
+            Constants::CODECHECK_BADGE_CUSTOM_URL,
         ]);
 
         parent::readInputData();
@@ -169,6 +181,8 @@ class SettingsForm extends Form
             'opt-out' => __('plugins.generic.codecheck.settings.mode.opt.out'),
             'mandatory' => __('plugins.generic.codecheck.settings.mode.mandatory'),
         ]);
+        $templateMgr->assign('codecheckBadgeType', $this->getData(Constants::CODECHECK_BADGE_TYPE) ?? 'codeworks');
+        $templateMgr->assign('codecheckBadgeCustomUrl', $this->getData(Constants::CODECHECK_BADGE_CUSTOM_URL) ?? '');
 
         return parent::fetch($request, $template, $display);
     }
@@ -239,6 +253,18 @@ class SettingsForm extends Form
                 (array) $this->getData(Constants::CODECHECK_GITHUB_CUSTOM_LABELS),
                 fn ($label) => !empty($label)
             ))
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_BADGE_TYPE,
+            $this->getData(Constants::CODECHECK_BADGE_TYPE) ?? 'codeworks'
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_BADGE_CUSTOM_URL,
+            $this->getData(Constants::CODECHECK_BADGE_CUSTOM_URL)
         );
 
         $notificationMgr = new NotificationManager();

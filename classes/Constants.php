@@ -35,4 +35,6 @@ class Constants
     public const CODECHECK_GITHUB_REGISTER_REPOSITORY = 'githubRegisterRepository';
     public const CODECHECK_GITHUB_CUSTOM_LABELS = 'githubCustomLabels';
     public const CODECHECK_MODE = 'codecheckMode';
+    public const CODECHECK_BADGE_TYPE = 'codecheckBadgeType';
+    public const CODECHECK_BADGE_CUSTOM_URL = 'codecheckBadgeCustomUrl';
 }

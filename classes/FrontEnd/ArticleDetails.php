@@ -80,25 +80,29 @@ class ArticleDetails
     private function generateSidebarDisplay(CodecheckSubmission $codecheckData, $templateMgr, $article): string
     {
         $request = Application::get()->getRequest();
+        $context = $request->getContext();
+        $badgeType = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_TYPE) ?? 'codeworks';
+        $badgeStyle = $badgeType === 'codecheck_logo' ? 'height:36px; width:auto;' : 'height:18px; width:auto;';
 
         $templateMgr->assign([
-            'logoUrl'    => $request->getBaseUrl() . '/' . $this->plugin->getPluginPath() . '/assets/img/codeworks-badge.png',
+            'logoUrl'      => $this->getBadgeUrl(),
+            'badgeStyle'   => $badgeStyle,
             'orcidIconUrl' => $request->getBaseUrl() . '/' . $this->plugin->getPluginPath() . '/assets/img/orcid.svg',
-            'articleId'  => $article->getId(),
+            'articleId'    => $article->getId(),
         ]);
 
         if ($codecheckData->hasCompletedCheck()) {
             $templateMgr->assign([
-                'codecheckStatus'  => 'completed',
-                'certificateLink'  => $codecheckData->getCertificateLink(),
-                'doiLink'          => $codecheckData->getDoiLink(),
-                'linkText'         => $codecheckData->getCertificate(),
-                'codecheckers'     => $codecheckData->getCodecheckers(),
-                'certificateDate'  => $codecheckData->getCertificateDate(),
-                'summary'          => $codecheckData->getSummary(),
-                'repository'       => $codecheckData->getRepository(),
-                'manifest'         => $codecheckData->getManifest(),
-                'additionalContent'=> $codecheckData->getAdditionalContent(),
+                'codecheckStatus'   => 'completed',
+                'certificateLink'   => $codecheckData->getCertificateLink(),
+                'doiLink'           => $codecheckData->getDoiLink(),
+                'linkText'          => $codecheckData->getCertificate(),
+                'codecheckers'      => $codecheckData->getCodecheckers(),
+                'certificateDate'   => $codecheckData->getCertificateDate(),
+                'summary'           => $codecheckData->getSummary(),
+                'repository'        => $codecheckData->getRepository(),
+                'manifest'          => $codecheckData->getManifest(),
+                'additionalContent' => $codecheckData->getAdditionalContent(),
             ]);
         } elseif ($codecheckData->hasAssignedChecker()) {
             $templateMgr->assign([
@@ -111,5 +115,24 @@ class ArticleDetails
         }
 
         return $templateMgr->fetch($this->plugin->getTemplateResource('frontend/objects/article_codecheck.tpl'));
+    }
+
+    /**
+     * Get the badge image URL based on the journal's badge type setting.
+     *
+     * @return string|null The URL to the badge image, or null if badge type is 'none' (text only).
+     */
+    private function getBadgeUrl(): ?string
+    {
+        $context = Application::get()->getRequest()->getContext();
+        $badgeType = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_TYPE) ?? 'codeworks';
+        $base = Application::get()->getRequest()->getBaseUrl() . '/' . $this->plugin->getPluginPath();
+
+        return match ($badgeType) {
+            'codecheck_logo' => $base . '/assets/img/codecheck_logo.svg',
+            'custom'         => $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_CUSTOM_URL) ?: null,
+            'none'           => null,
+            default          => $base . '/assets/img/codeworks-badge.png',
+        };
     }
 }
