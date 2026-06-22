@@ -94,6 +94,7 @@
   "plugins.generic.codecheck.repositories.removeConfirm",
   "plugins.generic.codecheck.repositories.title",
   "plugins.generic.codecheck.repository.addButton",
+  "plugins.generic.codecheck.repository.markAsPrivate",
   "plugins.generic.codecheck.repository.placeholder",
   "plugins.generic.codecheck.repository.validation.invalid",
   "plugins.generic.codecheck.repository.validation.protocol",

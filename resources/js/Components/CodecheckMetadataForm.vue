@@ -171,10 +171,14 @@
             <div v-for="(repo, index) in repositories" :key="'repo-' + index" class="repository-item">
               <input
                 type="url"
-                v-model="repositories[index]"
+                v-model="repo.url"
                 class="pkpFormField__input"
                 :placeholder="t('plugins.generic.codecheck.repository.placeholder')"
               />
+              <label class="repo-private-label">
+                <input type="checkbox" v-model="repo.isPrivate" class="repo-private-checkbox" />
+                {{ t('plugins.generic.codecheck.repository.markAsPrivate') }}
+              </label>
               <button
                 type="button"
                 class="pkpButton btn-add"
@@ -534,7 +538,16 @@ export default {
           };
           
           if (data.codecheck.repository) {
-            this.repositories = data.codecheck.repository.split(',').map(r => r.trim()).filter(r => r);
+            try {
+              const parsed = JSON.parse(data.codecheck.repository);
+              // New format: array of {url, isPrivate} objects
+              this.repositories = Array.isArray(parsed)
+                ? parsed
+                : data.codecheck.repository.split(',').map(r => ({ url: r.trim(), isPrivate: false })).filter(r => r.url);
+            } catch {
+              // Backward compat: old plain comma-separated string
+              this.repositories = data.codecheck.repository.split(',').map(r => ({ url: r.trim(), isPrivate: false })).filter(r => r.url);
+            }
           }
         }
         
@@ -553,7 +566,7 @@ export default {
     },
 
     async loadMetadataFromRepository(repo_index) {
-      let repository = this.repositories[repo_index];
+      let repository = this.repositories[repo_index].url;
       console.log(repository);
       let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
 
@@ -637,7 +650,7 @@ export default {
     },
 
     addRepository() {
-      this.repositories.push('');
+      this.repositories.push({ url: '', isPrivate: false });
     },
 
     removeRepository(index) {
@@ -784,7 +797,7 @@ export default {
           version: this.metadata.version,
           publication_type: this.metadata.publicationType,
           manifest: this.metadata.manifest,
-          repository: this.repositories.join(', '),
+          repository: JSON.stringify(this.repositories),
           source: this.metadata.source,
           codecheckers: this.metadata.codecheckers,
           certificate: this.metadata.certificate,
@@ -1536,6 +1549,23 @@ export default {
 
 .codecheck-metadata-form .repository-item input {
   flex: 1;
+}
+
+.codecheck-metadata-form .repo-private-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 13px;
+  color: #555;
+  white-space: nowrap;
+  cursor: pointer;
+  font-weight: normal;
+  margin-bottom: 0;
+}
+
+.codecheck-metadata-form .repo-private-checkbox {
+  margin: 0;
+  cursor: pointer;
 }
 
 .codecheck-metadata-form .form-footer {

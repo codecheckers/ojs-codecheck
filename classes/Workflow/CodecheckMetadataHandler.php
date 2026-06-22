@@ -237,7 +237,23 @@ class CodecheckMetadataHandler
 
         // Repository
         if ($metadata->repository) {
-            $data['repository'] = $metadata->repository;
+            $repos = json_decode($metadata->repository, true);
+            if (is_array($repos)) {
+                // New format: [{url: '...', isPrivate: bool}, ...]
+                $publicUrls = array_values(array_map(
+                    fn($r) => $r['url'] ?? '',
+                    array_filter($repos, fn($r) => empty($r['isPrivate']))
+                ));
+                $publicUrls = array_filter($publicUrls); // drop empty strings
+                if (!empty($publicUrls)) {
+                    $data['repository'] = count($publicUrls) === 1
+                        ? array_values($publicUrls)[0]
+                        : implode(', ', $publicUrls);
+                }
+            } else {
+                // Old format: plain comma-separated string — no privacy info, include as-is
+                $data['repository'] = $metadata->repository;
+            }
         }
 
         // Check time

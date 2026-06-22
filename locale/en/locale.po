@@ -582,3 +582,6 @@ msgstr "Code verification is currently in progress."
 
 msgid "plugins.generic.codecheck.additionalContent.frontendLabel"
 msgstr "Additional information"
+
+msgid "plugins.generic.codecheck.repository.markAsPrivate"
+msgstr "Do not share publicly"
