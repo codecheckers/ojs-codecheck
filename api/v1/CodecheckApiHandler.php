@@ -64,19 +64,19 @@ class CodecheckApiHandler
                     'roles' => $roles->editMetadata(),
                 ],
                 [
-                    'route' => 'metadata',
+                    'route'   => 'metadata',
                     'handler' => [$this, 'getMetadata'],
-                    'roles' => $roles->readMetadata(),
+                    'roles'   => $roles->readMetadata(),
                 ],
                 [
-                    'route' => 'download',
+                    'route'   => 'download',
                     'handler' => [$this, 'downloadFile'],
-                    'roles' => $roles->readMetadata(),
+                    'roles'   => $roles->readMetadata(),
                 ],
                 [
-                    'route' => 'yaml',
+                    'route'   => 'yaml',
                     'handler' => [$this, 'generateYaml'],
-                    'roles' => $roles->readMetadata(),
+                    'roles'   => $roles->readMetadata(),
                 ],
                 [
                     'route' => 'register',
@@ -94,21 +94,21 @@ class CodecheckApiHandler
                     'roles' => $roles->readMetadata(),
                 ],
                 [
-                    'route' => 'orcid-status',
+                    'route'   => 'orcid-status',
                     'handler' => [$this, 'getOrcidStatus'],
-                    'roles' => $roles->readMetadata(),
+                    'roles'   => $roles->readMetadata(),
                 ],
                 [
-                    'route' => 'orcid-test',
+                    'route'   => 'orcid-test',
                     'handler' => [$this, 'testOrcidSetup'],
-                    'roles' => $roles->admin(),
+                    'roles'   => $roles->admin(),
                 ],
             ],
             'POST' => [
                 [
-                    'route' => 'identifier',
+                    'route'   => 'identifier',
                     'handler' => [$this, 'reserveIdentifier'],
-                    'roles' => $roles->editMetadata(),
+                    'roles'   => $roles->editMetadata(),
                 ],
                 [
                     'route' => 'issue',
@@ -116,24 +116,24 @@ class CodecheckApiHandler
                     'roles' => $roles->editMetadata(),
                 ],
                 [
-                    'route' => 'metadata',
+                    'route'   => 'metadata',
                     'handler' => [$this, 'saveMetadata'],
-                    'roles' => $roles->editMetadata(),
+                    'roles'   => $roles->editMetadata(),
                 ],
                 [
-                    'route' => 'upload',
+                    'route'   => 'upload',
                     'handler' => [$this, 'uploadFile'],
-                    'roles' => $roles->editMetadata(),
+                    'roles'   => $roles->editMetadata(),
                 ],
                 [
-                    'route' => 'repository',
+                    'route'   => 'repository',
                     'handler' => [$this, 'loadMetadataFromRepository'],
-                    'roles' => $roles->editMetadata(),
+                    'roles'   => $roles->editMetadata(),
                 ],
                 [
-                    'route' => 'yaml/validate',
+                    'route'   => 'yaml/validate',
                     'handler' => [$this, 'validateYamlStructure'],
-                    'roles' => $roles->readMetadata(),
+                    'roles'   => $roles->readMetadata(),
                 ],
                 [
                     'route' => 'status/update',
@@ -146,9 +146,9 @@ class CodecheckApiHandler
                     'roles' => $roles->readMetadata(),
                 ],
                 [
-                    'route' => 'orcid-deposit',
+                    'route'   => 'orcid-deposit',
                     'handler' => [$this, 'depositToOrcid'],
-                    'roles' => $roles->editMetadata(),
+                    'roles'   => $roles->editMetadata(),
                 ],
             ],
         ];
@@ -166,7 +166,6 @@ class CodecheckApiHandler
 
     private function getEndpoint(): ApiEndpoint
     {
-        // get the request Method like POST or GET
         $requestMethod = $this->request->getRequestMethod();
 
         CodecheckLogger::debug("API Method: " . $requestMethod);
@@ -197,21 +196,21 @@ class CodecheckApiHandler
         $contextId = $this->request->getContext()->getId();
         $apiEndpoint = $this->getEndpoint();
         $codecheckRole = $apiEndpoint->getRoles();
-        
+
         try {
             $pkpRoles = $codecheckRole->getRoles();
 
             if(!($user && $user->hasRole($pkpRoles, $contextId))) {
                 JsonResponse::staticResponse([
-                    'success'   => false,
-                    'error'     => "User has no assigned Role or doesn't have the right roles assigned to access this resource"
+                    'success' => false,
+                    'error'   => "User has no assigned Role or doesn't have the right roles assigned to access this resource",
                 ], 400);
                 return;
             }
         } catch (RoleNotFoundException $roleNotFoundException) {
             JsonResponse::staticResponse([
-                'success'   => false,
-                'error'     => $roleNotFoundException->getMessage()
+                'success' => false,
+                'error'   => $roleNotFoundException->getMessage(),
             ], $roleNotFoundException->getCode());
             return;
         }
@@ -755,11 +754,12 @@ class CodecheckApiHandler
     public function getMetadata(): void
     {
         $submissionId = $this->codecheckMetadataHandler->getSubmissionId();
+
         $result = $this->codecheckMetadataHandler->getMetadata($this->request, $submissionId);
 
-        if(isset($result['error'])) {
-            $result = array_merge($result, ['success' => false, 'submissionID' => $submissionId]);
-            JsonResponse::staticResponse($result, 404);
+        if (isset($result['error'])) {
+            JsonResponse::staticResponse(array_merge($result, ['success' => false, 'submissionID' => $submissionId]), 404);
+            return;
         }
 
         JsonResponse::staticResponse(array_merge($result, ['success' => true]), 200);
@@ -773,11 +773,12 @@ class CodecheckApiHandler
     public function saveMetadata(): void
     {
         $submissionId = $this->codecheckMetadataHandler->getSubmissionId();
+
         $result = $this->codecheckMetadataHandler->saveMetadata($this->request, $submissionId);
 
-        if(isset($result['error'])) {
-            $result = array_merge($result, ['success' => false, 'submissionID' => $submissionId]);
-            JsonResponse::staticResponse($result, 404);
+        if (isset($result['error'])) {
+            JsonResponse::staticResponse(array_merge($result, ['success' => false, 'submissionID' => $submissionId]), 404);
+            return;
         }
 
         JsonResponse::staticResponse(array_merge($result, ['success' => true]), 200);
@@ -926,11 +927,12 @@ class CodecheckApiHandler
     public function generateYaml(): void
     {
         $submissionId = $this->codecheckMetadataHandler->getSubmissionId();
+
         $result = $this->codecheckMetadataHandler->generateYaml($this->request, $submissionId);
 
-        if(isset($result['error'])) {
-            $result = array_merge($result, ['success' => false, 'submissionID' => $submissionId]);
-            JsonResponse::staticResponse($result, 404);
+        if (isset($result['error'])) {
+            JsonResponse::staticResponse(array_merge($result, ['success' => false, 'submissionID' => $submissionId]), 404);
+            return;
         }
 
         JsonResponse::staticResponse(array_merge($result, ['success' => true]), 200);

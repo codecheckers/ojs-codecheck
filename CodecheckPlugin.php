@@ -188,7 +188,6 @@ class CodecheckPlugin extends GenericPlugin
                 admin:         $adminRoles,
             );
 
-            CodecheckLogger::debug('API request: ' . $request->getRequestPath());
             new CodecheckApiHandler($this, $request, $roles);
         }
     }
