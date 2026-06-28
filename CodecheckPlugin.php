@@ -179,8 +179,8 @@ class CodecheckPlugin extends GenericPlugin
             CodecheckLogger::debug('Instantiating the CODECHECK APIHandler');
 
             $adminRoles = new CodecheckRoleArray([Role::ROLE_ID_MANAGER, Role::ROLE_ID_SITE_ADMIN]);
-            $editRoles = new CodecheckRoleArray([$adminRoles, Role::ROLE_ID_SUB_EDITOR, Role::ROLE_ID_ASSISTANT, Role::ROLE_ID_MANAGER]);
-            $readRoles = new CodecheckRoleArray([$editRoles, Role::ROLE_ID_READER, Role::ROLE_ID_AUTHOR, Role::ROLE_ID_REVIEWER]);
+            $editRoles = new CodecheckRoleArray([$adminRoles, Role::ROLE_ID_SUB_EDITOR, Role::ROLE_ID_ASSISTANT, Role::ROLE_ID_MANAGER, Role::ROLE_ID_REVIEWER]);
+            $readRoles = new CodecheckRoleArray([$editRoles, Role::ROLE_ID_READER, Role::ROLE_ID_AUTHOR]);
 
             $roles = new CodecheckRoleManager(
                 readMetadata:  $readRoles,
