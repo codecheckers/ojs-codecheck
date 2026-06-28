@@ -26,6 +26,7 @@
 			}
 		}
 
+		// Initial state
 		updateEmptyState();
 
 		$('#addLabel').on('click', function () {
@@ -104,6 +105,20 @@
 			});
 		});
 	});
+
+	$('.settings-droptown.dropdown').on('mouseenter', function() {
+		const $dropdown = $(this);
+		const $content = $dropdown.find('.dropdown-content');
+		const rect = this.getBoundingClientRect();
+		const contentHeight = $content.outerHeight() || 200;
+		const spaceBelow = window.innerHeight - rect.bottom;
+
+		if (spaceBelow < contentHeight) {
+			$dropdown.addClass('dropdown-up');
+		} else {
+			$dropdown.removeClass('dropdown-up');
+		}
+	});
 </script>
 {/literal}
 
@@ -133,12 +148,15 @@
 	method="POST"
 	action="{url router=$smarty.const.ROUTE_COMPONENT op='manage' category='generic' plugin=$pluginName verb='settings' save=true}"
 >
+	<!-- Always add the csrf token to secure your form -->
 	{csrf}
 
 	{fbvFormArea id="codecheckSettingsArea"}
+		{* CODECHECK Settings Heading *}
 		<h3 class="section-title">{translate key="plugins.generic.codecheck.settings.title"}</h3>
 		<p class="section-description">{translate key="plugins.generic.codecheck.settings.description"}</p>
 		
+		{* Option to enable/ disable CODECHECK *}
 		{fbvFormSection list=true}
 			<div class="field-header">
 				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.enableCodecheck"}</label>
@@ -151,6 +169,20 @@
 			}
 		{/fbvFormSection}
 
+		{* Show CODECHECK column in submissions dashboard *}
+		{fbvFormSection list=true}
+			<div class="field-header">
+				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.showDashboardColumn"}</label>
+			</div>
+			{fbvElement
+				type="checkbox"
+				id="showDashboardColumn"
+				checked=$showDashboardColumn
+				label="plugins.generic.codecheck.settings.showDashboardColumn.description"
+			}
+		{/fbvFormSection}
+
+		{* Setting for different CODECHECK modes *}
 		{fbvFormSection list=true}
 			<div class="field-header">
 				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.mode"}</label>
@@ -165,6 +197,7 @@
 			}
 		{/fbvFormSection}
 
+		{* Clear / Reset CODECHECK Metadata DB *}
 		{fbvFormSection list=true}
 			<div class="field-header">
 				<label class="pkp_form_label">Clear / Reset CODECHECK Metadata Database</label>
@@ -179,6 +212,7 @@
 			</button>
 		{/fbvFormSection}
 		
+		{* Author anonymity option *}
 		{fbvFormSection list=true}
 			<div class="field-header">
 				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.authorAnonymity"}</label>
@@ -191,6 +225,7 @@
 			}
 		{/fbvFormSection}
 
+		{* GitHub Personal Access Token option *}
 		{fbvFormSection list=true}
 			<div class="field-header">
 				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.github.personalAccessToken"}</label>
@@ -206,6 +241,7 @@
 			/>
 		{/fbvFormSection}
 
+		{* Repository connection settings option *}
 		{fbvFormSection list=true}
 			<div class="field-header">
 				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.github.registerRepository"}</label>
@@ -238,6 +274,7 @@
 			</div>
 		{/fbvFormSection}
 
+		{* Add Custom GitHub Labels *}
 		{fbvFormSection}
 			<div class="field-header">
 				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.github.labels"}</label>
@@ -262,6 +299,55 @@
 					</div>
 				{/foreach}
 			</div>
+		{/fbvFormSection}
+
+		{* Select which parts of the codecheck GitHub Issue are updated *}
+		{fbvFormSection list=true}
+			<div class="field-header">
+				<label class="pkp_form_label">Update the GitHub Issue</label>
+			</div>
+			<label class="description">Select which information should be updated in the GitHub Register Issue of the CODECHECK</label>
+			{fbvElement
+				type="checkbox"
+				id="updateTitle"
+				checked=$updateTitle
+				label="plugins.generic.codecheck.settings.updateIssue.title"
+			}
+			{fbvElement
+				type="checkbox"
+				id="updateBody"
+				checked=$updateBody
+				label="plugins.generic.codecheck.settings.updateIssue.body"
+			}
+		{/fbvFormSection}
+
+		{* Block Publication, when CODECHECK has specific status *}
+		{fbvFormSection list=true}
+			<div class="field-header">
+				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.status"}</label>
+			</div>
+			<label class="description">{translate key="plugins.generic.codecheck.settings.status.description"}</label>
+			<fieldset>
+				<div class="settings-droptown dropdown">
+					<button type="button" class="dropbtn">{translate key="plugins.generic.codecheck.settings.status.selectStatuses"} ⚙</button>
+					<div class="dropdown-content">
+						{foreach from=$codecheckStatuses item=statusKey}
+							<div class="dropdown-checkbox-input">
+								<input
+									type="checkbox"
+									name="codecheckStatusKeysSelected[]"
+									id="status-{$statusKey}"
+									value="{$statusKey|escape}"
+									{if $codecheckStatusKeysSelected && in_array($statusKey, $codecheckStatusKeysSelected)}checked{/if}
+								/>
+								<label for="status-{$statusKey}">
+									{translate key=$statusKey}
+								</label>
+							</div>
+						{/foreach}
+					</div>
+				</div>
+			</fieldset>
 		{/fbvFormSection}
 
 		{* ------------------------------------------------------------------ *}

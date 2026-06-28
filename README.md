@@ -293,7 +293,7 @@ $this->endpoints = [
       [
           'route' => 'your endpoint route',
           'handler' => [$this, 'yourFunction'],
-          'roles' => $this->roles,
+          'role' => CodecheckRole::class, // give the `'Role'` property a class that extends CodecheckRole
       ],
   ],
 ];
@@ -314,6 +314,19 @@ private function yourFunction(): void
     ], 200);
 }
 ```
+
+Finally your defined `CodecheckRoleArray` can have the following PKP rules (`PKP\security\Role`):
+
+| Constant                  | Role name                           |
+|---------------------------|-------------------------------------|
+|`Role::ROLE_ID_SITE_ADMIN` | Site Administrator                  |
+|`Role::ROLE_ID_MANAGER`    | Manager	Journal/Press/Server Manager|
+|`Role::ROLE_ID_SUB_EDITOR` | Sub Editor                          |
+|`Role::ROLE_ID_ASSISTANT`  | Editorial assistant / support role  |
+|`Role::ROLE_ID_REVIEWER`   | Reviewer                            |
+|`Role::ROLE_ID_AUTHOR`     | Author                              |
+|`Role::ROLE_ID_READER`     | Reader                              |
+|`Role::ROLE_ID_SUBSCRIPTION_MANAGER` | Subscription Manager      |
 
 ## Running Tests
 

@@ -11,7 +11,15 @@ export default defineConfig({
     },
     specPattern: 'cypress/tests/component/**/*.cy.js',
     supportFile: 'cypress/support/component.js',
-    indexHtmlFile: 'cypress/support/component-index.html'
+    indexHtmlFile: 'cypress/support/component-index.html',
+    setupNodeEvents(on, config) {
+      on('task', {
+        log(message) {
+          console.log(message);
+          return null;
+        }
+      });
+    }
   },
     e2e: {
     // Default: local OJS at port 8888 (common dev setup)

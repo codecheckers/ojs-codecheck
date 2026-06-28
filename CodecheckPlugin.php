@@ -1,6 +1,7 @@
 <?php
 namespace APP\plugins\generic\codecheck;
 
+use PKP\security\Role;
 use APP\core\Application;
 use APP\template\TemplateManager;
 use APP\plugins\generic\codecheck\classes\FrontEnd\ArticleDetails;
@@ -17,9 +18,16 @@ use PKP\plugins\Hook;
 use PKP\components\forms\FieldOptions;
 use APP\facades\Repo;
 use APP\plugins\generic\codecheck\api\v1\CodecheckApiHandler;
+use APP\plugins\generic\codecheck\api\v1\CurlApiClient;
 use PKP\core\JSONMessage;
 use APP\plugins\generic\codecheck\classes\Constants;
+use APP\plugins\generic\codecheck\classes\Workflow\CodecheckStatusHandler;
 use APP\plugins\generic\codecheck\controllers\page\CodecheckPageHandler;
+use APP\plugins\generic\codecheck\classes\CodecheckRoles\CodecheckRoleArray;
+use APP\plugins\generic\codecheck\classes\CodecheckRoles\CodecheckRoleManager;
+use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
+use PKP\core\Request;
+use \Github\Client;
 
 class CodecheckPlugin extends GenericPlugin
 {
@@ -70,11 +78,61 @@ class CodecheckPlugin extends GenericPlugin
 
             // ORCID: automatically deposit when an article is published
             Hook::add('Publication::publish', $this->onPublicationPublish(...));
+            
+            // Test if we can hook into the publication to block it if codecheck failed
+            Hook::add('Publication::validatePublish', $this->validateCodecheckStatus(...));
+
+            // Add Localizations to Codecheck Status Preview
+            Hook::add('TemplateManager::display', $this->addCodecheckStatusLocalizations(...));
         }
 
         return $success;
     }
 
+    public function validateCodecheckStatus(string $hookName, array $args): bool
+    {
+        $errors = &$args[0];
+        $publication = $args[1]; // sometimes passed by reference depending on version
+        $request = Application::get()->getRequest();
+        $context = $request->getContext();
+        $codecheckMetadataHandler = new CodecheckMetadataHandler($request, new Client(), new CurlApiClient());
+        $codecheckStatus = CodecheckStatusHandler::getCurrentStatusData($codecheckMetadataHandler->getSubmissionId());
+
+        CodecheckLogger::debug("Validating CODECHECK before publication!");
+
+        $codecheckStatusKeysSelected = $this->getSetting($context->getId(), Constants::CODECHECK_STATUS_KEYS_SELECTED);
+
+        if (empty($codecheckStatus)) {
+            $errors[] = __('plugins.generic.codecheck.status.validation.failed.noStatusSet');
+            return false;
+        }
+
+        if (!in_array($codecheckStatus->status, $codecheckStatusKeysSelected)) {
+            $errors[] = __('plugins.generic.codecheck.status.validation.failed', [
+                'codecheckStatus' => __($codecheckStatus->status)
+            ]);
+            return false;
+        }
+
+        return true;
+    }
+
+    public function addCodecheckStatusLocalizations($hookName, $args) {
+        $templateMgr = $args[0];
+        $templateMgr->addJavaScript(
+            'codecheck-locale-status',
+            'pkp.localeKeys = pkp.localeKeys || {};' .
+            'Object.assign(pkp.localeKeys, ' . json_encode(
+                array_combine(
+                    Constants::CODECHECK_STATUSES,
+                    array_map(fn($status) => __($status), Constants::CODECHECK_STATUSES)
+                )
+            ) . ');',
+            ['inline' => true, 'contexts' => ['backend']]
+        );
+        return false;
+    }
+    
     /**
      * Triggered when an editor publishes an article.
      */
@@ -118,9 +176,20 @@ class CodecheckPlugin extends GenericPlugin
         if (!($router instanceof \PKP\core\APIRouter)) return;
 
         if (str_contains($request->getRequestPath(), 'api/v1/codecheck')) {
+            CodecheckLogger::debug('Instantiating the CODECHECK APIHandler');
+
+            $adminRoles = new CodecheckRoleArray([Role::ROLE_ID_MANAGER, Role::ROLE_ID_SITE_ADMIN]);
+            $editRoles = new CodecheckRoleArray([$adminRoles, Role::ROLE_ID_SUB_EDITOR, Role::ROLE_ID_ASSISTANT, Role::ROLE_ID_MANAGER]);
+            $readRoles = new CodecheckRoleArray([$editRoles, Role::ROLE_ID_READER, Role::ROLE_ID_AUTHOR, Role::ROLE_ID_REVIEWER]);
+
+            $roles = new CodecheckRoleManager(
+                readMetadata:  $readRoles,
+                editMetadata:  $editRoles,
+                admin:         $adminRoles,
+            );
+
             CodecheckLogger::debug('API request: ' . $request->getRequestPath());
-            new CodecheckApiHandler($this, $request);
-            // Constructor handles the response and exits internally
+            new CodecheckApiHandler($this, $request, $roles);
         }
     }
 
@@ -195,13 +264,31 @@ class CodecheckPlugin extends GenericPlugin
     {
         $templateMgr = $args[0];
         $request = Application::get()->getRequest();
+        $context = $request->getContext();
+        $contextId = $context->getId();
 
         // ----------------------------------------------------------------
-        // Editor workflow page
+        // Editorial dashboard — inject dashboard config for the Vue JS layer.
+        // Passes showDashboardColumn (Issue #30) and codecheckMode so the
+        // CODECHECK status column and opt-in warning box can be controlled.
         // ----------------------------------------------------------------
         if ($request->getRequestedOp() == 'editorial' && $request->getRequestedPage() == 'dashboard') {
-            $context = $request->getContext();
-            $contextId = $context->getId();
+            $showDashboardColumn = $this->getSetting($contextId, Constants::CODECHECK_SHOW_DASHBOARD_COLUMN);
+
+            $dashboardConfig = json_encode([
+                'showDashboardColumn' => $showDashboardColumn === null ? true : (bool) $showDashboardColumn,
+                'codecheckMode'       => $this->getSetting($contextId, Constants::CODECHECK_MODE) ?? 'opt-in',
+            ]);
+
+            $templateMgr->addJavaScript(
+                'codecheck-dashboard-config',
+                'window.codecheckDashboardConfig = ' . $dashboardConfig . ';',
+                [
+                    'inline'   => true,
+                    'contexts' => ['backend'],
+                    'priority' => TemplateManager::STYLE_SEQUENCE_LAST,
+                ]
+            );
 
             $orcidAuthUrl = $request->getBaseUrl() . '/index.php/' . $context->getPath() . '/codecheck/orcid/startAuth';
 
@@ -222,7 +309,12 @@ class CodecheckPlugin extends GenericPlugin
                     'priority' => TemplateManager::STYLE_SEQUENCE_LAST
                 ]
             );
+        }
 
+        // ----------------------------------------------------------------
+        // Workflow page — inject submission data for the CODECHECK tab
+        // ----------------------------------------------------------------
+        if ($request->getRequestedOp() == 'workflow') {
             $submission = $request->getRouter()->getHandler()->getAuthorizedContextObject(ASSOC_TYPE_SUBMISSION);
             if ($submission) {
                 $templateMgr->setState([
@@ -312,7 +404,8 @@ class CodecheckPlugin extends GenericPlugin
             $request = Application::get()->getRequest();
             $context = $request->getContext();
             $codecheckMode = $this->getSetting($context->getId(), Constants::CODECHECK_MODE);
-            $checkboxValue    = false;
+            CodecheckLogger::debug('Mode: ' . $codecheckMode);
+            $checkboxValue = false;
             $checkboxDisabled = false;
             $codecheckDescription = __('plugins.generic.codecheck.optIn.description', [
                 'codecheckLink' => "<a href='{$this->getUrlPageRoute("codecheck")}/info' target='_blank'>" . __('plugins.generic.codecheck.displayName') . "</a>"
@@ -423,11 +516,14 @@ class CodecheckPlugin extends GenericPlugin
 
     public function setEnabled($enabled, $contextId = null)
     {
+        CodecheckLogger::debug("Plugin Enabled!");
         $result = parent::setEnabled($enabled, $contextId);
         
         if ($enabled) {
             $this->migration = new CodecheckSchemaMigration();
             $this->migration->up();
+            $this->migration->issueLabelsUp();
+            $this->migration->codecheckStatusUp();
         }
         
         return $result;
@@ -438,6 +534,8 @@ class CodecheckPlugin extends GenericPlugin
         $this->migration = new CodecheckSchemaMigration();
         $this->migration->down();
         $this->migration->up();
+        $this->migration->issueLabelsDown();
+        $this->migration->issueLabelsUp();
     }
 }
 

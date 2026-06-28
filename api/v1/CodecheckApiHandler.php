@@ -2,11 +2,8 @@
 
 namespace APP\plugins\generic\codecheck\api\v1;
 
-use PKP\security\Role;
 use APP\plugins\generic\codecheck\api\v1\JsonResponse;
 use APP\core\Request;
-use \Github\Client;
-use APP\plugins\generic\codecheck\api\v1\CurlApiClient;
 
 use APP\plugins\generic\codecheck\classes\Exceptions\ApiCreateException;
 use APP\plugins\generic\codecheck\classes\Exceptions\ApiFetchException;
@@ -16,7 +13,7 @@ use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckVenueNames;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifierList;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifier;
-use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckVenue;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterIssue;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckYamlValidator;
 use APP\plugins\generic\codecheck\classes\Orcid\OrcidApiClient;
@@ -25,14 +22,16 @@ use APP\plugins\generic\codecheck\classes\Orcid\OrcidDepositService;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
-
 use APP\facades\Repo;
+use \Github\Client;
+use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitException;
+use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
 use Illuminate\Support\Facades\DB;
 
 class CodecheckApiHandler
 {
     private JsonResponse $response;
-    private array $roles;
+    private CodecheckRoleManager $roles;
     private array $endpoints;
     private string $route;
     private CodecheckPlugin $plugin;
@@ -44,9 +43,10 @@ class CodecheckApiHandler
      *
      * @param CodecheckPlugin $plugin
      * @param Request $request API Request
+     * @param CodecheckRoleManager $roles The CODECHECK roles for `read`, `write` and `standard` access to the API routes
      * @return void
      */
-    public function __construct(CodecheckPlugin $plugin, Request $request)
+    public function __construct(CodecheckPlugin $plugin, Request $request, CodecheckRoleManager $roles)
     {
         $this->plugin = $plugin;
 
@@ -58,31 +58,45 @@ class CodecheckApiHandler
             Role::ROLE_ID_MANAGER,
             Role::ROLE_ID_SUB_EDITOR,
             Role::ROLE_ID_ASSISTANT,
-            Role::ROLE_ID_AUTHOR,
-            Role::ROLE_ID_REVIEWER,
+            Role::ROLE_ID_AUTHOR
         ];
 
         $this->endpoints = [
             'GET' => [
                 [
-                    'route' => 'venue',
-                    'handler' => [$this, 'getVenueData'],
-                    'roles' => $this->roles,
+                    'route' => 'labels',
+                    'handler' => [$this, 'getCodecheckIssueLabels'],
+                    'roles' => $roles->editMetadata(),
                 ],
                 [
                     'route' => 'metadata',
                     'handler' => [$this, 'getMetadata'],
-                    'roles' => $this->roles,
+                    'roles' => $roles->readMetadata(),
                 ],
                 [
                     'route' => 'download',
                     'handler' => [$this, 'downloadFile'],
-                    'roles' => $this->roles,
+                    'roles' => $roles->readMetadata(),
                 ],
                 [
                     'route' => 'yaml',
                     'handler' => [$this, 'generateYaml'],
-                    'roles' => $this->roles,
+                    'roles' => $roles->readMetadata(),
+                ],
+                [
+                    'route' => 'register',
+                    'handler' => [$this, 'getGithubRegisterRepositoryUrl'],
+                    'roles' => $roles->readMetadata(),
+                ],
+                [
+                    'route' => 'status',
+                    'handler' => [$this, 'getCurrentStatus'],
+                    'roles' => $roles->readMetadata(),
+                ],
+                [
+                    'route' => 'status/history',
+                    'handler' => [$this, 'getStatusHistory'],
+                    'roles' => $roles->readMetadata(),
                 ],
                 [
                     'route' => 'orcid-status',
@@ -99,27 +113,42 @@ class CodecheckApiHandler
                 [
                     'route' => 'identifier',
                     'handler' => [$this, 'reserveIdentifier'],
-                    'roles' => $this->roles,
+                    'roles' => $roles->editMetadata(),
+                ],
+                [
+                    'route' => 'issue',
+                    'handler' => [$this, 'updateGithubIssue'],
+                    'roles' => $roles->editMetadata(),
                 ],
                 [
                     'route' => 'metadata',
                     'handler' => [$this, 'saveMetadata'],
-                    'roles' => $this->roles,
+                    'roles' => $roles->editMetadata(),
                 ],
                 [
                     'route' => 'upload',
                     'handler' => [$this, 'uploadFile'],
-                    'roles' => $this->roles,
+                    'roles' => $roles->editMetadata(),
                 ],
                 [
                     'route' => 'repository',
                     'handler' => [$this, 'loadMetadataFromRepository'],
-                    'roles' => $this->roles,
+                    'roles' => $roles->editMetadata(),
                 ],
                 [
                     'route' => 'yaml/validate',
                     'handler' => [$this, 'validateYamlStructure'],
-                    'roles' => $this->roles,
+                    'roles' => $roles->readMetadata(),
+                ],
+                [
+                    'route' => 'status/update',
+                    'handler' => [$this, 'updateStatus'],
+                    'roles' => $roles->editMetadata(),
+                ],
+                [
+                    'route' => 'users/roles/validation',
+                    'handler' => [$this, 'validateUserAccessRightsToStatus'],
+                    'roles' => $roles->readMetadata(),
                 ],
                 [
                     'route' => 'orcid-deposit',
@@ -131,10 +160,19 @@ class CodecheckApiHandler
 
         $this->request = $request;
 
-        $this->authorize();
-
         $this->route = $this->getRouteFromRequest();
+        // Serve the Request
         $this->serveRequest();
+    }
+
+    private function getEndpoint(): ApiEndpoint
+    {
+        // get the request Method like POST or GET
+        $requestMethod = $this->request->getRequestMethod();
+
+        CodecheckLogger::debug("API Method: " . $requestMethod);
+
+        return new ApiEndpoint($this->endpoints, $this->route, $requestMethod);
     }
 
     /**
@@ -155,10 +193,10 @@ class CodecheckApiHandler
         $user      = $this->request->getUser() ?? null;
         $contextId = $this->request->getContext()->getId();
 
-        if (!($user && $user->hasRole($this->roles, $contextId))) {
-            $this->response->response([
-                'success' => false,
-                'error'   => "User has no assigned Role or doesn't have the right roles assigned to access this resource",
+        if(!($user && $user->hasRole($this->roles, $contextId))) {
+            JsonResponse::staticResponse([
+                'success'   => false,
+                'error'     => "User has no assigned Role or doesn't have the right roles assigned to access this resource"
             ], 400);
             return;
         }
@@ -180,10 +218,13 @@ class CodecheckApiHandler
      */
     private function serveRequest(): void
     {
+        // get the request Method like POST or GET
         $method = $this->request->getRequestMethod();
 
+        CodecheckLogger::debug('Method: ' . $method);
+
         foreach ($this->endpoints[$method] as $endpoint) {
-            if ($this->route == $endpoint['route']) {
+            if($this->route == $endpoint['route']) {
                 call_user_func($endpoint['handler']);
                 return;
             }
@@ -191,39 +232,154 @@ class CodecheckApiHandler
     }
 
     /**
-     * Gets Venue Types, Venue Names and custom labels
+     * Gets Venue Types and Venue Names
+     * 
+     * @return void
      */
     private function getVenueData(): void
-    {
+    {   
         try {
             $codecheckVenueTypes = new CodecheckVenueTypes();
-        } catch (ApiFetchException $e) {
-            $this->response->response([
-                'success' => false,
-                'error'   => $e->getMessage(),
+        } catch (\Throwable $e) {
+            JsonResponse::staticResponse([
+                'success'   => false,
+                'error'     => "Error while fetching the Venue Types: " . $e->getMessage(),
             ], 400);
             return;
         }
 
         try {
             $codecheckVenueNames = new CodecheckVenueNames();
-        } catch (ApiFetchException $e) {
-            $this->response->response([
-                'success' => false,
-                'error'   => $e->getMessage(),
+        } catch (\Throwable $e) {
+            JsonResponse::staticResponse([
+                'success'   => false,
+                'error'     => "Error while fetching the Venue Names: " . $e->getMessage(),
             ], 400);
             return;
         }
 
-        $context            = $this->request->getContext();
+        // get the github custom labels specified in the plugin settings form
+        $context = $this->request->getContext();
         $githubCustomLabels = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_CUSTOM_LABELS);
 
-        $this->response->response([
-            'success'      => true,
-            'venueTypes'   => $codecheckVenueTypes->get()->toArray(),
-            'venueNames'   => $codecheckVenueNames->get()->toArray(),
+        // Serve the getVenueData API route
+        JsonResponse::staticResponse([
+            'success' => true,
+            'venueTypes' => $codecheckVenueTypes->get()->toArray(),
+            'venueNames' => $codecheckVenueNames->get()->toArray(),
             'customLabels' => $githubCustomLabels,
         ], 200);
+    }
+
+    private function getAuthorStringBasedOnAuthorAnonymity(): string|null
+    {
+        $postParams = json_decode(file_get_contents('php://input'), true);
+        $submissionData = $postParams["submission"];
+        $authorString = $submissionData["authorString"];
+
+        $context = $this->request->getContext();
+        $isAuthorStringEnabled = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_AUTHOR_ANONYMITY);
+
+        // if Authors should be Anonymous/ if no Author string was given, set it to null
+        if(!$isAuthorStringEnabled || !is_string($authorString)) {
+            $authorString = null;
+        }
+
+        return $authorString;
+    }
+
+    /**
+     * This function gets when the Codecheck Issue Labels where last updated
+     * 
+     * @return string The Date when the issues where last updated
+     */
+    private function getIssueLabelsLastUpdated(): string
+    {
+        if (!Schema::hasTable('codecheck_issue_labels')) {
+            // The issue labels table doesn't exist
+            CodecheckLogger::error("CODECHECK API: The Issue Label table doesn't exist");
+            throw new Exception("The table 'codecheck_issue_labels' doesn't exist.", 500);
+        }
+
+        $labelsLastUpdated = DB::table('codecheck_issue_labels')
+            ->select(['labels_last_updated'])
+            ->first();
+
+        CodecheckLogger::debug("Labels: " . print_r(DB::table('codecheck_issue_labels')->select(['*'])->get()->toArray(), true));
+
+        // If Labels weren't updated yet, set last updated to earliest date possible, so they will definitely get updated
+        $labelsLastUpdated = $labelsLastUpdated->labels_last_updated ?? date('Y-m-d H:i:s', 0);
+
+        CodecheckLogger::debug("CODECHECK API: Codecheck Issues Last Updated: " . json_encode($labelsLastUpdated));
+        
+        return $labelsLastUpdated;
+    }
+
+    /**
+     * Validates general POST parameters for reserveIdentifier & updateGithubIssue, returning an error message string
+     * on the first failed guard, or null if all parameters are valid.
+     */
+    private function validateIdentifierPostParameters(array $postParams): ?string
+    {
+        if(!is_array($postParams['issue'])) {
+            return "The parameter 'issue' must be an array!";
+        }
+        if(!is_array($postParams['issue']['labelsSelected'])) {
+            return "The parameter 'issue.labelsSelected' must be an array!";
+        }
+        if (!is_array($postParams['submission'])) {
+            return "Parameter 'submission' must be an array.";
+        }
+        if (!is_string($postParams['submission']['title'] ?? null)) {
+            return "Parameter 'submission.title' must be a string.";
+        }
+        if (!is_string($postParams['submission']['authorString'])) {
+            return "Parameter 'submission.authorString' must be a string.";
+        }
+        if (!is_array($postParams['repositories'])) {
+            return "Parameter 'repositories' must be an array.";
+        }
+        if (!is_array($postParams['codecheckers'])) {
+            return "Parameter 'codecheckers' must be an array.";
+        }
+
+        return null;
+    }
+
+    /**
+     * Validates POST parameters for reserveIdentifier, returning an error message string
+     * on the first failed guard, or null if all parameters are valid.
+     */
+    private function validateReserveIdentifierParameters(array $postParams): ?string
+    {
+        $error = $this->validateIdentifierPostParameters($postParams);
+        if(!is_null($error)) {
+            return $error;
+        }
+        if (!is_string($postParams['reserveIdentifierMode'])) {
+            return "No Reserve Identifier Mode was specified.";
+        }
+        if ($postParams['reserveIdentifierMode'] === 'linkExistingIdentifier' && !is_string($postParams['identifier'] ?? null)) {
+            return "Parameter 'identifier' must be a string when using mode 'linkExistingIdentifier'.";
+        }
+
+        return null;
+    }
+
+    private function validateUpdateGithubIssueParameters(array $postParams): ?string
+    {
+        $error = $this->validateIdentifierPostParameters($postParams);
+        if(!is_null($error)) {
+            return $error;
+        }
+        if(!is_int($postParams['issue']['number'])) {
+            return "The parameter 'issue.number' must be an integer!";
+        }
+        if(!is_string($postParams['issue']['url'])) {
+            return "The parameter 'issue.url' must be a string!";
+        }
+
+        return null;
     }
 
     /**
@@ -231,45 +387,66 @@ class CodecheckApiHandler
      */
     public function reserveIdentifier(): void
     {
-        $postParams   = json_decode(file_get_contents('php://input'), true);
-        $venueType    = $postParams["venueType"];
-        $venueName    = $postParams["venueName"];
+        $postParams = json_decode(file_get_contents('php://input'), true);
+        $venueType = $postParams["venueType"];
+        $venueName = $postParams["venueName"];
         $customLabels = $postParams["customLabels"];
         $authorString = $postParams["authorString"];
 
-        $context                    = $this->request->getContext();
-        $githubPersonalAccessToken  = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN);
+        // get the github Register Repository specified in the plugin settings form
+        $context = $this->request->getContext();
+        $githubPersonalAccessToken = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN);
         $githubRegisterOrganization = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION);
-        $githubRegisterRepository   = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY);
-        $isAuthorStringEnabled      = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_AUTHOR_ANONYMITY);
+        $githubRegisterRepository = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY);
+        $isAuthorStringEnabled = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_AUTHOR_ANONYMITY);
 
-        if (!$isAuthorStringEnabled || !is_string($authorString)) {
+        error_log("[Codecheck Api Handler] GitHub Register Repository specified in the Settings form: " . $githubRegisterRepository);
+
+        // if Authors should be Anonymous/ if no Author string was given, set it to null
+        if(!$isAuthorStringEnabled || !is_string($authorString)) {
             $authorString = null;
         }
 
-        if (is_string($venueType) && is_string($venueName) && is_array($customLabels)) {
+        // check if they are of type string (If not return success false over the API)
+        if(is_string($venueType) && is_string($venueName) && is_array($customLabels)) {
+            // CODECHECK GitHub Issue Register API parser
             $codecheckGithubRegisterApiClient = new CodecheckGithubRegisterApiClient(
-                $githubPersonalAccessToken,
-                $githubRegisterOrganization,
-                $githubRegisterRepository,
-                $this->codecheckMetadataHandler->getSubmissionId(),
-                $context,
+                $githubPersonalAccessToken, // The GitHub PAT (classic) needed to access the Register Repository
+                $githubRegisterOrganization, // The organization owning the GitHub Register Repository
+                $githubRegisterRepository, // Name of the GitHub Repository for the Register
+                $this->codecheckMetadataHandler->getSubmissionId(), // Submission ID
+                $context, // The Journal Object of the Submission
             );
 
+            CodecheckLogger::debug(print_r($this->request->getContext(), true));
+
+            // CODECHECK Register with list of all identifiers in range
             try {
                 $certificateIdentifierList = CertificateIdentifierList::fromApi($codecheckGithubRegisterApiClient);
             } catch (ApiFetchException $ae) {
-                $this->response->response(['success' => false, 'error' => $ae->getMessage()], 400);
+                JsonResponse::staticResponse([
+                    'success'   => false,
+                    'error'     => $ae->getMessage(),
+                ], 400);
                 return;
             } catch (NoMatchingIssuesFoundException $me) {
-                $this->response->response(['success' => false, 'error' => $me->getMessage()], 400);
+                JsonResponse::staticResponse([
+                    'success'   => false,
+                    'error'     => $me->getMessage(),
+                ], 400);
                 return;
             }
 
+            // print Certificate Identifier list
             $certificateIdentifierList->sortDesc();
+
+            // create the new unique Identifier
             $new_identifier = CertificateIdentifier::newUniqueIdentifier($certificateIdentifierList);
+
+            // create the CODECHECK Venue with the selected type and name
             $codecheckVenue = new CodecheckVenue($venueType, $venueName);
 
+            // Add the new issue to the CODECHECK GtiHub Register
             try {
                 $issueGithubUrl = $codecheckGithubRegisterApiClient->addIssue(
                     $new_identifier,
@@ -277,23 +454,48 @@ class CodecheckApiHandler
                     $codecheckVenue->getVenueName(),
                     $customLabels,
                     $authorString,
+                    $codecheckers,
+                    $repositories
                 );
             } catch (ApiCreateException $e) {
-                $this->response->response(['success' => false, 'error' => $e->getMessage()], 400);
+                // return an error result
+                JsonResponse::staticResponse([
+                    'success'   => false,
+                    'error'     => $e->getMessage(),
+                ], 400);
                 return;
             }
 
-            $this->response->response([
-                'success'    => true,
+            // return a success result
+            JsonResponse::staticResponse([
+                'success' => true,
                 'identifier' => $new_identifier->toStr(),
-                'issueUrl'   => $issueGithubUrl,
+                'issueUrl' => $issueGithubUrl,
             ], 200);
+            return;
         } else {
-            $this->response->response([
-                'success' => false,
-                'error'   => "The CODECHECK Venue Type and/ or Venue Names aren't of Type string as expected.",
+            JsonResponse::staticResponse([
+                'success'   => false,
+                'error'     => "The CODECHECK Venue Type and/ or Venue Names aren't of Type string as expected.",
             ], 400);
         }
+        $identifier = CertificateIdentifier::fromStr($rawIdentifier);
+        $issue = $certificateIdentifierList->getIssueInformationByIdentifier($identifier);
+        if(!is_array($issue) || !is_string($issue['issueUrl']) || !is_int($issue['issueNumber'])) {
+            JsonResponse::staticResponse([
+                'success'   => false,
+                'identifier' => $identifierStr,
+                'error'     => "The certificate with the Identifier: ". $identifierStr . " doesn't exist in the GitHub Register.",
+            ], 404);
+            return;
+        }
+
+        JsonResponse::staticResponse([
+            'success' => true,
+            'identifier' => $identifier->toStr(),
+            'issueUrl' => $issue['issueUrl'],
+            'issueNumber' => $issue['issueNumber'],
+        ], 200);
     }
 
     /**
@@ -333,42 +535,14 @@ class CodecheckApiHandler
     public function getMetadata(): void
     {
         $submissionId = $this->codecheckMetadataHandler->getSubmissionId();
+        $result = $this->codecheckMetadataHandler->getMetadata($this->request, $submissionId);
 
-        $submission = Repo::submission()->get($submissionId);
-        if (!$submission) {
-            $this->response->response(['success' => false, 'error' => 'Submission not found'], 404);
-            return;
+        if(isset($result['error'])) {
+            $result = array_merge($result, ['submissionID' => $submissionId]);
+            JsonResponse::staticResponse($result, 404);
         }
 
-        $publication = $submission->getCurrentPublication();
-        $metadata    = DB::table('codecheck_metadata')->where('submission_id', $submissionId)->first();
-
-        $this->response->response([
-            'submissionId' => $submissionId,
-            'submission'   => [
-                'id'                        => $submission->getId(),
-                'title'                     => $publication ? $publication->getLocalizedTitle() : '',
-                'authors'                   => $this->codecheckMetadataHandler->getAuthors($publication),
-                'doi'                       => $publication ? $publication->getStoredPubId('doi') : null,
-                'codeRepository'            => $submission->getData('codeRepository'),
-                'dataRepository'            => $submission->getData('dataRepository'),
-                'manifestFiles'             => $submission->getData('manifestFiles'),
-                'dataAvailabilityStatement' => $submission->getData('dataAvailabilityStatement'),
-            ],
-            'codecheck' => $metadata ? [
-                'version'           => $metadata->version ?? 'latest',
-                'publicationType'   => $metadata->publication_type ?? 'doi',
-                'manifest'          => json_decode($metadata->manifest ?? '[]', true),
-                'repository'        => $metadata->repository,
-                'codecheckers'      => json_decode($metadata->codecheckers ?? '[]', true),
-                'source'            => $metadata->source,
-                'certificate'       => $metadata->certificate,
-                'check_time'        => $metadata->check_time,
-                'summary'           => $metadata->summary,
-                'report'            => $metadata->report,
-                'additionalContent' => $metadata->additional_content,
-            ] : null,
-        ], 200);
+        JsonResponse::staticResponse($result, 200);
     }
 
     /**
@@ -377,50 +551,14 @@ class CodecheckApiHandler
     public function saveMetadata(): void
     {
         $submissionId = $this->codecheckMetadataHandler->getSubmissionId();
+        $result = $this->codecheckMetadataHandler->saveMetadata($this->request, $submissionId);
 
-        $submission = Repo::submission()->get($submissionId);
-        if (!$submission) {
-            $this->response->response(['success' => false, 'error' => 'Submission not found'], 404);
-            return;
+        if(isset($result['error'])) {
+            $result = array_merge($result, ['submissionID' => $submissionId]);
+            JsonResponse::staticResponse($result, 404);
         }
 
-        $data = json_decode(file_get_contents('php://input'), true);
-
-        $nullIfEmpty = function ($value) {
-            return (is_string($value) && trim($value) === '') ? null : $value;
-        };
-
-        $metadataData = [
-            'submission_id'      => $submissionId,
-            'version'            => $data['version'] ?? 'latest',
-            'publication_type'   => $data['publication_type'] ?? 'doi',
-            'manifest'           => json_encode($data['manifest'] ?? []),
-            'repository'         => $nullIfEmpty($data['repository'] ?? null),
-            'source'             => $nullIfEmpty($data['source'] ?? null),
-            'codecheckers'       => json_encode($data['codecheckers'] ?? []),
-            'certificate'        => $nullIfEmpty($data['certificate'] ?? null),
-            'check_time'         => $nullIfEmpty($data['check_time'] ?? null),
-            'summary'            => $nullIfEmpty($data['summary'] ?? null),
-            'report'             => $nullIfEmpty($data['report'] ?? null),
-            'additional_content' => $nullIfEmpty($data['additional_content'] ?? null),
-            'updated_at'         => date('Y-m-d H:i:s'),
-        ];
-
-        $exists = DB::table('codecheck_metadata')->where('submission_id', $submissionId)->exists();
-
-        if ($exists) {
-            DB::table('codecheck_metadata')->where('submission_id', $submissionId)->update($metadataData);
-        } else {
-            $metadataData['created_at'] = date('Y-m-d H:i:s');
-            DB::table('codecheck_metadata')->insert($metadataData);
-        }
-
-        $this->response->response([
-            'success'      => true,
-            'message'      => 'CODECHECK metadata saved successfully',
-            'submissionID' => $submissionId,
-            'certificate'  => $metadataData['certificate'],
-        ], 200);
+        JsonResponse::staticResponse($result, 200);
     }
 
     /**
@@ -516,30 +654,18 @@ class CodecheckApiHandler
         $submissionId = $this->codecheckMetadataHandler->getSubmissionId();
         $submission   = Repo::submission()->get($submissionId);
 
-        if (!$submission) {
-            $this->response->response(['success' => false, 'error' => 'Submission not found', 'submissionID' => $submissionId], 404);
-            return;
+        if(isset($result['error'])) {
+            $result = array_merge($result, ['submissionID' => $submissionId]);
+            JsonResponse::staticResponse($result, 404);
         }
 
-        $publication = $submission->getCurrentPublication();
-        $metadata    = DB::table('codecheck_metadata')->where('submission_id', $submissionId)->first();
-
-        if (!$metadata) {
-            $this->response->response(['success' => false, 'error' => 'No CODECHECK metadata found', 'submissionID' => $submissionId], 404);
-            return;
-        }
-
-        $yaml = $this->codecheckMetadataHandler->buildYaml($publication, $metadata);
-
-        $this->response->response([
-            'success'  => true,
-            'yaml'     => $yaml,
-            'filename' => 'codecheck.yml',
-        ], 200);
+        JsonResponse::staticResponse($result, 200);
     }
 
     /**
-     * Validate YAML structure
+     * This function validates the structure of a Yaml file
+     * 
+     * @return void
      */
     public function validateYamlStructure(): void
     {
@@ -727,6 +853,143 @@ class CodecheckApiHandler
         $this->response->response([
             'success' => true,
             'message' => __('plugins.generic.codecheck.orcid.test.success'),
+        ], 200);
+    }
+
+    public function getCurrentStatus(): void
+    {
+        $submissionId = (int) $this->codecheckMetadataHandler->getSubmissionId();
+
+        $statusRecord = CodecheckStatusHandler::getCurrentStatusData($submissionId);
+
+        if($statusRecord == null) {
+            JsonResponse::staticResponse([
+                'success' => false,
+                'error' => "There doesn't exist any Status in the OJS Databse for this submission Id yet.",
+                'statusRecord' => null,
+                'allStatuses' => Constants::CODECHECK_STATUSES,
+            ], 500);
+        }
+
+        JsonResponse::staticResponse([
+            'success' => true,
+            'statusRecord' => $statusRecord,
+            'allStatuses' => Constants::CODECHECK_STATUSES,
+        ], 200);
+    }
+
+    public function getStatusHistory(): void
+    {
+        $submissionId = (int) $this->codecheckMetadataHandler->getSubmissionId();
+
+        $statusHistory = CodecheckStatusHandler::getStatusDataHistory($submissionId);
+
+        if($statusHistory == null) {
+            JsonResponse::staticResponse([
+                'success' => false,
+                'statusHistory' => $statusHistory,
+            ], 400);
+        }
+
+        JsonResponse::staticResponse([
+            'success' => true,
+            'statusHistory' => $statusHistory,
+        ], 200);
+    }
+
+    public function updateStatus(): void
+    {
+        $submissionId = (int) $this->codecheckMetadataHandler->getSubmissionId();
+
+        $postParams = json_decode(file_get_contents('php://input'), true);
+        $status = $postParams["status"];
+        $userId = $postParams["userId"];
+
+        if(!is_string($status) || !is_int($userId)) {
+            JsonResponse::staticResponse([
+                'success' => false,
+                'statusRecord' => [
+                    'status' => $status,
+                    'userId' => $userId
+                ],
+                'allStatuses' => Constants::CODECHECK_STATUSES,
+                'error' => 'Bad Request: Please provide a Status form of string and a User ID in the form of int.'
+            ], 400);
+        }
+
+        if($userId == -1) {
+            $submissionMetadata = $this->codecheckMetadataHandler->getMetadata($this->request, $submissionId);
+            if(array_key_exists("error",$submissionMetadata)) {
+                JsonResponse::staticResponse([
+                    'success' => false,
+                    'error' => $submissionMetadata["error"],
+                    'allStatuses' => Constants::CODECHECK_STATUSES,
+                ], 400);
+            }
+            $statusUpdate = CodecheckStatusHandler::automaticStatusUpdate($submissionMetadata);
+
+            if($statusUpdate == null) {
+                JsonResponse::staticResponse([
+                    'success' => false,
+                    'statusRecord' => $statusUpdate,
+                    'allStatuses' => Constants::CODECHECK_STATUSES,
+                    'error' => "Status doesn't need to be automatically updated."
+                ], 200);
+            } else {
+                JsonResponse::staticResponse([
+                    'success' => true,
+                    'statusRecord' => $statusUpdate,
+                    'allStatuses' => Constants::CODECHECK_STATUSES,
+                ], 200);
+            }
+        }
+
+        $statusUpdate = CodecheckStatusHandler::updateStatus($submissionId, $status, $userId);
+
+        if($statusUpdate == false) {
+            JsonResponse::staticResponse([
+                'success' => true,
+                'statusRecord' => [
+                    'status' => $status,
+                    'userId' => $userId
+                ],
+                'allStatuses' => Constants::CODECHECK_STATUSES,
+                'error' => "Inserting into the CODECHECK Status Database went wrong."
+            ], 500);
+        }
+
+        JsonResponse::staticResponse([
+            'success' => true,
+            'statusRecord' => $statusUpdate,
+            'allStatuses' => Constants::CODECHECK_STATUSES,
+        ], 200);
+    }
+
+    public function validateUserAccessRightsToStatus(): void
+    {
+        $postParams = json_decode(file_get_contents('php://input'), true);
+        $user = $postParams["user"];
+
+        if(!is_array($user["roles"])) {
+            JsonResponse::staticResponse([
+                'success' => false,
+                'error' => 'Bad Request: Please provide the current User in your request.'
+            ], 400);
+        }
+
+        $userRoles = $user["roles"];
+        $allowedToAccess = false;
+
+        foreach ($userRoles as $userRole) {
+            if($userRole == 16) {
+                $allowedToAccess = true;
+                break;
+            }
+        }
+
+        JsonResponse::staticResponse([
+            'success' => true,
+            'userAllowedToAccess' => $allowedToAccess,
         ], 200);
     }
 }

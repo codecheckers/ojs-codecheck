@@ -2,6 +2,17 @@ import '../../support/pkp-mock.js';
 import CodecheckReviewDisplay from '../../../resources/js/Components/CodecheckReviewDisplay.vue';
 
 describe('CodecheckReviewDisplay Component', () => {
+  beforeEach(() => {
+    let status = 'plugins.generic.codecheck.status.needsCodechecker';
+
+    cy.intercept('GET', '**/codecheck/status*', {
+      statusCode: 200,
+      body: {
+        statusRecord: { status: status }
+      }
+    }).as('getStatus');
+  });
+
   it('shows not opted in message when codecheckOptIn is false', () => {
     cy.mount(CodecheckReviewDisplay, {
       props: {
@@ -15,39 +26,28 @@ describe('CodecheckReviewDisplay Component', () => {
     cy.get('.codecheck-info').should('not.exist');
   });
 
-  it('shows pending status when opted in but no metadata', () => {
+  it('shows status', () => {
+    let status = 'plugins.generic.codecheck.status.needsCodechecker';
+
+    cy.intercept('GET', '**/codecheck/status*', {
+      body: { statusRecord: { status: status } }
+    }).as('getStatus');
+
     cy.mount(CodecheckReviewDisplay, {
       props: {
         submission: {
+          id: 1,
           codecheckOptIn: true,
           codecheckMetadata: {}
         }
       }
     });
     
-    cy.get('.status-pending').should('exist');
-    cy.contains('plugins.generic.codecheck.status.pending').should('exist');
+    cy.wait('@getStatus');
+    cy.contains(status).should('exist');
   });
 
-  it('shows in-progress status with partial metadata', () => {
-    cy.mount(CodecheckReviewDisplay, {
-      props: {
-        submission: {
-          codecheckOptIn: true,
-          codecheckMetadata: {
-            configVersion: 'latest',
-            manifest: [{ file: 'output.png' }],
-            codecheckers: [{ name: 'John Doe' }]
-          }
-        }
-      }
-    });
-    
-    cy.get('.status-in-progress').should('exist');
-    cy.contains('plugins.generic.codecheck.status.inProgress').should('exist');
-  });
-
-  it('shows complete status with full metadata', () => {
+  it('shows complete information with full metadata', () => {
     cy.mount(CodecheckReviewDisplay, {
       props: {
         submission: {
@@ -67,7 +67,6 @@ describe('CodecheckReviewDisplay Component', () => {
       }
     });
     
-    cy.get('.status-complete').should('exist');
     cy.contains('CODECHECK-2024-001').should('exist');
     cy.contains('John Doe').should('exist');
     cy.contains('0000-0001-2345-6789').should('exist');

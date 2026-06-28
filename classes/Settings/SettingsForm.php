@@ -53,7 +53,6 @@ class SettingsForm extends Form
             ->getRequest()
             ->getContext();
 
-        // Load CODECHECK-specific settings
         $this->setData(
             Constants::CODECHECK_ENABLED,
             $this->plugin->getSetting(
@@ -126,6 +125,33 @@ class SettingsForm extends Form
             ) ?? []
         );
 
+        $this->setData(
+            Constants::CODECHECK_STATUS_KEYS_SELECTED,
+            $this->plugin->getSetting(
+                $context->getId(),
+                Constants::CODECHECK_STATUS_KEYS_SELECTED
+            ) ?? []
+        );
+
+        // Default to true — show the dashboard column unless explicitly disabled
+        $showDashboardColumn = $this->plugin->getSetting(
+            $context->getId(),
+            Constants::CODECHECK_SHOW_DASHBOARD_COLUMN
+        );
+        $this->setData(
+            Constants::CODECHECK_SHOW_DASHBOARD_COLUMN,
+            $showDashboardColumn === null ? true : (bool) $showDashboardColumn
+        );
+
+        $updateFields = $this->plugin->getSetting(
+            $context->getId(),
+            Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_FIELDS
+        ) ?? [];
+
+        // Unpack so each checkbox gets its own template variable
+        $this->setData(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE, in_array(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE, $updateFields));
+        $this->setData(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY, in_array(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY, $updateFields));
+
         // ORCID integration settings
         $this->setData(
             Constants::ORCID_ENABLED,
@@ -177,6 +203,13 @@ class SettingsForm extends Form
             Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION,
             Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY,
             Constants::CODECHECK_GITHUB_CUSTOM_LABELS,
+            Constants::CODECHECK_SHOW_DASHBOARD_COLUMN,
+            Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE,
+            Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY,
+            Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_FIELDS,
+            Constants::CODECHECK_STATUS,
+            Constants::CODECHECK_STATUSES_SELECTED,
+            Constants::CODECHECK_STATUS_KEYS_SELECTED,
             Constants::ORCID_ENABLED,
             Constants::ORCID_API_TYPE,
             Constants::ORCID_CLIENT_ID,
@@ -198,7 +231,7 @@ class SettingsForm extends Form
         $templateMgr = TemplateManager::getManager($request);
         $templateMgr->assign('pluginName', $this->plugin->getName());
         $templateMgr->assign(
-            'githubCustomLabels',
+            Constants::CODECHECK_GITHUB_CUSTOM_LABELS,
             $this->getData(Constants::CODECHECK_GITHUB_CUSTOM_LABELS) ?? []
         );
         $templateMgr->assign('codecheckModes', [
@@ -206,6 +239,18 @@ class SettingsForm extends Form
             'opt-out'   => __('plugins.generic.codecheck.settings.mode.opt.out'),
             'mandatory' => __('plugins.generic.codecheck.settings.mode.mandatory'),
         ]);
+
+        $templateMgr->assign(
+            'showDashboardColumn',
+            $this->getData(Constants::CODECHECK_SHOW_DASHBOARD_COLUMN)
+        );
+
+        $templateMgr->assign(
+            Constants::CODECHECK_STATUSES_SELECTED,
+            (array) $this->getData(Constants::CODECHECK_STATUSES_SELECTED) ?? []
+        );
+        $templateMgr->assign('codecheckStatuses', Constants::CODECHECK_STATUSES);
+
         $templateMgr->assign('orcidApiTypes', [
             Constants::ORCID_API_TYPE_SANDBOX    => __('plugins.generic.codecheck.orcid.apiType.sandbox'),
             Constants::ORCID_API_TYPE_PRODUCTION => __('plugins.generic.codecheck.orcid.apiType.production'),
@@ -224,7 +269,6 @@ class SettingsForm extends Form
             ->getRequest()
             ->getContext();
 
-        // Save CODECHECK-specific settings
         $this->plugin->updateSetting(
             $context->getId(),
             Constants::CODECHECK_ENABLED,
@@ -280,6 +324,29 @@ class SettingsForm extends Form
                 (array) $this->getData(Constants::CODECHECK_GITHUB_CUSTOM_LABELS),
                 fn ($label) => !empty($label)
             ))
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_STATUS_KEYS_SELECTED,
+            (array) $this->getData(Constants::CODECHECK_STATUS_KEYS_SELECTED)
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_SHOW_DASHBOARD_COLUMN,
+            (bool) $this->getData(Constants::CODECHECK_SHOW_DASHBOARD_COLUMN)
+        );
+
+        $updateFields = array_values(array_filter([
+            $this->getData(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE) ? Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE : null,
+            $this->getData(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY) ? Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY : null,
+        ]));
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_FIELDS,
+            $updateFields
         );
 
         // Save ORCID integration settings

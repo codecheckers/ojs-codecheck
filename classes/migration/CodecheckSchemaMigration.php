@@ -1,9 +1,11 @@
 <?php
 namespace APP\plugins\generic\codecheck\classes\migration;
 
+use APP\plugins\generic\codecheck\classes\Submission\Schema as SubmissionSchema;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 
 class CodecheckSchemaMigration extends Migration
 {
@@ -19,6 +21,7 @@ class CodecheckSchemaMigration extends Migration
                 $table->text('source')->nullable();
                 $table->text('codecheckers')->nullable();
                 $table->string('certificate', 100)->nullable();
+                $table->string('issue', 500)->default(json_encode(['url' => null, 'number' => null, 'labelsSelected' => []]));
                 $table->timestamp('check_time')->nullable();
                 $table->text('summary')->nullable();
                 $table->string('report', 500)->nullable();
@@ -47,6 +50,33 @@ class CodecheckSchemaMigration extends Migration
         }
         
         $this->createCodecheckGenres();
+    }
+
+    public function issueLabelsUp(): void
+    {
+        if(!Schema::hasTable('codecheck_issue_labels')) {
+            CodecheckLogger::debug("Creating Issue Label DB Schema");
+            Schema::create('codecheck_issue_labels', function (Blueprint $table) {
+                $table->string('label', 200)->default('');
+                $table->string('labels_last_updated', 100)->default(date('Y-m-d H:i:s'));
+            });
+        }
+    }
+    
+    public function codecheckStatusUp(): void
+    {
+        if (!Schema::hasTable('codecheck_status')) {
+            Schema::create('codecheck_status', function (Blueprint $table) {
+                $table->bigInteger('status_id')->autoIncrement()->primary();
+                $table->bigInteger('submission_id');
+                $table->foreign('submission_id', 'codecheck_status_metadata')->references('submission_id')->on('codecheck_metadata')->onDelete('cascade');
+                $table->string('status', 300);
+                $table->timestamp('timestamp');
+                $table->bigInteger('user_id');
+                $table->timestamps();
+                $table->index('status_id');
+            });
+        }
     }
 
     private function createCodecheckGenres(): void
@@ -82,6 +112,12 @@ class CodecheckSchemaMigration extends Migration
     public function down(): void
     {
         Schema::dropIfExists('codecheck_orcid_tokens');
+        Schema::dropIfExists('codecheck_status');
         Schema::dropIfExists('codecheck_metadata');
+    }
+
+    public function issueLabelsDown(): void
+    {
+        Schema::dropIfExists('codecheck_issue_labels');
     }
 }
