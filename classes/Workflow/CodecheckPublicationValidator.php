@@ -31,16 +31,19 @@ class CodecheckPublicationValidator {
         $this->plugin = $plugin;
     }
 
-    private function validateCodecheckStatus(): bool {
-        CodecheckLogger::debug("Validating Status!");
+    private function isOptedInToCodecheck(): bool {
+        $submission = $this->request->getRouter()->getHandler()->getAuthorizedContextObject(ASSOC_TYPE_SUBMISSION);
+        return $submission && $submission->getData('codecheckOptIn');
+    }
 
+    private function codecheckHasStatus(): bool {
+        $codecheckStatus = CodecheckStatusHandler::getCurrentStatusData($this->codecheckMetadataHandler->getSubmissionId());
+        return !empty($codecheckStatus);
+    }
+
+    private function validateCodecheckStatus(): bool {
         $codecheckStatus = CodecheckStatusHandler::getCurrentStatusData($this->codecheckMetadataHandler->getSubmissionId());
         $codecheckStatusKeysSelected = $this->plugin->getSetting($this->context->getId(), Constants::CODECHECK_STATUS_KEYS_SELECTED);
-
-        if (empty($codecheckStatus)) {
-            $this->errors[] = __('plugins.generic.codecheck.status.validation.failed.noStatusSet');
-            return false;
-        }
 
         if (!in_array($codecheckStatus->status, $codecheckStatusKeysSelected)) {
             $this->errors[] = __('plugins.generic.codecheck.status.validation.failed', [
@@ -53,8 +56,6 @@ class CodecheckPublicationValidator {
     }
 
     private function validateYamlStructure(): bool {
-        CodecheckLogger::debug("Validating Yaml!");
-
         try {
             $yamlValidator = CodecheckYamlValidator::fromRequest($this->request);
             $yamlValidator->validateYaml();
@@ -69,9 +70,11 @@ class CodecheckPublicationValidator {
     }
 
     public function validatePublication(): true|array {
-        foreach ($this->validationChecks as $validationCheck) {
-            if (!$validationCheck()) {
-                return $this->errors;
+        if($this->isOptedInToCodecheck() && $this->codecheckHasStatus()) {
+            foreach ($this->validationChecks as $validationCheck) {
+                if (!$validationCheck()) {
+                    return $this->errors;
+                }
             }
         }
 
