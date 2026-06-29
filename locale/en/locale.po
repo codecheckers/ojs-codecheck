@@ -357,7 +357,7 @@ msgid "plugins.generic.codecheck.yaml.valid"
 msgstr "codecheck.yml is valid."
 
 msgid "plugins.generic.codecheck.yaml.invalid"
-msgstr "CODECHECK metadata creates a structurally invalid codecheck.yml file. Please check the detailed error message below."
+msgstr "The provided CODECHECK metadata creates a structurally invalid codecheck.yml file. Please check the following error message for further details.\nError: {$errorMessage}"
 
 msgid "plugins.generic.codecheck.savedSuccessfully"
 msgstr "CODECHECK metadata saved successfully"

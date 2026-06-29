@@ -89,13 +89,14 @@ class CodecheckPlugin extends GenericPlugin
 
     public function validatePublication(string $hookName, array $args): bool
     {
+        CodecheckLogger::debug("Validating Publication!");
         $errors = &$args[0];
-        $codecheckPublicationValidator = new CodecheckPublicationValidator();
+        $codecheckPublicationValidator = new CodecheckPublicationValidator($this);
 
         $validationErrors = $codecheckPublicationValidator->validatePublication();
 
-        if(!$validationErrors) {
-            $errors[] = $validationErrors;
+        if(is_array($validationErrors)) {
+            $errors = array_merge($errors, $validationErrors);
             return false;
         }
 

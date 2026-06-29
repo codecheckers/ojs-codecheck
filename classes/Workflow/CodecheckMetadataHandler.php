@@ -27,11 +27,11 @@ class CodecheckMetadataHandler
      * `CodecheckMetadataHandler`
      * @param \APP\core\Request $request The API Request
      */
-    public function __construct(Request $request, ?Client $client, ?CurlApiClient $curlApiClient)
+    public function __construct(Request $request, Client $client = new Client(), CurlApiClient $curlApiClient = new CurlApiClient())
     {
-        $this->client = $client ?? new Client();
+        $this->client = $client;
         $this->submissionId = $request->getUserVar('submissionId');
-        $this->curlApiClient = $curlApiClient ?? new CurlApiClient;
+        $this->curlApiClient = $curlApiClient;
       
         // Load Composer dependencies if not already loaded
         if (!class_exists('Symfony\Component\Yaml\Yaml')) {

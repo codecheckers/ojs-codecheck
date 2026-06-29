@@ -38,7 +38,6 @@
   "plugins.generic.codecheck.dataSoftwareAvailability",
   "plugins.generic.codecheck.dataSoftwareAvailability.description",
   "plugins.generic.codecheck.details.title",
-  "plugins.generic.codecheck.error",
   "plugins.generic.codecheck.github.issue.display",
   "plugins.generic.codecheck.github.issue.display.button.viewIssue",
   "plugins.generic.codecheck.github.issue.display.certificateIdentifier",

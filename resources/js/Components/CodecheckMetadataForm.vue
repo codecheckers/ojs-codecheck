@@ -1309,12 +1309,12 @@ export default {
             return true;
         } else {
             console.error('Structural Validation error:', data.error);
-            this.showMessage(`${this.t('plugins.generic.codecheck.yaml.invalid')}\n${this.t('plugins.generic.codecheck.error')}: ${data.error}`, 'error');
+            this.showMessage(this.t('plugins.generic.codecheck.yaml.invalid', {errorMessage: data.error}), 'error');
             return false;
         }
       } catch (error) {
         console.error('Structural Validation API fetch error:', error);
-        this.showMessage(`${this.t('plugins.generic.codecheck.yaml.invalid')}\n${error}`, 'error');
+        this.showMessage(this.t('plugins.generic.codecheck.yaml.invalid', {errorMessage: error}), 'error');
         return false;
       }
     },

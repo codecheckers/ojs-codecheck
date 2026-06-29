@@ -151,7 +151,7 @@ class CodecheckApiHandler
         // get the request Method like POST or GET
         $requestMethod = $this->request->getRequestMethod();
 
-        CodecheckLogger::debug("API Method: " . $requestMethod);
+        CodecheckLogger::debug("API Request: " . $requestMethod . " - " . $this->request->getRequestPath());
 
         return new ApiEndpoint($this->endpoints, $this->route, $requestMethod);
     }
