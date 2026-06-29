@@ -7,10 +7,11 @@ use APP\template\TemplateManager;
 use APP\plugins\generic\codecheck\classes\FrontEnd\ArticleDetails;
 use APP\plugins\generic\codecheck\classes\Settings\Actions;
 use APP\plugins\generic\codecheck\classes\Settings\Manage;
-use APP\plugins\generic\codecheck\classes\migration\CodecheckSchemaMigration;
+use APP\plugins\generic\codecheck\classes\migration\install\CodecheckSchemaMigration;
 use APP\plugins\generic\codecheck\classes\Submission\Schema;
 use APP\plugins\generic\codecheck\classes\Submission\SubmissionWizardHandler;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
+use Illuminate\Support\Facades\Schema as DBSchema;
 use PKP\plugins\GenericPlugin;
 use PKP\plugins\Hook;
 use PKP\components\forms\FieldOptions;
@@ -29,8 +30,6 @@ use \Github\Client;
 
 class CodecheckPlugin extends GenericPlugin
 {
-    private CodecheckSchemaMigration $migration;
-
     public function register($category, $path, $mainContextId = null): bool
     {
         CodecheckLogger::debug('register() called, path=' . $path);
@@ -57,25 +56,25 @@ class CodecheckPlugin extends GenericPlugin
             Hook::add('LoadHandler', $this->setCodecheckPageHandler(...));
             // Add hook for the Template Manager
             Hook::add('TemplateManager::display', $this->callbackTemplateManagerDisplay(...));
-            
+
             // Wizard fields schema
             $codecheckSchema = new Schema();
-            Hook::add('Schema::get::publication', function($hookName, $args) use ($codecheckSchema) {
+            Hook::add('Schema::get::publication', function ($hookName, $args) use ($codecheckSchema) {
                 return $codecheckSchema->addToSchemaPublication($hookName, $args);
             });
 
             // Wizard template handlers
             $codecheckWizard = new SubmissionWizardHandler($this);
-            Hook::add('TemplateManager::display', function($hookName, $params) use ($codecheckWizard) {
+            Hook::add('TemplateManager::display', function ($hookName, $params) use ($codecheckWizard) {
                 return $codecheckWizard->addToSubmissionWizardSteps($hookName, $params);
             });
-            Hook::add('Template::SubmissionWizard::Section', function($hookName, $params) use ($codecheckWizard) {
+            Hook::add('Template::SubmissionWizard::Section', function ($hookName, $params) use ($codecheckWizard) {
                 return $codecheckWizard->addToSubmissionWizardTemplate($hookName, $params);
             });
-            Hook::add('Template::SubmissionWizard::Section::Review', function($hookName, $params) use ($codecheckWizard) {
+            Hook::add('Template::SubmissionWizard::Section::Review', function ($hookName, $params) use ($codecheckWizard) {
                 return $codecheckWizard->addToSubmissionWizardReviewTemplate($hookName, $params);
             });
-            
+
             // Test if we can hook into the publication to block it if codecheck failed
             Hook::add('Publication::validatePublish', $this->validateCodecheckStatus(...));
 
@@ -89,7 +88,7 @@ class CodecheckPlugin extends GenericPlugin
     public function validateCodecheckStatus(string $hookName, array $args): bool
     {
         $errors = &$args[0];
-        $publication = $args[1]; // sometimes passed by reference depending on version
+        $publication = $args[1];
         $request = Application::get()->getRequest();
         $context = $request->getContext();
         $codecheckMetadataHandler = new CodecheckMetadataHandler($request, new Client(), new CurlApiClient());
@@ -114,7 +113,8 @@ class CodecheckPlugin extends GenericPlugin
         return true;
     }
 
-    public function addCodecheckStatusLocalizations($hookName, $args) {
+    public function addCodecheckStatusLocalizations($hookName, $args)
+    {
         $templateMgr = $args[0];
         $templateMgr->addJavaScript(
             'codecheck-locale-status',
@@ -129,14 +129,9 @@ class CodecheckPlugin extends GenericPlugin
         );
         return false;
     }
-    
+
     /**
-     * Setup the `CodecheckApiHandler`
-     * 
-     * @param string $hookname The name of the hook
-     * @param array $args The arguments passed by the hook
-     * 
-     * @return void
+     * Setup the CodecheckApiHandler.
      */
     public function setupAPIHandler(string $hookName, array $args): void
     {
@@ -155,7 +150,7 @@ class CodecheckPlugin extends GenericPlugin
             $readRoles = new CodecheckRoleArray([$editRoles, Role::ROLE_ID_READER, Role::ROLE_ID_AUTHOR]);
 
             $roles = new CodecheckRoleManager(
-                readMetadata:  $readRoles,
+                readMetadata: $readRoles,
                 editMetadata: $editRoles,
                 admin: $adminRoles,
             );
@@ -173,24 +168,17 @@ class CodecheckPlugin extends GenericPlugin
     }
 
     /**
-     * Declare the handler function to process the actual page PATH
-     *
-     * @param string $hookName The name of the invoked hook
-     * @param array $args Hook parameters
-     *
-     * @return bool Hook handling status
+     * Declare the handler function to process the actual page PATH.
      */
     public function setCodecheckPageHandler($hookName, $args)
     {
         $request = Application::get()->getRequest();
         $templateMgr = TemplateManager::getManager($request);
 
-        $page = &$args[0];
-        $op = &$args[1];
+        $page    = &$args[0];
+        $op      = &$args[1];
         $handler = &$args[3];
 
-        
-        // Construct a path to look for
         $path = $page;
         if ($op !== 'index') {
             $path .= "/{$op}";
@@ -199,16 +187,13 @@ class CodecheckPlugin extends GenericPlugin
             $path .= '/' . implode('/', $ops);
         }
 
-        // Check if this is a request for a static page or preview.
         if ($page = 'codecheck' && $op == 'info') {
-            // Trick the handler into dealing with it normally
             $page = 'pages';
             $op = 'view';
-
-            // It is -- attach the static pages handler.
             $handler = new CodecheckPageHandler($this);
             return true;
         }
+
         return false;
     }
 
@@ -216,7 +201,7 @@ class CodecheckPlugin extends GenericPlugin
     {
         $request = Application::get()->getRequest();
         $templateMgr = TemplateManager::getManager($request);
-        
+
         $templateMgr->addJavaScript(
             'codecheck-vue-app',
             "{$request->getBaseUrl()}/{$this->getPluginPath()}/public/build/build.iife.js",
@@ -226,13 +211,13 @@ class CodecheckPlugin extends GenericPlugin
                 'priority' => TemplateManager::STYLE_SEQUENCE_LAST
             ]
         );
-        
+
         $templateMgr->addStyleSheet(
             'codecheck-vue-styles',
             "{$request->getBaseUrl()}/{$this->getPluginPath()}/public/build/build.css",
             ['contexts' => ['backend', 'frontend']]
         );
-        
+
         $cssUrl = $request->getBaseUrl() . '/' . $this->getPluginPath() . '/css/codecheck.css';
         $templateMgr->addStyleSheet(
             'codecheck-styles',
@@ -248,11 +233,7 @@ class CodecheckPlugin extends GenericPlugin
         $context = $request->getContext();
         $contextId = $context->getId();
 
-        // ----------------------------------------------------------------
         // Editorial dashboard — inject dashboard config for the Vue JS layer.
-        // Passes showDashboardColumn (Issue #30) and codecheckMode so the
-        // CODECHECK status column and opt-in warning box can be controlled.
-        // ----------------------------------------------------------------
         if ($request->getRequestedOp() == 'editorial' && $request->getRequestedPage() == 'dashboard') {
             $showDashboardColumn = $this->getSetting($contextId, Constants::CODECHECK_SHOW_DASHBOARD_COLUMN);
 
@@ -272,57 +253,50 @@ class CodecheckPlugin extends GenericPlugin
             );
         }
 
-        // ----------------------------------------------------------------
-        // Workflow page — inject submission data for the CODECHECK tab
-        // ----------------------------------------------------------------
+        // Workflow page — inject submission data for the CODECHECK tab.
         if ($request->getRequestedOp() == 'workflow') {
             $submission = $request->getRouter()->getHandler()->getAuthorizedContextObject(ASSOC_TYPE_SUBMISSION);
-            
+
             if ($submission) {
                 $templateMgr->setState([
                     'codecheckSubmission' => [
-                        'id' => $submission->getId(),
-                        'codecheckOptIn' => $submission->getData('codecheckOptIn'),
+                        'id'                                   => $submission->getId(),
+                        'codecheckOptIn'                       => $submission->getData('codecheckOptIn'),
                         'retrieveReserveCertificateIdentifier' => $submission->getData('retrieveReserveCertificateIdentifier'),
-                        'codeRepository' => $submission->getData('codeRepository'),
-                        'dataRepository' => $submission->getData('dataRepository'),
-                        'manifestFiles' => $submission->getData('manifestFiles'),
-                        'dataAvailabilityStatement' => $submission->getData('dataAvailabilityStatement'),
+                        'codeRepository'                       => $submission->getData('codeRepository'),
+                        'dataRepository'                       => $submission->getData('dataRepository'),
+                        'manifestFiles'                        => $submission->getData('manifestFiles'),
+                        'dataAvailabilityStatement'            => $submission->getData('dataAvailabilityStatement'),
                     ]
                 ]);
             }
         }
-        
+
         return false;
     }
 
     public function getUrlPageRoute(string $page): string
     {
         $request = Application::get()->getRequest();
-        return $request->getDispatcher()->url(
-            $request,
-            ROUTE_PAGE,
-            null,
-            $page
-        );
+        return $request->getDispatcher()->url($request, ROUTE_PAGE, null, $page);
     }
 
     public function addOptInToSchema(string $hookName, array $args): bool
     {
         $schema = $args[0];
-        
+
         $schema->properties->codecheckOptIn = (object) [
-            'type' => 'boolean',
+            'type'       => 'boolean',
             'apiSummary' => true,
             'validation' => ['nullable']
         ];
 
         $schema->properties->retrieveReserveCertificateIdentifier = (object) [
-            'type' => 'string',
+            'type'       => 'string',
             'apiSummary' => true,
             'validation' => ['nullable']
         ];
-        
+
         return false;
     }
 
@@ -333,16 +307,16 @@ class CodecheckPlugin extends GenericPlugin
             $context = $request->getContext();
             $codecheckMode = $this->getSetting($context->getId(), Constants::CODECHECK_MODE);
             CodecheckLogger::debug('Mode: ' . $codecheckMode);
-            $checkboxValue = false;
+            $checkboxValue    = false;
             $checkboxDisabled = false;
             $codecheckDescription = __('plugins.generic.codecheck.optIn.description', [
                 'codecheckLink' => "<a href='{$this->getUrlPageRoute("codecheck")}/info' target='_blank'>" . __('plugins.generic.codecheck.displayName') . "</a>"
             ]);
 
-            if($codecheckMode == 'opt-out') {
+            if ($codecheckMode == 'opt-out') {
                 $checkboxValue = true;
             } elseif ($codecheckMode == 'mandatory') {
-                $checkboxValue = true;
+                $checkboxValue    = true;
                 $checkboxDisabled = true;
                 $codecheckDescription = __('plugins.generic.codecheck.mandatory.description', [
                     'codecheckLink' => "<a href='{$this->getUrlPageRoute("codecheck")}/info' target='_blank'>" . __('plugins.generic.codecheck.displayName') . "</a>"
@@ -350,52 +324,52 @@ class CodecheckPlugin extends GenericPlugin
             }
 
             $form->addField(new FieldOptions('codecheckOptIn', [
-                'label' => __('plugins.generic.codecheck.displayName'),
-                'type' => 'checkbox',
+                'label'   => __('plugins.generic.codecheck.displayName'),
+                'type'    => 'checkbox',
                 'options' => [
                     [
-                        'value' => 1, 
-                        'label' => $codecheckDescription,
+                        'value'    => 1,
+                        'label'    => $codecheckDescription,
                         'disabled' => $checkboxDisabled,
                     ]
                 ],
-                'value' => $checkboxValue,
+                'value'   => $checkboxValue,
                 'groupId' => 'default'
             ]));
-            
+
             return false;
         }
-        
+
         return false;
     }
 
     public function saveOptIn(string $hookName, array $params): bool
     {
-        $submission = $params[0];
+        $submission   = $params[0];
         $params_array = $params[2];
-        
+
         if (isset($params_array['codecheckOptIn'])) {
             $submission->setData('codecheckOptIn', $params_array['codecheckOptIn']);
         }
-        
+
         return false;
     }
 
     public function saveWizardFieldsFromRequest(string $hookName, array $params): bool
     {
         $submission = $params[1];
-        
+
         if (!$submission) {
             return false;
         }
-        
+
         $request = Application::get()->getRequest();
-        
-        $codeRepository = $request->getUserVar('codeRepository');
-        $dataRepository = $request->getUserVar('dataRepository');
-        $manifestFiles = $request->getUserVar('manifestFiles');
+
+        $codeRepository            = $request->getUserVar('codeRepository');
+        $dataRepository            = $request->getUserVar('dataRepository');
+        $manifestFiles             = $request->getUserVar('manifestFiles');
         $dataAvailabilityStatement = $request->getUserVar('dataAvailabilityStatement');
-        
+
         if ($codeRepository || $dataRepository || $manifestFiles || $dataAvailabilityStatement) {
             $publication = $submission->getCurrentPublication();
             if ($publication) {
@@ -404,21 +378,18 @@ class CodecheckPlugin extends GenericPlugin
                 if ($dataRepository) $updates['dataRepository'] = $dataRepository;
                 if ($manifestFiles) $updates['manifestFiles'] = $manifestFiles;
                 if ($dataAvailabilityStatement) $updates['dataAvailabilityStatement'] = $dataAvailabilityStatement;
-                
+
                 if (!empty($updates)) {
                     Repo::publication()->edit($publication, $updates);
                 }
             }
         }
-        
+
         return false;
     }
 
     /**
-     * Provide a name for this plugin
-     *
-     * The name will appear in the Plugin Gallery where editors can
-     * install, enable and disable plugins.
+     * Provide a name for this plugin.
      */
     public function getDisplayName(): string
     {
@@ -426,10 +397,7 @@ class CodecheckPlugin extends GenericPlugin
     }
 
     /**
-     * Provide a description for this plugin
-     *
-     * The description will appear in the Plugin Gallery where editors can
-     * install, enable and disable plugins.
+     * Provide a description for this plugin.
      */
     public function getDescription(): string
     {
@@ -437,10 +405,16 @@ class CodecheckPlugin extends GenericPlugin
     }
 
     /**
-     * Add a settings action to the plugin's entry in the CODECHECK plugins list.
-     *
-     * @param Request $request
-     * @param array $actionArgs
+     * @copydoc Plugin::getInstallMigration()
+     * Registers the install migration with OJS's plugin installer mechanism.
+     */
+    public function getInstallMigration(): CodecheckSchemaMigration
+    {
+        return new CodecheckSchemaMigration();
+    }
+
+    /**
+     * Add a settings action to the plugin's entry in the plugins list.
      */
     public function getActions($request, $actionArgs): array
     {
@@ -449,11 +423,7 @@ class CodecheckPlugin extends GenericPlugin
     }
 
     /**
-     * Load a form when the `settings` button is clicked and
-     * save the form when the user saves it.
-     *
-     * @param array $args
-     * @param Request $request
+     * Load a form when the `settings` button is clicked and save it when the user saves it.
      */
     public function manage($args, $request): JSONMessage
     {
@@ -463,26 +433,33 @@ class CodecheckPlugin extends GenericPlugin
 
     public function setEnabled($enabled, $contextId = null)
     {
-        CodecheckLogger::debug("Plugin Enabled!");
         $result = parent::setEnabled($enabled, $contextId);
-        
+
         if ($enabled) {
-            $this->migration = new CodecheckSchemaMigration();
-            $this->migration->up();
-            $this->migration->issueLabelsUp();
-            $this->migration->codecheckStatusUp();
+            // Single entry point — install migration calls upgrade migrations internally.
+            $this->getInstallMigration()->up();
         }
-        
+
         return $result;
     }
 
+    /**
+     * Drop all CODECHECK tables and recreate them from scratch.
+     *
+     * This is a deliberate, admin-triggered destructive action exposed via
+     * the plugin settings UI ("Clear / Reset DB"). It is intentionally kept
+     * separate from the migration system, which never drops tables.
+     */
     public function resetSchema(): void
     {
-        $this->migration = new CodecheckSchemaMigration();
-        $this->migration->down();
-        $this->migration->up();
-        $this->migration->issueLabelsDown();
-        $this->migration->issueLabelsUp();
+        // Drop in reverse dependency order — codecheck_status references codecheck_metadata.
+        DBSchema::dropIfExists('codecheck_status');
+        DBSchema::dropIfExists('codecheck_orcid_tokens');
+        DBSchema::dropIfExists('codecheck_issue_labels');
+        DBSchema::dropIfExists('codecheck_metadata');
+
+        // Recreate everything fresh via the install migration.
+        $this->getInstallMigration()->up();
     }
 }
 

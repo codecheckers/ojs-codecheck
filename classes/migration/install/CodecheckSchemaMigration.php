@@ -1,16 +1,30 @@
 <?php
-namespace APP\plugins\generic\codecheck\classes\migration;
 
-use APP\plugins\generic\codecheck\classes\Submission\Schema as SubmissionSchema;
+/**
+ * @file classes/migration/install/CodecheckSchemaMigration.php
+ *
+ * Copyright (c) 2026 CODECHECK Initiative
+ * Distributed under the GNU GPL v3. For full terms see the file docs/COPYING.
+ *
+ * @class CodecheckSchemaMigration
+ * @brief Create all CODECHECK database tables on fresh install.
+ *        Also calls all upgrade migrations so that fresh installs
+ *        and existing installs both end up at the same schema state.
+ */
+
+namespace APP\plugins\generic\codecheck\classes\migration\install;
+
+use APP\plugins\generic\codecheck\classes\migration\upgrade\I94_AddMissingColumns;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
+use PKP\install\DowngradeNotSupportedException;
 
 class CodecheckSchemaMigration extends Migration
 {
     public function up(): void
     {
+        // codecheck_metadata — core CODECHECK data per submission
         if (!Schema::hasTable('codecheck_metadata')) {
             Schema::create('codecheck_metadata', function (Blueprint $table) {
                 $table->bigInteger('submission_id')->primary();
@@ -30,28 +44,43 @@ class CodecheckSchemaMigration extends Migration
                 $table->index('submission_id');
             });
         }
-        
-        $this->createCodecheckGenres();
-    }
 
-    public function issueLabelsUp(): void
-    {
-        if(!Schema::hasTable('codecheck_issue_labels')) {
-            CodecheckLogger::debug("Creating Issue Label DB Schema");
+        // codecheck_orcid_tokens — ORCID OAuth tokens per submission/codechecker
+        if (!Schema::hasTable('codecheck_orcid_tokens')) {
+            Schema::create('codecheck_orcid_tokens', function (Blueprint $table) {
+                $table->bigIncrements('id');
+                $table->bigInteger('submission_id')->unsigned();
+                $table->string('orcid_id', 20)->nullable();
+                $table->string('access_token', 255)->nullable();
+                $table->string('refresh_token', 255)->nullable();
+                $table->timestamp('token_expires_at')->nullable();
+                $table->string('put_code', 50)->nullable();
+                $table->enum('deposit_status', ['pending', 'success', 'failed'])->default('pending');
+                $table->text('error_message')->nullable();
+                $table->timestamp('deposited_at')->nullable();
+                $table->timestamps();
+                $table->index('submission_id');
+                $table->index(['submission_id', 'orcid_id']);
+            });
+        }
+
+        // codecheck_issue_labels — cached GitHub issue labels
+        if (!Schema::hasTable('codecheck_issue_labels')) {
             Schema::create('codecheck_issue_labels', function (Blueprint $table) {
                 $table->string('label', 200)->default('');
                 $table->string('labels_last_updated', 100)->default(date('Y-m-d H:i:s'));
             });
         }
-    }
-    
-    public function codecheckStatusUp(): void
-    {
+
+        // codecheck_status — CODECHECK status history per submission
         if (!Schema::hasTable('codecheck_status')) {
             Schema::create('codecheck_status', function (Blueprint $table) {
                 $table->bigInteger('status_id')->autoIncrement()->primary();
                 $table->bigInteger('submission_id');
-                $table->foreign('submission_id', 'codecheck_status_metadata')->references('submission_id')->on('codecheck_metadata')->onDelete('cascade');
+                $table->foreign('submission_id', 'codecheck_status_metadata')
+                    ->references('submission_id')
+                    ->on('codecheck_metadata')
+                    ->onDelete('cascade');
                 $table->string('status', 300);
                 $table->timestamp('timestamp');
                 $table->bigInteger('user_id');
@@ -59,25 +88,43 @@ class CodecheckSchemaMigration extends Migration
                 $table->index('status_id');
             });
         }
+
+        $this->createCodecheckGenres();
+
+        // Run all upgrade migrations — they are fully idempotent (hasColumn/hasTable guards).
+        // This ensures a fresh install ends up at exactly the same schema as an upgraded one.
+        (new I94_AddMissingColumns())->up();
     }
 
+    /**
+     * Downgrade is not supported — dropping tables would destroy journal data.
+     */
+    public function down(): void
+    {
+        throw new DowngradeNotSupportedException();
+    }
+
+    /**
+     * Create the codecheck.yml genre for all existing journal contexts.
+     * Skips contexts that already have it.
+     */
     private function createCodecheckGenres(): void
     {
         $contextDao = \APP\core\Application::getContextDAO();
         $genreDao = \PKP\db\DAORegistry::getDAO('GenreDAO');
-        
+
         $contexts = $contextDao->getAll();
         while ($context = $contexts->next()) {
             $existingGenres = $genreDao->getByContextId($context->getId());
             $ymlExists = false;
-            
+
             while ($genre = $existingGenres->next()) {
                 if ($genre->getLocalizedName() === 'codecheck.yml') {
                     $ymlExists = true;
                     break;
                 }
             }
-            
+
             if (!$ymlExists) {
                 $ymlGenre = $genreDao->newDataObject();
                 $ymlGenre->setContextId($context->getId());
@@ -89,16 +136,5 @@ class CodecheckSchemaMigration extends Migration
                 $genreDao->insertObject($ymlGenre);
             }
         }
-    }
-
-    public function down(): void
-    {
-        Schema::dropIfExists('codecheck_status');
-        Schema::dropIfExists('codecheck_metadata');
-    }
-
-    public function issueLabelsDown(): void
-    {
-        Schema::dropIfExists('codecheck_issue_labels');
     }
 }
