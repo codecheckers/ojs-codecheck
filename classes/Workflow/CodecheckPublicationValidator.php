@@ -22,7 +22,8 @@ class CodecheckPublicationValidator {
     {
         $this->validationChecks = [
             fn() => $this->validateCodecheckStatus(),
-            fn() => $this->validateYamlStructure()
+            fn() => $this->validateYamlStructure(),
+            fn() => $this->validateRepository(),
         ];
 
         $this->request = Application::get()->getRequest();
@@ -36,14 +37,14 @@ class CodecheckPublicationValidator {
         return $submission && $submission->getData('codecheckOptIn');
     }
 
-    private function codecheckHasStatus(): bool {
-        $codecheckStatus = CodecheckStatusHandler::getCurrentStatusData($this->codecheckMetadataHandler->getSubmissionId());
-        return !empty($codecheckStatus);
-    }
-
     private function validateCodecheckStatus(): bool {
         $codecheckStatus = CodecheckStatusHandler::getCurrentStatusData($this->codecheckMetadataHandler->getSubmissionId());
         $codecheckStatusKeysSelected = $this->plugin->getSetting($this->context->getId(), Constants::CODECHECK_STATUS_KEYS_SELECTED);
+
+        if(empty($codecheckStatus)) {
+            $this->errors[] = __('plugins.generic.codecheck.status.validation.failed.noStatusSet');
+            return false;
+        }
 
         if (!in_array($codecheckStatus->status, $codecheckStatusKeysSelected)) {
             $this->errors[] = __('plugins.generic.codecheck.status.validation.failed', [
@@ -69,9 +70,35 @@ class CodecheckPublicationValidator {
         return true;
     }
 
+    private function validateRepository(): bool {
+        $codecheckMetadata = $this->codecheckMetadataHandler->getMetadata($this->request, $this->codecheckMetadataHandler->getSubmissionId());
+        
+        CodecheckLogger::debug(print_r($codecheckMetadata, true));
+        if(isset($codecheckMetadata['error']) || !is_array($codecheckMetadata['codecheck']) || !isset($codecheckMetadata['codecheck']['repository'])) {
+            $this->errors[] = __('plugins.generic.codecheck.publication.validation.invalidRepository', [
+                'repositoryError' => __('plugins.generic.codecheck.publication.validation.metadataDBLoadError')
+            ]);
+            return false;
+        }
+        
+        $repositories = explode(",", preg_replace('/\s+/', '', $codecheckMetadata['codecheck']['repository']));
+        foreach ($repositories as $repository) {
+            $response = $this->codecheckMetadataHandler->importMetadataFromRepository($repository);
+            if($response->isSuccess()) { return true; }
+
+            CodecheckLogger::debug("Repository Error: " . $response->getPayloadArray()['error']);
+            $this->errors[] = __('plugins.generic.codecheck.publication.validation.invalidRepository', [
+                'repositoryError' => $response->getPayloadArray()['error']
+            ]);
+        }
+
+        return false;
+    }
+
     public function validatePublication(): true|array {
-        if($this->isOptedInToCodecheck() && $this->codecheckHasStatus()) {
+        if($this->isOptedInToCodecheck()) {
             foreach ($this->validationChecks as $validationCheck) {
+                CodecheckLogger::debug("Validation Check!");
                 if (!$validationCheck()) {
                     return $this->errors;
                 }

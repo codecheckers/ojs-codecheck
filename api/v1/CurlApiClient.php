@@ -4,6 +4,7 @@ namespace APP\plugins\generic\codecheck\api\v1;
 
 use CurlHandle;
 use APP\plugins\generic\codecheck\api\v1\ApiClientInterface;
+use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlHttpException;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitException;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
 
@@ -28,6 +29,14 @@ class CurlApiClient implements ApiClientInterface
         $response = curl_exec($curlHandle);
         if($response === false) {
             throw new CurlReadException($curlHandle);
+        }
+
+        $httpCode = curl_getinfo($curlHandle, CURLINFO_HTTP_CODE);
+        if ($httpCode >= 400) {
+            throw new CurlHttpException(
+                "Request to $url failed with HTTP status $httpCode. " . curl_error($curlHandle),
+                $httpCode
+            );
         }
         return $response;
     }

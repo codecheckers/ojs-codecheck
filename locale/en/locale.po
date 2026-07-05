@@ -402,7 +402,13 @@ msgid "plugins.generic.codecheck.status.validation.failed"
 msgstr "The mandatory CODECHECK for this submission has a status ({$codecheckStatus}), which is not allowed for publication by the journal. Please get in touch with the codechecker(s) to resolve all errors, before this submission can be published!"
 
 msgid "plugins.generic.codecheck.status.validation.failed.noStatusSet"
-msgstr "The mandatory CODECHECK for this submission has no status (so it was not yet started), which is not allowed for publication by the journal. Please get in touch with the codechecker(s) to resolve all errors, before this submission can be published!"
+msgstr "The CODECHECK for this submission is mandatory, but wasn't started yet, which is not allowed for the publication of a submission. Please get in touch with the codechecker(s) to start the CODECHECK / fill in the missing metadata into the CODECHECK metadata form, before this submission can be published!"
+
+msgid "plugins.generic.codecheck.publication.validation.metadataDBLoadError"
+msgstr "Couldn't retrieve the CODECHECK Metadata for this submission from the CODECHECK Metadata DB table.
+
+msgid "plugins.generic.codecheck.publication.validation.invalidRepository"
+msgstr "Invalid CODECHECK repository: {$repositoryError}"
 
 msgid "plugins.generic.codecheck.status.pending"
 msgstr "Pending"

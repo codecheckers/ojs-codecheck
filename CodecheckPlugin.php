@@ -97,10 +97,9 @@ class CodecheckPlugin extends GenericPlugin
 
         if(is_array($validationErrors)) {
             $errors = array_merge($errors, $validationErrors);
-            return false;
         }
 
-        return true;
+        return false;
     }
 
     public function addCodecheckStatusLocalizations($hookName, $args) {
