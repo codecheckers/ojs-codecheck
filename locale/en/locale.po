@@ -408,7 +408,13 @@ msgid "plugins.generic.codecheck.publication.validation.metadataDBLoadError"
 msgstr "Couldn't retrieve the CODECHECK Metadata for this submission from the CODECHECK Metadata DB table.
 
 msgid "plugins.generic.codecheck.publication.validation.invalidRepository"
-msgstr "Invalid CODECHECK repository: {$repositoryError}"
+msgstr "Invalid CODECHECK repository: {$repositoryError}."
+
+msgid "plugins.generic.codecheck.publication.validation.invalidPaperTitle"
+msgstr "The paper title from this submission is not matching the paper title in the provided repository"
+
+msgid "plugins.generic.codecheck.publication.validation.invalidCodecheckers"
+msgstr "The ORCIDs of the codecheckers specified in this submissions CODECHECK metadata from are not matching the codecheckers ORCIDs in the provided repository"
 
 msgid "plugins.generic.codecheck.status.pending"
 msgstr "Pending"

@@ -4,6 +4,7 @@ namespace APP\plugins\generic\codecheck\classes\Workflow;
 
 use \APP\core\Request;
 use APP\core\Application;
+use APP\plugins\generic\codecheck\api\v1\JsonResponse;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
 use APP\plugins\generic\codecheck\classes\Constants;
@@ -23,7 +24,7 @@ class CodecheckPublicationValidator {
         $this->validationChecks = [
             fn() => $this->validateCodecheckStatus(),
             fn() => $this->validateYamlStructure(),
-            fn() => $this->validateRepository(),
+            fn() => $this->validateMetadataFromRepository(),
         ];
 
         $this->request = Application::get()->getRequest();
@@ -70,10 +71,9 @@ class CodecheckPublicationValidator {
         return true;
     }
 
-    private function validateRepository(): bool {
+    private function validateMetadataFromRepository(): bool {
         $codecheckMetadata = $this->codecheckMetadataHandler->getMetadata($this->request, $this->codecheckMetadataHandler->getSubmissionId());
         
-        CodecheckLogger::debug(print_r($codecheckMetadata, true));
         if(isset($codecheckMetadata['error']) || !is_array($codecheckMetadata['codecheck']) || !isset($codecheckMetadata['codecheck']['repository'])) {
             $this->errors[] = __('plugins.generic.codecheck.publication.validation.invalidRepository', [
                 'repositoryError' => __('plugins.generic.codecheck.publication.validation.metadataDBLoadError')
@@ -84,15 +84,58 @@ class CodecheckPublicationValidator {
         $repositories = explode(",", preg_replace('/\s+/', '', $codecheckMetadata['codecheck']['repository']));
         foreach ($repositories as $repository) {
             $response = $this->codecheckMetadataHandler->importMetadataFromRepository($repository);
-            if($response->isSuccess()) { return true; }
+            $responseArray = $response->getPayloadArray();
+            if($response->isSuccess()) { 
+                if(!$this->validatePaperTitle($responseArray['metadata'])) {
+                    $this->errors[] = __('plugins.generic.codecheck.publication.validation.invalidRepository', [
+                        'repositoryError' => __('plugins.generic.codecheck.publication.validation.invalidPaperTitle')
+                    ]);
+                    continue;
+                }
 
-            CodecheckLogger::debug("Repository Error: " . $response->getPayloadArray()['error']);
+                if(!$this->validateCodechecker($responseArray['metadata'])) {
+                    $this->errors[] = __('plugins.generic.codecheck.publication.validation.invalidRepository', [
+                        'repositoryError' => __('plugins.generic.codecheck.publication.validation.invalidCodecheckers')
+                    ]);
+                    continue;
+                }
+
+                return true;
+            }
+
+            CodecheckLogger::debug("Repository Error: " . $responseArray['error']);
             $this->errors[] = __('plugins.generic.codecheck.publication.validation.invalidRepository', [
-                'repositoryError' => $response->getPayloadArray()['error']
+                'repositoryError' => $responseArray['error']
             ]);
         }
 
         return false;
+    }
+
+    private function validateCodechecker(array $codecheckMetadata): bool {
+        $codecheckersFromRepository = $codecheckMetadata['codechecker'];
+        $codecheckersFromOjsSubmission = $this->codecheckMetadataHandler->getMetadata($this->request, $this->codecheckMetadataHandler->getSubmissionId());
+
+        foreach ($codecheckersFromRepository as $codecheckerFromRepository) {
+            foreach ($codecheckersFromOjsSubmission as $codecheckerFromOjsSubmission) {
+                if(!isset($codecheckerFromRepository['orcid']) || !isset($codecheckerFromOjsSubmission['orcid'])) {
+                    continue;
+                }
+
+                if($codecheckerFromRepository['orcid'] !== $codecheckerFromOjsSubmission['orcid']) {
+
+                }
+            }
+        }
+
+        $paperTitle = $codecheckMetadata['paper']['title'];
+        error_log($paperTitle);
+        return true;
+    }
+
+    private function validatePaperTitle(array $codecheckMetadata): bool {
+        $metadataFromOjsSubmission = $this->codecheckMetadataHandler->getMetadata($this->request, $this->codecheckMetadataHandler->getSubmissionId());
+        return $codecheckMetadata['paper']['title'] === $metadataFromOjsSubmission['submission']['title'];
     }
 
     public function validatePublication(): true|array {
