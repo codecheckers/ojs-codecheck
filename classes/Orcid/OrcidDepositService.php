@@ -145,17 +145,17 @@ class OrcidDepositService
 
             if ($putCode) {
                 $client->putPeerReview($orcidId, $accessToken, $putCode, $payload);
-                $this->tokenDAO->markSuccess((int) $row->id, $putCode);
+                $this->tokenDAO->markSuccess($row->id, $putCode);
                 return ['orcidId' => $orcidId, 'status' => 'success', 'putCode' => $putCode, 'action' => 'updated'];
             } else {
                 $newPutCode = $client->postPeerReview($orcidId, $accessToken, $payload);
-                $this->tokenDAO->markSuccess((int) $row->id, $newPutCode);
+                $this->tokenDAO->markSuccess($row->id, $newPutCode);
                 return ['orcidId' => $orcidId, 'status' => 'success', 'putCode' => $newPutCode, 'action' => 'created'];
             }
         } catch (\Throwable $e) {
             $error = $e->getMessage();
             CodecheckLogger::error('ORCID deposit failed for ' . $orcidId . ': ' . $error);
-            $this->tokenDAO->markFailed((int) $row->id, $error);
+            $this->tokenDAO->markFailed($row->id, $error);
             return ['orcidId' => $orcidId, 'status' => 'failed', 'error' => $error];
         }
     }
