@@ -185,6 +185,14 @@ class SettingsForm extends Form
             )
         );
 
+        $this->setData(
+            Constants::ORCID_CITY,
+            $this->plugin->getSetting(
+                $context->getId(),
+                Constants::ORCID_CITY
+            )
+        );
+
         parent::initData();
     }
 
@@ -214,6 +222,7 @@ class SettingsForm extends Form
             Constants::ORCID_API_TYPE,
             Constants::ORCID_CLIENT_ID,
             Constants::ORCID_CLIENT_SECRET,
+            Constants::ORCID_CITY,
         ]);
 
         parent::readInputData();
@@ -377,6 +386,12 @@ class SettingsForm extends Form
                 $newSecret
             );
         }
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::ORCID_CITY,
+            $this->getData(Constants::ORCID_CITY)
+        );
 
         $notificationMgr = new NotificationManager();
         $notificationMgr->createTrivialNotification(

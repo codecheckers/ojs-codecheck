@@ -886,3 +886,21 @@ msgstr "Testing..."
 
 msgid "plugins.generic.codecheck.orcid.test.error.requestFailed"
 msgstr "Request failed. Please check your network connection."
+
+msgid "plugins.generic.codecheck.orcid.city"
+msgstr "Publisher City"
+
+msgid "plugins.generic.codecheck.orcid.cityDescription"
+msgstr "City of the publishing organisation, required for ORCID peer-review deposition via the Member API."
+
+msgid "plugins.generic.codecheck.orcid.payload.untitledSubmission"
+msgstr "Untitled submission"
+
+msgid "plugins.generic.codecheck.orcid.payload.missingMetadata"
+msgstr "ORCID deposition requires the following journal metadata to be configured: {$fields}"
+
+msgid "plugins.generic.codecheck.orcid.payload.missingPublisherName"
+msgstr "Publisher Name (Journal Settings → Masthead → Publisher)"
+
+msgid "plugins.generic.codecheck.orcid.payload.missingCountry"
+msgstr "Country (Journal Settings → Masthead → Country)"

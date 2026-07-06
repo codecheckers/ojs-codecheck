@@ -418,6 +418,20 @@
 
 		{fbvFormSection list=true}
 			<div class="field-header">
+				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.orcid.city"}</label>
+			</div>
+			<label class="description">{translate key="plugins.generic.codecheck.orcid.cityDescription"}</label>
+			<input
+				type="text"
+				name="orcidCity"
+				class="pkpFormField__input"
+				value="{$orcidCity|escape}"
+				placeholder="e.g. Amsterdam"
+			/>
+		{/fbvFormSection}
+
+		{fbvFormSection list=true}
+			<div class="field-header">
 				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.orcid.test.title"}</label>
 			</div>
 			<label class="description">{translate key="plugins.generic.codecheck.orcid.test.description"}</label>

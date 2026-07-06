@@ -25,10 +25,10 @@ class PeerReviewPayloadBuilder
 
         $submissionTitle = $publication
             ? strip_tags($publication->getLocalizedFullTitle() ?? '')
-            : 'Untitled submission';
+            : __('plugins.generic.codecheck.orcid.payload.untitledSubmission');
 
         if (empty($submissionTitle)) {
-            $submissionTitle = 'Untitled submission';
+            $submissionTitle = __('plugins.generic.codecheck.orcid.payload.untitledSubmission');
         }
 
         $certificateDoi = !empty($meta['certificate']) ? $meta['certificate'] : null;
@@ -133,13 +133,12 @@ class PeerReviewPayloadBuilder
         $country = !empty($journal['publisherCountry']) ? trim($journal['publisherCountry']) : '';
 
         $missing = [];
-        if (empty($publisherName)) $missing[] = 'Publisher Name (Journal Settings → Masthead → Publisher)';
-        if (empty($country))       $missing[] = 'Country (Journal Settings → Masthead → Country)';
+        if (empty($publisherName)) $missing[] = __('plugins.generic.codecheck.orcid.payload.missingPublisherName');
+        if (empty($country))       $missing[] = __('plugins.generic.codecheck.orcid.payload.missingCountry');
 
         if (!empty($missing)) {
-            throw new \InvalidArgumentException(
-                'ORCID deposition requires the following journal metadata to be configured: ' .
-                implode(', ', $missing) . '.'
+        throw new \InvalidArgumentException(
+                __('plugins.generic.codecheck.orcid.payload.missingMetadata', ['fields' => implode(', ', $missing)])
             );
         }
 

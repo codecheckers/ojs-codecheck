@@ -175,7 +175,7 @@ class OrcidDepositService
             'name'             => $context->getLocalizedName() ?? '',
             'issn'             => $context->getData('onlineIssn') ?? $context->getData('printIssn') ?? '',
             'publisherName'    => $context->getData('publisherInstitution') ?? '',
-            'publisherCity'    => '', // OJS has no publisher city field
+            'publisherCity'   => $this->plugin->getSetting($contextId, Constants::ORCID_CITY) ?? '',
             'publisherCountry' => $context->getData('country') ?? '',
             'ringgoldId'       => $context->getData('ringgoldId') ?? null,
         ];

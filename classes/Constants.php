@@ -77,6 +77,7 @@ class Constants
     public const ORCID_API_TYPE = 'orcidApiType';
     public const ORCID_CLIENT_ID = 'orcidClientId';
     public const ORCID_CLIENT_SECRET = 'orcidClientSecret';
+    public const ORCID_CITY = 'orcidCity';
 
     // ORCID API type values
     public const ORCID_API_TYPE_SANDBOX = 'memberSandbox';
