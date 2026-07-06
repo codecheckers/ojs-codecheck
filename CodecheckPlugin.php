@@ -363,8 +363,6 @@ class CodecheckPlugin extends GenericPlugin
                 'value' => $checkboxValue,
                 'groupId' => 'default'
             ]));
-            
-            return false;
         }
         
         return false;
