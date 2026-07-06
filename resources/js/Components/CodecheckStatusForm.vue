@@ -1,9 +1,10 @@
 <template>
     <div class="codecheck-status-form border border-light">
         <div class="flex items-center justify-between bg-default p-5">
-            <h3 class="text-2xl-bold uppercase text-heading">Status</h3>
+            <h3 class="text-2xl-bold uppercase text-heading">{{ t('plugins.generic.codecheck.status') }}</h3>
             <div class="flex gap-x-2">
                 <button
+                    v-if="hasStatusHistory"
                     class="
                         pkpButton
                         inline-flex
@@ -28,7 +29,7 @@
                     {{ t('plugins.generic.codecheck.status.buttons.history') }}
                 </button>
                 <button
-                    v-if="userAllowedToAccess"
+                    v-if="userAllowedToAccess && hasStatusHistory"
                     class="
                         pkpButton
                         pkpButton--isPrimary
@@ -92,6 +93,7 @@ export default {
       statusData: [],
       allStatuses: [],
       userAllowedToAccess: false,
+      hasStatusHistory: false,
     }
   },
   computed: {
@@ -104,6 +106,7 @@ export default {
   },
   mounted() {
     this.validateUserAccessRights();
+    this.getStatusHistory();
     this.loadStatusData();
   },
   watch: {
@@ -222,8 +225,15 @@ export default {
             const data = await response.json();
             const statusHistory = data.statusHistory;
 
+            if(statusHistory === null) {
+                this.hasStatusHistory = false;
+            } else {
+                this.hasStatusHistory = true;
+            }
+
             return statusHistory;
         } catch (error) {
+            this.hasStatusHistory = false;
             console.error('getStatus error:', error);
         }
     },
@@ -282,9 +292,11 @@ export default {
         return table;
     },
     async buildStatusHistoryTable() {
-        const statusHistory = await this.getStatusHistory();
-        const [currentStatus, ...statusRest] = statusHistory;
-        return await this.statusTableSegment([currentStatus], true) + await this.statusTableSegment(statusRest, false);
+        if(this.hasStatusHistory) {
+            const statusHistory = await this.getStatusHistory();
+            const [currentStatus, ...statusRest] = statusHistory;
+            return await this.statusTableSegment([currentStatus], true) + await this.statusTableSegment(statusRest, false);
+        }
     },
     async showHistoryModal() {
       const { useModal } = pkp.modules.useModal;

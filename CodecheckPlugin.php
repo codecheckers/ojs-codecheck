@@ -115,15 +115,18 @@ class CodecheckPlugin extends GenericPlugin
 
     public function addCodecheckStatusLocalizations($hookName, $args) {
         $templateMgr = $args[0];
+
+        $localeKeys = array_combine(
+            Constants::CODECHECK_STATUSES,
+            array_map(fn($status) => __($status), Constants::CODECHECK_STATUSES)
+        );
+
+        $localeKeys[Constants::CODECHECK_STATUS_PENDING] = __(Constants::CODECHECK_STATUS_PENDING);
+
         $templateMgr->addJavaScript(
             'codecheck-locale-status',
             'pkp.localeKeys = pkp.localeKeys || {};' .
-            'Object.assign(pkp.localeKeys, ' . json_encode(
-                array_combine(
-                    Constants::CODECHECK_STATUSES,
-                    array_map(fn($status) => __($status), Constants::CODECHECK_STATUSES)
-                )
-            ) . ');',
+            'Object.assign(pkp.localeKeys, ' . json_encode($localeKeys) . ');',
             ['inline' => true, 'contexts' => ['backend']]
         );
         return false;

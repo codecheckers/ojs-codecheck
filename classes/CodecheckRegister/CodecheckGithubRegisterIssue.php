@@ -4,6 +4,7 @@ namespace APP\plugins\generic\codecheck\classes\CodecheckRegister;
 
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifier;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckIssueLabels;
+use APP\plugins\generic\codecheck\classes\Workflow\CodecheckStatusHandler;
 
 class CodecheckGithubRegisterIssue {
     private string $repositoryOwner;
@@ -13,6 +14,7 @@ class CodecheckGithubRegisterIssue {
     private string $submissionID;
     private array $labels;
     private string $jsonEncodedCodecheckMetadata;
+    private string $codecheckStatus;
 
     public function __construct(
         string $repositoryOwner,
@@ -29,6 +31,7 @@ class CodecheckGithubRegisterIssue {
         $this->repositoryOwner = $repositoryOwner;
         $this->repository = $repository;
         $this->submissionID = $submissionID;
+        $this->codecheckStatus = CodecheckStatusHandler::getCurrentStatusData($this->submissionID)->status;
         $authorString = empty($authorString) ? 'New CODECHECK' : $authorString;
         $this->title = $this->createTitleMarkdown($authorString, $certificateIdentifier);
         $this->jsonEncodedCodecheckMetadata = $this->createJsonEncodedCodecheckMetadataMarkdown($authorString, $certificateIdentifier, $journalName, $submissionID, $codecheckers, $repositories);
@@ -77,6 +80,7 @@ class CodecheckGithubRegisterIssue {
         . "```json\n"
         . "{"
         . "\n\t\"identifier\": \"" . $certificateIdentifier->toStr() . "\","
+        . "\n\t\"status\": \"" . $this->codecheckStatus . "\","
         . "\n\t\"repositories\": " . json_encode($repositories) . ","
         . "\n\t\"codecheckers\": " . json_encode($codecheckers) . ","
         . "\n\t\"links\": [],"
@@ -99,8 +103,9 @@ class CodecheckGithubRegisterIssue {
         return "<!-- Provide the title of your published paper or preprint -->\n## " . $paperTitle . "\n\n"
         . "<!-- Provide a link to your published paper or preprint, ideally with a DOI -->\n**Article:**\n\n"
         . "<!-- Information about the Journal in which the paper/ preprint is published -->\n**Journal:** " . $journalName . " *(Submission ID: " . $this->submissionID . ")*\n\n"
-        . "<!-- Provide a link to your code (and data) repository(s) (GitHub, GitLab, etc.) -->\n**Repositories:**\n"
-        . $repoStr;
+        . "<!-- Provide a link to your code (and data) repository(s) (GitHub, GitLab, etc.) -->\n**Repositories:**\n" . $repoStr . "\n\n"
+        . "<!-- The current status of the CODECHECK -->\n**CODECHECK Status:** "
+        . __($this->codecheckStatus) . "\n\n";
     }
 
     private function fillLabels(

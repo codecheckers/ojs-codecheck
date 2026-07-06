@@ -26,6 +26,7 @@ class Constants
     /**
      * The possible Codecheck Statuses
      */
+    public const CODECHECK_STATUS_PENDING = 'plugins.generic.codecheck.status.pending';
     public const CODECHECK_STATUS_NEEDS_CODECHECKER = 'plugins.generic.codecheck.status.needsCodechecker';
     public const CODECHECK_STATUS_ASSIGNED_CODECHECKER = 'plugins.generic.codecheck.status.assignedCodechecker';
     public const CODECHECK_STATUS_STALLED_AUTHOR = 'plugins.generic.codecheck.status.stalled.author';
