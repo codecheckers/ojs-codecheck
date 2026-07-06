@@ -53,6 +53,7 @@ class OrcidDepositService
 
         $submission = Repo::submission()->get($submissionId);
         if (!$submission) {
+            CodecheckLogger::error('ORCID deposit skipped: submission ' . $submissionId . ' not found.');
             return [];
         }
 
