@@ -136,6 +136,11 @@ class SettingsForm extends Form
             $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_CUSTOM_URL)
         );
 
+        $this->setData(
+            Constants::CODECHECK_BADGE_HEIGHT,
+            $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_HEIGHT) ?? '24'
+        );
+
         parent::initData();
     }
 
@@ -156,6 +161,7 @@ class SettingsForm extends Form
             Constants::CODECHECK_GITHUB_CUSTOM_LABELS,
             Constants::CODECHECK_BADGE_TYPE,
             Constants::CODECHECK_BADGE_CUSTOM_URL,
+            Constants::CODECHECK_BADGE_HEIGHT,
         ]);
 
         parent::readInputData();
@@ -183,6 +189,7 @@ class SettingsForm extends Form
         ]);
         $templateMgr->assign('codecheckBadgeType', $this->getData(Constants::CODECHECK_BADGE_TYPE) ?? 'codeworks');
         $templateMgr->assign('codecheckBadgeCustomUrl', $this->getData(Constants::CODECHECK_BADGE_CUSTOM_URL) ?? '');
+        $templateMgr->assign('codecheckBadgeHeight', $this->getData(Constants::CODECHECK_BADGE_HEIGHT) ?? '24');
 
         return parent::fetch($request, $template, $display);
     }
@@ -265,6 +272,12 @@ class SettingsForm extends Form
             $context->getId(),
             Constants::CODECHECK_BADGE_CUSTOM_URL,
             $this->getData(Constants::CODECHECK_BADGE_CUSTOM_URL)
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_BADGE_HEIGHT,
+            (int) ($this->getData(Constants::CODECHECK_BADGE_HEIGHT) ?? 24)
         );
 
         $notificationMgr = new NotificationManager();

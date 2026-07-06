@@ -82,7 +82,8 @@ class ArticleDetails
         $request = Application::get()->getRequest();
         $context = $request->getContext();
         $badgeType = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_TYPE) ?? 'codeworks';
-        $badgeStyle = $badgeType === 'codecheck_logo' ? 'height:36px; width:auto;' : 'height:18px; width:auto;';
+        $badgeHeight = (int) ($this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_HEIGHT) ?? 24);
+        $badgeStyle = 'height:' . $badgeHeight . 'px; width:auto;';
 
         $templateMgr->assign([
             'logoUrl'      => $this->getBadgeUrl(),

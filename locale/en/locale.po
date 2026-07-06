@@ -609,3 +609,9 @@ msgstr "No badge (text only)"
 
 msgid "plugins.generic.codecheck.badge.textOnly"
 msgstr "CODECHECK"
+
+msgid "plugins.generic.codecheck.settings.badge.height.label"
+msgstr "Badge display height"
+
+msgid "plugins.generic.codecheck.settings.badge.height.description"
+msgstr "Height in pixels. Width adjusts automatically. Default: 24px."

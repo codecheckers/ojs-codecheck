@@ -301,6 +301,21 @@
 				placeholder="https://example.com/your-badge.png"
 			/>
 		</div>
+		
+		<div style="margin-top:0.75rem;">
+			<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.badge.height.label"}</label>
+			<p class="description">{translate key="plugins.generic.codecheck.settings.badge.height.description"}</p>
+			<input
+				type="number"
+				name="codecheckBadgeHeight"
+				class="pkpFormField__input"
+				value="{$codecheckBadgeHeight|escape}"
+				min="10"
+				max="200"
+				style="width:100px;"
+			/>
+			<span style="font-size:13px; color:#666; margin-left:6px;">px</span>
+		</div>
 	{/fbvFormSection}
 	{fbvFormButtons submitText="common.save"}
 </form>
