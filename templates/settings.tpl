@@ -74,7 +74,11 @@
 			const $btn    = $(this);
 			const $result = $('#orcidTestResult');
 
-			$btn.prop('disabled', true).text('Testing...');
+			const labelTesting  = $btn.data('label-testing');
+			const labelDefault  = $btn.data('label-default');
+			const labelFallback = $btn.data('label-fallback');
+
+			$btn.prop('disabled', true).text(labelTesting);
 			$result.hide().removeClass('orcid-test--success orcid-test--error');
 
 			fetch(pkp.context.apiBaseUrl.replace('/api/v1', '') + '/api/v1/codecheck/orcid-test', {
@@ -94,14 +98,14 @@
 						.show();
 				}
 			})
-			.catch(() => {
+			.catch((err) => {
 				$result
 					.addClass('orcid-test--error')
-					.text('✗ Request failed. Check your network connection.')
+					.text('✗ ' + (err.message || labelFallback))
 					.show();
 			})
 			.finally(() => {
-				$btn.prop('disabled', false).text('Test ORCID Setup');
+				$btn.prop('disabled', false).text(labelDefault);
 			});
 		});
 	});
@@ -417,7 +421,15 @@
 				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.orcid.test.title"}</label>
 			</div>
 			<label class="description">{translate key="plugins.generic.codecheck.orcid.test.description"}</label>
-			<button type="button" id="testOrcidSetup" class="pkpButton btn-add" style="margin-top: 0;">
+			<button
+				type="button"
+				id="testOrcidSetup"
+				class="pkpButton btn-add"
+				style="margin-top: 0;"
+				data-label-default="{translate key="plugins.generic.codecheck.orcid.test.button"}"
+				data-label-testing="{translate key="plugins.generic.codecheck.orcid.test.button.testing"}"
+				data-label-fallback="{translate key="plugins.generic.codecheck.orcid.test.error.requestFailed"}"
+			>
 				{translate key="plugins.generic.codecheck.orcid.test.button"}
 			</button>
 			<div id="orcidTestResult"></div>

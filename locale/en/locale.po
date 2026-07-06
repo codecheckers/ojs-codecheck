@@ -880,3 +880,9 @@ msgstr "Authorisation successful. You may close this window."
 
 msgid "plugins.generic.codecheck.orcid.auth.closeWindow"
 msgstr "Close this window"
+
+msgid "plugins.generic.codecheck.orcid.test.button.testing"
+msgstr "Testing..."
+
+msgid "plugins.generic.codecheck.orcid.test.error.requestFailed"
+msgstr "Request failed. Please check your network connection."
