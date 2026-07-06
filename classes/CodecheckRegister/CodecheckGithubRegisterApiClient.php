@@ -204,7 +204,8 @@ class CodecheckGithubRegisterApiClient
         string $paperTitle,
         string $authorString,
         array $codecheckers,
-        array $repositories
+        array $repositories,
+        array $updateInformation
     ): array {
         $this->client->authenticate($this->githubPAT, null, Client::AUTH_ACCESS_TOKEN);
 
@@ -218,7 +219,8 @@ class CodecheckGithubRegisterApiClient
             $authorString,
             $this->submissionID,
             $codecheckers,
-            $repositories
+            $repositories,
+            $updateInformation
         );
 
         try {
@@ -272,7 +274,8 @@ class CodecheckGithubRegisterApiClient
             $authorString,
             $this->submissionID,
             $codecheckers,
-            $repositories
+            $repositories,
+            $updateInformation
         );
 
         $issueContents = [];

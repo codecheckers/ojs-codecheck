@@ -119,6 +119,9 @@ msgstr "Update the Issue Title (containing the article's authors)"
 msgid "plugins.generic.codecheck.settings.updateIssue.body"
 msgstr "Update the Issue Description (containing the article, codechecker and repository information)"
 
+msgid "plugins.generic.codecheck.settings.updateIssue.status"
+msgstr "Record & update the CODECHECK Status in the GitHub Register Issue"
+
 msgid "plugins.generic.codecheck.settings.status"
 msgstr "What status must a check have for a submission to proceed with the publication?"
 

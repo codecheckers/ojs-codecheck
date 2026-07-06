@@ -611,6 +611,7 @@ class CodecheckApiHandler
         array $repositories
     ): array
     {
+        $updateInformation = $this->plugin->getSetting($this->request->getContext()->getId(), Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_FIELDS);
         // Add the new issue to the CODECHECK GtiHub Register
         $issue = $codecheckGithubRegisterApiClient->addIssue(
             $identifier,
@@ -618,7 +619,8 @@ class CodecheckApiHandler
             $articleTitle,
             $authorString,
             $codecheckers,
-            $repositories
+            $repositories,
+            $updateInformation
         );
 
         return $issue;
@@ -640,8 +642,9 @@ class CodecheckApiHandler
         array $repositories
     ): string
     {
-        $journalName = $this->request->getContext()?->getLocalizedName() ?? 'Unknwon Journal';
-
+        $context = $this->request->getContext();
+        $journalName = $context?->getLocalizedName() ?? 'Unknwon Journal';
+        $updateInformation = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_FIELDS);
         $codecheckIssue = new CodecheckGithubRegisterIssue(
             $githubRegisterOrganization,
             $githubRegisterRepository,
@@ -652,7 +655,8 @@ class CodecheckApiHandler
             $authorString,
             $this->codecheckMetadataHandler->getSubmissionId(),
             $codecheckers,
-            $repositories
+            $repositories,
+            $updateInformation
         );
 
         return $codecheckIssue->getNewIssueUrl();

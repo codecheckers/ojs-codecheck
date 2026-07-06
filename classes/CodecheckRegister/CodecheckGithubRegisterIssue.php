@@ -5,6 +5,10 @@ namespace APP\plugins\generic\codecheck\classes\CodecheckRegister;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifier;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckIssueLabels;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckStatusHandler;
+use APP\plugins\generic\codecheck\classes\Constants;
+use PKP\plugins\PluginRegistry;
+use APP\core\Application;
+use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 
 class CodecheckGithubRegisterIssue {
     private string $repositoryOwner;
@@ -15,6 +19,7 @@ class CodecheckGithubRegisterIssue {
     private array $labels;
     private string $jsonEncodedCodecheckMetadata;
     private string $codecheckStatus;
+    private bool $updateStatus;
 
     public function __construct(
         string $repositoryOwner,
@@ -26,12 +31,19 @@ class CodecheckGithubRegisterIssue {
         string $authorString,
         string $submissionID,
         array $codecheckers,
-        array $repositories
+        array $repositories,
+        array $updateInformation
     ){
         $this->repositoryOwner = $repositoryOwner;
         $this->repository = $repository;
         $this->submissionID = $submissionID;
         $this->codecheckStatus = CodecheckStatusHandler::getCurrentStatusData($this->submissionID)->status;
+        $this->updateStatus = false;
+        if(in_array(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_STATUS, $updateInformation)) {
+            $this->updateStatus = true;
+        }
+        $updateCodecheckStatus = $this->updateStatus ? 'true' : 'false';
+        CodecheckLogger::debug("Record / Update Status: " . $updateCodecheckStatus);
         $authorString = empty($authorString) ? 'New CODECHECK' : $authorString;
         $this->title = $this->createTitleMarkdown($authorString, $certificateIdentifier);
         $this->jsonEncodedCodecheckMetadata = $this->createJsonEncodedCodecheckMetadataMarkdown($authorString, $certificateIdentifier, $journalName, $submissionID, $codecheckers, $repositories);
@@ -76,11 +88,12 @@ class CodecheckGithubRegisterIssue {
         array $repositories
     ): string
     {
+        $statusInformation = $this->updateStatus ? "\n\t\"status\": \"" . $this->codecheckStatus . "\"," : "";
         return "<details>\n<summary><h3>JSON encoded CODECHECK metadata</h3></summary>\n\n"
         . "```json\n"
         . "{"
         . "\n\t\"identifier\": \"" . $certificateIdentifier->toStr() . "\","
-        . "\n\t\"status\": \"" . $this->codecheckStatus . "\","
+        . $statusInformation
         . "\n\t\"repositories\": " . json_encode($repositories) . ","
         . "\n\t\"codecheckers\": " . json_encode($codecheckers) . ","
         . "\n\t\"links\": [],"
@@ -100,12 +113,13 @@ class CodecheckGithubRegisterIssue {
         foreach ($repositories as $repo) {
             $repoStr .= "\t- " . $repo . "\n";
         }
+        $statusInformation = $this->updateStatus ? "<!-- The current status of the CODECHECK -->\n**CODECHECK Status:** " . __($this->codecheckStatus) . "\n\n" : "";
+        
         return "<!-- Provide the title of your published paper or preprint -->\n## " . $paperTitle . "\n\n"
         . "<!-- Provide a link to your published paper or preprint, ideally with a DOI -->\n**Article:**\n\n"
         . "<!-- Information about the Journal in which the paper/ preprint is published -->\n**Journal:** " . $journalName . " *(Submission ID: " . $this->submissionID . ")*\n\n"
         . "<!-- Provide a link to your code (and data) repository(s) (GitHub, GitLab, etc.) -->\n**Repositories:**\n" . $repoStr . "\n\n"
-        . "<!-- The current status of the CODECHECK -->\n**CODECHECK Status:** "
-        . __($this->codecheckStatus) . "\n\n";
+        . $statusInformation;
     }
 
     private function fillLabels(
