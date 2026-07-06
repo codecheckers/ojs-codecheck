@@ -48,13 +48,13 @@ class OrcidDepositService
 
         if (empty($clientId) || empty($clientSecret)) {
             CodecheckLogger::error('ORCID deposit skipped: no credentials configured.');
-            return [];
+            return [['status' => 'failed', 'error' => __('plugins.generic.codecheck.orcid.test.error.noCredentials')]];
         }
 
         $submission = Repo::submission()->get($submissionId);
         if (!$submission) {
             CodecheckLogger::error('ORCID deposit skipped: submission ' . $submissionId . ' not found.');
-            return [];
+            return [['status' => 'failed', 'error' => __('plugins.generic.codecheck.orcid.auth.error.submissionNotFound')]];
         }
 
         $journal = $this->loadJournalInfo($contextId);

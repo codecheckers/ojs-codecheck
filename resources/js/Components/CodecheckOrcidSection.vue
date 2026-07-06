@@ -25,6 +25,11 @@
       <button class="codecheck-orcid-section__error-close" @click="authError = null">✕</button>
     </div>
 
+    <div v-if="depositError" class="codecheck-orcid-section__error-banner">
+      <span>⚠ {{ depositError }}</span>
+      <button class="codecheck-orcid-section__error-close" @click="depositError = null">✕</button>
+    </div>
+
     <div v-if="isLoading">{{ t('common.loading') }}</div>
 
     <div v-else-if="codecheckers.length === 0">
@@ -139,6 +144,7 @@ export default {
       isDepositing: false,
       authError: null,
       journalConfigError: null,
+      depositError: null,
     };
   },
 
@@ -208,6 +214,7 @@ export default {
     },
 
     async deposit(cc) {
+      this.depositError = null;
       this.isDepositing = true;
       try {
         const response = await fetch(
@@ -221,8 +228,14 @@ export default {
             body: JSON.stringify({ submissionId: this.submission.id, orcidId: cc.orcidId }),
           }
         );
-        await response.json();
+        const data = await response.json();
         await this.loadTokenStatus();
+        if (data.results && Array.isArray(data.results)) {
+          const failed = data.results.filter(r => r.status === 'failed');
+          if (failed.length > 0) {
+            this.depositError = failed.map(r => r.error).join(', ');
+          }
+        }
       } catch (err) {
         console.error('[CODECHECK ORCID] Deposit error', err);
       } finally {
@@ -331,7 +344,7 @@ export default {
 }
 .codecheck-orcid-section__error-banner {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
   background: #f8d7da;
