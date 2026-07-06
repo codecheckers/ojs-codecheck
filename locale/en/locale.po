@@ -838,3 +838,45 @@ msgstr "Client ID and Client Secret are not configured in plugin settings."
 
 msgid "plugins.generic.codecheck.orcid.test.error.credentialsFailed"
 msgstr "ORCID credentials test failed:"
+
+msgid "plugins.generic.codecheck.orcid.auth.error.notEnabled"
+msgstr "ORCID integration is not enabled for this journal."
+
+msgid "plugins.generic.codecheck.orcid.auth.error.noCredentials"
+msgstr "ORCID credentials are not configured. Please ask the journal manager to set the Client ID and Client Secret in the CODECHECK plugin settings."
+
+msgid "plugins.generic.codecheck.orcid.auth.error.missingSubmissionId"
+msgstr "Missing submission ID parameter."
+
+msgid "plugins.generic.codecheck.orcid.auth.error.accessDenied"
+msgstr "Access denied."
+
+msgid "plugins.generic.codecheck.orcid.auth.error.denied"
+msgstr "ORCID authorisation denied: {$error}"
+
+msgid "plugins.generic.codecheck.orcid.auth.error.invalidCallback"
+msgstr "Invalid ORCID callback: missing code or state."
+
+msgid "plugins.generic.codecheck.orcid.auth.error.invalidState"
+msgstr "Invalid state parameter."
+
+msgid "plugins.generic.codecheck.orcid.auth.error.securityCheck"
+msgstr "Security check failed. Please try again."
+
+msgid "plugins.generic.codecheck.orcid.auth.error.submissionNotFound"
+msgstr "Submission not found."
+
+msgid "plugins.generic.codecheck.orcid.auth.error.orcidMismatch"
+msgstr "The ORCID iD you authenticated with ({$orcidId}) does not match any codechecker ORCID on record for this submission. Please sign in with the correct ORCID account."
+
+msgid "plugins.generic.codecheck.orcid.auth.error.tokenExchange"
+msgstr "ORCID token exchange failed: {$error}"
+
+msgid "plugins.generic.codecheck.orcid.auth.error.prefix"
+msgstr "Error"
+
+msgid "plugins.generic.codecheck.orcid.auth.success"
+msgstr "Authorisation successful. You may close this window."
+
+msgid "plugins.generic.codecheck.orcid.auth.closeWindow"
+msgstr "Close this window"
