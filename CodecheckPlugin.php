@@ -405,7 +405,7 @@ class CodecheckPlugin extends GenericPlugin
             $codecheckMode = $this->getSetting($context->getId(), Constants::CODECHECK_MODE);
             CodecheckLogger::debug('Mode: ' . $codecheckMode);
             $checkboxValue = false;
-            $checkboxDisabled = false;
+            $codecheckMandatory = false;
             $codecheckDescription = __('plugins.generic.codecheck.optIn.description', [
                 'codecheckLink' => "<a href='{$this->getUrlPageRoute("codecheck")}/info' target='_blank'>" . __('plugins.generic.codecheck.displayName') . "</a>"
             ]);
@@ -413,8 +413,8 @@ class CodecheckPlugin extends GenericPlugin
             if ($codecheckMode == 'opt-out') {
                 $checkboxValue = true;
             } elseif ($codecheckMode == 'mandatory') {
-                $checkboxValue    = true;
-                $checkboxDisabled = true;
+                $checkboxValue = true;
+                $codecheckMandatory = true;
                 $codecheckDescription = __('plugins.generic.codecheck.mandatory.description', [
                     'codecheckLink' => "<a href='{$this->getUrlPageRoute("codecheck")}/info' target='_blank'>" . __('plugins.generic.codecheck.displayName') . "</a>"
                 ]);
@@ -422,19 +422,18 @@ class CodecheckPlugin extends GenericPlugin
 
             $form->addField(new FieldOptions('codecheckOptIn', [
                 'label' => __('plugins.generic.codecheck.displayName'),
+                'isRequired' => $codecheckMandatory,
                 'type' => 'checkbox',
                 'options' => [
                     [
-                        'value'    => 1,
-                        'label'    => $codecheckDescription,
-                        'disabled' => $checkboxDisabled,
+                        'value' => 1, 
+                        'label' => $codecheckDescription,
+                        'disabled' => $codecheckMandatory,
                     ]
                 ],
                 'value'   => $checkboxValue,
                 'groupId' => 'default'
             ]));
-            
-            return false;
         }
         
         return false;
