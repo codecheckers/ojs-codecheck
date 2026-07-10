@@ -21,6 +21,7 @@ class CodecheckPublicationValidator {
 
     public function __construct(CodecheckPlugin $plugin)
     {
+
         $this->validationChecks = [
             fn() => $this->validateCodecheckStatus(),
             fn() => $this->validateYamlStructure(),
@@ -43,7 +44,9 @@ class CodecheckPublicationValidator {
         $codecheckStatusKeysSelected = $this->plugin->getSetting($this->context->getId(), Constants::CODECHECK_STATUS_KEYS_SELECTED);
 
         if(empty($codecheckStatus)) {
-            $this->errors[] = __('plugins.generic.codecheck.status.validation.failed.noStatusSet');
+            if($this->isExtendedValidation()) {
+                $this->errors[] = __('plugins.generic.codecheck.status.validation.failed.noStatusSet');
+            }
             return false;
         }
 
@@ -72,6 +75,11 @@ class CodecheckPublicationValidator {
     }
 
     private function validateMetadataFromRepository(): bool {
+        // If this is not an extended Publication Validation, just return valid (and except that the metadata might be invalid, but ignore it since the user set the configuration setting to fail silently in this case)
+        if(!$this->isExtendedValidation()) {
+            return true;
+        }
+
         $codecheckMetadata = $this->codecheckMetadataHandler->getMetadata($this->request, $this->codecheckMetadataHandler->getSubmissionId());
         
         if(isset($codecheckMetadata['error']) || !is_array($codecheckMetadata['codecheck']) || !isset($codecheckMetadata['codecheck']['repository'])) {
@@ -112,7 +120,7 @@ class CodecheckPublicationValidator {
         return false;
     }
 
-    private function validateCodechecker(array $codecheckMetadata): bool {
+    /*private function validateCodechecker(array $codecheckMetadata): bool {
         $codecheckersFromRepository = $codecheckMetadata['codechecker'];
         $codecheckersFromOjsSubmission = $this->codecheckMetadataHandler->getMetadata($this->request, $this->codecheckMetadataHandler->getSubmissionId());
 
@@ -131,11 +139,16 @@ class CodecheckPublicationValidator {
         $paperTitle = $codecheckMetadata['paper']['title'];
         error_log($paperTitle);
         return true;
-    }
+    }*/
 
     private function validatePaperTitle(array $codecheckMetadata): bool {
         $metadataFromOjsSubmission = $this->codecheckMetadataHandler->getMetadata($this->request, $this->codecheckMetadataHandler->getSubmissionId());
         return $codecheckMetadata['paper']['title'] === $metadataFromOjsSubmission['submission']['title'];
+    }
+
+    private function isExtendedValidation(): bool {
+        $codecheckExtendPublicationValidation = $this->plugin->getSetting($this->context->getId(), Constants::CODECHECK_PUBLICATION_VALIDATION_EXTENDED);
+        return $codecheckExtendPublicationValidation;
     }
 
     public function validatePublication(): true|array {

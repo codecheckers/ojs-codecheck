@@ -181,7 +181,7 @@ textarea[name="dataAvailabilityStatement"] {
 }
 
 #codecheckSettings {
-  border: 2px solid #ccc;
+  border: none !important;
   margin: 0;
   padding: 2rem 1.5rem;
 }
@@ -206,6 +206,10 @@ textarea[name="dataAvailabilityStatement"] {
   margin-bottom: 1.5rem !important;
 }
 
+#codecheckSettings #codecheckSettingsArea .section:last-of-type {
+  margin-bottom: 0 !important;
+}
+
 #codecheckSettings #codecheckSettingsArea .section#settingsHeader {
 	padding: 20px;
   border: 2px solid #ccc;
@@ -221,6 +225,11 @@ textarea[name="dataAvailabilityStatement"] {
 
 #codecheckSettings #codecheckSettingsArea .section .field-header .pkp_form_label {
   margin-bottom: 0.5rem;
+  cursor: text !important;
+}
+
+#codecheckSettings #codecheckSettingsArea .section .field-header .pkp_form_title {
+  margin-bottom: 1rem;
   cursor: text !important;
 }
 

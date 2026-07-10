@@ -47,6 +47,9 @@ msgstr "Configure the CODECHECK integration settings for this journal"
 msgid "plugins.generic.settings.button.reset"
 msgstr "Reset"
 
+msgid "plugins.generic.codecheck.settings.submission.title"
+msgstr "Submission Settings"
+
 msgid "plugins.generic.codecheck.settings.enableCodecheck"
 msgstr "Enable CODECHECK for this journal"
 
@@ -66,10 +69,13 @@ msgid "plugins.generic.codecheck.settings.enableCodecheck.description"
 msgstr "Allow editors to assign codecheckers to submissions"
 
 msgid "plugins.generic.codecheck.settings.authorAnonymity"
-msgstr "Author anonymity"
+msgstr "Author anonymity in the GitHub register repository"
 
 msgid "plugins.generic.codecheck.settings.authorAnonymity.description"
-msgstr "Include the author names in the GitHub register issue"
+msgstr "Include the author names in the GitHub register repository issue"
+
+msgid "plugins.generic.codecheck.settings.github.title"
+msgstr "GitHub Settings"
 
 msgid "plugins.generic.codecheck.settings.github.personalAccessToken"
 msgstr "GitHub Personal Access Token (classic)"
@@ -124,6 +130,19 @@ msgstr "Select Status(es)"
 
 msgid "plugins.generic.codecheck.settings.status.noBlock"
 msgstr "Ignore the CODECHECK status and never block Publication"
+
+msgid "plugins.generic.codecheck.settings.publication.title"
+msgstr "Publication Validation Settings"
+
+msgid "plugins.generic.codecheck.settings.publication.extendedValidation.title"
+msgstr "Extended Publication Validation"
+
+msgid "plugins.generic.codecheck.settings.publication.extendedValidation.description"
+msgstr "Extend the validation of the CODECHECK Metadata and block the publication if it is invalid (compare metadata to codecheck.yml from repository, ...)<br>NOTE: If turned of, but the CODECHECK Metadata is invalid, the validation will fail silently without warnings"
+
+msgid "plugins.generic.codecheck.settings.publication.extendedValidation.checkboxText"
+msgstr "Extend the CODECHECK publication validation"
+
 
 msgid "plugins.generic.codecheck.title"
 msgstr "CODECHECK"

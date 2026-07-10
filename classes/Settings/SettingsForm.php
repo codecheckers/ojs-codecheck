@@ -152,6 +152,14 @@ class SettingsForm extends Form
         $this->setData(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE, in_array(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE, $updateFields));
         $this->setData(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY, in_array(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY, $updateFields));
 
+        $this->setData(
+            Constants::CODECHECK_PUBLICATION_VALIDATION_EXTENDED,
+            $this->plugin->getSetting(
+                $context->getId(),
+                Constants::CODECHECK_PUBLICATION_VALIDATION_EXTENDED
+            )
+        );
+
         parent::initData();
     }
 
@@ -177,6 +185,7 @@ class SettingsForm extends Form
             Constants::CODECHECK_STATUS,
             Constants::CODECHECK_STATUSES_SELECTED,
             Constants::CODECHECK_STATUS_KEYS_SELECTED,
+            Constants::CODECHECK_PUBLICATION_VALIDATION_EXTENDED,
         ]);
 
         parent::readInputData();
@@ -305,6 +314,12 @@ class SettingsForm extends Form
             $context->getId(),
             Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_FIELDS,
             $updateFields
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_PUBLICATION_VALIDATION_EXTENDED,
+            $this->getData(Constants::CODECHECK_PUBLICATION_VALIDATION_EXTENDED)
         );
 
         $notificationMgr = new NotificationManager();
