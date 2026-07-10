@@ -560,7 +560,7 @@ export default {
             publicationType: data.codecheck.publicationType || data.codecheck.publication_type || 'doi',
             manifest: Array.isArray(data.codecheck.manifest) ? data.codecheck.manifest : 
                       (typeof data.codecheck.manifest === 'string' ? JSON.parse(data.codecheck.manifest) : []),
-            repository: data.codecheck.repository || '',
+            repository: data.codecheck.repository.repositories || '',
             source: data.codecheck.source || '',
             codecheckers: Array.isArray(data.codecheck.codecheckers) ? data.codecheck.codecheckers : 
                           (typeof data.codecheck.codecheckers === 'string' ? JSON.parse(data.codecheck.codecheckers) : []),
@@ -577,8 +577,9 @@ export default {
           this.certificateIdentifier.issue.labelsSelected = data.codecheck.issue.labelsSelected;
           this.certificateIdentifier.isLinked = !!(data.codecheck.issue?.url && data.codecheck.issue?.number);
           
-          if (data.codecheck.repository) {
-            this.repositories = data.codecheck.repository.split(',').map(r => r.trim()).filter(r => r);
+          this.repositoryWithCodecheckYaml = data.codecheck.repository.repoWithCodecheckYaml;
+          if (data.codecheck.repository.repositories) {
+            this.repositories = data.codecheck.repository.repositories.split(',').map(r => r.trim()).filter(r => r);
           }
         }
         
@@ -644,6 +645,9 @@ export default {
                 report: data.metadata?.report ?? this.metadata.report,
                 additionalContent: data.metadata?.additionalContent ?? this.metadata.additionalContent,
               };
+              if(this.repositoryWithCodecheckYaml !== repo_index) {
+                this.repositoryWithCodecheckYaml = repo_index;
+              }
           } else {
               console.error('Error:', data.error);
           }
@@ -866,7 +870,10 @@ export default {
           version: this.metadata.version,
           publication_type: this.metadata.publicationType,
           manifest: this.metadata.manifest,
-          repository: this.repositories.join(', '),
+          repository: {
+            repositories: this.repositories.join(', '),
+            repoWithCodecheckYaml: this.repositoryWithCodecheckYaml,
+          },
           source: this.metadata.source,
           codecheckers: this.metadata.codecheckers,
           certificate: this.metadata.certificate,

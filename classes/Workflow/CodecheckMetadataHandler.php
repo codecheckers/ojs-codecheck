@@ -16,6 +16,7 @@ use APP\plugins\generic\codecheck\api\v1\CurlApiClient;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitException;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
+use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 
 class CodecheckMetadataHandler
 {
@@ -81,7 +82,7 @@ class CodecheckMetadataHandler
                 'version' => $metadata->version ?? 'latest',
                 'publicationType' => $metadata->publication_type ?? 'doi',
                 'manifest' => json_decode($metadata->manifest ?? '[]', true),
-                'repository' => $metadata->repository,
+                'repository' => json_decode($metadata->repository ?? '{"repositories":null,"repoWithCodecheckYaml":null}', true),
                 'codecheckers' => json_decode($metadata->codecheckers ?? '[]', true),
                 'source' => $metadata->source,
                 'certificate' => $metadata->certificate,
@@ -116,7 +117,7 @@ class CodecheckMetadataHandler
             'version' => $data['version'] ?? 'latest',
             'publication_type' => $data['publication_type'] ?? 'doi',
             'manifest' => json_encode($data['manifest'] ?? []),
-            'repository' => $nullIfEmpty($data['repository'] ?? null),
+            'repository' => json_encode($data['repository'] ?? ['repositories' => null, 'repoWithCodecheckYaml']),
             'source' => $nullIfEmpty($data['source'] ?? null),
             'codecheckers' => json_encode($data['codecheckers'] ?? []),
             'certificate' => $nullIfEmpty($data['certificate'] ?? null),
@@ -177,6 +178,7 @@ class CodecheckMetadataHandler
     {
         $manifest = json_decode($metadata->manifest ?? '[]', true);
         $codecheckers = json_decode($metadata->codecheckers ?? '[]', true);
+        $repository = json_decode($metadata->repository ?? '{"repositories":null,"repoWithCodecheckYaml":null}', false);
 
         // Build YAML data structure
         $data = [
@@ -237,9 +239,10 @@ class CodecheckMetadataHandler
             $data['summary'] = $metadata->summary;
         }
 
+        CodecheckLogger::debug("Repo" . print_r($repository, true));
         // Repository
-        if ($metadata->repository) {
-            $data['repository'] = $metadata->repository;
+        if ($repository->repositories) {
+            $data['repository'] = $repository->repositories;
         }
 
         // Check time
