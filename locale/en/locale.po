@@ -285,6 +285,18 @@ msgstr "Repositories"
 msgid "plugins.generic.codecheck.repositories.add"
 msgstr "+ Repository"
 
+msgid "plugins.generic.codecheck.repositories.loadMetadata"
+msgstr "Load Metadata"
+
+msgid "plugins.generic.codecheck.repositories.containsCodecheckYaml"
+msgstr "Contains 'codecheck.yml' file"
+
+msgid "plugins.generic.codecheck.repositories.doesntContainCodecheckYamlError"
+msgstr "[Error: Aborted loading CODECHECK metadata from repository]\nYou didn't specify, that this repository contains the 'codecheck.yml' file."
+
+msgid "plugins.generic.codecheck.repositories.emptyState"
+msgstr "No repositories added yet"
+
 msgid "plugins.generic.codecheck.completionTime.title"
 msgstr "Time the CODECHECK was completed"
 

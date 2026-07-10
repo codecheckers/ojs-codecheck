@@ -180,11 +180,19 @@
                 :placeholder="t('plugins.generic.codecheck.repository.placeholder')"
               />
               <button
+                v-if="repositoryWithCodecheckYaml === index"
                 type="button"
                 class="pkpButton btn-add"
                 @click="loadMetadataFromRepository(index)"
               >
-                Load Metadata
+                {{ t('plugins.generic.codecheck.repositories.loadMetadata') }}
+              </button>
+              <button
+                type="button"
+                :class="['pkpButton', 'btn-radio', { 'btn-radio__active': repositoryWithCodecheckYaml === index }]"
+                @click="repositoryWithCodecheckYaml = index"
+              >
+                {{ t('plugins.generic.codecheck.repositories.containsCodecheckYaml') }}
               </button>
               <button 
                 type="button"
@@ -194,7 +202,7 @@
             </div>
           </div>
           <div v-else class="empty-state">
-            No repositories added yet
+            {{ t('plugins.generic.codecheck.repositories.emptyState') }}
           </div>
         </div>
 
@@ -434,7 +442,8 @@ export default {
         summary: '',
         report: '',
         additionalContent: ''
-      }
+      },
+      repositoryWithCodecheckYaml: null,
     }
   },
   computed: {
@@ -589,6 +598,10 @@ export default {
     },
 
     async loadMetadataFromRepository(repo_index) {
+      if(this.repositoryWithCodecheckYaml !== repo_index) {
+        throw new Error(t('plugins.generic.codecheck.repositories.doesntContainCodecheckYamlError'));
+      }
+
       let repository = this.repositories[repo_index];
       console.log(repository);
       let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
@@ -677,6 +690,9 @@ export default {
     },
 
     removeRepository(index) {
+      if(this.repositoryWithCodecheckYaml === index) {
+        this.repositoryWithCodecheckYaml = null;
+      }
       if (confirm(this.t('plugins.generic.codecheck.repositories.removeConfirm'))) {
         this.repositories.splice(index, 1);
       }
@@ -1911,6 +1927,32 @@ export default {
 
 .btn-add:hover {
   background: #005580;
+}
+
+.btn-radio {
+  background: #ccc;
+  color: black;
+  border: none;
+  font-size: .875rem;
+  font-weight: 600;
+  padding: .4375rem .75rem;
+  border-radius: 4px;
+  line-height: 1.25rem;
+  cursor: pointer;
+}
+
+.btn-radio:hover {
+  background: #c0c0c0;
+}
+
+.btn-radio__active {
+  background: #008033;
+  color: #fff;
+}
+
+.btn-radio__active:hover {
+  background: #008033 !important;
+  cursor: default;
 }
 
 a {
