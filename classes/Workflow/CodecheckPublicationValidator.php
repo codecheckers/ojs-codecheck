@@ -21,11 +21,12 @@ class CodecheckPublicationValidator {
 
     public function __construct(CodecheckPlugin $plugin)
     {
-
+        $this->errors = [];
         $this->validationChecks = [
             fn() => $this->validateCodecheckStatus(),
             fn() => $this->validateYamlStructure(),
-            fn() => $this->validateMetadataFromRepository(),
+            // If this is not an extended Publication Validation, just return valid (and except that the metadata might be invalid, but ignore it since the user set the configuration setting to fail silently in this case)
+            fn() => !$this->isExtendedValidation() || $this->validateMetadataFromRepository(),
         ];
 
         $this->request = Application::get()->getRequest();
@@ -74,49 +75,60 @@ class CodecheckPublicationValidator {
         return true;
     }
 
-    private function validateMetadataFromRepository(): bool {
-        // If this is not an extended Publication Validation, just return valid (and except that the metadata might be invalid, but ignore it since the user set the configuration setting to fail silently in this case)
-        if(!$this->isExtendedValidation()) {
-            return true;
-        }
-
-        $codecheckMetadata = $this->codecheckMetadataHandler->getMetadata($this->request, $this->codecheckMetadataHandler->getSubmissionId());
+    public function validateMetadataFromRepository(string|null $repository = null): bool {
+        if(empty($repository)) {
+            $codecheckMetadata = $this->codecheckMetadataHandler->getMetadata($this->request, $this->codecheckMetadataHandler->getSubmissionId());
         
-        if(isset($codecheckMetadata['error']) || !is_array($codecheckMetadata['codecheck']) || !isset($codecheckMetadata['codecheck']['repository'])) {
-            $this->errors[] = __('plugins.generic.codecheck.publication.validation.invalidRepository', [
-                'repositoryError' => __('plugins.generic.codecheck.publication.validation.metadataDBLoadError')
-            ]);
-            return false;
-        }
-        
-        $repositories = explode(",", preg_replace('/\s+/', '', $codecheckMetadata['codecheck']['repository']));
-        foreach ($repositories as $repository) {
-            $response = $this->codecheckMetadataHandler->importMetadataFromRepository($repository);
-            $responseArray = $response->getPayloadArray();
-            if($response->isSuccess()) { 
-                if(!$this->validatePaperTitle($responseArray['metadata'])) {
-                    $this->errors[] = __('plugins.generic.codecheck.publication.validation.invalidRepository', [
-                        'repositoryError' => __('plugins.generic.codecheck.publication.validation.invalidPaperTitle')
-                    ]);
-                    continue;
-                }
-
-                if(!$this->validateCodechecker($responseArray['metadata'])) {
-                    $this->errors[] = __('plugins.generic.codecheck.publication.validation.invalidRepository', [
-                        'repositoryError' => __('plugins.generic.codecheck.publication.validation.invalidCodecheckers')
-                    ]);
-                    continue;
-                }
-
-                return true;
+            if(isset($codecheckMetadata['error']) || !is_array($codecheckMetadata['codecheck']) || !isset($codecheckMetadata['codecheck']['repository']) || !isset($codecheckMetadata['codecheck']['repository']['repositories'])) {
+                $this->errors[] = __('plugins.generic.codecheck.publication.validation.invalidRepository', [
+                    'repositoryError' => __('plugins.generic.codecheck.publication.validation.metadataDBLoadError')
+                ]);
+                return false;
             }
 
-            CodecheckLogger::debug("Repository Error: " . $responseArray['error']);
-            $this->errors[] = __('plugins.generic.codecheck.publication.validation.invalidRepository', [
-                'repositoryError' => $responseArray['error']
-            ]);
+            $repositoryData = $codecheckMetadata['codecheck']['repository'];
+            $repositories = explode(",", preg_replace('/\s+/', '', $repositoryData['repositories']));
+            $repositoryWithCodecheckYml = $repositoryData['repoWithCodecheckYaml'];
+            if(!is_int($repositoryWithCodecheckYml)) {
+                $this->errors[] = __('plugins.generic.codecheck.publication.validation.invalidRepository', [
+                    'repositoryError' => __('plugins.generic.codecheck.publication.validation.noRepositoryWithCodecheckYmlSelected')
+                ]);
+                return false;
+            }
+            if (!array_key_exists($repositoryWithCodecheckYml, $repositories)) {
+                $this->errors[] = __('plugins.generic.codecheck.publication.validation.invalidRepository', [
+                    'repositoryError' => __('plugins.generic.codecheck.publication.validation.repositoryWithCodecheckYmlSelectedDoesntExist')
+                ]);
+                return false;
+            }
+            $repository = $repositories[$repositoryWithCodecheckYml];
         }
+        $response = $this->codecheckMetadataHandler->importMetadataFromRepository($repository);
+        $responseArray = $response->getPayloadArray();
+        if($response->isSuccess()) { 
+            if(!$this->validatePaperTitle($responseArray['metadata'])) {
+                $this->errors[] = __('plugins.generic.codecheck.publication.validation.invalidRepository', [
+                    'repositoryError' => __('plugins.generic.codecheck.publication.validation.invalidPaperTitle')
+                ]);
+                return false;
+            }
 
+            /*
+            if(!$this->validateCodechecker($responseArray['metadata'])) {
+                $this->errors[] = __('plugins.generic.codecheck.publication.validation.invalidRepository', [
+                    'repositoryError' => __('plugins.generic.codecheck.publication.validation.invalidCodecheckers')
+                ]);
+                $this->errors[] = __('plugins.generic.codecheck.publication.validation.invalidRepository', [
+                    'repositoryError' => $responseArray['error']
+                ]);
+                return false;
+            }
+            */
+            return true;
+        }
+        $this->errors[] = __('plugins.generic.codecheck.publication.validation.invalidRepository', [
+            'repositoryError' => $responseArray['error']
+        ]);
         return false;
     }
 
@@ -162,5 +174,9 @@ class CodecheckPublicationValidator {
         }
 
         return true;
+    }
+
+    public function getErrors(): array {
+        return $this->errors;
     }
 }

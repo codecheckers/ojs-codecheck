@@ -18,6 +18,7 @@ use \Github\Client;
 use APP\plugins\generic\codecheck\classes\CodecheckRoles\CodecheckRoleManager;
 use APP\plugins\generic\codecheck\classes\Exceptions\RoleExceptions\RoleNotFoundException;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckIssueLabels;
+use APP\plugins\generic\codecheck\classes\Workflow\CodecheckPublicationValidator;
 use Exception;
 use Illuminate\Support\Facades\Schema;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckStatusHandler;
@@ -116,6 +117,11 @@ class CodecheckApiHandler
                     'route' => 'repository',
                     'handler' => [$this, 'loadMetadataFromRepository'],
                     'roles' => $roles->editMetadata(),
+                ],
+                [
+                    'route' => 'repository/validate',
+                    'handler' => [$this, 'validateMetadataFromRepository'],
+                    'roles' => $roles->readMetadata(),
                 ],
                 [
                     'route' => 'yaml/validate',
@@ -685,6 +691,8 @@ class CodecheckApiHandler
         ], 200);
     }
 
+    
+
     /**
      * This function loads the Codecheck Metadata from an existing `codecheck.yml` in an existing Code Repository
      * 
@@ -704,6 +712,39 @@ class CodecheckApiHandler
         
         $response = $this->codecheckMetadataHandler->importMetadataFromRepository($repository);
         $response->constructResponse();
+    }
+
+    /**
+     * This function validates if the contents of the CODECHECK metadata form are equal to the contents in the provided repositories `codecheck.yml` file
+     * 
+     * @return void
+     */
+    public function validateMetadataFromRepository(): void
+    {
+        $postParams = json_decode(file_get_contents('php://input'), true);
+        $repository = $postParams["repository"];
+
+        if(!is_string($repository)) {
+            JsonResponse::staticResponse([
+                'success' => false,
+                'error' => 'The provided Repository must be of the type string.'
+            ], 400);
+        }
+
+        $publicationValidator = new CodecheckPublicationValidator($this->plugin);
+        $publicationValidator->validateMetadataFromRepository($repository);
+        $errors = $publicationValidator->getErrors();
+
+        if(count($errors) > 0) {
+            JsonResponse::staticResponse([
+                'success' => false,
+                'error' => implode(' ,', $errors),
+            ], 500);
+            return;
+        }
+        JsonResponse::staticResponse([
+            'success' => true,
+        ], 200);
     }
 
     /**

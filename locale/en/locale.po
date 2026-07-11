@@ -285,6 +285,12 @@ msgstr "Repositories"
 msgid "plugins.generic.codecheck.repositories.add"
 msgstr "+ Repository"
 
+msgid "plugins.generic.codecheck.repositories.warning"
+msgstr "The repositories CODECHECK Metadata is not equal to this form. {$error}"
+
+msgid "plugins.generic.codecheck.repositories.error"
+msgstr "Error while importing the CODECHECK metadata from the repository. {$error}"
+
 msgid "plugins.generic.codecheck.repositories.loadMetadata"
 msgstr "Load Metadata"
 
@@ -439,10 +445,17 @@ msgid "plugins.generic.codecheck.publication.validation.metadataDBLoadError"
 msgstr "Couldn't retrieve the CODECHECK Metadata for this submission from the CODECHECK Metadata DB table.
 
 msgid "plugins.generic.codecheck.publication.validation.invalidRepository"
-msgstr "Invalid CODECHECK repository: {$repositoryError}."
+msgstr "Invalid CODECHECK repository: {$repositoryError}"
 
 msgid "plugins.generic.codecheck.publication.validation.invalidPaperTitle"
-msgstr "The paper title from this submission is not matching the paper title in the provided repository"
+msgstr "The paper title from this submission is not matching the paper title in the provided repository."
+
+msgid "plugins.generic.codecheck.publication.validation.noRepositoryWithCodecheckYmlSelected"
+msgstr "Couldn't validate metadata from repository, as for no repository it was selected, that it contains the 'codecheck.yml' file with the CODECHECK metadata."
+
+msgid "plugins.generic.codecheck.publication.validation.repositoryWithCodecheckYmlSelectedDoesntExist"
+msgstr "Couldn't validate metadata from repository, as the repository that should contain the 'codecheck.yml' file doesn't exist in the OJS CODECHECK metadata."
+
 
 msgid "plugins.generic.codecheck.publication.validation.invalidCodecheckers"
 msgstr "The ORCIDs of the codecheckers specified in this submissions CODECHECK metadata from are not matching the codecheckers ORCIDs in the provided repository"

@@ -171,6 +171,13 @@
           </div>
           <p class="field-description">{{ t('plugins.generic.codecheck.repositories.description') }}</p>
           
+          <p
+            v-if="repositoryWarning.message !== null"
+            :class="repositoryWarning.isWarning ? 'codecheck-repository-warning' : 'codecheck-repository-error'"
+          >
+            ⚠ {{ repositoryWarning.message }}
+          </p>
+
           <div v-if="repositories.length > 0" class="repository-list">
             <div v-for="(repo, index) in repositories" :key="'repo-' + index" class="repository-item">
               <input
@@ -190,7 +197,7 @@
               <button
                 type="button"
                 :class="['pkpButton', 'btn-radio', { 'btn-radio__active': repositoryWithCodecheckYaml === index }]"
-                @click="repositoryWithCodecheckYaml = index"
+                @click="repositoryWithCodecheckMetadata(index)"
               >
                 {{ t('plugins.generic.codecheck.repositories.containsCodecheckYaml') }}
               </button>
@@ -444,6 +451,10 @@ export default {
         additionalContent: ''
       },
       repositoryWithCodecheckYaml: null,
+      repositoryWarning: {
+        message: null,
+        isWarning: true,
+      },
     }
   },
   computed: {
@@ -648,11 +659,63 @@ export default {
               if(this.repositoryWithCodecheckYaml !== repo_index) {
                 this.repositoryWithCodecheckYaml = repo_index;
               }
+              this.repositoryWarning = {
+                message: null,
+                isWarning: true,
+              };
           } else {
+              this.repositoryWarning = {
+                message: this.t('plugins.generic.codecheck.repositories.error', {error: data.error}),
+                isWarning: false,
+              };
               console.error('Error:', data.error);
           }
       } catch (error) {
+          this.repositoryWarning = {
+            message: this.t('plugins.generic.codecheck.repositories.error', {error: error}),
+            isWarning: false,
+          };
           console.error('Failed to fetch metadata from existing Repository:', error);
+      }
+    },
+
+    async repositoryWithCodecheckMetadata(repo_index) {
+      this.repositoryWithCodecheckYaml = repo_index;
+      let repository = this.repositories[repo_index];
+      console.log(repository);
+      let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
+      const submissionId = this.submission.id;
+      try {
+          const response = await fetch(`${apiUrl}/repository/validate?submissionId=${submissionId}`, {
+              method: 'POST',
+              headers: {
+              'Content-Type': 'application/json',
+              'X-Csrf-Token': pkp.currentUser.csrfToken,
+              },
+              body: JSON.stringify({
+                repository: repository,
+              }),
+          });
+          const data = await response.json();
+
+          if (data.success) {
+            this.repositoryWarning = {
+              message: null,
+              isWarning: true,
+            };
+          } else {
+            this.repositoryWarning = {
+              message: data.error,
+              isWarning: true,
+            };
+            console.error('Error:', data.error);
+          }
+      } catch (error) {
+          this.repositoryWarning = {
+            message: error,
+            isWarning: true,
+          };
+          console.error('Failed to validate that the CODECHECK Metadata from the Repository is equal to the CODECHECK Metadata in this Form:', error);
       }
     },
 
@@ -1360,7 +1423,14 @@ export default {
 </script>
 
 <style>
+.codecheck-metadata-form *,
+.codecheck-metadata-form *::before,
+.codecheck-metadata-form *::after {
+  box-sizing: border-box;
+}
+
 .codecheck-optin-warning {
+  box-sizing: border-box;
   margin: 0 0 1rem 0;
   padding: 0.75rem 1rem;
   background: #fff3cd;
@@ -1368,6 +1438,28 @@ export default {
   border-radius: 3px;
   font-size: 14px;
   color: #856404;
+}
+
+.codecheck-repository-warning {
+  box-sizing: border-box;
+  margin: 0 0 1rem 0;
+  padding: 0.75rem 1rem;
+  background: #fff3cd;
+  border-left: 4px solid #ffc107;
+  border-radius: 3px;
+  font-size: 14px;
+  color: #856404;
+}
+
+.codecheck-repository-error {
+  box-sizing: border-box;
+  margin: 0 0 1rem 0;
+  padding: 0.75rem 1rem;
+  border-left: 4px solid #f5c6cb;
+  border-radius: 3px;
+  font-size: 14px;
+  background: #f8d7da;
+  color: #721c24;
 }
 
 .text-bold {
