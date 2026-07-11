@@ -1287,10 +1287,6 @@ export default {
         this.showMessage(this.t('plugins.generic.codecheck.validation.manifestRequired'), 'error');
         return false;
       }
-      /*if (this.metadata.codecheckers.length === 0) {
-        this.showMessage(this.t('plugins.generic.codecheck.validation.codecheckersRequired'), 'error');
-        return false;
-      }*/
       if (!this.metadata.certificate) {
         this.showMessage(this.t('plugins.generic.codecheck.validation.certificateRequired'), 'error');
         return false;

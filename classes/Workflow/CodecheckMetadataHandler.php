@@ -317,6 +317,10 @@ class CodecheckMetadataHandler
 
     public function importMetadataFromRepository(string $repository): JsonResponse
     {
+        // Resolve DOI links (e.g. https://doi.org/10.5281/zenodo.1234567) to their
+        // final destination, in case Zenodo or OSF repositories are provided as a DOI.
+        $repository = $this->curlApiClient->resolveDoi($repository);
+
         // Check if the repository is a Zenodo Repository
         if (preg_match('#^https://zenodo\.org/records/\d{8}/?$#', $repository)) {
             // Remove trailing / if it exists
