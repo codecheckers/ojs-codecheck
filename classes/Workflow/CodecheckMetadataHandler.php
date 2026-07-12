@@ -117,7 +117,7 @@ class CodecheckMetadataHandler
             'version' => $data['version'] ?? 'latest',
             'publication_type' => $data['publication_type'] ?? 'doi',
             'manifest' => json_encode($data['manifest'] ?? []),
-            'repository' => json_encode($data['repository'] ?? ['repositories' => null, 'repoWithCodecheckYaml']),
+            'repository' => json_encode($data['repository'] ?? ['repositories' => null, 'repoWithCodecheckYaml' => null]),
             'source' => $nullIfEmpty($data['source'] ?? null),
             'codecheckers' => json_encode($data['codecheckers'] ?? []),
             'certificate' => $nullIfEmpty($data['certificate'] ?? null),

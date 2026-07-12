@@ -4,42 +4,23 @@ describe('YAML Generation Consistency', () => {
   
   before(() => {
     cy.ojsLogin('admin', 'admin');
-
+    
+    // Get any published submission dynamically
     cy.visit('/index.php/codecheck/submissions');
     cy.window().then((win) => {
       const csrfToken = win.pkp?.currentUser?.csrfToken;
-
+      
       cy.request({
         method: 'GET',
         url: '/index.php/codecheck/api/v1/submissions?status[]=3&count=1',
         headers: { 'X-Csrf-Token': csrfToken }
       }).then((response) => {
-        if (!response.body.items || response.body.items.length === 0) {
-          throw new Error('No published submissions found.');
+        if (response.body.items && response.body.items.length > 0) {
+          submissionId = response.body.items[0].id;
+          cy.log(`Using submission ID: ${submissionId}`);
+        } else {
+          throw new Error('No published submissions found. Please publish at least one submission with CODECHECK metadata.');
         }
-        submissionId = response.body.items[0].id;
-        cy.log(`Using submission ID: ${submissionId}`);
-
-        // Ensure this submission has CODECHECK metadata before the test runs
-        cy.request({
-          method: 'POST',
-          url: `/index.php/codecheck/api/v1/codecheck/metadata?submissionId=${submissionId}`,
-          headers: { 'X-Csrf-Token': csrfToken },
-          body: {
-            version: 'latest',
-            publication_type: 'doi',
-            manifest: [{ file: 'output.pdf', comment: '', checked: true }],
-            repository: { repositories: '', repoWithCodecheckYaml: null },
-            source: '',
-            codecheckers: [{ name: 'Test Checker', orcid: '' }],
-            certificate: 'TEST-2026-001',
-            issue: { url: 'https://github.com/codecheckers/Register/issues/1', number: 1 },
-            check_time: '',
-            summary: 'Automated test summary',
-            report: '',
-            additional_content: ''
-          }
-        });
       });
     });
   });
