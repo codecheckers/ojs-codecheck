@@ -47,6 +47,9 @@ msgstr "Configure the CODECHECK integration settings for this journal"
 msgid "plugins.generic.settings.button.reset"
 msgstr "Reset"
 
+msgid "plugins.generic.codecheck.settings.submission.title"
+msgstr "Submission Settings"
+
 msgid "plugins.generic.codecheck.settings.enableCodecheck"
 msgstr "Enable CODECHECK for this journal"
 
@@ -66,10 +69,13 @@ msgid "plugins.generic.codecheck.settings.enableCodecheck.description"
 msgstr "Allow editors to assign codecheckers to submissions"
 
 msgid "plugins.generic.codecheck.settings.authorAnonymity"
-msgstr "Author anonymity"
+msgstr "Author anonymity in the GitHub register repository"
 
 msgid "plugins.generic.codecheck.settings.authorAnonymity.description"
-msgstr "Include the author names in the GitHub register issue"
+msgstr "Include the author names in the GitHub register repository issue"
+
+msgid "plugins.generic.codecheck.settings.github.title"
+msgstr "GitHub Settings"
 
 msgid "plugins.generic.codecheck.settings.github.personalAccessToken"
 msgstr "GitHub Personal Access Token (classic)"
@@ -113,6 +119,9 @@ msgstr "Update the Issue Title (containing the article's authors)"
 msgid "plugins.generic.codecheck.settings.updateIssue.body"
 msgstr "Update the Issue Description (containing the article, codechecker and repository information)"
 
+msgid "plugins.generic.codecheck.settings.updateIssue.status"
+msgstr "Record & update the CODECHECK Status in the GitHub Register Issue"
+
 msgid "plugins.generic.codecheck.settings.status"
 msgstr "What status must a check have for a submission to proceed with the publication?"
 
@@ -124,6 +133,19 @@ msgstr "Select Status(es)"
 
 msgid "plugins.generic.codecheck.settings.status.noBlock"
 msgstr "Ignore the CODECHECK status and never block Publication"
+
+msgid "plugins.generic.codecheck.settings.publication.title"
+msgstr "Publication Validation Settings"
+
+msgid "plugins.generic.codecheck.settings.publication.extendedValidation.title"
+msgstr "Extended Publication Validation"
+
+msgid "plugins.generic.codecheck.settings.publication.extendedValidation.description"
+msgstr "Extend the validation of the CODECHECK metadata and block the publication if it is invalid (compare metadata to codecheck.yml from repository, ...)<br>NOTE: If turned of, but the CODECHECK metadata is invalid, the validation will fail silently without warnings"
+
+msgid "plugins.generic.codecheck.settings.publication.extendedValidation.checkboxText"
+msgstr "Extend the CODECHECK publication validation"
+
 
 msgid "plugins.generic.codecheck.title"
 msgstr "CODECHECK"
@@ -266,6 +288,24 @@ msgstr "Repositories"
 msgid "plugins.generic.codecheck.repositories.add"
 msgstr "+ Repository"
 
+msgid "plugins.generic.codecheck.repositories.warning"
+msgstr "The repository's CODECHECK metadata is not equal to the metadata in this form. {$error}"
+
+msgid "plugins.generic.codecheck.repositories.error"
+msgstr "Error while importing the CODECHECK metadata from the repository. {$error}"
+
+msgid "plugins.generic.codecheck.repositories.loadMetadata"
+msgstr "Load Metadata"
+
+msgid "plugins.generic.codecheck.repositories.containsCodecheckYaml"
+msgstr "Contains 'codecheck.yml' file"
+
+msgid "plugins.generic.codecheck.repositories.doesntContainCodecheckYamlError"
+msgstr "[Error: Aborted loading CODECHECK metadata from repository]\nThe provided repository does not match the configured main repository with the 'codecheck.yml' file."
+
+msgid "plugins.generic.codecheck.repositories.emptyState"
+msgstr "No repositories added yet"
+
 msgid "plugins.generic.codecheck.completionTime.title"
 msgstr "Time the CODECHECK was completed"
 
@@ -357,7 +397,7 @@ msgid "plugins.generic.codecheck.yaml.valid"
 msgstr "codecheck.yml is valid."
 
 msgid "plugins.generic.codecheck.yaml.invalid"
-msgstr "CODECHECK metadata creates a structurally invalid codecheck.yml file. Please check the detailed error message below."
+msgstr "The provided CODECHECK metadata creates a structurally invalid codecheck.yml file. Please check the following error message for further details.\nError: {$errorMessage}"
 
 msgid "plugins.generic.codecheck.savedSuccessfully"
 msgstr "CODECHECK metadata saved successfully"
@@ -402,7 +442,26 @@ msgid "plugins.generic.codecheck.status.validation.failed"
 msgstr "The mandatory CODECHECK for this submission has a status ({$codecheckStatus}), which is not allowed for publication by the journal. Please get in touch with the codechecker(s) to resolve all errors, before this submission can be published!"
 
 msgid "plugins.generic.codecheck.status.validation.failed.noStatusSet"
-msgstr "The mandatory CODECHECK for this submission has no status (so it was not yet started), which is not allowed for publication by the journal. Please get in touch with the codechecker(s) to resolve all errors, before this submission can be published!"
+msgstr "The CODECHECK for this submission is mandatory, but wasn't started yet, which is not allowed for the publication of a submission. Please get in touch with the codechecker(s) to start the CODECHECK / fill in the missing metadata into the CODECHECK metadata form, before this submission can be published!"
+
+msgid "plugins.generic.codecheck.publication.validation.metadataDBLoadError"
+msgstr "Couldn't retrieve the CODECHECK metadata for this submission from the CODECHECK metadata DB table."
+
+msgid "plugins.generic.codecheck.publication.validation.invalidRepository"
+msgstr "Invalid CODECHECK repository: {$repositoryError}"
+
+msgid "plugins.generic.codecheck.publication.validation.invalidPaperTitle"
+msgstr "The paper title from this submission is not matching the paper title in the provided repository."
+
+msgid "plugins.generic.codecheck.publication.validation.noRepositoryWithCodecheckYmlSelected"
+msgstr "Couldn't validate metadata from repository, as for no repository it was selected, that it contains the 'codecheck.yml' file with the CODECHECK metadata."
+
+msgid "plugins.generic.codecheck.publication.validation.repositoryWithCodecheckYmlSelectedDoesntExist"
+msgstr "Couldn't validate metadata from repository, as the repository that should contain the 'codecheck.yml' file doesn't exist in the OJS CODECHECK metadata."
+
+
+msgid "plugins.generic.codecheck.publication.validation.invalidCodecheckers"
+msgstr "The ORCIDs of the codecheckers specified in this submissions CODECHECK metadata from are not matching the codecheckers ORCIDs in the provided repository"
 
 msgid "plugins.generic.codecheck.status.pending"
 msgstr "Pending"
@@ -444,7 +503,7 @@ msgid "plugins.generic.codecheck.notYetAssigned"
 msgstr "Not yet assigned"
 
 msgid "plugins.generic.codecheck.viewFullMetadata"
-msgstr "View Full CODECHECK Metadata"
+msgstr "View Full CODECHECK metadata"
 
 msgid "plugins.generic.codecheck.notOptedIn"
 msgstr "This submission has not opted in for CODECHECK"
@@ -561,7 +620,7 @@ msgid "plugins.generic.codecheck.repositories.infoTextOne"
 msgstr "If you desire, you can directly load the metadata from the codecheck.yml of the provided CODECHECK Repository, if it contains a valid codecheck.yml."
 
 msgid "plugins.generic.codecheck.repositories.infoTextTwo"
-msgstr "The supported CODECHECK Repository Sites are GitHub, OSF, Zenodo and GitLab."
+msgstr "The supported CODECHECK Repository Sites are GitHub, OSF, Zenodo and GitLab. Providing a DOI to the desired repository is supported as well."
 
 msgid "plugins.generic.codecheck.repositories.infoTextNote"
 msgstr "Note that loading the data from a remote repository will overwrite, but not save, the values in the current form."
@@ -585,7 +644,7 @@ msgid "plugins.generic.codecheck.yaml.close"
 msgstr "Close"
 
 msgid "plugins.generic.codecheck.yaml.previewTitle"
-msgstr "CODECHECK Metadata Preview (codecheck.yml)"
+msgstr "CODECHECK metadata preview (codecheck.yml)"
 
 msgid "plugins.generic.codecheck.modal.close"
 msgstr "Close"

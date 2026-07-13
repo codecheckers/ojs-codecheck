@@ -25,6 +25,8 @@ use APP\plugins\generic\codecheck\controllers\page\CodecheckPageHandler;
 use APP\plugins\generic\codecheck\classes\CodecheckRoles\CodecheckRoleArray;
 use APP\plugins\generic\codecheck\classes\CodecheckRoles\CodecheckRoleManager;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
+use APP\plugins\generic\codecheck\classes\Workflow\CodecheckPublicationValidator;
+use APP\plugins\generic\codecheck\classes\Workflow\CodecheckRegisterDepositService;
 use PKP\core\Request;
 use \Github\Client;
 
@@ -76,7 +78,10 @@ class CodecheckPlugin extends GenericPlugin
             });
 
             // Test if we can hook into the publication to block it if codecheck failed
-            Hook::add('Publication::validatePublish', $this->validateCodecheckStatus(...));
+            Hook::add('Publication::validatePublish', $this->validatePublicationHook(...));
+
+            // Deposit a register.csv row when a CODECHECK-opted-in article is published (Issue #10)
+            Hook::add('Publication::publish', $this->depositToRegister(...));
 
             // Add Localizations to Codecheck Status Preview
             Hook::add('TemplateManager::display', $this->addCodecheckStatusLocalizations(...));
@@ -85,46 +90,88 @@ class CodecheckPlugin extends GenericPlugin
         return $success;
     }
 
-    public function validateCodecheckStatus(string $hookName, array $args): bool
+    /**
+     * The publication will be invalid, whenever we ship at least one error in the `$errors` Array. And it will be valid, whenever the array is empty.
+     * The return value of this function doesn't have to do anything with the publication validation. Instead it has to do with how OJS handles this hook. If `true` where to be returned, the Hook: `'Publication::validatePublish'` would stop to be called (meaning that for other plugins & OJS itsself this Hook wouldn't be fired anymore, if we have invalid metadata). This of course means, that e.g. if a submission is in the review stage, but somehow the editor already wants to publish it, we never get to see this error during the publication validation (because our invalid CODECHECK data would stop the hook).
+     * To prevent this, it is best practise to always return `false` on a Hook, so other Plugins and OJS itsself get to call the Hook as well after our plugin did.
+     * 
+     * @param string $hookName The name of the Hook (`'Publication::validatePublish'`)
+     * @param array $args The arguments of the Hook including the validation `$errors` Array at `&$args[0]`
+     * 
+     * @return bool Returns `false` to enable OJS itsself and other Plugins to continue with their implementation for this Hook
+    */
+    public function validatePublicationHook(string $hookName, array $args): bool
     {
+        CodecheckLogger::debug("Validating Publication!");
         $errors = &$args[0];
-        $publication = $args[1];
-        $request = Application::get()->getRequest();
-        $context = $request->getContext();
-        $codecheckMetadataHandler = new CodecheckMetadataHandler($request, new Client(), new CurlApiClient());
-        $codecheckStatus = CodecheckStatusHandler::getCurrentStatusData($codecheckMetadataHandler->getSubmissionId());
+        $codecheckPublicationValidator = new CodecheckPublicationValidator($this);
 
-        CodecheckLogger::debug("Validating CODECHECK before publication!");
+        $validationErrors = $codecheckPublicationValidator->validatePublication();
 
-        $codecheckStatusKeysSelected = $this->getSetting($context->getId(), Constants::CODECHECK_STATUS_KEYS_SELECTED);
+        if(is_array($validationErrors)) {
+            $errors = array_merge($errors, $validationErrors);
+        }
 
-        if (empty($codecheckStatus)) {
-            $errors[] = __('plugins.generic.codecheck.status.validation.failed.noStatusSet');
+        /* Returns `false` to enable OJS itsself and other Plugins to continue with their implementation for this Hook */
+        return false;
+    }
+
+    /**
+     * Deposits a register.csv row to the CODECHECK Register when a
+     * CODECHECK-opted-in submission is published.
+     *
+     * Fires on `Publication::publish`, i.e. after the publication has
+     * actually been saved as published (not during pre-publish validation),
+     * matching the hook signature:
+     *   Hook::call('Publication::publish', [&$newPublication, $publication, $submission]);
+     *
+     * Uses whichever GitHub register organization/repository is already
+     * configured in the plugin settings (see CODECHECK_GITHUB_REGISTER_ORGANIZATION /
+     * CODECHECK_GITHUB_REGISTER_REPOSITORY) — currently defaulting to
+     * codecheckers/testing-dev-register for development.
+     *
+     * @param string $hookName
+     * @param array $args [0] => Publication $newPublication, [1] => Publication $publication, [2] => Submission $submission
+     * @return bool
+     */
+    public function depositToRegister(string $hookName, array $args): bool
+    {
+        [$newPublication, $publication, $submission] = $args;
+
+        if (!$submission->getData('codecheckOptIn')) {
             return false;
         }
 
-        if (!in_array($codecheckStatus->status, $codecheckStatusKeysSelected)) {
-            $errors[] = __('plugins.generic.codecheck.status.validation.failed', [
-                'codecheckStatus' => __($codecheckStatus->status)
-            ]);
-            return false;
+        CodecheckLogger::debug('Depositing register.csv row for submission #' . $submission->getId());
+
+        $depositService = new CodecheckRegisterDepositService($this);
+        $result = $depositService->depositForSubmission($submission->getId());
+
+        if (!$result['success']) {
+            CodecheckLogger::error('Register deposit failed for submission #' . $submission->getId() . ': ' . ($result['error'] ?? 'unknown error'));
         }
 
-        return true;
+        // Never block publication on a register-deposit failure — this is a
+        // best-effort side effect, not a publish requirement. Failures are
+        // logged; a manual/CI fallback can pick up the deposit later.
+        return false;
     }
 
     public function addCodecheckStatusLocalizations($hookName, $args)
     {
         $templateMgr = $args[0];
+
+        $localeKeys = array_combine(
+            Constants::CODECHECK_STATUSES,
+            array_map(fn($status) => __($status), Constants::CODECHECK_STATUSES)
+        );
+
+        $localeKeys[Constants::CODECHECK_STATUS_PENDING] = __(Constants::CODECHECK_STATUS_PENDING);
+
         $templateMgr->addJavaScript(
             'codecheck-locale-status',
             'pkp.localeKeys = pkp.localeKeys || {};' .
-            'Object.assign(pkp.localeKeys, ' . json_encode(
-                array_combine(
-                    Constants::CODECHECK_STATUSES,
-                    array_map(fn($status) => __($status), Constants::CODECHECK_STATUSES)
-                )
-            ) . ');',
+            'Object.assign(pkp.localeKeys, ' . json_encode($localeKeys) . ');',
             ['inline' => true, 'contexts' => ['backend']]
         );
         return false;
@@ -307,8 +354,8 @@ class CodecheckPlugin extends GenericPlugin
             $context = $request->getContext();
             $codecheckMode = $this->getSetting($context->getId(), Constants::CODECHECK_MODE);
             CodecheckLogger::debug('Mode: ' . $codecheckMode);
-            $checkboxValue    = false;
-            $checkboxDisabled = false;
+            $checkboxValue = false;
+            $codecheckMandatory = false;
             $codecheckDescription = __('plugins.generic.codecheck.optIn.description', [
                 'codecheckLink' => "<a href='{$this->getUrlPageRoute("codecheck")}/info' target='_blank'>" . __('plugins.generic.codecheck.displayName') . "</a>"
             ]);
@@ -316,28 +363,27 @@ class CodecheckPlugin extends GenericPlugin
             if ($codecheckMode == 'opt-out') {
                 $checkboxValue = true;
             } elseif ($codecheckMode == 'mandatory') {
-                $checkboxValue    = true;
-                $checkboxDisabled = true;
+                $checkboxValue = true;
+                $codecheckMandatory = true;
                 $codecheckDescription = __('plugins.generic.codecheck.mandatory.description', [
                     'codecheckLink' => "<a href='{$this->getUrlPageRoute("codecheck")}/info' target='_blank'>" . __('plugins.generic.codecheck.displayName') . "</a>"
                 ]);
             }
 
             $form->addField(new FieldOptions('codecheckOptIn', [
-                'label'   => __('plugins.generic.codecheck.displayName'),
-                'type'    => 'checkbox',
+                'label' => __('plugins.generic.codecheck.displayName'),
+                'isRequired' => $codecheckMandatory,
+                'type' => 'checkbox',
                 'options' => [
                     [
-                        'value'    => 1,
-                        'label'    => $codecheckDescription,
-                        'disabled' => $checkboxDisabled,
+                        'value' => 1, 
+                        'label' => $codecheckDescription,
+                        'disabled' => $codecheckMandatory,
                     ]
                 ],
                 'value'   => $checkboxValue,
                 'groupId' => 'default'
             ]));
-
-            return false;
         }
 
         return false;

@@ -151,6 +151,15 @@ class SettingsForm extends Form
         // Unpack so each checkbox gets its own template variable
         $this->setData(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE, in_array(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE, $updateFields));
         $this->setData(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY, in_array(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY, $updateFields));
+        $this->setData(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_STATUS, in_array(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_STATUS, $updateFields));
+
+        $this->setData(
+            Constants::CODECHECK_PUBLICATION_VALIDATION_EXTENDED,
+            $this->plugin->getSetting(
+                $context->getId(),
+                Constants::CODECHECK_PUBLICATION_VALIDATION_EXTENDED
+            )
+        );
 
         parent::initData();
     }
@@ -173,10 +182,12 @@ class SettingsForm extends Form
             Constants::CODECHECK_SHOW_DASHBOARD_COLUMN,
             Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE,
             Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY,
+            Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_STATUS,
             Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_FIELDS,
             Constants::CODECHECK_STATUS,
             Constants::CODECHECK_STATUSES_SELECTED,
             Constants::CODECHECK_STATUS_KEYS_SELECTED,
+            Constants::CODECHECK_PUBLICATION_VALIDATION_EXTENDED,
         ]);
 
         parent::readInputData();
@@ -299,12 +310,19 @@ class SettingsForm extends Form
         $updateFields = array_values(array_filter([
             $this->getData(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE) ? Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE : null,
             $this->getData(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY) ? Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY : null,
+            $this->getData(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_STATUS) ? Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_STATUS : null,
         ]));
 
         $this->plugin->updateSetting(
             $context->getId(),
             Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_FIELDS,
             $updateFields
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_PUBLICATION_VALIDATION_EXTENDED,
+            $this->getData(Constants::CODECHECK_PUBLICATION_VALIDATION_EXTENDED)
         );
 
         $notificationMgr = new NotificationManager();
