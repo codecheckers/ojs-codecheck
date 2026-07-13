@@ -25,6 +25,7 @@ use APP\plugins\generic\codecheck\classes\CodecheckRoles\CodecheckRoleArray;
 use APP\plugins\generic\codecheck\classes\CodecheckRoles\CodecheckRoleManager;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckPublicationValidator;
+use APP\plugins\generic\codecheck\classes\Workflow\CodecheckRegisterDepositService;
 use PKP\core\Request;
 use \Github\Client;
 
@@ -80,6 +81,9 @@ class CodecheckPlugin extends GenericPlugin
             // Test if we can hook into the publication to block it if codecheck failed
             Hook::add('Publication::validatePublish', $this->validatePublicationHook(...));
 
+            // Deposit a register.csv row when a CODECHECK-opted-in article is published (Issue #10)
+            Hook::add('Publication::publish', $this->depositToRegister(...));
+
             // Add Localizations to Codecheck Status Preview
             Hook::add('TemplateManager::display', $this->addCodecheckStatusLocalizations(...));
         }
@@ -110,6 +114,47 @@ class CodecheckPlugin extends GenericPlugin
         }
 
         /* Returns `false` to enable OJS itsself and other Plugins to continue with their implementation for this Hook */
+        return false;
+    }
+
+    /**
+     * Deposits a register.csv row to the CODECHECK Register when a
+     * CODECHECK-opted-in submission is published.
+     *
+     * Fires on `Publication::publish`, i.e. after the publication has
+     * actually been saved as published (not during pre-publish validation),
+     * matching the hook signature:
+     *   Hook::call('Publication::publish', [&$newPublication, $publication, $submission]);
+     *
+     * Uses whichever GitHub register organization/repository is already
+     * configured in the plugin settings (see CODECHECK_GITHUB_REGISTER_ORGANIZATION /
+     * CODECHECK_GITHUB_REGISTER_REPOSITORY) — currently defaulting to
+     * codecheckers/testing-dev-register for development.
+     *
+     * @param string $hookName
+     * @param array $args [0] => Publication $newPublication, [1] => Publication $publication, [2] => Submission $submission
+     * @return bool
+     */
+    public function depositToRegister(string $hookName, array $args): bool
+    {
+        [$newPublication, $publication, $submission] = $args;
+
+        if (!$submission->getData('codecheckOptIn')) {
+            return false;
+        }
+
+        CodecheckLogger::debug('Depositing register.csv row for submission #' . $submission->getId());
+
+        $depositService = new CodecheckRegisterDepositService($this);
+        $result = $depositService->depositForSubmission($submission->getId());
+
+        if (!$result['success']) {
+            CodecheckLogger::error('Register deposit failed for submission #' . $submission->getId() . ': ' . ($result['error'] ?? 'unknown error'));
+        }
+
+        // Never block publication on a register-deposit failure — this is a
+        // best-effort side effect, not a publish requirement. Failures are
+        // logged; a manual/CI fallback can pick up the deposit later.
         return false;
     }
 

@@ -307,6 +307,144 @@ class CodecheckGithubRegisterApiClient
     }
 
     /**
+     * Deposits a new row into the register.csv of the CODECHECK GitHub Register,
+     * by opening a Pull Request against the register repository.
+     *
+     * Flow: fetch current register.csv + its blob sha -> append the new row ->
+     * create a branch off the register's default branch -> commit the updated
+     * file to that branch -> open a PR back to the default branch.
+     *
+     * @param array $row Associative array with keys: Certificate, Repository, Type, Venue, Issue
+     * @param string $certificateIdentifier Used to build a unique branch name and PR title
+     * @return array The created Pull Request's GitHub API response array
+     */
+    public function depositRegisterRow(array $row, string $certificateIdentifier): array
+    {
+        $this->client->authenticate($this->githubPAT, null, Client::AUTH_ACCESS_TOKEN);
+
+        $registerFilePath = 'register.csv';
+
+        // 1. Get the current register.csv content + sha, and the repo's default branch
+        try {
+            $repoInfo = $this->client->api('repo')->show($this->githubRegisterOrganization, $this->githubRegisterRepository);
+            $defaultBranch = $repoInfo['default_branch'] ?? 'main';
+
+            $fileContents = $this->client->api('repo')->contents()->show(
+                $this->githubRegisterOrganization,
+                $this->githubRegisterRepository,
+                $registerFilePath,
+                $defaultBranch
+            );
+        } catch (\Throwable $e) {
+            throw new ApiFetchException("Failed fetching '$registerFilePath' from the register repository.\n" . $e->getMessage());
+        }
+
+        $currentCsv = base64_decode($fileContents['content']);
+        $currentSha = $fileContents['sha'];
+
+        // 2. Append the new row, preserving the existing line-ending style
+        $newCsv = $this->appendCsvRow($currentCsv, $row);
+
+        // 3. Create a new branch off the default branch's current commit
+        $branchName = 'register-deposit/' . preg_replace('/[^A-Za-z0-9_.-]/', '-', $certificateIdentifier);
+
+        try {
+            $baseRef = $this->client->api('gitData')->references()->show(
+                $this->githubRegisterOrganization,
+                $this->githubRegisterRepository,
+                'heads/' . $defaultBranch
+            );
+            $baseSha = $baseRef['object']['sha'];
+
+            $this->client->api('gitData')->references()->create(
+                $this->githubRegisterOrganization,
+                $this->githubRegisterRepository,
+                [
+                    'ref' => 'refs/heads/' . $branchName,
+                    'sha' => $baseSha,
+                ]
+            );
+        } catch (\Throwable $e) {
+            throw new ApiCreateException("Failed creating the branch '$branchName' for the register deposit.\n" . $e->getMessage(), $e->getCode());
+        }
+
+        // 4. Commit the updated register.csv to the new branch
+        try {
+            $this->client->api('repo')->contents()->update(
+                $this->githubRegisterOrganization,
+                $this->githubRegisterRepository,
+                $registerFilePath,
+                $newCsv,
+                'Add register entry for certificate ' . $certificateIdentifier,
+                $currentSha,
+                $branchName
+            );
+        } catch (\Throwable $e) {
+            throw new ApiUpdateException("Failed committing the updated '$registerFilePath' to branch '$branchName'.\n" . $e->getMessage(), $e->getCode());
+        }
+
+        // 5. Open the Pull Request
+        try {
+            $pullRequest = $this->client->api('pull_request')->create(
+                $this->githubRegisterOrganization,
+                $this->githubRegisterRepository,
+                [
+                    'base' => $defaultBranch,
+                    'head' => $branchName,
+                    'title' => 'Register deposit: certificate ' . $certificateIdentifier,
+                    'body' => $this->buildDepositPrBody($row),
+                ]
+            );
+        } catch (\Throwable $e) {
+            throw new ApiCreateException("Failed opening the Pull Request for the register deposit.\n" . $e->getMessage(), $e->getCode());
+        }
+
+        return $pullRequest;
+    }
+
+    /**
+     * Appends a single row to CSV content, matching the existing header's
+     * column order and preserving the file's trailing-newline style.
+     */
+    private function appendCsvRow(string $currentCsv, array $row): string
+    {
+        $hadTrailingNewline = str_ends_with($currentCsv, "\n");
+        $lines = explode("\n", rtrim($currentCsv, "\n"));
+
+        $header = str_getcsv($lines[0]);
+
+        $newLineValues = [];
+        foreach ($header as $column) {
+            $newLineValues[] = $row[$column] ?? '';
+        }
+
+        $newLine = implode(',', array_map(
+            fn($value) => str_contains($value, ',') ? '"' . str_replace('"', '""', $value) . '"' : $value,
+            $newLineValues
+        ));
+
+        $lines[] = $newLine;
+
+        return implode("\n", $lines) . ($hadTrailingNewline ? "\n" : '');
+    }
+
+    private function buildDepositPrBody(array $row): string
+    {
+        $body = "Automated register deposit opened by the OJS CODECHECK plugin on publication.\n\n";
+        $body .= "| Column | Value |\n|---|---|\n";
+        foreach ($row as $column => $value) {
+            // Turn the Issue number into a full URL so GitHub auto-links this PR
+            // with the corresponding register issue, and posts a backlink comment there too.
+            if ($column === 'Issue' && $value !== 'NA' && ctype_digit((string) $value)) {
+                $issueUrl = "https://github.com/{$this->githubRegisterOrganization}/{$this->githubRegisterRepository}/issues/{$value}";
+                $value = "[#{$value}]({$issueUrl})";
+            }
+            $body .= "| $column | $value |\n";
+        }
+        return $body;
+    }
+
+    /**
      * Gets all fetched CODECHECK GtiHub Register Issues
      * 
      * @return array Returns an array of all CODECHECK GtiHub Register Issues
