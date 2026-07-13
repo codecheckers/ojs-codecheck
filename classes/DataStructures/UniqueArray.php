@@ -3,7 +3,7 @@ namespace APP\plugins\generic\codecheck\classes\DataStructures;
 
 class UniqueArray
 {
-    private $array = [];
+    protected $array = [];
 
     /**
      * Factory method that creates a new UniqueArray from a normal array
@@ -14,9 +14,7 @@ class UniqueArray
     public static function from(array $arr): UniqueArray
     {
         $uniqueArray = new UniqueArray();
-        foreach ($arr as $element) {
-            $uniqueArray->add($element);
-        }
+        $uniqueArray->addArray($arr);
 
         return $uniqueArray;
     }
@@ -30,6 +28,13 @@ class UniqueArray
     {
         if(!$this->contains($element)) {
             $this->array[] = $element;
+        }
+    }
+
+    public function addArray(array $arr): void
+    {
+        foreach ($arr as $element) {
+            $this->add($element);
         }
     }
 

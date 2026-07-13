@@ -53,7 +53,6 @@ class SettingsForm extends Form
             ->getRequest()
             ->getContext();
 
-        // Load CODECHECK-specific settings
         $this->setData(
             Constants::CODECHECK_ENABLED,
             $this->plugin->getSetting(
@@ -139,6 +138,39 @@ class SettingsForm extends Form
         $this->setData(
             Constants::CODECHECK_BADGE_HEIGHT,
             $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_HEIGHT) ?? '24'
+            Constants::CODECHECK_STATUS_KEYS_SELECTED,
+            $this->plugin->getSetting(
+                $context->getId(),
+                Constants::CODECHECK_STATUS_KEYS_SELECTED
+            ) ?? []
+        );
+
+        // Default to true — show the dashboard column unless explicitly disabled
+        $showDashboardColumn = $this->plugin->getSetting(
+            $context->getId(),
+            Constants::CODECHECK_SHOW_DASHBOARD_COLUMN
+        );
+        $this->setData(
+            Constants::CODECHECK_SHOW_DASHBOARD_COLUMN,
+            $showDashboardColumn === null ? true : (bool) $showDashboardColumn
+        );
+        
+        $updateFields = $this->plugin->getSetting(
+            $context->getId(),
+            Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_FIELDS
+        ) ?? [];
+
+        // Unpack so each checkbox gets its own template variable
+        $this->setData(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE, in_array(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE, $updateFields));
+        $this->setData(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY, in_array(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY, $updateFields));
+        $this->setData(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_STATUS, in_array(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_STATUS, $updateFields));
+
+        $this->setData(
+            Constants::CODECHECK_PUBLICATION_VALIDATION_EXTENDED,
+            $this->plugin->getSetting(
+                $context->getId(),
+                Constants::CODECHECK_PUBLICATION_VALIDATION_EXTENDED
+            )
         );
 
         parent::initData();
@@ -162,6 +194,15 @@ class SettingsForm extends Form
             Constants::CODECHECK_BADGE_TYPE,
             Constants::CODECHECK_BADGE_CUSTOM_URL,
             Constants::CODECHECK_BADGE_HEIGHT,
+            Constants::CODECHECK_SHOW_DASHBOARD_COLUMN,
+            Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE,
+            Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY,
+            Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_STATUS,
+            Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_FIELDS,
+            Constants::CODECHECK_STATUS,
+            Constants::CODECHECK_STATUSES_SELECTED,
+            Constants::CODECHECK_STATUS_KEYS_SELECTED,
+            Constants::CODECHECK_PUBLICATION_VALIDATION_EXTENDED,
         ]);
 
         parent::readInputData();
@@ -179,17 +220,29 @@ class SettingsForm extends Form
         $templateMgr = TemplateManager::getManager($request);
         $templateMgr->assign('pluginName', $this->plugin->getName());
         $templateMgr->assign(
-            'githubCustomLabels',
+            Constants::CODECHECK_GITHUB_CUSTOM_LABELS,
             $this->getData(Constants::CODECHECK_GITHUB_CUSTOM_LABELS) ?? []
         );
         $templateMgr->assign('codecheckModes', [
-            'opt-in' => __('plugins.generic.codecheck.settings.mode.opt.in'),
-            'opt-out' => __('plugins.generic.codecheck.settings.mode.opt.out'),
+            'opt-in'    => __('plugins.generic.codecheck.settings.mode.opt.in'),
+            'opt-out'   => __('plugins.generic.codecheck.settings.mode.opt.out'),
             'mandatory' => __('plugins.generic.codecheck.settings.mode.mandatory'),
         ]);
+        
         $templateMgr->assign('codecheckBadgeType', $this->getData(Constants::CODECHECK_BADGE_TYPE) ?? 'codeworks');
         $templateMgr->assign('codecheckBadgeCustomUrl', $this->getData(Constants::CODECHECK_BADGE_CUSTOM_URL) ?? '');
         $templateMgr->assign('codecheckBadgeHeight', $this->getData(Constants::CODECHECK_BADGE_HEIGHT) ?? '24');
+        
+        $templateMgr->assign(
+            'showDashboardColumn',
+            $this->getData(Constants::CODECHECK_SHOW_DASHBOARD_COLUMN)
+        );
+
+        $templateMgr->assign(
+            Constants::CODECHECK_STATUSES_SELECTED,
+            (array) $this->getData(Constants::CODECHECK_STATUSES_SELECTED) ?? []
+        );
+        $templateMgr->assign('codecheckStatuses', Constants::CODECHECK_STATUSES);
 
         return parent::fetch($request, $template, $display);
     }
@@ -204,7 +257,6 @@ class SettingsForm extends Form
             ->getRequest()
             ->getContext();
 
-        // Save CODECHECK-specific settings
         $this->plugin->updateSetting(
             $context->getId(),
             Constants::CODECHECK_ENABLED,
@@ -267,6 +319,12 @@ class SettingsForm extends Form
             Constants::CODECHECK_BADGE_TYPE,
             $this->getData(Constants::CODECHECK_BADGE_TYPE) ?? 'codeworks'
         );
+        
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_STATUS_KEYS_SELECTED,
+            (array) $this->getData(Constants::CODECHECK_STATUS_KEYS_SELECTED)
+        );
 
         $this->plugin->updateSetting(
             $context->getId(),
@@ -278,6 +336,29 @@ class SettingsForm extends Form
             $context->getId(),
             Constants::CODECHECK_BADGE_HEIGHT,
             (int) ($this->getData(Constants::CODECHECK_BADGE_HEIGHT) ?? 24)
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_SHOW_DASHBOARD_COLUMN,
+            (bool) $this->getData(Constants::CODECHECK_SHOW_DASHBOARD_COLUMN)
+        );
+        
+        $updateFields = array_values(array_filter([
+            $this->getData(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE) ? Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE : null,
+            $this->getData(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY) ? Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY : null,
+            $this->getData(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_STATUS) ? Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_STATUS : null,
+        ]));
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_FIELDS,
+            $updateFields
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_PUBLICATION_VALIDATION_EXTENDED,
+            $this->getData(Constants::CODECHECK_PUBLICATION_VALIDATION_EXTENDED)
         );
 
         $notificationMgr = new NotificationManager();

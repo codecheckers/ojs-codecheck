@@ -36,6 +36,8 @@ class CodecheckSubmissionDAO
             'source' => $data['source'] ?? '',
             'codecheckers' => isset($data['codecheckers']) ? json_encode($data['codecheckers']) : null,
             'certificate' => $data['certificate'] ?? '',
+            'issueUrl' => $data['issueUrl'] ?? '',
+            'issueNumber' => $data['issueNumber'] ?? null,
             'check_time' => $data['check_time'] ?? null,
             'summary' => $data['summary'] ?? '',
             'report' => $data['report'] ?? '',
@@ -113,6 +115,16 @@ class CodecheckSubmission
     public function getCertificate(): string 
     { 
         return $this->data['certificate'] ?? ''; 
+    }
+
+    public function getIssueUrl(): string 
+    { 
+        return $this->data['issueUrl'] ?? ''; 
+    }
+
+    public function getIssueNumber(): string 
+    { 
+        return $this->data['issueNumber'] ?? ''; 
     }
 
     public function getCheckTime(): ?string 

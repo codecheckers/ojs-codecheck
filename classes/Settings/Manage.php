@@ -12,7 +12,6 @@
 namespace APP\plugins\generic\codecheck\classes\Settings;
 
 use APP\core\Request;
-use APP\plugins\generic\codecheck\classes\migration\CodecheckSchemaMigration;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
 use PKP\core\JSONMessage;
 

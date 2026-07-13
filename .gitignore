@@ -36,6 +36,7 @@ node_modules/
 
 # npm release build
 public/
+public/*
 
 # test results
 tests/.phpunit.result.cache
