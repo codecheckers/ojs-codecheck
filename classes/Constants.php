@@ -26,6 +26,7 @@ class Constants
     /**
      * The possible Codecheck Statuses
      */
+    public const CODECHECK_STATUS_PENDING = 'plugins.generic.codecheck.status.pending';
     public const CODECHECK_STATUS_NEEDS_CODECHECKER = 'plugins.generic.codecheck.status.needsCodechecker';
     public const CODECHECK_STATUS_ASSIGNED_CODECHECKER = 'plugins.generic.codecheck.status.assignedCodechecker';
     public const CODECHECK_STATUS_STALLED_AUTHOR = 'plugins.generic.codecheck.status.stalled.author';
@@ -65,6 +66,7 @@ class Constants
     public const CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_FIELDS = 'codecheckGithubUpdateFields';
     public const CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE = 'updateTitle';
     public const CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY = 'updateBody';
+    public const CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_STATUS = 'updateStatus';
     # Codecheck Publication Validation
     # Codecheck Status
     public const CODECHECK_STATUS = 'codecheckStatus';

@@ -611,6 +611,7 @@ class CodecheckApiHandler
         array $repositories
     ): array
     {
+        $updateInformation = $this->plugin->getSetting($this->request->getContext()->getId(), Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_FIELDS);
         // Add the new issue to the CODECHECK GtiHub Register
         $issue = $codecheckGithubRegisterApiClient->addIssue(
             $identifier,
@@ -618,7 +619,8 @@ class CodecheckApiHandler
             $articleTitle,
             $authorString,
             $codecheckers,
-            $repositories
+            $repositories,
+            $updateInformation
         );
 
         return $issue;
@@ -640,8 +642,9 @@ class CodecheckApiHandler
         array $repositories
     ): string
     {
-        $journalName = $this->request->getContext()?->getLocalizedName() ?? 'Unknwon Journal';
-
+        $context = $this->request->getContext();
+        $journalName = $context?->getLocalizedName() ?? 'Unknwon Journal';
+        $updateInformation = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_FIELDS);
         $codecheckIssue = new CodecheckGithubRegisterIssue(
             $githubRegisterOrganization,
             $githubRegisterRepository,
@@ -652,7 +655,8 @@ class CodecheckApiHandler
             $authorString,
             $this->codecheckMetadataHandler->getSubmissionId(),
             $codecheckers,
-            $repositories
+            $repositories,
+            $updateInformation
         );
 
         return $codecheckIssue->getNewIssueUrl();
@@ -972,15 +976,6 @@ class CodecheckApiHandler
 
         $statusRecord = CodecheckStatusHandler::getCurrentStatusData($submissionId);
 
-        if($statusRecord == null) {
-            JsonResponse::staticResponse([
-                'success' => false,
-                'error' => "There doesn't exist any Status in the OJS Databse for this submission Id yet.",
-                'statusRecord' => null,
-                'allStatuses' => Constants::CODECHECK_STATUSES,
-            ], 500);
-        }
-
         JsonResponse::staticResponse([
             'success' => true,
             'statusRecord' => $statusRecord,
@@ -990,14 +985,18 @@ class CodecheckApiHandler
 
     public function getStatusHistory(): void
     {
+        CodecheckLogger::debug("Get Status History");
         $submissionId = (int) $this->codecheckMetadataHandler->getSubmissionId();
 
         $statusHistory = CodecheckStatusHandler::getStatusDataHistory($submissionId);
 
-        if($statusHistory == null) {
+        CodecheckLogger::debug(print_r($statusHistory, true));
+
+        if(empty($statusHistory)) {
             JsonResponse::staticResponse([
                 'success' => false,
-                'statusHistory' => $statusHistory,
+                'error' => "Currently there is no recorded CODECHECK status history for this submission ID in the OJS database.",
+                'statusHistory' => null,
             ], 400);
         }
 
@@ -1038,13 +1037,13 @@ class CodecheckApiHandler
             }
             $statusUpdate = CodecheckStatusHandler::automaticStatusUpdate($submissionMetadata);
 
-            if($statusUpdate == null) {
+            if(empty($statusUpdate)) {
                 JsonResponse::staticResponse([
                     'success' => false,
                     'statusRecord' => $statusUpdate,
                     'allStatuses' => Constants::CODECHECK_STATUSES,
                     'error' => "Status doesn't need to be automatically updated."
-                ], 200);
+                ], 400);
             } else {
                 JsonResponse::staticResponse([
                     'success' => true,

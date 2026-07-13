@@ -564,13 +564,13 @@ export default {
           manifestFiles: data.submission?.manifestFiles || '',
           dataAvailabilityStatement: data.submission?.dataAvailabilityStatement || ''
         };
-
-        let repositoryData = typeof data.codecheck.repository === 'string' ? JSON.parse(data.codecheck.repository) :  {
-          repositories: null,
-          repoWithCodecheckYaml: null,
-        };
         
         if (data.codecheck && typeof data.codecheck === 'object') {
+          let repositoryData = typeof data.codecheck.repository === 'string' ? JSON.parse(data.codecheck.repository) :  {
+            repositories: null,
+            repoWithCodecheckYaml: null,
+          };
+
           this.metadata = {
             version: data.codecheck.version || data.codecheck.version || 'latest',
             publicationType: data.codecheck.publicationType || data.codecheck.publication_type || 'doi',
