@@ -250,9 +250,6 @@ class CodecheckMetadataHandler
                         ? array_values($publicUrls)[0]
                         : implode(', ', $publicUrls);
                 }
-            } else {
-                // Old format: plain comma-separated string — no privacy info, include as-is
-                $data['repository'] = $metadata->repository;
             }
         }
 

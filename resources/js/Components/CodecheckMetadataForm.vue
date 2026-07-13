@@ -175,9 +175,10 @@
                 class="pkpFormField__input"
                 :placeholder="t('plugins.generic.codecheck.repository.placeholder')"
               />
-              <label class="repo-private-label">
+              <label class="repo-private-label" :title="t('plugins.generic.codecheck.repository.markAsPrivate.tooltip')">
                 <input type="checkbox" v-model="repo.isPrivate" class="repo-private-checkbox" />
                 {{ t('plugins.generic.codecheck.repository.markAsPrivate') }}
+                <span class="repo-private-info">ℹ️</span>
               </label>
               <button
                 type="button"
@@ -538,16 +539,7 @@ export default {
           };
           
           if (data.codecheck.repository) {
-            try {
-              const parsed = JSON.parse(data.codecheck.repository);
-              // New format: array of {url, isPrivate} objects
-              this.repositories = Array.isArray(parsed)
-                ? parsed
-                : data.codecheck.repository.split(',').map(r => ({ url: r.trim(), isPrivate: false })).filter(r => r.url);
-            } catch {
-              // Backward compat: old plain comma-separated string
-              this.repositories = data.codecheck.repository.split(',').map(r => ({ url: r.trim(), isPrivate: false })).filter(r => r.url);
-            }
+            this.repositories = JSON.parse(data.codecheck.repository);
           }
         }
         
