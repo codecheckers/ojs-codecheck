@@ -138,6 +138,9 @@ class SettingsForm extends Form
         $this->setData(
             Constants::CODECHECK_BADGE_HEIGHT,
             $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_HEIGHT) ?? '24'
+        );
+
+        $this->setData(
             Constants::CODECHECK_STATUS_KEYS_SELECTED,
             $this->plugin->getSetting(
                 $context->getId(),
@@ -336,6 +339,7 @@ class SettingsForm extends Form
             $context->getId(),
             Constants::CODECHECK_BADGE_HEIGHT,
             (int) ($this->getData(Constants::CODECHECK_BADGE_HEIGHT) ?? 24)
+        );
 
         $this->plugin->updateSetting(
             $context->getId(),
