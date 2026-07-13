@@ -216,66 +216,6 @@
 							class="pkpFormField__input"
 							value="{$githubRegisterRepository|escape|default:'testing-dev-register'}"
 						/>
-						<button type="button" class="remove pkpButton pkpButton--close">×</button>
-					</div>
-				{/foreach}
-			</div>
-		{/fbvFormSection}
-
-		{* Select which parts of the codecheck GitHub Issue are updated *}
-		{fbvFormSection
-			list=true
-		}
-			<div class="field-header">
-				<label class="pkp_form_label">Update the GitHub Issue</label>
-			</div>
-			<label class="description">Select which information should be updated in the GitHub Register Issue of the CODECHECK</label>
-			{fbvElement
-				type="checkbox"
-				id="updateTitle"
-				checked=$updateTitle
-				label="plugins.generic.codecheck.settings.updateIssue.title"
-			}
-			{fbvElement
-				type="checkbox"
-				id="updateBody"
-				checked=$updateBody
-				label="plugins.generic.codecheck.settings.updateIssue.body"
-			}
-			{fbvElement
-				type="checkbox"
-				id="updateStatus"
-				checked=$updateStatus
-				label="plugins.generic.codecheck.settings.updateIssue.status"
-			}
-		{/fbvFormSection}
-
-		{* Block Publication, when CODECHECK has specific status *}
-		{fbvFormSection
-			list=true
-		}
-			<div class="field-header">
-				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.status"}</label>
-			</div>
-			<label class="description">{translate key="plugins.generic.codecheck.settings.status.description"}</label>
-			<fieldset>
-				<div class="settings-droptown dropdown">
-					<button type="button" class="dropbtn">{translate key="plugins.generic.codecheck.settings.status.selectStatuses"} ⚙</button>
-					<div class="dropdown-content">
-						{foreach from=$codecheckStatuses item=statusKey}
-							<div class="dropdown-checkbox-input">
-								<input
-									type="checkbox"
-									name="codecheckStatusKeysSelected[]"
-									id="status-{$statusKey}"
-									value="{$statusKey|escape}"
-									{if $codecheckStatusKeysSelected && in_array($statusKey, $codecheckStatusKeysSelected)}checked{/if}
-								/>
-								<label for="status-{$statusKey}">
-									{translate key=$statusKey}
-								</label>
-							</div>
-						{/foreach}
 					</div>
 					<button
 					type="button"
@@ -349,8 +289,19 @@
 					checked=$updateBody
 					label="plugins.generic.codecheck.settings.updateIssue.body"
 				}
+				{fbvElement
+					type="checkbox"
+					id="updateStatus"
+					checked=$updateStatus
+					label="plugins.generic.codecheck.settings.updateIssue.status"
+				}
 			{/fbvFormSection}
+		{/fbvFormSection}
 
+		{fbvFormSection list=true}
+			<div class="field-header">
+				<label class="pkp_form_title">{translate key="plugins.generic.codecheck.settings.publication.title"}</label>
+			</div>
 			{* Block Publication, when CODECHECK has specific status *}
 			{fbvFormSection
 				list=true
@@ -381,42 +332,7 @@
 					</div>
 				</fieldset>
 			{/fbvFormSection}
-		{/fbvFormSection}
-
-		{fbvFormSection list=true}
-			<div class="field-header">
-				<label class="pkp_form_title">{translate key="plugins.generic.codecheck.settings.publication.title"}</label>
-			</div>
 			{* Enable extended validation of the CODECHECK metadata to block the publication of the submission *}
-			{fbvFormSection
-				list=true
-			}
-				<div class="field-header">
-					<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.status"}</label>
-				</div>
-				<label class="description">{translate key="plugins.generic.codecheck.settings.status.description"}</label>
-				<fieldset>
-					<div class="settings-droptown dropdown">
-						<button type="button" class="dropbtn">{translate key="plugins.generic.codecheck.settings.status.selectStatuses"} ⚙</button>
-						<div class="dropdown-content">
-							{foreach from=$codecheckStatuses item=statusKey}
-								<div class="dropdown-checkbox-input">
-									<input
-										type="checkbox"
-										name="codecheckStatusKeysSelected[]"
-										id="status-{$statusKey}"
-										value="{$statusKey|escape}"
-										{if $codecheckStatusKeysSelected && in_array($statusKey, $codecheckStatusKeysSelected)}checked{/if}
-									/>
-									<label for="status-{$statusKey}">
-										{translate key=$statusKey}
-									</label>
-								</div>
-							{/foreach}
-						</div>
-					</div>
-				</fieldset>
-			{/fbvFormSection}
 			{fbvFormSection
 				list=true
 			}
