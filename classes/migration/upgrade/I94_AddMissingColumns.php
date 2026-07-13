@@ -13,14 +13,13 @@
 
 namespace APP\plugins\generic\codecheck\classes\migration\upgrade;
 
-use Illuminate\Database\Migrations\Migration;
+use APP\plugins\generic\codecheck\classes\migration\CodecheckMigration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use PKP\install\DowngradeNotSupportedException;
 
-class I94_AddMissingColumns extends Migration
+class I94_AddMissingColumns extends CodecheckMigration
 {
-    public function up(): void
+    protected function runUp(): void
     {
         // Nothing to do if the table doesn't exist — install migration handles creation
         if (!Schema::hasTable('codecheck_metadata')) {
@@ -35,10 +34,5 @@ class I94_AddMissingColumns extends Migration
                     ->after('certificate');
             }
         });
-    }
-
-    public function down(): void
-    {
-        throw new DowngradeNotSupportedException();
     }
 }

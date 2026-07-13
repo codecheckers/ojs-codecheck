@@ -10,19 +10,28 @@
  * @brief Create all CODECHECK database tables on fresh install.
  *        Also calls all upgrade migrations so that fresh installs
  *        and existing installs both end up at the same schema state.
+ *
+ * Upgrade migrations are called at the end of runUp() in the order
+ * they are listed. This order matters — later migrations may depend
+ * on changes made by earlier ones.
+ *
+ * Upgrade scripts can do more than add columns. They may also:
+ * - Rename columns or tables
+ * - Migrate or transform existing data values
+ * - Insert default content (e.g. initial settings or lookup data)
+ * - Remove columns, tables, or fields no longer in use
  */
 
 namespace APP\plugins\generic\codecheck\classes\migration\install;
 
+use APP\plugins\generic\codecheck\classes\migration\CodecheckMigration;
 use APP\plugins\generic\codecheck\classes\migration\upgrade\I94_AddMissingColumns;
-use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use PKP\install\DowngradeNotSupportedException;
 
-class CodecheckSchemaMigration extends Migration
+class CodecheckSchemaMigration extends CodecheckMigration
 {
-    public function up(): void
+    protected function runUp(): void
     {
         // codecheck_metadata — core CODECHECK data per submission
         if (!Schema::hasTable('codecheck_metadata')) {
@@ -91,17 +100,9 @@ class CodecheckSchemaMigration extends Migration
 
         $this->createCodecheckGenres();
 
-        // Run all upgrade migrations — they are fully idempotent (hasColumn/hasTable guards).
-        // This ensures a fresh install ends up at exactly the same schema as an upgraded one.
+        // Run upgrade migrations in order — each is idempotent so safe to run
+        // on both fresh installs and existing ones. Add new migrations here.
         (new I94_AddMissingColumns())->up();
-    }
-
-    /**
-     * Downgrade is not supported — dropping tables would destroy journal data.
-     */
-    public function down(): void
-    {
-        throw new DowngradeNotSupportedException();
     }
 
     /**
