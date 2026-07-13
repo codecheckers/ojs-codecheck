@@ -11,6 +11,7 @@ use APP\plugins\generic\codecheck\classes\Exceptions\ApiCreateException;
 use APP\plugins\generic\codecheck\classes\Exceptions\NoMatchingIssuesFoundException;
 use APP\plugins\generic\codecheck\classes\DataStructures\UniqueArray;
 use PKP\tests\PKPTestCase;
+use APP\plugins\generic\codecheck\classes\Constants;
 
 /**
  * @file APP/plugins/generic/codecheck/tests/unittests/CodecheckGithubRegisterApiClientUnitTest.php
@@ -27,6 +28,7 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
     private string $githubRegisterOrganization;
     private string $githubRegisterRepository;
     private string $journalName;
+    private array $updateInformation;
     
     protected function setUp(): void
 	{
@@ -38,6 +40,10 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
         $this->journalName = 'Example journal';
         $this->journal = $this->createMock(\APP\journal\Journal::class);
         $this->journal->method('getLocalizedName')->willReturn($this->journalName);
+        $this->updateInformation = [
+            Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE,
+            Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY,
+        ];
 	}
 
     public function testGithubRegisterClientGetEmptyLabels()
@@ -165,7 +171,8 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
             $authorString,
             $this->submissionId,
             $codecheckers,
-            $repos
+            $repos,
+            $this->updateInformation,
         );
 
         $expectedBody = $issue->getBody();
@@ -207,7 +214,8 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
             $paperTitle,
             $authorString,
             $codecheckers,
-            $repos
+            $repos,
+            $this->updateInformation,
         );
 
         $this->assertEquals(
