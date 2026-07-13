@@ -564,6 +564,11 @@ export default {
           manifestFiles: data.submission?.manifestFiles || '',
           dataAvailabilityStatement: data.submission?.dataAvailabilityStatement || ''
         };
+
+        let repositoryData = typeof data.codecheck.repository === 'string' ? JSON.parse(data.codecheck.repository) :  {
+          repositories: null,
+          repoWithCodecheckYaml: null,
+        };
         
         if (data.codecheck && typeof data.codecheck === 'object') {
           this.metadata = {
@@ -571,7 +576,7 @@ export default {
             publicationType: data.codecheck.publicationType || data.codecheck.publication_type || 'doi',
             manifest: Array.isArray(data.codecheck.manifest) ? data.codecheck.manifest : 
                       (typeof data.codecheck.manifest === 'string' ? JSON.parse(data.codecheck.manifest) : []),
-            repository: data.codecheck.repository.repositories || '',
+            repository: repositoryData.repositories || '',
             source: data.codecheck.source || '',
             codecheckers: Array.isArray(data.codecheck.codecheckers) ? data.codecheck.codecheckers : 
                           (typeof data.codecheck.codecheckers === 'string' ? JSON.parse(data.codecheck.codecheckers) : []),
@@ -588,9 +593,9 @@ export default {
           this.certificateIdentifier.issue.labelsSelected = data.codecheck.issue.labelsSelected;
           this.certificateIdentifier.isLinked = !!(data.codecheck.issue?.url && data.codecheck.issue?.number);
           
-          this.repositoryWithCodecheckYaml = data.codecheck.repository.repoWithCodecheckYaml;
-          if (data.codecheck.repository.repositories) {
-            this.repositories = data.codecheck.repository.repositories.split(',').map(r => r.trim()).filter(r => r);
+          this.repositoryWithCodecheckYaml = repositoryData.repoWithCodecheckYaml;
+          if (repositoryData.repositories) {
+            this.repositories = repositoryData.repositories.split(',').map(r => r.trim()).filter(r => r);
           }
         }
         
