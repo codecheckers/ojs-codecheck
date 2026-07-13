@@ -31,6 +31,28 @@ class JsonResponse
     }
 
     /**
+     * This function returns the Payload of the JSON Response as an associative Array
+     * 
+     * @return array The Payload of the JSON Response
+     */
+    public function getPayloadArray(): array
+    {
+        return json_decode($this->payload, true);
+    }
+
+    /**
+     * This function returns whether the JSON Response was a success or not
+     * 
+     * @return bool JSON Response is success
+     */
+    public function isSuccess(): bool
+    {
+        if(!isset($this->getPayloadArray()['success'])) { return false; }
+
+        return $this->getPayloadArray()['success'];
+    }
+
+    /**
      * This function returns the HTTP Response Code of the JSON Response
      * 
      * @return int The HTTP Response Code of the JSON Response

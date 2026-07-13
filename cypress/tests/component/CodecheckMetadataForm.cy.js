@@ -26,28 +26,32 @@ describe('CodecheckMetadataForm Component', () => {
           version: 'latest',
           publicationType: 'doi',
           manifest: [],
-          repository: '',
+          repository: JSON.stringify({ repositories: null, repoWithCodecheckYaml: null }),
           source: '',
           codecheckers: [],
           certificate: '',
           check_time: '',
           summary: '',
           report: '',
-          additionalContent: ''
-        }
+          additionalContent: '',
+          issue: {
+            url: "https://github.come/example/repo/issues/0",
+            number: 0,
+            labels: ["test-label-1", "test-label-2"],
+            labelsSelected: ["test-label-2"]
+          },
+        },
       }
     }).as('loadMetadata');
 
-    // Mock venue data API
-    cy.intercept('GET', '**/codecheck/venue', {
+    cy.intercept('GET', '**/codecheck/labels*', {
       statusCode: 200,
       body: {
         success: true,
-        message: 'Venue data loaded',
-        venueTypes: ['Journal', 'Conference', 'Preprint'],
-        venueNames: ['Nature', 'Science', 'PLOS ONE', 'arXiv']
+        labels: ['test-label-1', 'test-label-2'],
+        message: 'Labels fetched successfully'
       }
-    }).as('getVenueData');
+    }).as('loadLabelData');
   });
 
   it('renders loading state initially', () => {
@@ -70,7 +74,7 @@ describe('CodecheckMetadataForm Component', () => {
     });
     
     cy.wait('@loadMetadata');
-    
+        
     // Check paper metadata section
     cy.contains('Test Article Title').should('exist');
     cy.contains('John Doe').should('exist');
@@ -296,7 +300,7 @@ describe('CodecheckMetadataForm Component', () => {
       .should('have.value', testDateTime);
   });
 
-  it('loads venue data for certificate identifier', () => {
+  it('loads labels for certificate identifier', () => {
     cy.mount(CodecheckMetadataForm, {
       props: {
         submission: { id: 1 },
@@ -305,13 +309,13 @@ describe('CodecheckMetadataForm Component', () => {
     });
     
     cy.wait('@loadMetadata');
-    cy.wait('@getVenueData');
+    cy.wait('@loadLabelData');
     
-    cy.get('.certificate-identifier-venue-types option')
-      .should('have.length.gt', 1);
-    
-    cy.get('.certificate-identifier-venue-names option')
-      .should('have.length.gt', 1);
+    cy.get('.certificate-identifier-select.dropdown .dropdown-checkbox-input')
+      .should('have.length.gt', 0);
+
+    cy.get('.certificate-identifier-select.dropdown .dropdown-checkbox-input input[type="checkbox"]')
+      .should('have.length', 2);
   });
 
   it('can reserve certificate identifier', () => {
@@ -329,7 +333,8 @@ describe('CodecheckMetadataForm Component', () => {
       body: {
         success: true,
         identifier: '2025-042',
-        issueUrl: 'https://github.com/codecheckers/register/issues/42'
+        issueUrl: 'https://github.com/codecheckers/register/issues/42',
+        issueNumber: 42
       }
     }).as('reserveIdentifier');
 
@@ -341,23 +346,24 @@ describe('CodecheckMetadataForm Component', () => {
     });
     
     cy.wait('@loadMetadata');
-    cy.wait('@getVenueData');
+    cy.wait('@loadLabelData');
     
-    // Select venue type and name
-    cy.get('.certificate-identifier-venue-types').select('Journal');
-    cy.get('.certificate-identifier-venue-names').select('Nature');
-    
-    // Click reserve button
-    cy.get('#certificate-identifier-button-wrapper')
-      .find('button')
-      .contains(/reserve/i)
-      .click();
-    
-    cy.on('window:alert', (text) => {
-      expect(text).to.contains('2025-042');
+    // Open dropdown and select a label first, otherwise the guard blocks the request
+    cy.get('.dropdown-content').invoke('show');
+    cy.get('.dropdown-content').should('be.visible');
+    cy.get('.dropdown-checkbox-input input[type="checkbox"]').first().check();
+
+    cy.get('.certificate-identifier-button').contains(
+      'plugins.generic.codecheck.identifier.reserve.withApi'
+    ).click();
+
+    cy.wait('@reserveIdentifier').then((interception) => {
+      expect(interception.request.body).to.have.property('reserveIdentifierMode', 'api');
+      expect(interception.request.body.issue.labelsSelected).to.have.length.gt(0);
     });
-    
-    cy.wait('@reserveIdentifier');
+
+    cy.get('.certificate-identifier-input')
+      .should('have.value', '2025-042');
   });
 
   it('disables preview button when requirements not met', () => {

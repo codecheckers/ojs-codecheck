@@ -4,10 +4,14 @@ namespace APP\plugins\generic\codecheck\tests;
 
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifier;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterIssue;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckIssueLabels;
 use APP\plugins\generic\codecheck\classes\Exceptions\ApiFetchException;
 use APP\plugins\generic\codecheck\classes\Exceptions\ApiCreateException;
 use APP\plugins\generic\codecheck\classes\Exceptions\NoMatchingIssuesFoundException;
+use APP\plugins\generic\codecheck\classes\DataStructures\UniqueArray;
 use PKP\tests\PKPTestCase;
+use APP\plugins\generic\codecheck\classes\Constants;
 
 /**
  * @file APP/plugins/generic/codecheck/tests/unittests/CodecheckGithubRegisterApiClientUnitTest.php
@@ -24,6 +28,7 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
     private string $githubRegisterOrganization;
     private string $githubRegisterRepository;
     private string $journalName;
+    private array $updateInformation;
     
     protected function setUp(): void
 	{
@@ -35,6 +40,10 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
         $this->journalName = 'Example journal';
         $this->journal = $this->createMock(\APP\journal\Journal::class);
         $this->journal->method('getLocalizedName')->willReturn($this->journalName);
+        $this->updateInformation = [
+            Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE,
+            Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY,
+        ];
 	}
 
     public function testGithubRegisterClientGetEmptyLabels()
@@ -95,7 +104,7 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
             $this->journal,
             $clientMock
         );
-        $apiParser->fetchIssues();
+        $apiParser->fetchNewestIssues();
         $issues = $apiParser->getIssues();
 
         $this->assertCount(1, $issues);
@@ -134,18 +143,44 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
     {
         $_ENV['CODECHECK_REGISTER_GITHUB_TOKEN'] = $this->githubPAT;
 
+        $codecheckers = ['Example Codechecker'];
+        $repos = ['https://repo.com'];
+        $paperTitle = 'Some Paper';
+        $authorString = 'Daniel Nüst et al.';
+
         $certMock = $this->createMock(CertificateIdentifier::class);
         $certMock->method('toStr')
             ->willReturn('2025-001');
 
         $issueApiMock = $this->createMock(\Github\Api\Issue::class);
-        $expectedBody = 'Journal: `' . $this->journalName . '`<br />'
-              . 'Submission ID: `' . $this->submissionId . '`';
+
+        $issueLabelsMock = $this->createMock(CodecheckIssueLabels::class);
+
+        $collectionMock = $this->createMock(UniqueArray::class);
+        $collectionMock->method('toArray')->willReturn(['institution', 'check-nl']);
+
+        $issueLabelsMock->method('get')->willReturn($collectionMock);
+
+        $issue = new CodecheckGithubRegisterIssue(
+            $this->githubRegisterOrganization,
+            $this->githubRegisterRepository,
+            $certMock,
+            $issueLabelsMock,
+            $paperTitle,
+            $this->journalName,
+            $authorString,
+            $this->submissionId,
+            $codecheckers,
+            $repos,
+            $this->updateInformation,
+        );
+
+        $expectedBody = $issue->getBody();
 
         $issueApiMock->expects($this->once())
             ->method('create')
             ->with(
-                'codecheckers',
+                $this->githubRegisterOrganization,
                 $this->githubRegisterRepository,
                 [
                     'title'  => 'Daniel Nüst et al. | 2025-001',
@@ -171,17 +206,21 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
             $clientMock
         );
 
-        $url = $parser->addIssue(
+        $labels = new CodecheckIssueLabels(['institution', 'check-nl']);
+
+        $issue = $parser->addIssue(
             $certMock,
-            'institution',
-            'check-nl',
-            [],
-            'Daniel Nüst et al.'
+            $labels,
+            $paperTitle,
+            $authorString,
+            $codecheckers,
+            $repos,
+            $this->updateInformation,
         );
 
         $this->assertEquals(
             'https://github.com/codecheckers/testing-dev-register/issues/123',
-            $url
+            $issue['html_url']
         );
     }
 
@@ -205,6 +244,6 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
         $this->expectException(NoMatchingIssuesFoundException::class);
         $this->expectExceptionMessage("There was no open or closed issue found with the label 'id assigned' in the GitHub Codecheck Register.");
 
-        $parser->fetchIssues();
+        $parser->fetchNewestIssues();
     }
 }

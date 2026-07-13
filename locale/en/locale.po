@@ -20,6 +20,9 @@ msgstr "No"
 msgid "plugins.generic.codecheck.ok"
 msgstr "Ok"
 
+msgid "plugins.generic.codecheck.common.reload"
+msgstr "Reload"
+
 msgid "plugins.generic.codecheck.request.failed"
 msgstr "Request failed"
 
@@ -44,11 +47,14 @@ msgstr "Configure the CODECHECK integration settings for this journal"
 msgid "plugins.generic.settings.button.reset"
 msgstr "Reset"
 
+msgid "plugins.generic.codecheck.settings.submission.title"
+msgstr "Submission Settings"
+
 msgid "plugins.generic.codecheck.settings.enableCodecheck"
 msgstr "Enable CODECHECK for this journal"
 
 msgid "plugins.generic.codecheck.settings.mode"
-msgstr "Select the CODECHECK mode used during the submission of a paper"
+msgstr "Select the CODECHECK mode for submissions"
 
 msgid "plugins.generic.codecheck.settings.mode.opt.in"
 msgstr "opt-in by the author"
@@ -63,10 +69,13 @@ msgid "plugins.generic.codecheck.settings.enableCodecheck.description"
 msgstr "Allow editors to assign codecheckers to submissions"
 
 msgid "plugins.generic.codecheck.settings.authorAnonymity"
-msgstr "Author anonymity"
+msgstr "Author anonymity in the GitHub register repository"
 
 msgid "plugins.generic.codecheck.settings.authorAnonymity.description"
-msgstr "Include the author names in the GitHub register issue"
+msgstr "Include the author names in the GitHub register repository issue"
+
+msgid "plugins.generic.codecheck.settings.github.title"
+msgstr "GitHub Settings"
 
 msgid "plugins.generic.codecheck.settings.github.personalAccessToken"
 msgstr "GitHub Personal Access Token (classic)"
@@ -91,6 +100,52 @@ msgstr "+ Label"
 
 msgid "plugins.generic.codecheck.settings.github.labels.emptyState"
 msgstr "No custom journal labels added yet"
+
+msgid "plugins.generic.codecheck.settings.updateIssue.author"
+msgstr "Update the author names on the Issue Title"
+
+msgid "plugins.generic.codecheck.settings.updateIssue.codecheckers"
+msgstr "Update the codecheckers"
+
+msgid "plugins.generic.codecheck.settings.updateIssue.repositories"
+msgstr "Update the repository links"
+
+msgid "plugins.generic.codecheck.settings.updateIssue.article"
+msgstr "Update the article / submission data"
+
+msgid "plugins.generic.codecheck.settings.updateIssue.title"
+msgstr "Update the Issue Title (containing the article's authors)"
+
+msgid "plugins.generic.codecheck.settings.updateIssue.body"
+msgstr "Update the Issue Description (containing the article, codechecker and repository information)"
+
+msgid "plugins.generic.codecheck.settings.updateIssue.status"
+msgstr "Record & update the CODECHECK Status in the GitHub Register Issue"
+
+msgid "plugins.generic.codecheck.settings.status"
+msgstr "What status must a check have for a submission to proceed with the publication?"
+
+msgid "plugins.generic.codecheck.settings.status.description"
+msgstr "Please select the minimum statuses required for a CODECHECK, before a submission is allowed to be published"
+
+msgid "plugins.generic.codecheck.settings.status.selectStatuses"
+msgstr "Select Status(es)"
+
+msgid "plugins.generic.codecheck.settings.status.noBlock"
+msgstr "Ignore the CODECHECK status and never block Publication"
+
+msgid "plugins.generic.codecheck.settings.publication.title"
+msgstr "Publication Validation Settings"
+
+msgid "plugins.generic.codecheck.settings.publication.extendedValidation.title"
+msgstr "Extended Publication Validation"
+
+msgid "plugins.generic.codecheck.settings.publication.extendedValidation.description"
+msgstr "Extend the validation of the CODECHECK metadata and block the publication if it is invalid (compare metadata to codecheck.yml from repository, ...)<br>NOTE: If turned of, but the CODECHECK metadata is invalid, the validation will fail silently without warnings"
+
+msgid "plugins.generic.codecheck.settings.publication.extendedValidation.checkboxText"
+msgstr "Extend the CODECHECK publication validation"
+
 
 msgid "plugins.generic.codecheck.title"
 msgstr "CODECHECK"
@@ -233,6 +288,24 @@ msgstr "Repositories"
 msgid "plugins.generic.codecheck.repositories.add"
 msgstr "+ Repository"
 
+msgid "plugins.generic.codecheck.repositories.warning"
+msgstr "The repository's CODECHECK metadata is not equal to the metadata in this form. {$error}"
+
+msgid "plugins.generic.codecheck.repositories.error"
+msgstr "Error while importing the CODECHECK metadata from the repository. {$error}"
+
+msgid "plugins.generic.codecheck.repositories.loadMetadata"
+msgstr "Load Metadata"
+
+msgid "plugins.generic.codecheck.repositories.containsCodecheckYaml"
+msgstr "Contains 'codecheck.yml' file"
+
+msgid "plugins.generic.codecheck.repositories.doesntContainCodecheckYamlError"
+msgstr "[Error: Aborted loading CODECHECK metadata from repository]\nThe provided repository does not match the configured main repository with the 'codecheck.yml' file."
+
+msgid "plugins.generic.codecheck.repositories.emptyState"
+msgstr "No repositories added yet"
+
 msgid "plugins.generic.codecheck.completionTime.title"
 msgstr "Time the CODECHECK was completed"
 
@@ -269,8 +342,29 @@ msgstr "View GitHub Issue"
 msgid "plugins.generic.codecheck.identifier.save"
 msgstr "Save Identifier"
 
-msgid "plugins.generic.codecheck.identifier.reserve"
-msgstr "Reserve Identifier"
+msgid "plugins.generic.codecheck.identifier.update.error.message"
+msgstr "Error while updating the GitHub Issue"
+
+msgid "plugins.generic.codecheck.identifier.reserve.linkExistingIdentifier"
+msgstr "Link Existing Identifier"
+
+msgid "plugins.generic.codecheck.identifier.reserve.withApi"
+msgstr "Reserve Identifier Automatically"
+
+msgid "plugins.generic.codecheck.identifier.reserve.withNewIssueUrl"
+msgstr "Reserve Identifier Manually"
+
+msgid "plugins.generic.codecheck.identifier.reserve.withNewIssueUrl.success.message"
+msgstr "Success: You are being forwarded to GitHub. Please finish the creation of the Issue there!"
+
+msgid "plugins.generic.codecheck.identifier.reserve.withNewIssueUrl.fail.message"
+msgstr "Error while creating the New Issue URL"
+
+msgid "plugins.generic.codecheck.identifier.reserve.linkExistingIdentifier.success.message"
+msgstr "The GitHub Issue was linked to OJS with the Certificate Identifier"
+
+msgid "plugins.generic.codecheck.identifier.reserve.linkExistingIdentifier.fail.message"
+msgstr "Error while linking an existing GitHub Issue"
 
 msgid "plugins.generic.codecheck.identifier.reserve.success.message"
 msgstr "You have reserved the Certificate Identifier"
@@ -293,6 +387,9 @@ msgstr "Do you want to reserve a new identifier for this CODECHECK?"
 msgid "plugins.generic.codecheck.identifier.removeConfirm"
 msgstr "Are you sure you want to remove this identifier?"
 
+msgid "plugins.generic.codecheck.identifier.labels"
+msgstr "GitHub Labels"
+
 msgid "plugins.generic.codecheck.previewYaml"
 msgstr "Preview CODECHECK metadata file"
 
@@ -300,7 +397,7 @@ msgid "plugins.generic.codecheck.yaml.valid"
 msgstr "codecheck.yml is valid."
 
 msgid "plugins.generic.codecheck.yaml.invalid"
-msgstr "CODECHECK metadata creates a structurally invalid codecheck.yml file. Please check the detailed error message below."
+msgstr "The provided CODECHECK metadata creates a structurally invalid codecheck.yml file. Please check the following error message for further details.\nError: {$errorMessage}"
 
 msgid "plugins.generic.codecheck.savedSuccessfully"
 msgstr "CODECHECK metadata saved successfully"
@@ -314,22 +411,99 @@ msgstr "CODECHECK Information"
 msgid "plugins.generic.codecheck.status"
 msgstr "Status"
 
+msgid "plugins.generic.codecheck.status.history"
+msgstr "CODECHECK Status History"
+
+msgid "plugins.generic.codecheck.status.history.timestamp"
+msgstr "Timestamp"
+
+msgid "plugins.generic.codecheck.status.history.user"
+msgstr "Changed By"
+
+msgid "plugins.generic.codecheck.status.buttons.change"
+msgstr "Change"
+
+msgid "plugins.generic.codecheck.status.buttons.history"
+msgstr "History"
+
+msgid "plugins.generic.codecheck.status.modal.title"
+msgstr "Change CODECHECK Status"
+
+msgid "plugins.generic.codecheck.status.modal.label"
+msgstr "Select the new CODECHECK Status for this Submission"
+
+msgid "plugins.generic.codecheck.status.modal.change"
+msgstr "Change"
+
 msgid "plugins.generic.codecheck.status.complete"
 msgstr "Complete"
+
+msgid "plugins.generic.codecheck.status.validation.failed"
+msgstr "The mandatory CODECHECK for this submission has a status ({$codecheckStatus}), which is not allowed for publication by the journal. Please get in touch with the codechecker(s) to resolve all errors, before this submission can be published!"
+
+msgid "plugins.generic.codecheck.status.validation.failed.noStatusSet"
+msgstr "The CODECHECK for this submission is mandatory, but wasn't started yet, which is not allowed for the publication of a submission. Please get in touch with the codechecker(s) to start the CODECHECK / fill in the missing metadata into the CODECHECK metadata form, before this submission can be published!"
+
+msgid "plugins.generic.codecheck.publication.validation.metadataDBLoadError"
+msgstr "Couldn't retrieve the CODECHECK metadata for this submission from the CODECHECK metadata DB table."
+
+msgid "plugins.generic.codecheck.publication.validation.invalidRepository"
+msgstr "Invalid CODECHECK repository: {$repositoryError}"
+
+msgid "plugins.generic.codecheck.publication.validation.invalidPaperTitle"
+msgstr "The paper title from this submission is not matching the paper title in the provided repository."
+
+msgid "plugins.generic.codecheck.publication.validation.noRepositoryWithCodecheckYmlSelected"
+msgstr "Couldn't validate metadata from repository, as for no repository it was selected, that it contains the 'codecheck.yml' file with the CODECHECK metadata."
+
+msgid "plugins.generic.codecheck.publication.validation.repositoryWithCodecheckYmlSelectedDoesntExist"
+msgstr "Couldn't validate metadata from repository, as the repository that should contain the 'codecheck.yml' file doesn't exist in the OJS CODECHECK metadata."
+
+
+msgid "plugins.generic.codecheck.publication.validation.invalidCodecheckers"
+msgstr "The ORCIDs of the codecheckers specified in this submissions CODECHECK metadata from are not matching the codecheckers ORCIDs in the provided repository"
+
+msgid "plugins.generic.codecheck.status.pending"
+msgstr "Pending"
+
+msgid "plugins.generic.codecheck.status.needsCodechecker"
+msgstr "needs codechecker"
+
+msgid "plugins.generic.codecheck.status.assignedCodechecker"
+msgstr "codechecker assigned"
+
+msgid "plugins.generic.codecheck.status.stalled.author"
+msgstr "stalled (author)"
+
+msgid "plugins.generic.codecheck.status.stalled.codechecker"
+msgstr "stalled (codechecker)"
+
+msgid "plugins.generic.codecheck.status.completed.unsuccessful"
+msgstr "completed: unsuccessful"
+
+msgid "plugins.generic.codecheck.status.completed.partialReproduction"
+msgstr "completed: partial reproduction"
+
+msgid "plugins.generic.codecheck.status.completed.fullReproduction"
+msgstr "completed: full reproduction"
+
+msgid "plugins.generic.codecheck.status.publishedCertificate.partialReproduction"
+msgstr "published certificate: partial reproduction"
+
+msgid "plugins.generic.codecheck.status.publishedCertificate.fullReproduction"
+msgstr "published certificate: full reproduction"
+
 msgid "plugins.generic.codecheck.dataAvailability.placeholder"
 msgstr "Describe how your data and code are available..."
 
 msgid "plugins.generic.codecheck.review.title"
 msgstr "CODECHECK Information"
 
-msgid "plugins.generic.codecheck.status.pending"
-msgstr "Pending"
-
 msgid "plugins.generic.codecheck.notYetAssigned"
 msgstr "Not yet assigned"
 
 msgid "plugins.generic.codecheck.viewFullMetadata"
-msgstr "View Full CODECHECK Metadata"
+msgstr "View Full CODECHECK metadata"
 
 msgid "plugins.generic.codecheck.notOptedIn"
 msgstr "This submission has not opted in for CODECHECK"
@@ -428,7 +602,10 @@ msgid "plugins.generic.codecheck.validation.codecheckersRequired"
 msgstr "Please add at least one codechecker"
 
 msgid "plugins.generic.codecheck.validation.certificateRequired"
-msgstr "Please provide a certificate ID"
+msgstr "Please reserve/ input a Certificate Identifier"
+
+msgid "plugins.generic.codecheck.validation.githubIssueLinkRequired"
+msgstr "Please link the OJS form to the corresponding GitHub Issue with the same Certificate Identifier"
 
 msgid "plugins.generic.codecheck.validation.summaryRequired"
 msgstr "Please provide a summary"
@@ -443,7 +620,7 @@ msgid "plugins.generic.codecheck.repositories.infoTextOne"
 msgstr "If you desire, you can directly load the metadata from the codecheck.yml of the provided CODECHECK Repository, if it contains a valid codecheck.yml."
 
 msgid "plugins.generic.codecheck.repositories.infoTextTwo"
-msgstr "The supported CODECHECK Repository Sites are GitHub, OSF, Zenodo and GitLab."
+msgstr "The supported CODECHECK Repository Sites are GitHub, OSF, Zenodo and GitLab. Providing a DOI to the desired repository is supported as well."
 
 msgid "plugins.generic.codecheck.repositories.infoTextNote"
 msgstr "Note that loading the data from a remote repository will overwrite, but not save, the values in the current form."
@@ -467,7 +644,7 @@ msgid "plugins.generic.codecheck.yaml.close"
 msgstr "Close"
 
 msgid "plugins.generic.codecheck.yaml.previewTitle"
-msgstr "CODECHECK Metadata Preview (codecheck.yml)"
+msgstr "CODECHECK metadata preview (codecheck.yml)"
 
 msgid "plugins.generic.codecheck.modal.close"
 msgstr "Close"
@@ -477,6 +654,9 @@ msgstr "Cancel"
 
 msgid "plugins.generic.codecheck.modal.add"
 msgstr "Add"
+
+msgid "plugins.generic.codecheck.modal.change"
+msgstr "Change"
 
 msgid "plugins.generic.codecheck.review.configVersion"
 msgstr "Config Version"
@@ -582,6 +762,85 @@ msgstr "Code verification is currently in progress."
 
 msgid "plugins.generic.codecheck.additionalContent.frontendLabel"
 msgstr "Additional information"
+
+msgid "plugins.generic.codecheck.settings.badge.title"
+msgstr "Badge / Logo"
+
+msgid "plugins.generic.codecheck.settings.badge.description"
+msgstr "Choose the image displayed as the CODECHECK badge on the article landing page sidebar and in the issue table of contents."
+
+msgid "plugins.generic.codecheck.settings.badge.codeworks"
+msgstr "CODE WORKS badge"
+
+msgid "plugins.generic.codecheck.settings.badge.codecheck_logo"
+msgstr "CODECHECK logo"
+
+msgid "plugins.generic.codecheck.settings.badge.custom"
+msgstr "Own image (custom URL)"
+
+msgid "plugins.generic.codecheck.settings.badge.custom.hint"
+msgstr "Enter a URL to your hosted image. Recommended: approx. 134×24px. The same image is used on the article landing page sidebar and the issue table of contents."
+
+msgid "plugins.generic.codecheck.settings.badge.custom.url.label"
+msgstr "Custom badge URL"
+
+msgid "plugins.generic.codecheck.settings.badge.none"
+msgstr "No badge (text only)"
+
+msgid "plugins.generic.codecheck.badge.textOnly"
+msgstr "CODECHECK"
+
+msgid "plugins.generic.codecheck.settings.badge.height.label"
+msgstr "Badge display height"
+
+msgid "plugins.generic.codecheck.settings.badge.height.description"
+msgstr "Height in pixels. Width adjusts automatically. Default: 24px."
+
+msgid "plugins.generic.codecheck.dashboard.columnHeader"
+msgstr "CODECHECK"
+
+msgid "plugins.generic.codecheck.dashboard.add"
+msgstr "Add"
+
+msgid "plugins.generic.codecheck.warning.notOptedIn"
+msgstr "This article was not opted into CODECHECK during submission."
+
+msgid "plugins.generic.codecheck.warning.optedOut"
+msgstr "The author opted out of CODECHECK for this article."
+
+msgid "plugins.generic.codecheck.settings.showDashboardColumn"
+msgstr "Show CODECHECK column in submissions dashboard"
+
+msgid "plugins.generic.codecheck.settings.showDashboardColumn.description"
+msgstr "Display a CODECHECK status column in the editorial submissions dashboard. Default: enabled."
+
+msgid "plugins.generic.codecheck.github.issue.display"
+msgstr "Github Register Issue"
+
+msgid "plugins.generic.codecheck.github.issue.display.errorModal.title"
+msgstr "No URL is currently configured for the GitHub Register Issue."
+
+msgid "plugins.generic.codecheck.github.issue.display.errorModal.message"
+msgstr "Please first connect to the Issue with the reservation of a certificate identifier."
+
+msgid "plugins.generic.codecheck.github.issue.display.button.viewIssue"
+msgstr "View Issue"
+
+msgid "plugins.generic.codecheck.github.issue.display.connected"
+msgstr "Connected"
+
+msgid "plugins.generic.codecheck.github.issue.display.disconnected"
+msgstr "Disconnected"
+
+msgid "plugins.generic.codecheck.github.issue.display.certificateIdentifier"
+msgstr "Certificate Identifier: {$identifier}"
+
+msgid "plugins.generic.codecheck.github.issue.display.certificateIdentifier.notSet"
+msgstr "not set"
+
+msgid "plugins.generic.codecheck.github.issue.display.registerRepository"
+msgstr "Register Repository: {$repository}"
+
 
 msgid "plugins.generic.codecheck.repository.markAsPrivate"
 msgstr "Do not share publicly"

@@ -12,6 +12,10 @@ use APP\plugins\generic\codecheck\classes\Exceptions\NoMatchingIssuesFoundExcept
 use APP\plugins\generic\codecheck\classes\Exceptions\ApiFetchException;
 use APP\plugins\generic\codecheck\classes\Exceptions\ApiCreateException;
 use APP\plugins\generic\codecheck\classes\Exceptions\GithubUrlParseException;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterIssue;
+use APP\plugins\generic\codecheck\classes\Constants;
+use APP\plugins\generic\codecheck\classes\Exceptions\ApiUpdateException;
+use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 
 // Load .env variables
 $dotenv = Dotenv::createImmutable(__DIR__ . '/../../');
@@ -83,9 +87,9 @@ class CodecheckGithubRegisterApiClient
     }
 
     /**
-     * Fetches all Issues from the CODECHECK GitHub Register
+     * Fetches only the first newest Issues from the CODECHECK GitHub Register
      */
-    public function fetchIssues(): void
+    public function fetchNewestIssues(): void
     {
         $issuePage = 1;
         $issuesToFetchPerPage = 20;
@@ -106,7 +110,7 @@ class CodecheckGithubRegisterApiClient
             }
 
             // stop looping if no more issues exist and we haven't yet found a matching issue
-            if (empty($allissues) && empty($this->issue)) {
+            if (empty($allissues) && empty($this->issues)) {
                 throw new NoMatchingIssuesFoundException("There was no open or closed issue found with the label 'id assigned' in the GitHub Codecheck Register.");
             }
 
@@ -119,6 +123,54 @@ class CodecheckGithubRegisterApiClient
 
             $issuePage++;
         } while (!$fetchedMatchingIssue);
+    }
+
+    /**
+     * Fetches all Issues from the CODECHECK GitHub Register
+     */
+    public function fetchAllIssues(): void
+    {
+        try {
+            $allissues = $this->client->api('search')->issues('repo:' . $this->githubRegisterOrganization . '/' . $this->githubRegisterRepository . ' sort:"updated"');
+        } catch (\Throwable $e) {
+            throw new ApiFetchException("Failed fetching the GitHub Issues\n" . $e->getMessage());
+        }
+
+        foreach ($allissues['items'] as $issue) {
+            if (strpos($issue['title'], '|') !== false) {
+                $this->issues[] = $issue;
+            }
+        }
+
+        // stop if no issues exist and we haven't yet found any matching issue
+        if (empty($allissues) && empty($this->issues)) {
+            throw new NoMatchingIssuesFoundException("There was no open or closed issue found with the label 'id assigned' in the GitHub Codecheck Register.");
+        }
+    }
+
+    /**
+     * Fetches all Issues from the CODECHECK GitHub Register
+     */
+    public function fetchIssueByIdentifier(
+        CertificateIdentifier $certificateIdentifier
+    ): void
+    {
+        try {
+            $allissues = $this->client->api('search')->issues('repo:' . $this->githubRegisterOrganization . '/' . $this->githubRegisterRepository . ' "'. $certificateIdentifier->toStr() . '" sort:"updated"');
+        } catch (\Throwable $e) {
+            throw new ApiFetchException("Failed fetching the GitHub Issues\n" . $e->getMessage());
+        }
+
+        foreach ($allissues['items'] as $issue) {
+            if (strpos($issue['title'], '|') !== false) {
+                $this->issues[] = $issue;
+            }
+        }
+
+        // stop if no issues exist and we haven't yet found any matching issue
+        if (empty($allissues) && empty($this->issues)) {
+            throw new NoMatchingIssuesFoundException("There was no open or closed issue found with the label 'id assigned' in the GitHub Codecheck Register.");
+        }
     }
 
     /**
@@ -141,45 +193,255 @@ class CodecheckGithubRegisterApiClient
      * Adds an Issue with the new Certificate Identifier to the CODECHECK GitHub Register
      *
      * @param CertificateIdentifier $certificateIdentifier The Certificate identifier to be added
-     * @param string $codecheckVenueType The CODECHECK Venue Type that will be added as a label to the issue
-     * @param string $codecheckVenueName The CODECHECK Venue Name that will be added as a second label to the issue
+     * @param CodecheckIssueLabels $codecheckIssueLabels The CODECHECK Issue Labels that will be added
      * @param string $authorString The formatted author string e.g. `author name et al.`
-     * @return string Returns the GitHub URL of the newly created issue
+     * @param string $paperTitle The Title of the submitted paper / preprint / article
+     * @return array Returns the GitHub URL & Issue Number of the newly created issue
      */
     public function addIssue(
         CertificateIdentifier $certificateIdentifier,
-        string $codecheckVenueType,
-        string $codecheckVenueName,
-        array $customLabels,
-        ?string $authorString,
-    ): string {
+        CodecheckIssueLabels $codecheckIssueLabels,
+        string $paperTitle,
+        string $authorString,
+        array $codecheckers,
+        array $repositories,
+        array $updateInformation
+    ): array {
         $this->client->authenticate($this->githubPAT, null, Client::AUTH_ACCESS_TOKEN);
 
-        $authorString = empty($authorString) ? 'New CODECHECK' : $authorString;
-        $issueTitle = $authorString . ' | ' . $certificateIdentifier->toStr();
-        $issueBody = 'Journal: `' . $this->journalName . '`<br />' . 'Submission ID: `' . $this->submissionID . '`';
-        $labelStrings = ['id assigned'];
-
-        $labelStrings[] = $codecheckVenueType;
-        $labelStrings[] = $codecheckVenueName;
-
-        $labelStrings = array_merge($labelStrings, $customLabels);
-
-        //error_log(print_r($labelStrings, true));
-        error_log($this->githubRegisterOrganization);
+        $codecheckIssue = new CodecheckGithubRegisterIssue(
+            $this->githubRegisterOrganization,
+            $this->githubRegisterRepository,
+            $certificateIdentifier,
+            $codecheckIssueLabels,
+            $paperTitle,
+            $this->journalName,
+            $authorString,
+            $this->submissionID,
+            $codecheckers,
+            $repositories,
+            $updateInformation
+        );
 
         try {
-            $issue = $this->client->api('issue')->create($this->githubRegisterOrganization, $this->githubRegisterRepository, [
-                    'title' => $issueTitle,
-                    'body'  => $issueBody,
-                    'labels' => $labelStrings
+            $issue = $this->client->api('issue')->create(
+                $this->githubRegisterOrganization,
+                $this->githubRegisterRepository,
+                [
+                    'title' => $codecheckIssue->getTitle(),
+                    'body'  => $codecheckIssue->getBody(),
+                    'labels' => $codecheckIssue->getLabels()
                 ]
             );
         } catch (\Throwable $e) {
-            throw new ApiCreateException("Error while adding the new GitHub issue with the new Certificate Identifier: " . $certificateIdentifier->toStr() . "\n" . $e->getMessage());
+            throw new ApiCreateException("Error while adding the new GitHub issue with the new Certificate Identifier: " . $certificateIdentifier->toStr() . "\n" . $e->getMessage(), $e->getCode());
         }
 
-        return $issue['html_url'];
+        return $issue;
+    }
+
+    /**
+     * Adds an Issue with the new Certificate Identifier to the CODECHECK GitHub Register
+     *
+     * @param int $issueNumber The Number of the corresponding GitHub Issue
+     * @param CertificateIdentifier $certificateIdentifier The Certificate identifier to be added
+     * @param CodecheckIssueLabels $codecheckIssueLabels The CODECHECK Issue Labels that will be updated
+     * @param string $authorString The formatted author string e.g. `author name et al.`
+     * @param string $paperTitle The Title of the submitted paper / preprint / article
+     * @return array Returns the GitHub URL & Issue Number of the newly created issue
+     */
+    public function updateIssue(
+        array $updateInformation,
+        int $issueNumber,
+        CertificateIdentifier $certificateIdentifier,
+        CodecheckIssueLabels $codecheckIssueLabels,
+        string $paperTitle,
+        string $authorString,
+        array $codecheckers,
+        array $repositories
+    ): array {
+        $token = $_ENV['CODECHECK_REGISTER_GITHUB_TOKEN'];
+
+        $this->client->authenticate($token, null, Client::AUTH_ACCESS_TOKEN);
+
+        $codecheckIssue = new CodecheckGithubRegisterIssue(
+            $this->githubRegisterOrganization,
+            $this->githubRegisterRepository,
+            $certificateIdentifier,
+            $codecheckIssueLabels,
+            $paperTitle,
+            $this->journalName,
+            $authorString,
+            $this->submissionID,
+            $codecheckers,
+            $repositories,
+            $updateInformation
+        );
+
+        $issueContents = [];
+
+        if(in_array(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE, $updateInformation)) {
+            $issueContents['title'] = $codecheckIssue->getTitle();
+        }
+
+        if(in_array(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY, $updateInformation)) {
+            $issueContents['body'] = $codecheckIssue->getBody();
+        }
+
+        if(!empty($codecheckIssueLabels->get()->toArray())){
+            $issueContents['labels'] = $codecheckIssue->getLabels();
+        }
+
+        try {
+            $issue = $this->client->api('issue')->update(
+                $this->githubRegisterOrganization,
+                $this->githubRegisterRepository,
+                $issueNumber,
+                $issueContents,
+            );
+        } catch (\Throwable $e) {
+            throw new ApiUpdateException("Error while updating GitHub issue #$issueNumber with the Certificate Identifier: " . $certificateIdentifier->toStr() . "\n" . $e->getMessage(), $e->getCode());
+        }
+
+        return $issue;
+    }
+
+    /**
+     * Deposits a new row into the register.csv of the CODECHECK GitHub Register,
+     * by opening a Pull Request against the register repository.
+     *
+     * Flow: fetch current register.csv + its blob sha -> append the new row ->
+     * create a branch off the register's default branch -> commit the updated
+     * file to that branch -> open a PR back to the default branch.
+     *
+     * @param array $row Associative array with keys: Certificate, Repository, Type, Venue, Issue
+     * @param string $certificateIdentifier Used to build a unique branch name and PR title
+     * @return array The created Pull Request's GitHub API response array
+     */
+    public function depositRegisterRow(array $row, string $certificateIdentifier): array
+    {
+        $this->client->authenticate($this->githubPAT, null, Client::AUTH_ACCESS_TOKEN);
+
+        $registerFilePath = 'register.csv';
+
+        // 1. Get the current register.csv content + sha, and the repo's default branch
+        try {
+            $repoInfo = $this->client->api('repo')->show($this->githubRegisterOrganization, $this->githubRegisterRepository);
+            $defaultBranch = $repoInfo['default_branch'] ?? 'main';
+
+            $fileContents = $this->client->api('repo')->contents()->show(
+                $this->githubRegisterOrganization,
+                $this->githubRegisterRepository,
+                $registerFilePath,
+                $defaultBranch
+            );
+        } catch (\Throwable $e) {
+            throw new ApiFetchException("Failed fetching '$registerFilePath' from the register repository.\n" . $e->getMessage());
+        }
+
+        $currentCsv = base64_decode($fileContents['content']);
+        $currentSha = $fileContents['sha'];
+
+        // 2. Append the new row, preserving the existing line-ending style
+        $newCsv = $this->appendCsvRow($currentCsv, $row);
+
+        // 3. Create a new branch off the default branch's current commit
+        $branchName = 'register-deposit/' . preg_replace('/[^A-Za-z0-9_.-]/', '-', $certificateIdentifier);
+
+        try {
+            $baseRef = $this->client->api('gitData')->references()->show(
+                $this->githubRegisterOrganization,
+                $this->githubRegisterRepository,
+                'heads/' . $defaultBranch
+            );
+            $baseSha = $baseRef['object']['sha'];
+
+            $this->client->api('gitData')->references()->create(
+                $this->githubRegisterOrganization,
+                $this->githubRegisterRepository,
+                [
+                    'ref' => 'refs/heads/' . $branchName,
+                    'sha' => $baseSha,
+                ]
+            );
+        } catch (\Throwable $e) {
+            throw new ApiCreateException("Failed creating the branch '$branchName' for the register deposit.\n" . $e->getMessage(), $e->getCode());
+        }
+
+        // 4. Commit the updated register.csv to the new branch
+        try {
+            $this->client->api('repo')->contents()->update(
+                $this->githubRegisterOrganization,
+                $this->githubRegisterRepository,
+                $registerFilePath,
+                $newCsv,
+                'Add register entry for certificate ' . $certificateIdentifier,
+                $currentSha,
+                $branchName
+            );
+        } catch (\Throwable $e) {
+            throw new ApiUpdateException("Failed committing the updated '$registerFilePath' to branch '$branchName'.\n" . $e->getMessage(), $e->getCode());
+        }
+
+        // 5. Open the Pull Request
+        try {
+            $pullRequest = $this->client->api('pull_request')->create(
+                $this->githubRegisterOrganization,
+                $this->githubRegisterRepository,
+                [
+                    'base' => $defaultBranch,
+                    'head' => $branchName,
+                    'title' => 'Register deposit: certificate ' . $certificateIdentifier,
+                    'body' => $this->buildDepositPrBody($row),
+                ]
+            );
+        } catch (\Throwable $e) {
+            throw new ApiCreateException("Failed opening the Pull Request for the register deposit.\n" . $e->getMessage(), $e->getCode());
+        }
+
+        return $pullRequest;
+    }
+
+    /**
+     * Appends a single row to CSV content, matching the existing header's
+     * column order and preserving the file's trailing-newline style.
+     */
+    private function appendCsvRow(string $currentCsv, array $row): string
+    {
+        $hadTrailingNewline = str_ends_with($currentCsv, "\n");
+        $lines = explode("\n", rtrim($currentCsv, "\n"));
+
+        $header = str_getcsv($lines[0]);
+
+        $newLineValues = [];
+        foreach ($header as $column) {
+            $newLineValues[] = $row[$column] ?? '';
+        }
+
+        $newLine = implode(',', array_map(
+            fn($value) => str_contains($value, ',') ? '"' . str_replace('"', '""', $value) . '"' : $value,
+            $newLineValues
+        ));
+
+        $lines[] = $newLine;
+
+        return implode("\n", $lines) . ($hadTrailingNewline ? "\n" : '');
+    }
+
+    private function buildDepositPrBody(array $row): string
+    {
+        $body = "Automated register deposit opened by the OJS CODECHECK plugin on publication.\n\n";
+        $body .= "| Column | Value |\n|---|---|\n";
+        foreach ($row as $column => $value) {
+            // Turn the Issue number into a full URL so GitHub auto-links this PR
+            // with the corresponding register issue, and posts a backlink comment there too.
+            if ($column === 'Issue' && $value !== 'NA' && ctype_digit((string) $value)) {
+                $issueUrl = "https://github.com/{$this->githubRegisterOrganization}/{$this->githubRegisterRepository}/issues/{$value}";
+                $value = "[#{$value}]({$issueUrl})";
+            }
+            $body .= "| $column | $value |\n";
+        }
+        return $body;
     }
 
     /**

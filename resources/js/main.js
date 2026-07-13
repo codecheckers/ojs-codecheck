@@ -1,15 +1,19 @@
-import { createApp } from 'vue';
+import { createApp, reactive } from 'vue';
 import CodecheckManifestFiles from "./Components/CodecheckManifestFiles.vue";
 import CodecheckRepositoryList from "./Components/CodecheckRepositoryList.vue";
 import CodecheckReviewDisplay from "./Components/CodecheckReviewDisplay.vue";
-import CodecheckMetadataForm from "./Components/CodecheckMetadataForm.vue";
 import CodecheckDataAndSoftwareAvailability from "./Components/CodecheckDataAndSoftwareAvailability.vue";
+import CodecheckMetadataForm from './Components/CodecheckMetadataForm.vue';
+import CodecheckStatusForm from './Components/CodecheckStatusForm.vue';
+import CodecheckGithubIssueDisplay from "./Components/CodecheckGithubIssueDisplay.vue";
 
 pkp.registry.registerComponent("CodecheckReviewDisplay", CodecheckReviewDisplay);
 pkp.registry.registerComponent("CodecheckMetadataForm", CodecheckMetadataForm);
 pkp.registry.registerComponent("CodecheckManifestFiles", CodecheckManifestFiles);
 pkp.registry.registerComponent("CodecheckRepositoryList", CodecheckRepositoryList);
 pkp.registry.registerComponent("CodecheckDataAndSoftwareAvailability", CodecheckDataAndSoftwareAvailability);
+pkp.registry.registerComponent("CodecheckStatusForm", CodecheckStatusForm);
+pkp.registry.registerComponent("CodecheckGithubIssueDisplay", CodecheckGithubIssueDisplay);
 
 const { useLocalize } = pkp.modules.useLocalize;
 const { t } = useLocalize();
@@ -17,40 +21,41 @@ const { t } = useLocalize();
 pkp.registry.storeExtend("workflow", (piniaContext) => {
   const workflowStore = piniaContext.store;
 
+  workflowStore.codecheck = reactive({
+    registerIssueDisplayUpdateEvent: null,
+    certificateIdentifier: null,
+    issue: null,
+    statusUpdateEvent: null,
+  });
+
   workflowStore.extender.extendFn("getMenuItems", (menuItems, args) => {
     const submission = args?.submission;
-    const hasCodecheck = submission?.codecheckOptIn == true || submission?.codecheckOptIn == 1 || submission?.codecheckOptIn === "1";
-
-    if (hasCodecheck) {
-      const updatedMenuItems = [...menuItems];
-      const workflowMenuItem = updatedMenuItems.find(item => item.key === 'workflow');
-      
-      if (workflowMenuItem && workflowMenuItem.items) {
-        const codecheckItem = {
-          key: 'codecheck',
-          label: t('plugins.generic.codecheck.workflow.label'),
-          state: { 
-            primaryMenuItem: 'workflow',
-            title: t('plugins.generic.codecheck.workflow.title'),
-            stageId: 999
-          }
-        };
-        
-        const reviewIndex = workflowMenuItem.items.findIndex(
-          item => item.state?.stageId === pkp.const.WORKFLOW_STAGE_ID_EXTERNAL_REVIEW
-        );
-        
-        if (reviewIndex >= 0) {
-          workflowMenuItem.items.splice(reviewIndex + 1, 0, codecheckItem);
-        } else {
-          workflowMenuItem.items.push(codecheckItem);
+    const updatedMenuItems = [...menuItems];
+    const workflowMenuItem = updatedMenuItems.find(item => item.key === 'workflow');
+    
+    if (workflowMenuItem && workflowMenuItem.items) {
+      const codecheckItem = {
+        key: 'codecheck',
+        label: t('plugins.generic.codecheck.workflow.label'),
+        state: { 
+          primaryMenuItem: 'workflow',
+          title: t('plugins.generic.codecheck.workflow.title'),
+          stageId: 999
         }
-      }
+      };
       
-      return updatedMenuItems;
+      const reviewIndex = workflowMenuItem.items.findIndex(
+        item => item.state?.stageId === pkp.const.WORKFLOW_STAGE_ID_EXTERNAL_REVIEW
+      );
+      
+      if (reviewIndex >= 0) {
+        workflowMenuItem.items.splice(reviewIndex + 1, 0, codecheckItem);
+      } else {
+        workflowMenuItem.items.push(codecheckItem);
+      }
     }
     
-    return menuItems;
+    return updatedMenuItems;
   });
 
   workflowStore.extender.extendFn("getPrimaryItems", (primaryItems, args) => {
@@ -66,7 +71,9 @@ pkp.registry.storeExtend("workflow", (piniaContext) => {
           component: "CodecheckMetadataForm",
           props: { 
             submission: submission,
-            canEdit: true
+            canEdit: true,
+            // Pass the journal mode so the form can show the opt-in warning box (Issue #30)
+            codecheckMode: window.codecheckDashboardConfig?.codecheckMode ?? 'opt-in',
           },
         }
       ];
@@ -87,6 +94,36 @@ pkp.registry.storeExtend("workflow", (piniaContext) => {
     }
     
     return primaryItems;
+  });
+
+  workflowStore.extender.extendFn("getSecondaryItems", (sidebarItems, args) => {
+    const store = pkp.registry.stores?.workflow;
+    const submission = args?.submission;
+
+    if (
+      args?.selectedMenuState?.primaryMenuItem === "workflow" &&
+      args?.selectedMenuState?.stageId === 999
+    ) {
+      return [
+        {
+          component: "CodecheckStatusForm",
+          props: {
+            submission: submission,
+            canEdit: true
+          },
+        },
+        {
+          component: "CodecheckGithubIssueDisplay",
+          props: {
+            submission: submission,
+            certificateIdentifier: workflowStore?.codecheck?.certificateIdentifier,
+            issue: workflowStore?.codecheck?.issue,
+          },
+        },
+      ];
+    }
+
+    return sidebarItems;
   });
 });
 
@@ -535,3 +572,87 @@ const CodecheckFileStatus = {
 pkp.registry.registerComponent("CodecheckFileStatus", CodecheckFileStatus);
 
 console.log("CODECHECK plugin initialized successfully");
+
+// -----------------------------------------------------------------------
+// Issue #30: Dashboard CODECHECK status column
+//
+// Injects a CODECHECK column into the editorial submissions dashboard.
+// Each cell fetches from api/v1/codecheck/metadata and shows:
+//   - certificate id (green)  if a CODECHECK is complete
+//   - "Add" link              if no CODECHECK certificate exists
+//
+// Controlled by the showDashboardColumn plugin setting (default: true).
+// window.codecheckDashboardConfig is injected by CodecheckPlugin.php.
+// -----------------------------------------------------------------------
+const DashboardCellCodecheck = {
+  name: 'DashboardCellCodecheck',
+  props: {
+    item: { type: Object, required: true }
+  },
+  data() {
+    return {
+      codecheckData: null,
+      loading: true,
+    };
+  },
+  async mounted() {
+    try {
+      const apiUrl = pkp.context.apiBaseUrl + 'codecheck/metadata?submissionId=' + this.item.id;
+      const response = await fetch(apiUrl, {
+        headers: { 'X-Csrf-Token': pkp.currentUser.csrfToken }
+      });
+      const data = await response.json();
+      if (data.codecheck) {
+        this.codecheckData = data.codecheck;
+      }
+    } catch (e) {
+      // no codecheck data available
+    } finally {
+      this.loading = false;
+    }
+  },
+  computed: {
+    hasCertificate() {
+      return !!this.codecheckData?.certificate;
+    },
+    workflowUrl() {
+      return this.item.urlEditorialWorkflow + '&workflowMenuKey=codecheck';
+    }
+  },
+  template: `
+    <pkp-table-cell>
+      <span v-if="loading" style="color:#888;font-size:0.85em;">...</span>
+      <span v-else-if="hasCertificate" style="color:#008033;font-weight:600;">
+        ✓ {{ codecheckData.certificate }}
+      </span>
+      <a v-else
+        :href="workflowUrl"
+        class="pkpButton inline-flex relative items-center gap-x-1 border-transparent hover:enabled:underline disabled:text-disabled text-lg-medium text-primary border-light hover:text-hover disabled:text-disabled py-[0.4375rem] px-3 border rounded -ms-3">
+        {{ t('plugins.generic.codecheck.dashboard.add') }}
+      </a>
+    </pkp-table-cell>
+  `
+};
+
+pkp.registry.registerComponent("DashboardCellCodecheck", DashboardCellCodecheck);
+
+pkp.registry.storeExtend("dashboard", (piniaContext) => {
+  // Read setting inside the callback so it's evaluated when the store loads,
+  // not at script load time when window.codecheckDashboardConfig may not exist yet.
+  if (!(window.codecheckDashboardConfig ?? { showDashboardColumn: true }).showDashboardColumn) {
+    return;
+  }
+
+  const dashboardStore = piniaContext.store;
+
+  dashboardStore.extender.extendFn("getColumns", (columns, args) => {
+    const newColumns = [...columns];
+    newColumns.splice(newColumns.length - 1, 0, {
+      id:        "codecheck",
+      header:    t('plugins.generic.codecheck.dashboard.columnHeader'),
+      component: "DashboardCellCodecheck",
+      sortable:  false,
+    });
+    return newColumns;
+  });
+});
