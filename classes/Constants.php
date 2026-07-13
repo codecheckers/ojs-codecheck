@@ -61,17 +61,24 @@ class Constants
     public const CODECHECK_GITHUB_REGISTER_REPOSITORY = 'githubRegisterRepository';
     public const CODECHECK_GITHUB_CUSTOM_LABELS = 'githubCustomLabels';
     public const CODECHECK_MODE = 'codecheckMode';
+
+    public const CODECHECK_BADGE_TYPE = 'codecheckBadgeType';
+    public const CODECHECK_BADGE_CUSTOM_URL = 'codecheckBadgeCustomUrl';
+    public const CODECHECK_BADGE_HEIGHT = 'codecheckBadgeHeight';
+
     public const CODECHECK_SHOW_DASHBOARD_COLUMN = 'showDashboardColumn';
+    
     # Update Github Register Issue
     public const CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_FIELDS = 'codecheckGithubUpdateFields';
     public const CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE = 'updateTitle';
     public const CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY = 'updateBody';
     public const CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_STATUS = 'updateStatus';
+    
     # Codecheck Publication Validation
     # Codecheck Status
     public const CODECHECK_STATUS = 'codecheckStatus';
     public const CODECHECK_STATUSES_SELECTED = 'codecheckStatusesSelected';
     public const CODECHECK_STATUS_KEYS_SELECTED = 'codecheckStatusKeysSelected';
-    # Extended Publication
+    # Extended Validation
     public const CODECHECK_PUBLICATION_VALIDATION_EXTENDED = 'codecheckPublicationExtendedValidation';
 }

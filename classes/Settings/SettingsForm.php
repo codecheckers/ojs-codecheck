@@ -126,6 +126,18 @@ class SettingsForm extends Form
         );
 
         $this->setData(
+            Constants::CODECHECK_BADGE_TYPE,
+            $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_TYPE) ?? 'codeworks'
+        );
+
+        $this->setData(
+            Constants::CODECHECK_BADGE_CUSTOM_URL,
+            $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_CUSTOM_URL)
+        );
+
+        $this->setData(
+            Constants::CODECHECK_BADGE_HEIGHT,
+            $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_HEIGHT) ?? '24'
             Constants::CODECHECK_STATUS_KEYS_SELECTED,
             $this->plugin->getSetting(
                 $context->getId(),
@@ -179,6 +191,9 @@ class SettingsForm extends Form
             Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION,
             Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY,
             Constants::CODECHECK_GITHUB_CUSTOM_LABELS,
+            Constants::CODECHECK_BADGE_TYPE,
+            Constants::CODECHECK_BADGE_CUSTOM_URL,
+            Constants::CODECHECK_BADGE_HEIGHT,
             Constants::CODECHECK_SHOW_DASHBOARD_COLUMN,
             Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE,
             Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY,
@@ -213,6 +228,10 @@ class SettingsForm extends Form
             'opt-out'   => __('plugins.generic.codecheck.settings.mode.opt.out'),
             'mandatory' => __('plugins.generic.codecheck.settings.mode.mandatory'),
         ]);
+        
+        $templateMgr->assign('codecheckBadgeType', $this->getData(Constants::CODECHECK_BADGE_TYPE) ?? 'codeworks');
+        $templateMgr->assign('codecheckBadgeCustomUrl', $this->getData(Constants::CODECHECK_BADGE_CUSTOM_URL) ?? '');
+        $templateMgr->assign('codecheckBadgeHeight', $this->getData(Constants::CODECHECK_BADGE_HEIGHT) ?? '24');
         
         $templateMgr->assign(
             'showDashboardColumn',
@@ -297,9 +316,26 @@ class SettingsForm extends Form
 
         $this->plugin->updateSetting(
             $context->getId(),
+            Constants::CODECHECK_BADGE_TYPE,
+            $this->getData(Constants::CODECHECK_BADGE_TYPE) ?? 'codeworks'
+        );
+        
+        $this->plugin->updateSetting(
+            $context->getId(),
             Constants::CODECHECK_STATUS_KEYS_SELECTED,
             (array) $this->getData(Constants::CODECHECK_STATUS_KEYS_SELECTED)
         );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_BADGE_CUSTOM_URL,
+            $this->getData(Constants::CODECHECK_BADGE_CUSTOM_URL)
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_BADGE_HEIGHT,
+            (int) ($this->getData(Constants::CODECHECK_BADGE_HEIGHT) ?? 24)
 
         $this->plugin->updateSetting(
             $context->getId(),
