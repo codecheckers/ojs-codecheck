@@ -37,10 +37,11 @@ class CodecheckGithubRegisterIssue {
         $this->repositoryOwner = $repositoryOwner;
         $this->repository = $repository;
         $this->submissionID = $submissionID;
-        $this->codecheckStatus = CodecheckStatusHandler::getCurrentStatusData($this->submissionID)->status;
+        $this->codecheckStatus = '';
         $this->updateStatus = false;
         if(in_array(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_STATUS, $updateInformation)) {
             $this->updateStatus = true;
+            $this->codecheckStatus = CodecheckStatusHandler::getCurrentStatusData($this->submissionID)->status;
         }
         $updateCodecheckStatus = $this->updateStatus ? 'true' : 'false';
         CodecheckLogger::debug("Record / Update Status: " . $updateCodecheckStatus);
