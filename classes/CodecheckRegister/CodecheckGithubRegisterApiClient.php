@@ -433,6 +433,12 @@ class CodecheckGithubRegisterApiClient
         $body = "Automated register deposit opened by the OJS CODECHECK plugin on publication.\n\n";
         $body .= "| Column | Value |\n|---|---|\n";
         foreach ($row as $column => $value) {
+            // Turn the Issue number into a full URL so GitHub auto-links this PR
+            // with the corresponding register issue, and posts a backlink comment there too.
+            if ($column === 'Issue' && $value !== 'NA' && ctype_digit((string) $value)) {
+                $issueUrl = "https://github.com/{$this->githubRegisterOrganization}/{$this->githubRegisterRepository}/issues/{$value}";
+                $value = "[#{$value}]({$issueUrl})";
+            }
             $body .= "| $column | $value |\n";
         }
         return $body;
