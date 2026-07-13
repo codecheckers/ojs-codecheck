@@ -65,8 +65,11 @@ class Constants
     public const CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_FIELDS = 'codecheckGithubUpdateFields';
     public const CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE = 'updateTitle';
     public const CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY = 'updateBody';
+    # Codecheck Publication Validation
     # Codecheck Status
     public const CODECHECK_STATUS = 'codecheckStatus';
     public const CODECHECK_STATUSES_SELECTED = 'codecheckStatusesSelected';
     public const CODECHECK_STATUS_KEYS_SELECTED = 'codecheckStatusKeysSelected';
+    # Extended Publication
+    public const CODECHECK_PUBLICATION_VALIDATION_EXTENDED = 'codecheckPublicationExtendedValidation';
 }

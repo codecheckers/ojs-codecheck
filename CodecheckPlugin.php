@@ -24,6 +24,7 @@ use APP\plugins\generic\codecheck\controllers\page\CodecheckPageHandler;
 use APP\plugins\generic\codecheck\classes\CodecheckRoles\CodecheckRoleArray;
 use APP\plugins\generic\codecheck\classes\CodecheckRoles\CodecheckRoleManager;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
+use APP\plugins\generic\codecheck\classes\Workflow\CodecheckPublicationValidator;
 use PKP\core\Request;
 use \Github\Client;
 
@@ -77,7 +78,7 @@ class CodecheckPlugin extends GenericPlugin
             });
             
             // Test if we can hook into the publication to block it if codecheck failed
-            Hook::add('Publication::validatePublish', $this->validateCodecheckStatus(...));
+            Hook::add('Publication::validatePublish', $this->validatePublicationHook(...));
 
             // Add Localizations to Codecheck Status Preview
             Hook::add('TemplateManager::display', $this->addCodecheckStatusLocalizations(...));
@@ -86,32 +87,30 @@ class CodecheckPlugin extends GenericPlugin
         return $success;
     }
 
-    public function validateCodecheckStatus(string $hookName, array $args): bool
+    /**
+     * The publication will be invalid, whenever we ship at least one error in the `$errors` Array. And it will be valid, whenever the array is empty.
+     * The return value of this function doesn't have to do anything with the publication validation. Instead it has to do with how OJS handles this hook. If `true` where to be returned, the Hook: `'Publication::validatePublish'` would stop to be called (meaning that for other plugins & OJS itsself this Hook wouldn't be fired anymore, if we have invalid metadata). This of course means, that e.g. if a submission is in the review stage, but somehow the editor already wants to publish it, we never get to see this error during the publication validation (because our invalid CODECHECK data would stop the hook).
+     * To prevent this, it is best practise to always return `false` on a Hook, so other Plugins and OJS itsself get to call the Hook as well after our plugin did.
+     * 
+     * @param string $hookName The name of the Hook (`'Publication::validatePublish'`)
+     * @param array $args The arguments of the Hook including the validation `$errors` Array at `&$args[0]`
+     * 
+     * @return bool Returns `false` to enable OJS itsself and other Plugins to continue with their implementation for this Hook
+    */
+    public function validatePublicationHook(string $hookName, array $args): bool
     {
+        CodecheckLogger::debug("Validating Publication!");
         $errors = &$args[0];
-        $publication = $args[1]; // sometimes passed by reference depending on version
-        $request = Application::get()->getRequest();
-        $context = $request->getContext();
-        $codecheckMetadataHandler = new CodecheckMetadataHandler($request, new Client(), new CurlApiClient());
-        $codecheckStatus = CodecheckStatusHandler::getCurrentStatusData($codecheckMetadataHandler->getSubmissionId());
+        $codecheckPublicationValidator = new CodecheckPublicationValidator($this);
 
-        CodecheckLogger::debug("Validating CODECHECK before publication!");
+        $validationErrors = $codecheckPublicationValidator->validatePublication();
 
-        $codecheckStatusKeysSelected = $this->getSetting($context->getId(), Constants::CODECHECK_STATUS_KEYS_SELECTED);
-
-        if (empty($codecheckStatus)) {
-            $errors[] = __('plugins.generic.codecheck.status.validation.failed.noStatusSet');
-            return false;
+        if(is_array($validationErrors)) {
+            $errors = array_merge($errors, $validationErrors);
         }
 
-        if (!in_array($codecheckStatus->status, $codecheckStatusKeysSelected)) {
-            $errors[] = __('plugins.generic.codecheck.status.validation.failed', [
-                'codecheckStatus' => __($codecheckStatus->status)
-            ]);
-            return false;
-        }
-
-        return true;
+        /* Returns `false` to enable OJS itsself and other Plugins to continue with their implementation for this Hook */
+        return false;
     }
 
     public function addCodecheckStatusLocalizations($hookName, $args) {

@@ -18,6 +18,7 @@ use \Github\Client;
 use APP\plugins\generic\codecheck\classes\CodecheckRoles\CodecheckRoleManager;
 use APP\plugins\generic\codecheck\classes\Exceptions\RoleExceptions\RoleNotFoundException;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckIssueLabels;
+use APP\plugins\generic\codecheck\classes\Workflow\CodecheckPublicationValidator;
 use Exception;
 use Illuminate\Support\Facades\Schema;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckStatusHandler;
@@ -118,6 +119,11 @@ class CodecheckApiHandler
                     'roles' => $roles->editMetadata(),
                 ],
                 [
+                    'route' => 'repository/validate',
+                    'handler' => [$this, 'validateMetadataFromRepository'],
+                    'roles' => $roles->readMetadata(),
+                ],
+                [
                     'route' => 'yaml/validate',
                     'handler' => [$this, 'validateYamlStructure'],
                     'roles' => $roles->readMetadata(),
@@ -151,7 +157,7 @@ class CodecheckApiHandler
         // get the request Method like POST or GET
         $requestMethod = $this->request->getRequestMethod();
 
-        CodecheckLogger::debug("API Method: " . $requestMethod);
+        CodecheckLogger::debug("API Request: " . $requestMethod . " - " . $this->request->getRequestPath());
 
         return new ApiEndpoint($this->endpoints, $this->route, $requestMethod);
     }
@@ -685,6 +691,8 @@ class CodecheckApiHandler
         ], 200);
     }
 
+    
+
     /**
      * This function loads the Codecheck Metadata from an existing `codecheck.yml` in an existing Code Repository
      * 
@@ -695,38 +703,48 @@ class CodecheckApiHandler
         $postParams = json_decode(file_get_contents('php://input'), true);
         $repository = $postParams["repository"];
 
-        // Check if the repository is a Zenodo Repository
-        if (preg_match('#^https://zenodo\.org/records/\d{8}/?$#', $repository)) {
-            // Remove trailing / if it exists
-            $repository = rtrim($repository, '/');
-            $yamlResponse = $this->codecheckMetadataHandler->importMetadataFromZenodo($repository);
-            $yamlResponse->constructResponse();
-
-        } elseif (preg_match('#^https://github\.com/codecheckers/#', $repository))
-        // Check if the Repository is a GitHub Repository
-        {
-            $yamlResponse = $this->codecheckMetadataHandler->importMetadataFromGitHub($repository);
-            $yamlResponse->constructResponse();
-        } elseif (preg_match('#^https://osf\.io/([A-Za-z0-9]{5})/?$#', $repository, $matches))
-        // Check if the Repository is an OSF Repository
-        {
-            $osf_node_id = $matches[1];
-            $yamlResponse = $this->codecheckMetadataHandler->importMetadataFromOSF($osf_node_id);
-            $yamlResponse->constructResponse();
-        } elseif (preg_match('#^https://gitlab\.com/cdchck/community-codechecks/([^/]+)/?$#', $repository))
-        // Check if the Repository is a GitLab Repository
-        {
-            // Remove trailing / if it exists
-            $repository = rtrim($repository, '/');
-            $yamlResponse = $this->codecheckMetadataHandler->importMetadataFromGitLab($repository);
-            $yamlResponse->constructResponse();
-        } else {
+        if(!is_string($repository)) {
             JsonResponse::staticResponse([
                 'success' => false,
-                'repository' => $repository,
-                'error' => "The repository (" . $repository . ") isn't of the required format.",
+                'error' => 'The provided Repository must be of the type string.'
             ], 400);
         }
+        
+        $response = $this->codecheckMetadataHandler->importMetadataFromRepository($repository);
+        $response->constructResponse();
+    }
+
+    /**
+     * This function validates if the contents of the CODECHECK metadata form are equal to the contents in the provided repositories `codecheck.yml` file
+     * 
+     * @return void
+     */
+    public function validateMetadataFromRepository(): void
+    {
+        $postParams = json_decode(file_get_contents('php://input'), true);
+        $repository = $postParams["repository"];
+
+        if(!is_string($repository)) {
+            JsonResponse::staticResponse([
+                'success' => false,
+                'error' => 'The provided Repository must be of the type string.'
+            ], 400);
+        }
+
+        $publicationValidator = new CodecheckPublicationValidator($this->plugin);
+        $publicationValidator->validateMetadataFromRepository($repository);
+        $errors = $publicationValidator->getErrors();
+
+        if(count($errors) > 0) {
+            JsonResponse::staticResponse([
+                'success' => false,
+                'error' => implode(' ,', $errors),
+            ], 500);
+            return;
+        }
+        JsonResponse::staticResponse([
+            'success' => true,
+        ], 200);
     }
 
     /**
