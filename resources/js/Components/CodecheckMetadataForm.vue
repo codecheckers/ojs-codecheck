@@ -203,8 +203,9 @@
                 type="button"
                 :class="['pkpButton', 'btn-radio', { 'btn-radio__active': repositoryWithCodecheckYaml === index }]"
                 @click="repositoryWithCodecheckMetadata(index)"
+                :title="t('plugins.generic.codecheck.repositories.containsCodecheckYaml')"
               >
-                {{ t('plugins.generic.codecheck.repositories.containsCodecheckYaml') }}
+                📄 codecheck.yml
               </button>
               <button 
                 type="button"
