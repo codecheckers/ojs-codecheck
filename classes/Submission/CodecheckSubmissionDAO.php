@@ -95,7 +95,24 @@ class CodecheckSubmission
 
     public function getRepository(): string 
     { 
-        return $this->data['repository'] ?? ''; 
+        $raw = $this->data['repository'] ?? '';
+        if (empty($raw)) {
+            return '';
+        }
+
+        $decoded = json_decode($raw, true);
+
+        if (is_array($decoded) && isset($decoded['repositories']) && is_array($decoded['repositories'])) {
+            $publicUrls = array_filter(
+                $decoded['repositories'],
+                fn($r) => empty($r['isPrivate'])
+            );
+            $urls = array_map(fn($r) => $r['url'] ?? '', $publicUrls);
+            $urls = array_filter($urls);
+            return implode(', ', $urls);
+        }
+
+        return $raw;
     }
 
     public function getSource(): string 
