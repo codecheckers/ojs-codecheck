@@ -149,6 +149,16 @@ class SettingsForm extends Form
             ) ?? []
         );
 
+        // Default to true — register deposit runs unless explicitly disabled
+        $registerDepositEnabled = $this->plugin->getSetting(
+            $context->getId(),
+            Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED
+        );
+        $this->setData(
+            Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED,
+            $registerDepositEnabled === null ? true : (bool) $registerDepositEnabled
+        );
+
         // Default to true — show the dashboard column unless explicitly disabled
         $showDashboardColumn = $this->plugin->getSetting(
             $context->getId(),
@@ -207,6 +217,7 @@ class SettingsForm extends Form
             Constants::CODECHECK_STATUSES_SELECTED,
             Constants::CODECHECK_STATUS_KEYS_SELECTED,
             Constants::CODECHECK_PUBLICATION_VALIDATION_EXTENDED,
+            Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED,
         ]);
 
         parent::readInputData();
@@ -307,6 +318,12 @@ class SettingsForm extends Form
             $context->getId(),
             Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY,
             $this->getData(Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY)
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED,
+            (bool) $this->getData(Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED)
         );
 
         $registerWarning = $this->validateRegisterFileExists(

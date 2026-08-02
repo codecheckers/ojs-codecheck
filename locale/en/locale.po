@@ -843,3 +843,12 @@ msgstr "Register Repository: {$repository}"
 
 msgid "plugins.generic.codecheck.settings.github.registerRepository.missingCsvWarning"
 msgstr "Warning: no register.csv was found at the root of {$organization}/{$repository}. Register deposits will fail until this file exists there."
+
+msgid "plugins.generic.codecheck.settings.registerDeposit.title"
+msgstr "Register Deposit"
+
+msgid "plugins.generic.codecheck.settings.registerDeposit.description"
+msgstr "When enabled, publishing a CODECHECK-opted-in submission will automatically open a Pull Request adding a row to the CODECHECK Register's register.csv file."
+
+msgid "plugins.generic.codecheck.settings.registerDeposit.checkboxText"
+msgstr "Automatically deposit to the CODECHECK Register on publication"

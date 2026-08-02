@@ -142,6 +142,12 @@ class CodecheckPlugin extends GenericPlugin
             return false;
         }
 
+        $context = Application::get()->getRequest()->getContext();
+        if (!$this->getSetting($context->getId(), Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED)) {
+            CodecheckLogger::debug('Register deposit is disabled for this journal; skipping for submission #' . $submission->getId());
+            return false;
+        }
+
         CodecheckLogger::debug('Depositing register.csv row for submission #' . $submission->getId());
 
         $depositService = new CodecheckRegisterDepositService($this);
