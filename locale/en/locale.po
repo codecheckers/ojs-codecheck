@@ -840,3 +840,6 @@ msgstr "not set"
 
 msgid "plugins.generic.codecheck.github.issue.display.registerRepository"
 msgstr "Register Repository: {$repository}"
+
+msgid "plugins.generic.codecheck.settings.github.registerRepository.missingCsvWarning"
+msgstr "Warning: no register.csv was found at the root of {$organization}/{$repository}. Register deposits will fail until this file exists there."
