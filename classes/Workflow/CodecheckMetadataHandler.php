@@ -247,6 +247,10 @@ class CodecheckMetadataHandler
                 array_filter($repository->repositories, fn($r) => empty($r->isPrivate))
             ));
             $publicUrls = array_filter($publicUrls);
+            $filteredCount = count($repository->repositories) - count($publicUrls);
+            if ($filteredCount > 0) {
+                CodecheckLogger::debug("Filtered out {$filteredCount} of " . count($repository->repositories) . " repositories because they are marked as private.");
+            }
             if (!empty($publicUrls)) {
                 $data['repository'] = count($publicUrls) === 1
                     ? array_values($publicUrls)[0]

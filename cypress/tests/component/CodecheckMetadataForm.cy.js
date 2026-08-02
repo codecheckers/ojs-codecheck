@@ -535,4 +535,28 @@ describe('CodecheckMetadataForm Component', () => {
     cy.get('.repo-private-checkbox').eq(0).should('be.checked');
     cy.get('.repo-private-checkbox').eq(1).should('not.be.checked');
   });
+  
+  it('private checkbox state is preserved after save', () => {
+    cy.intercept('POST', '**/codecheck/metadata*', {
+      statusCode: 200,
+      body: { success: true }
+    }).as('saveMetadata');
+
+    cy.mount(CodecheckMetadataForm, {
+      props: { submission: { id: 1 }, canEdit: true }
+    });
+
+    cy.wait('@loadMetadata');
+
+    cy.contains('.field-label', /repositories/i)
+      .parent()
+      .find('.btn-add')
+      .click();
+
+    cy.get('.repository-item input[type="url"]').first()
+      .type('https://github.com/test/private-repo');
+
+    cy.get('.repo-private-checkbox').first().check();
+    cy.get('.repo-private-checkbox').first().should('be.checked');
+  });
 });

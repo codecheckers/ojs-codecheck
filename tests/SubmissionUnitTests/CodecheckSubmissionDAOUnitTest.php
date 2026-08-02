@@ -45,7 +45,12 @@ class CodecheckSubmissionDAOUnitTest extends PKPTestCase
             'version' => 'latest',
             'publication_type' => 'doi',
             'manifest' => '[]',
-            'repository' => 'https://github.com/test/repo',
+            'repository' => json_encode([
+                'repositories' => [
+                    ['url' => 'https://github.com/test/repo', 'isPrivate' => false],
+                ],
+                'repoWithCodecheckYaml' => null,
+            ]),
             'source' => '',
             'codecheckers' => '[]',
             'certificate' => '',
@@ -73,7 +78,7 @@ class CodecheckSubmissionDAOUnitTest extends PKPTestCase
         
         $this->assertInstanceOf(CodecheckSubmission::class, $result);
         $this->assertSame(123, $result->getSubmissionId());
-        $this->assertSame('https://github.com/test/repo', $result->getRepository());
+        $this->assertSame(['https://github.com/test/repo'], $result->getRepositories());
     }
 
     public function testInsertOrUpdateInsertsNewRecord()

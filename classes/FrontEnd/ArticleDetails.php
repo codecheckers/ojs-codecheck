@@ -101,14 +101,14 @@ class ArticleDetails
                 'codecheckers'      => $codecheckData->getCodecheckers(),
                 'certificateDate'   => $codecheckData->getCertificateDate(),
                 'summary'           => $codecheckData->getSummary(),
-                'repository'        => $codecheckData->getRepository(),
+                'repository' => implode(', ', $codecheckData->getRepositories()),
                 'manifest'          => $codecheckData->getManifest(),
                 'additionalContent' => $codecheckData->getAdditionalContent(),
             ]);
         } elseif ($codecheckData->hasAssignedChecker()) {
             $templateMgr->assign([
                 'codecheckStatus' => 'pending',
-                'codeRepo'        => $codecheckData->getCodeRepository(),
+                'codeRepo' => implode(', ', $codecheckData->getRepositories()),
                 'dataRepo'        => $codecheckData->getDataRepository(),
             ]);
         } else {
