@@ -115,18 +115,18 @@
 		<h3 class="section-title">{translate key="plugins.generic.codecheck.settings.title"}</h3>
 		<p class="section-description">{translate key="plugins.generic.codecheck.settings.description"}</p>
 		
-		{* Option to enable/ disable CODECHECK *}
+		{* Option to show or hide the CODECHECK block on published article pages *}
 		{fbvFormSection
 			list=true
 		}
 			<div class="field-header">
-				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.enableCodecheck"}</label>
+				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.showArticleSidebar"}</label>
 			</div>
 			{fbvElement
 				type="checkbox"
-				id="codecheckEnabled"
-				checked=$codecheckEnabled
-				label="plugins.generic.codecheck.settings.enableCodecheck.description"
+				id="showArticleSidebar"
+				checked=$showArticleSidebar
+				label="plugins.generic.codecheck.settings.showArticleSidebar.description"
 			}
 		{/fbvFormSection}
 		
