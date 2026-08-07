@@ -240,7 +240,7 @@ class CodecheckPlugin extends GenericPlugin
             $path .= '/' . implode('/', $ops);
         }
 
-        if ($page = 'codecheck' && $op == 'info') {
+        if ($page === 'codecheck' && $op === 'info') {
             $page = 'pages';
             $op = 'view';
             $handler = new CodecheckPageHandler($this);
