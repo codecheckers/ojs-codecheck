@@ -1,6 +1,7 @@
 <?php
 namespace APP\plugins\generic\codecheck\classes\Submission;
 
+use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use Illuminate\Support\Facades\DB;
 
 class CodecheckSubmissionDAO
@@ -93,9 +94,26 @@ class CodecheckSubmission
         return is_array($decoded) ? $decoded : [];
     }
 
-    public function getRepository(): string 
+    public function getRepositories(): array 
     { 
-        return $this->data['repository'] ?? ''; 
+        $raw = $this->data['repository'] ?? '';
+        if (empty($raw)) {
+            return [];
+        }
+
+        $decoded = json_decode($raw, true);
+
+        if (is_array($decoded) && isset($decoded['repositories']) && is_array($decoded['repositories'])) {
+            $publicUrls = array_filter(
+                $decoded['repositories'],
+                fn($r) => empty($r['isPrivate'])
+            );
+            $urls = array_map(fn($r) => $r['url'] ?? '', $publicUrls);
+            return array_values(array_filter($urls));
+        } else {
+            CodecheckLogger::warning("Repository data is not in expected format. Raw value: " . $raw);
+            return [];
+        }
     }
 
     public function getSource(): string 
@@ -150,7 +168,7 @@ class CodecheckSubmission
     // Legacy getters for backward compatibility
     public function getCodeRepository(): string 
     { 
-        return $this->getRepository(); 
+        return implode(', ', $this->getRepositories());
     }
 
     public function getDataRepository(): string 

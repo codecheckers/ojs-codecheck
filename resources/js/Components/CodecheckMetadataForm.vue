@@ -182,10 +182,15 @@
             <div v-for="(repo, index) in repositories" :key="'repo-' + index" class="repository-item">
               <input
                 type="url"
-                v-model="repositories[index]"
+                v-model="repo.url"
                 class="pkpFormField__input"
                 :placeholder="t('plugins.generic.codecheck.repository.placeholder')"
               />
+              <label class="repo-private-label" :title="t('plugins.generic.codecheck.repository.markAsPrivate.tooltip')">
+                <input type="checkbox" v-model="repo.isPrivate" class="repo-private-checkbox" />
+                {{ t('plugins.generic.codecheck.repository.markAsPrivate') }}
+                <span class="repo-private-info">ℹ️</span>
+              </label>
               <button
                 v-if="repositoryWithCodecheckYaml === index"
                 type="button"
@@ -198,8 +203,9 @@
                 type="button"
                 :class="['pkpButton', 'btn-radio', { 'btn-radio__active': repositoryWithCodecheckYaml === index }]"
                 @click="repositoryWithCodecheckMetadata(index)"
+                :title="t('plugins.generic.codecheck.repositories.containsCodecheckYaml')"
               >
-                {{ t('plugins.generic.codecheck.repositories.containsCodecheckYaml') }}
+                📄 codecheck.yml
               </button>
               <button 
                 type="button"
@@ -595,7 +601,11 @@ export default {
           
           this.repositoryWithCodecheckYaml = repositoryData.repoWithCodecheckYaml;
           if (repositoryData.repositories) {
-            this.repositories = repositoryData.repositories.split(',').map(r => r.trim()).filter(r => r);
+            if (Array.isArray(repositoryData.repositories)) {
+              this.repositories = repositoryData.repositories;
+            } else {
+              this.repositories = repositoryData.repositories.split(',').map(r => ({ url: r.trim(), isPrivate: false })).filter(r => r.url);
+            }
           }
         }
         
@@ -619,7 +629,7 @@ export default {
         throw new Error(t('plugins.generic.codecheck.repositories.doesntContainCodecheckYamlError'));
       }
 
-      let repository = this.repositories[repo_index];
+      let repository = this.repositories[repo_index].url;
       console.log(repository);
       let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
 
@@ -758,7 +768,7 @@ export default {
     },
 
     addRepository() {
-      this.repositories.push('');
+      this.repositories.push({ url: '', isPrivate: false });
     },
 
     removeRepository(index) {
@@ -939,7 +949,7 @@ export default {
           publication_type: this.metadata.publicationType,
           manifest: this.metadata.manifest,
           repository: {
-            repositories: this.repositories.join(', '),
+            repositories: this.repositories,
             repoWithCodecheckYaml: this.repositoryWithCodecheckYaml,
           },
           source: this.metadata.source,
@@ -1828,6 +1838,23 @@ export default {
 
 .codecheck-metadata-form .repository-item input {
   flex: 1;
+}
+
+.codecheck-metadata-form .repo-private-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 13px;
+  color: #555;
+  white-space: nowrap;
+  cursor: pointer;
+  font-weight: normal;
+  margin-bottom: 0;
+}
+
+.codecheck-metadata-form .repo-private-checkbox {
+  margin: 0;
+  cursor: pointer;
 }
 
 .codecheck-metadata-form .form-footer {

@@ -493,4 +493,102 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $this->assertEquals($repository, $actualMetadataReturnArray["repository"]);
         $this->assertEquals($errorMessage, $actualMetadataReturnArray["error"]);
     }
+
+    public function testBuildYamlExcludesPrivateRepositories()
+    {
+        $publication = $this->createMock(\APP\publication\Publication::class);
+        $publication->method('getLocalizedTitle')->willReturn('Test Paper');
+        $publication->method('getData')->with('authors')->willReturn([]);
+        $publication->method('getStoredPubId')->willReturn(null);
+
+        $metadata = (object) [
+            'version'            => 'latest',
+            'publication_type'   => 'doi',
+            'manifest'           => '[]',
+            'repository' => json_encode([
+                'repositories' => [
+                    ['url' => 'https://github.com/public/repo', 'isPrivate' => false],
+                    ['url' => 'https://github.com/private/repo', 'isPrivate' => true],
+                ],
+                'repoWithCodecheckYaml' => null,
+            ]),
+            'codecheckers'       => '[]',
+            'source'             => null,
+            'summary'            => null,
+            'check_time'         => null,
+            'certificate'        => null,
+            'report'             => null,
+            'additional_content' => null,
+        ];
+
+        $yaml = $this->handler->buildYaml($publication, $metadata);
+
+        $this->assertStringContainsString('github.com/public/repo', $yaml);
+        $this->assertStringNotContainsString('github.com/private/repo', $yaml);
+    }
+
+    public function testBuildYamlExcludesRepositoryKeyWhenAllPrivate()
+    {
+        $publication = $this->createMock(\APP\publication\Publication::class);
+        $publication->method('getLocalizedTitle')->willReturn('Test Paper');
+        $publication->method('getData')->with('authors')->willReturn([]);
+        $publication->method('getStoredPubId')->willReturn(null);
+
+        $metadata = (object) [
+            'version'            => 'latest',
+            'publication_type'   => 'doi',
+            'manifest'           => '[]',
+            'repository' => json_encode([
+                'repositories' => [
+                    ['url' => 'https://github.com/private/repo-one', 'isPrivate' => true],
+                    ['url' => 'https://github.com/private/repo-two', 'isPrivate' => true],
+                ],
+                'repoWithCodecheckYaml' => null,
+            ]),
+            'codecheckers'       => '[]',
+            'source'             => null,
+            'summary'            => null,
+            'check_time'         => null,
+            'certificate'        => null,
+            'report'             => null,
+            'additional_content' => null,
+        ];
+
+        $yaml = $this->handler->buildYaml($publication, $metadata);
+
+        $this->assertStringNotContainsString('repository', $yaml);
+    }
+
+    public function testBuildYamlIncludesAllPublicRepositories()
+    {
+        $publication = $this->createMock(\APP\publication\Publication::class);
+        $publication->method('getLocalizedTitle')->willReturn('Test Paper');
+        $publication->method('getData')->with('authors')->willReturn([]);
+        $publication->method('getStoredPubId')->willReturn(null);
+
+        $metadata = (object) [
+            'version'            => 'latest',
+            'publication_type'   => 'doi',
+            'manifest'           => '[]',
+            'repository' => json_encode([
+                'repositories' => [
+                    ['url' => 'https://github.com/public/repo-one', 'isPrivate' => false],
+                    ['url' => 'https://github.com/public/repo-two', 'isPrivate' => false],
+                ],
+                'repoWithCodecheckYaml' => null,
+            ]),
+            'codecheckers'       => '[]',
+            'source'             => null,
+            'summary'            => null,
+            'check_time'         => null,
+            'certificate'        => null,
+            'report'             => null,
+            'additional_content' => null,
+        ];
+
+        $yaml = $this->handler->buildYaml($publication, $metadata);
+
+        $this->assertStringContainsString('github.com/public/repo-one', $yaml);
+        $this->assertStringContainsString('github.com/public/repo-two', $yaml);
+    }
 }
