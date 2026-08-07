@@ -357,6 +357,7 @@ CREATE TABLE `codecheck_metadata` (
   `source` text,
   `codecheckers` text,
   `certificate` varchar(100) DEFAULT NULL,
+  `issue` varchar(500) NOT NULL DEFAULT '{"url":null,"number":null,"labelsSelected":[]}',
   `check_time` timestamp NULL DEFAULT NULL,
   `summary` text,
   `report` varchar(500) DEFAULT NULL,
@@ -378,6 +379,58 @@ INSERT INTO `codecheck_metadata` (`submission_id`, `version`, `publication_type`
 (8, '1.0', 'doi', '[{\"file\":\"figure-2b.png\",\"size\":188596,\"comment\":\"Figure 2(b) of the article\",\"checked\":false},{\"file\":\"figure-3b.png\",\"size\":142875,\"comment\":\"Figure 3(b) of the article\",\"checked\":false},{\"file\":\"figure-4.png\",\"size\":62928,\"comment\":\"Figure 4 of the article\",\"checked\":false},{\"file\":\"figure-5.pdf\",\"size\":157893,\"comment\":\"Figure 5 of the article\",\"checked\":false},{\"file\":\"figure-6.pdf\",\"size\":4768,\"comment\":\"Figure 6 of the article\",\"checked\":false}]', JSON_OBJECT('repositories', JSON_ARRAY(JSON_OBJECT('url', 'https://gitlab.com/cdchck/community-codechecks/2022-svaRetro-svaNUMT.git', 'isPrivate', FALSE)), 'repoWithCodecheckYaml', NULL), NULL, '[{\"name\":\"Raniere Silva\",\"orcid\":\"0000-0002-8381-3749\"}]', '2022-018', '2022-09-26 23:00:00', 'Only visualisation steps performed. All created figures match those in the article.', 'https://doi.org/10.5281/zenodo.7084333', 'reference: https://doi.org/10.46471/gigabyte.70', '2026-03-26 07:17:27', '2026-03-26 07:17:27'),
 (9, 'latest', 'doi', '[{\"file\":\"NA\",\"size\":0,\"comment\":\"The AGILE 2022 Reproducibility Review did not include manifest documentation, see https:\\/\\/github.com\\/codecheckers\\/register\\/issues\\/38\",\"checked\":false}]', JSON_OBJECT('repositories', JSON_ARRAY(JSON_OBJECT('url', 'https://github.com/zilongliu-geo/Geoparsing-Solved-Or-Biased', 'isPrivate', FALSE)), 'repoWithCodecheckYaml', NULL), NULL, '[{\"name\":\"Daniel N\\u00fcst\",\"orcid\":\"0000-0002-0024-5046\"},{\"name\":\"Eleni Tomai\",\"orcid\":\"0000-0003-1162-7389\"}]', '2022-007', '2022-07-09 11:00:00', 'The article presents an evaluation of geoparsing performance using a number of different datasets and methods from various sources.\nThough preprocessing steps and a core analysis step based on proprietary software could not be evaluated, one of two toponym resolution models could be executed successfully.\nThe provided notebooks for exploratory analysis, calculating statistical values, and geographic bias evaluation could be run and the outputs match the data and figures presented in the paper.\nTherefore, this reproducibility report can confirm a partially successful reproduction of a complex pipeline, for which authors provide reasonable but improvable documentation and share all details (code, data) of their computational workflow.', 'https://doi.org/10.17605/OSF.IO/3DSMV', 'reference: https://doi.org/10.5194/agile-giss-3-9-2022', '2026-03-26 07:10:10', '2026-03-26 07:10:10'),
 (10, '1.0', 'doi', '[{\"file\":\"NA\",\"size\":0,\"comment\":\"The AGILE 2023 Reproducibility Review did not include manifest documentation, see https:\\/\\/github.com\\/codecheckers\\/register\\/issues\\/49\",\"checked\":false}]', JSON_OBJECT('repositories', JSON_ARRAY(JSON_OBJECT('url', 'https://doi.org/10.6084/m9.figshare.22109987', 'isPrivate', FALSE)), 'repoWithCodecheckYaml', NULL), NULL, '[{\"name\":\"Philipp A. Friese\",\"orcid\":\"0000-0002-3124-5364\"}]', '2023-001', '2023-06-13 11:00:00', 'The data of the paper under reproduction is published on figshare under a CC-BY-4.0 license.\nIn total, three tables, three figures, and two data points embedded into the text are eligible for reproduction.\nAll have been successfully reproduced. The authors showed concern and dedication to support reproducibility of their work.\nReproduction was successful.', 'https://doi.org/10.17605/osf.io/c7vx3', 'reference: https://doi.org/10.5194/agile-giss-4-9-2023', '2026-03-26 07:06:00', '2026-03-26 07:17:50');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `codecheck_orcid_tokens`
+--
+
+CREATE TABLE `codecheck_orcid_tokens` (
+  `id` bigint UNSIGNED NOT NULL,
+  `submission_id` bigint UNSIGNED NOT NULL,
+  `orcid_id` varchar(20) DEFAULT NULL,
+  `access_token` varchar(255) DEFAULT NULL,
+  `refresh_token` varchar(255) DEFAULT NULL,
+  `token_expires_at` timestamp NULL DEFAULT NULL,
+  `put_code` varchar(50) DEFAULT NULL,
+  `deposit_status` enum('pending','success','failed') NOT NULL DEFAULT 'pending',
+  `error_message` text,
+  `deposited_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `codecheck_status`
+--
+
+CREATE TABLE `codecheck_status` (
+  `status_id` bigint NOT NULL,
+  `submission_id` bigint NOT NULL,
+  `status` varchar(300) NOT NULL,
+  `timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `user_id` bigint NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `codecheck_issue_labels`
+--
+-- Cache of the GitHub issue labels fetched from the CODECHECK API. Left empty
+-- on purpose: the plugin refills it on first use when the cached copy is more
+-- than six hours old, so a seeded value would only ever be stale.
+--
+
+CREATE TABLE `codecheck_issue_labels` (
+  `label` varchar(200) NOT NULL DEFAULT '',
+  `labels_last_updated` varchar(100) NOT NULL DEFAULT '2000-01-01 00:00:00'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
 -- --------------------------------------------------------
 
@@ -2013,7 +2066,8 @@ INSERT INTO `plugin_settings` (`plugin_setting_id`, `plugin_name`, `context_id`,
 (27, 'htmlarticlegalleyplugin', 1, 'enabled', '1', 'bool'),
 (28, 'pdfjsviewerplugin', 1, 'enabled', '1', 'bool'),
 (29, 'jatstemplateplugin', 1, 'enabled', '1', 'bool'),
-(30, 'codecheckplugin', 1, 'enabled', '1', 'bool');
+(30, 'codecheckplugin', 1, 'enabled', '1', 'bool'),
+(31, 'codecheckplugin', 1, 'showArticleSidebar', '1', 'bool');
 
 -- --------------------------------------------------------
 
@@ -5473,6 +5527,22 @@ ALTER TABLE `codecheck_metadata`
   ADD KEY `codecheck_metadata_submission_id_index` (`submission_id`);
 
 --
+-- Indexes for table `codecheck_orcid_tokens`
+--
+ALTER TABLE `codecheck_orcid_tokens`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `codecheck_orcid_tokens_submission_id_index` (`submission_id`),
+  ADD KEY `codecheck_orcid_tokens_submission_id_orcid_id_index` (`submission_id`,`orcid_id`);
+
+--
+-- Indexes for table `codecheck_status`
+--
+ALTER TABLE `codecheck_status`
+  ADD PRIMARY KEY (`status_id`),
+  ADD KEY `codecheck_status_metadata` (`submission_id`),
+  ADD KEY `codecheck_status_status_id_index` (`status_id`);
+
+--
 -- Indexes for table `completed_payments`
 --
 ALTER TABLE `completed_payments`
@@ -6566,6 +6636,18 @@ ALTER TABLE `citation_settings`
   MODIFY `citation_setting_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `codecheck_orcid_tokens`
+--
+ALTER TABLE `codecheck_orcid_tokens`
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `codecheck_status`
+--
+ALTER TABLE `codecheck_status`
+  MODIFY `status_id` bigint NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `completed_payments`
 --
 ALTER TABLE `completed_payments`
@@ -6941,7 +7023,7 @@ ALTER TABLE `oai_resumption_tokens`
 -- AUTO_INCREMENT for table `plugin_settings`
 --
 ALTER TABLE `plugin_settings`
-  MODIFY `plugin_setting_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
+  MODIFY `plugin_setting_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
 
 --
 -- AUTO_INCREMENT for table `publications`
@@ -7270,6 +7352,12 @@ ALTER TABLE `versions`
 --
 -- Constraints for dumped tables
 --
+
+--
+-- Constraints for table `codecheck_status`
+--
+ALTER TABLE `codecheck_status`
+  ADD CONSTRAINT `codecheck_status_metadata` FOREIGN KEY (`submission_id`) REFERENCES `codecheck_metadata` (`submission_id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `announcements`
