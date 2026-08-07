@@ -20,6 +20,7 @@ use APP\template\TemplateManager;
 use PKP\form\Form;
 use PKP\form\validation\FormValidatorCSRF;
 use PKP\form\validation\FormValidatorPost;
+use Github\Client;
 
 class SettingsForm extends Form
 {
@@ -148,6 +149,16 @@ class SettingsForm extends Form
             ) ?? []
         );
 
+        // Default to true — register deposit runs unless explicitly disabled
+        $registerDepositEnabled = $this->plugin->getSetting(
+            $context->getId(),
+            Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED
+        );
+        $this->setData(
+            Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED,
+            $registerDepositEnabled === null ? true : (bool) $registerDepositEnabled
+        );
+
         // Default to true — show the dashboard column unless explicitly disabled
         $showDashboardColumn = $this->plugin->getSetting(
             $context->getId(),
@@ -206,6 +217,7 @@ class SettingsForm extends Form
             Constants::CODECHECK_STATUSES_SELECTED,
             Constants::CODECHECK_STATUS_KEYS_SELECTED,
             Constants::CODECHECK_PUBLICATION_VALIDATION_EXTENDED,
+            Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED,
         ]);
 
         parent::readInputData();
@@ -310,6 +322,26 @@ class SettingsForm extends Form
 
         $this->plugin->updateSetting(
             $context->getId(),
+            Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED,
+            (bool) $this->getData(Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED)
+        );
+
+        $registerWarning = $this->validateRegisterFileExists(
+            $this->getData(Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION),
+            $this->getData(Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY)
+        );
+
+        if ($registerWarning !== null) {
+            $notificationMgr = new NotificationManager();
+            $notificationMgr->createTrivialNotification(
+                Application::get()->getRequest()->getUser()->getId(),
+                Notification::NOTIFICATION_TYPE_WARNING,
+                ['contents' => $registerWarning]
+            );
+        }
+
+        $this->plugin->updateSetting(
+            $context->getId(),
             Constants::CODECHECK_GITHUB_CUSTOM_LABELS,
             array_values(array_filter(
                 (array) $this->getData(Constants::CODECHECK_GITHUB_CUSTOM_LABELS),
@@ -373,5 +405,28 @@ class SettingsForm extends Form
         );
 
         return parent::execute();
+    }
+
+    /**
+     * Checks whether `register.csv` exists at the root of the configured
+     * GitHub register repository, so a misconfigured target is caught at
+     * settings-save time instead of silently failing on the next publish.
+     */
+    private function validateRegisterFileExists(string $organization, string $repository): ?string
+    {
+        if (empty($organization) || empty($repository)) {
+            return null; // nothing to check yet
+        }
+
+        try {
+            $client = new Client();
+            $client->api('repo')->contents()->show($organization, $repository, 'register.csv');
+            return null; // found, no warning needed
+        } catch (\Throwable $e) {
+            return __('plugins.generic.codecheck.settings.github.registerRepository.missingCsvWarning', [
+                'organization' => $organization,
+                'repository' => $repository,
+            ]);
+        }
     }
 }
