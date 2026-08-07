@@ -1,5 +1,38 @@
 # CODECHECK Plugin Test Dataset
 
+> **This dump is self-contained.** It carries the full CODECHECK schema —
+> `codecheck_metadata` (including the `issue` column), `codecheck_status`,
+> `codecheck_issue_labels` and `codecheck_orcid_tokens` — plus the
+> `showArticleSidebar` plugin setting, so loading it produces a working
+> instance with no repair step. The plugin's migration is not involved.
+>
+> The shipped `config.inc.php` is not usable as-is: `files_dir` points at a
+> MAMP path and the database block assumes `root`/`root` on a database named
+> `ojs`. `make ojs-config` rewrites these.
+
+## Keeping this dataset in sync
+
+This dump is a fixture that CI's e2e job and every local development
+environment load. **When you change the shape of anything stored in
+`codecheck_metadata` — including the JSON blobs inside it — update this dump in
+the same commit.** The plugin's migrations only run when the plugin is enabled through the UI;
+they are not applied when this dump is loaded, so schema changes have to be
+written into it by hand — the table definitions here must be kept in step with
+`classes/migration/install/CodecheckSchemaMigration.php`.
+
+A format change that skips this step fails silently: the seeded articles keep
+loading, the tests keep passing, and the affected field just renders as empty.
+After editing, run `make db-reset && make test-e2e && make screenshots` and look
+at the resulting images.
+
+## Recommended: use the Makefile
+
+From the plugin root, `make setup` loads this dataset and wires up an OJS
+installation in one step. See "Local development environment"
+in the [main README](../README.md).
+
+The manual procedure below remains valid for other setups.
+
 ## Apply the CODECHECK Test Dataset to an OJS instance
 
 - Download [OJS 3.5](https://pkp.sfu.ca/software/ojs/download/) and install it

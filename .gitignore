@@ -48,6 +48,5 @@ cypress/downloads/
 
 # output of dev/inspect.mjs
 dev/out/
-CLAUDE.md
 
 .claude/

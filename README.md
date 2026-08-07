@@ -5,7 +5,7 @@
 [![repo status](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Contributions - welcome](https://img.shields.io/badge/Contributions-welcome-blueviolet)](https://github.com/codecheckers/ojs-codecheck/blob/main/CONTRIBUTING.md)
-[![Component Tests](https://github.com/codecheckers/ojs-codecheck/actions/workflows/component-tests.yml/badge.svg?branch=main)](https://github.com/codecheckers/ojs-codecheck/actions/workflows/component-tests.yml)
+[![Tests](https://github.com/codecheckers/ojs-codecheck/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/codecheckers/ojs-codecheck/actions/workflows/tests.yml)
 <br />
 
 An [OJS Plugin](https://docs.pkp.sfu.ca/dev/plugin-guide/en/) to streamline codechecking of submissions and display of [CODECHECK](https://codecheck.org.uk/) certificates.
@@ -137,34 +137,44 @@ function getStatus() {
 
 - OJS 3.5.0 or later
 - PHP 8.2.0 or later
-- Node.js 16+ (for frontend development)
-- npm or yarn
+- Node.js 18+ (for frontend development)
+- npm
+- Composer
+
+### Install dependencies
+
+```bash
+composer install
+npm install
+npm run build
+```
+
+**All three are required to run the plugin**, not just to develop it:
+
+- `composer install` creates `vendor/`, which several classes load at file scope.
+  Without it, any request reaching the CODECHECK API fails.
+- `npm run build` creates `public/build/build.iife.js` and `public/build/build.css`,
+  which the plugin loads into the OJS backend. `public/` is **not in git**, so after
+  a fresh clone the CODECHECK UI is missing until you build. Re-run after every
+  change under `resources/js/`.
 
 ### Frontend Development
 
 This plugin uses **Vite** for building Vue.js components.
 
-#### Install dependencies
-
 ```bash
-npm install
+npm run build     # production build into public/build/
+npm run watch     # rebuild on file changes
 ```
 
-#### Build for production
+The bundle is an IIFE library that expects OJS's own globals (`pkp.registry`,
+`pkp.modules.vue`) to exist — it registers components into the OJS Vue app rather
+than mounting its own. It therefore cannot be exercised standalone; the Cypress
+component tests substitute a mock `pkp` global.
 
-```bash
-npm run build
-```
-
-This compiles Vue components and JavaScript into the `public/` directory.
-
-#### Watch mode (development)
-
-```bash
-npm run dev
-```
-
-Use during development to automatically rebuild on file changes.
+`registry/uiLocaleKeysBackend.json` is **generated** during the build from the
+`t('…')` calls in the Vue sources. Do not edit it by hand; add the key to
+`locale/en/locale.po` and rebuild.
 
 ### Frontend Structure
 ```bash
@@ -178,6 +188,78 @@ Use during development to automatically rebuild on file changes.
         ├── build.iife.js
         └── build.css
 ```
+
+### Local development environment
+
+The plugin is developed in a standalone checkout and linked into an OJS
+installation that sits next to it. A `Makefile` automates the whole setup —
+run `make help` for the full list of targets.
+
+#### One-off database grant
+
+The setup uses a MySQL/MariaDB account named `ojs`. Because MySQL root normally
+authenticates via `unix_socket`, this one step needs a root shell (`sudo mysql`)
+and only has to be done once:
+
+```sql
+CREATE USER IF NOT EXISTS 'ojs'@'localhost' IDENTIFIED BY 'ojs';
+CREATE DATABASE IF NOT EXISTS ojs_codecheck_350
+  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+GRANT ALL PRIVILEGES ON ojs_codecheck_350.* TO 'ojs'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+Everything after this uses only the `ojs` account.
+
+#### Bring-up
+
+```bash
+make ojs-install    # download OJS into ../ojs-350 and add its dev dependencies
+make setup          # plugin deps + build, link into OJS, write config, load test data
+make serve          # http://localhost:8350 — admin / admin
+```
+
+`make setup` links this checkout to `../ojs-350/plugins/generic/codecheck`, so
+edits are live on the dev server with no copying. It also generates the OJS
+`app_key` (3.5 refuses to serve any page without one), repairs the test
+dataset's schema, and clears the caches OJS keeps for plugin settings.
+
+The seeded journal is at <http://localhost:8350/index.php/codecheck>. See
+[testData/README.md](testData/README.md) for the accounts and content it contains.
+
+Useful targets:
+
+| Target | Does |
+|---|---|
+| `make db-load` | load the test dataset |
+| `make db-reset` | drop, recreate and reload from scratch |
+| `make build` / `make watch` | rebuild the Vue bundle |
+| `make test` | component tests + PHPUnit |
+| `make screenshots` | capture every plugin UI surface to `cypress/screenshots/` |
+| `make inspect URL=…` | open one page and dump screenshot, HTML and console log |
+
+Any value can be overridden, e.g. `make serve PORT=9000` or
+`make setup OJS_ROOT=/path/to/other/ojs`.
+
+#### Inspecting the UI without a browser
+
+`make screenshots` runs a Cypress pass over the plugin settings form, the
+editorial dashboard column, the workflow CODECHECK tab, the published article
+sidebar, an issue table of contents and the info page, writing full-page PNGs to
+`cypress/screenshots/`.
+
+Captures are 1920x1200; change that with
+`make screenshots SHOT_WIDTH=2560 SHOT_HEIGHT=1440`.
+
+For a single page, `dev/inspect.mjs` logs in and dumps a screenshot, the rendered
+HTML and the console/network log (including failed requests) to `dev/out/`:
+
+```bash
+make inspect URL=http://localhost:8350/index.php/codecheck/dashboard/editorial
+node dev/inspect.mjs <url> --selector '.codecheck-metadata-form' --headed
+```
+
+Both need `make serve` running in another terminal.
 
 ### Creating a Release
 
@@ -241,9 +323,15 @@ codecheck/
 ├── composer.json              # composer json-file
 ├── composer.lock              # composer lock-file
 ├── css/*                      # CODECHECK CSS stylesheets
-├── cypress/tests/functional/  # End-to-end testing
-│   └── CodecheckPlugin.cy.js  # Cypress test suite
+├── cypress/                   # Frontend tests
+│   ├── support/*              # mount helpers, pkp global mock, login commands
+│   └── tests/
+│       ├── component/*        # Vue component tests (no OJS needed)
+│       ├── e2e/*              # end-to-end tests (need a running OJS)
+│       └── visual/*           # screenshot pass over the plugin UI
+├── dev/*                      # Development helpers (schema repair, page inspector)
 ├── locale/*                   # Internationalization (language localization strings)
+├── Makefile                   # Local development environment automation
 ├── package-lock.json
 ├── package.json
 ├── package-plugin.sh          # Shell script, that makes packaging this plugin reproducible
@@ -308,89 +396,94 @@ Finally your defined `CodecheckRoleArray` can have the following PKP rules (`PKP
 
 ## Running Tests
 
-The plugin includes comprehensive test coverage for both backend PHP code and frontend Vue components.
+The plugin has three test suites. Only the component tests run without an OJS
+installation — see [Local development environment](#local-development-environment)
+for setting one up.
 
-### PHP Unit Tests
+| Suite | Command | Needs OJS? | Needs a running server? |
+|---|---|---|---|
+| Vue component tests | `npm run test:component` | no | no |
+| PHP unit tests | `make test-php` | yes | no |
+| End-to-end tests | `make test-e2e` | yes | yes |
+| Screenshots | `make screenshots` | yes | yes |
 
-**Note:** Some tests require the full OJS environment (e.g.: database, facades, translations).
-They run successfully in [**Option 2: Docker/CI Environment**](#option-2-dockerci-environment) but are skipped in [**Option 1: Local Testing**](#option-1-local-testing).
+`make test` runs everything that does not need a running server.
 
-#### Option 1: Local Testing
+### Frontend component tests
 
-From the plugins directory:
-
-1. Navigate to the `tests/` directory:
-    ```bash
-    cd plugins/generic/codecheck/tests/
-    ```
-2. Run the tests:
-    - **without** a test coverage report:
-        ```bash
-        sh runTests.sh
-        ```
-        or
-        ```bash
-        sh runTests.sh --coverage-report=false
-        ```
-    - **with** a test coverage report:
-        ```bash
-        sh runTests.sh --coverage-report=true
-        ```
-        **Note:** You will find the test coverage in the `tests/results/index.html` file.
-
-#### Option 2: Docker/CI Environment
-
-From the root of the OJS application directory:
+These mount the Vue components directly through Vite against a mock `pkp`
+global, so they need nothing but `npm install`:
 
 ```bash
-lib/pkp/lib/vendor/phpunit/phpunit/phpunit -c lib/pkp/tests/phpunit.xml plugins/generic/codecheck/tests/
+npm run test:component        # headless
+npm run test:component:open   # interactive
 ```
 
-If you want to visualize the test coverage, open the test coverage report which is located in the following file:
+### PHP unit tests
+
+PHPUnit needs an OJS installation, because the tests load OJS classes and the
+runner uses the PHPUnit shipped in `lib/pkp`. That installation must have its
+**development** dependencies installed (`composer install` inside `lib/pkp`) —
+release tarballs ship without PHPUnit. `make ojs-install` does this for you.
+
+With the plugin linked into an OJS install (`make setup`):
 
 ```bash
-lib/pkp/tests/results/index.html
+make test-php
 ```
 
-### Frontend Component Tests
-
-[![Component Tests](https://github.com/codecheckers/ojs-codecheck/actions/workflows/component-tests.yml/badge.svg?branch=main)](https://github.com/codecheckers/ojs-codecheck/actions/workflows/component-tests.yml)
-
-From the plugin directory:
+Or directly, from the `tests/` directory:
 
 ```bash
-npm run test:component
+sh runTests.sh                          # inside <ojs>/plugins/generic/codecheck
+OJS_ROOT=/path/to/ojs sh runTests.sh    # from a standalone checkout
+sh runTests.sh --coverage-report=true   # writes tests/results/index.html
 ```
 
-For interactive testing:
+`OJS_ROOT` is needed whenever the plugin directory is a symlink, because PHP
+resolves `__FILE__` through symlinks and the default "four levels up" lookup
+then points outside the OJS tree.
+
+**Some tests are skipped**, not run: `SettingsFormUnitTest`, `ManageUnitTest`
+and parts of `ActionsUnitTest` call `markTestSkipped()` in `setUp()` because they
+need Laravel facades and the translator that a bare test bootstrap does not
+provide. They are skipped locally *and* in CI.
+
+### End-to-end tests
+
+These drive a real OJS instance through the browser.
 
 ```bash
-npm run test:component:open
-```
-
-### E2E Tests
-
-End-to-end tests verify critical user workflows and integration between frontend, backend, and database.
-
-From the plugin directory:
-```bash
-npm run test:e2e
-```
-
-For interactive testing:
-```bash
-npm run test:e2e:open
+make serve      # in one terminal
+make test-e2e   # in another
 ```
 
 **Prerequisites:**
-- OJS running at `http://localhost:8888/ojs` (or set `CYPRESS_BASE_URL` environment variable)
-- At least one published submission with CODECHECK metadata
-- Admin credentials configured (default: `admin/admin`)
 
-**Custom base URL:**
+- OJS running with the test dataset loaded (`make setup && make serve`)
+- at least one published submission carrying CODECHECK metadata — the bundled
+  dataset provides this
+- admin credentials (`admin`/`admin`)
+
+The base URL defaults to `http://localhost:8350` and can be pointed anywhere:
+
 ```bash
-CYPRESS_BASE_URL=http://localhost:3000/ojs npm run test:e2e
+CYPRESS_BASE_URL=http://localhost:8888/ojs npm run test:e2e
 ```
+
+### Screenshots
+
+`make screenshots` walks every surface the plugin renders and writes full-page
+PNGs to `cypress/screenshots/`. It is a way to look at the UI, not a regression
+suite — it only asserts that each page loads and carries its CODECHECK element.
+
+### Continuous integration
+
+[`.github/workflows/tests.yml`](.github/workflows/tests.yml) runs all three
+suites on every push and pull request to `main`: PHPUnit against a checkout of
+`pkp/ojs@stable-3_5_0` with MySQL, the Cypress component tests standalone, and
+the e2e tests against a full Apache + MySQL + OJS stack seeded from
+[`testData/`](testData/).
 
 ## License
 
