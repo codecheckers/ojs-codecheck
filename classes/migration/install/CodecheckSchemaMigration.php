@@ -120,7 +120,16 @@ class CodecheckSchemaMigration extends CodecheckMigration
             $ymlExists = false;
 
             while ($genre = $existingGenres->next()) {
-                if ($genre->getLocalizedName() === 'codecheck.yml') {
+                // Compare against every stored locale rather than
+                // getLocalizedName(): that resolves the locale through the
+                // current request context, which does not exist when the
+                // migration runs from the command line, and it would not match
+                // the 'en' name written below on a journal whose primary locale
+                // is something else — creating a duplicate genre each time.
+                $names = $genre->getData('name');
+                $names = is_array($names) ? $names : [$names];
+
+                if (in_array('codecheck.yml', $names, true)) {
                     $ymlExists = true;
                     break;
                 }
