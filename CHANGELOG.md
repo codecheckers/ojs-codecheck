@@ -19,6 +19,7 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 - Documentation: [README.md](README.md) (Issue #4), [CONTRIBUTING.md](CONTRIBUTING.md) (Issue #3), [CHANGELOG.md](CHANGELOG.md) (Issue #5)
 - Color scheme documentation in [README.md](README.md)
 - Mock-Ups in Issue descriptions (Issue #26)
+- `WARNING` log level in `CodecheckLogger`, alongside the existing `DEBUG`, `INFO` and `ERROR` levels. Use it for conditions that are unexpected but recoverable, such as stored data in an unexpected format that is skipped rather than treated as fatal. Log lines are prefixed `[codecheck][warning]`.
 
 ## [1.0.0] - 2025-??-??
 
