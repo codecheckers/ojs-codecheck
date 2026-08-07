@@ -361,6 +361,22 @@
 					label="plugins.generic.codecheck.settings.publication.extendedValidation.checkboxText"
 				}
 			{/fbvFormSection}
+
+			{* Enable automatic register.csv deposit on publication (Issue #10) *}
+			{fbvFormSection
+				list=true
+			}
+				<div class="field-header">
+					<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.registerDeposit.title"}</label>
+				</div>
+				<label class="description">{translate key="plugins.generic.codecheck.settings.registerDeposit.description"}</label>
+				{fbvElement
+					type="checkbox"
+					id="codecheckRegisterDepositEnabled"
+					checked=$codecheckRegisterDepositEnabled
+					label="plugins.generic.codecheck.settings.registerDeposit.checkboxText"
+				}
+			{/fbvFormSection}
 		{/fbvFormSection}
 
 		{* TODO: Add more settings in future development *}

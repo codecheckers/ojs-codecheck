@@ -81,4 +81,7 @@ class Constants
     public const CODECHECK_STATUS_KEYS_SELECTED = 'codecheckStatusKeysSelected';
     # Extended Validation
     public const CODECHECK_PUBLICATION_VALIDATION_EXTENDED = 'codecheckPublicationExtendedValidation';
+
+    # Register Deposit (Issue #10)
+    public const CODECHECK_REGISTER_DEPOSIT_ENABLED = 'codecheckRegisterDepositEnabled';
 }
