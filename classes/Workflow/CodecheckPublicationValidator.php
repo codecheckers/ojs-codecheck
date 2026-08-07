@@ -87,7 +87,7 @@ class CodecheckPublicationValidator {
             }
 
             $repositoryData = $codecheckMetadata['codecheck']['repository'];
-            $repositories = explode(",", preg_replace('/\s+/', '', $repositoryData['repositories']));
+            $repositories = is_array($repositoryData['repositories']) ? $repositoryData['repositories'] : [];
             $repositoryWithCodecheckYml = $repositoryData['repoWithCodecheckYaml'];
             if(!is_int($repositoryWithCodecheckYml)) {
                 $this->errors[] = __('plugins.generic.codecheck.publication.validation.invalidRepository', [
@@ -101,7 +101,13 @@ class CodecheckPublicationValidator {
                 ]);
                 return false;
             }
-            $repository = $repositories[$repositoryWithCodecheckYml];
+            $repository = $repositories[$repositoryWithCodecheckYml]['url'] ?? null;
+            if (!is_string($repository) || $repository === '') {
+                $this->errors[] = __('plugins.generic.codecheck.publication.validation.invalidRepository', [
+                    'repositoryError' => __('plugins.generic.codecheck.publication.validation.repositoryWithCodecheckYmlSelectedDoesntExist')
+                ]);
+                return false;
+            }
         }
         $response = $this->codecheckMetadataHandler->importMetadataFromRepository($repository);
         $responseArray = $response->getPayloadArray();

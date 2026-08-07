@@ -56,3 +56,8 @@ Demonstrates:
 - Article with two codecheckers (2020-002: Eglen + Nüst)
 - Three different codecheckers (Eglen, Nüst, Ostermann)
 - Multiple conference venues (AGILE, GigaScience, J Geogr Syst)
+- A private repository: submission 7 (certificate 2022-009) carries one public
+  and one private repository, so the "Keep private" flag can be exercised
+  end to end — visible to editors in the workflow, filtered out of everything
+  readers see. Covered by `cypress/tests/e2e/private-repository.cy.js`; keep
+  both entries if you regenerate the dump.

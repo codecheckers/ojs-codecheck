@@ -572,10 +572,20 @@ export default {
         };
         
         if (data.codecheck && typeof data.codecheck === 'object') {
-          let repositoryData = typeof data.codecheck.repository === 'string' ? JSON.parse(data.codecheck.repository) :  {
-            repositories: null,
-            repoWithCodecheckYaml: null,
-          };
+          // api/v1/codecheck/metadata returns this already decoded; the string
+          // form is only seen when the raw column value is passed through.
+          const rawRepository = data.codecheck.repository;
+          let repositoryData = { repositories: null, repoWithCodecheckYaml: null };
+
+          if (rawRepository && typeof rawRepository === 'object') {
+            repositoryData = rawRepository;
+          } else if (typeof rawRepository === 'string' && rawRepository !== '') {
+            try {
+              repositoryData = JSON.parse(rawRepository);
+            } catch (error) {
+              console.error('CODECHECK: could not parse stored repository data:', rawRepository, error);
+            }
+          }
 
           this.metadata = {
             version: data.codecheck.version || data.codecheck.version || 'latest',
@@ -600,12 +610,17 @@ export default {
           this.certificateIdentifier.isLinked = !!(data.codecheck.issue?.url && data.codecheck.issue?.number);
           
           this.repositoryWithCodecheckYaml = repositoryData.repoWithCodecheckYaml;
-          if (repositoryData.repositories) {
-            if (Array.isArray(repositoryData.repositories)) {
-              this.repositories = repositoryData.repositories;
-            } else {
-              this.repositories = repositoryData.repositories.split(',').map(r => ({ url: r.trim(), isPrivate: false })).filter(r => r.url);
-            }
+          if (Array.isArray(repositoryData.repositories)) {
+            this.repositories = repositoryData.repositories;
+          } else if (repositoryData.repositories) {
+            // Anything else is stored data in a format this form no longer
+            // reads — most likely the removed comma-separated string. Leaving
+            // the list empty would look like "no repositories" rather than a
+            // problem, so say so.
+            console.error(
+              'CODECHECK: ignoring repository data in an unexpected format, expected an array of {url, isPrivate}:',
+              repositoryData.repositories
+            );
           }
         }
         
