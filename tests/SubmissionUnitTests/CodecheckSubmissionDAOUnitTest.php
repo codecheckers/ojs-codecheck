@@ -4,6 +4,7 @@ namespace APP\plugins\generic\codecheck\tests;
 
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionDAO;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmission;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PKP\tests\PKPTestCase;
 use Illuminate\Support\Facades\DB;
 
@@ -161,9 +162,8 @@ class CodecheckSubmissionDAOUnitTest extends PKPTestCase
      * Regression test: this branch logs through CodecheckLogger::warning(),
      * which did not exist, so malformed stored repository data raised
      * "Call to undefined method" instead of degrading to an empty list.
-     *
-     * @dataProvider malformedRepositoryProvider
      */
+    #[DataProvider('malformedRepositoryProvider')]
     public function testGetRepositoriesReturnsEmptyListForMalformedRepositoryData(string $repository)
     {
         $submission = new CodecheckSubmission([

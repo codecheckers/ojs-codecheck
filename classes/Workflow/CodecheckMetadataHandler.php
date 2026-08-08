@@ -402,6 +402,16 @@ class CodecheckMetadataHandler
             ], 404);
         }
 
+        // A path that is not a directory listing comes back as null or a single
+        // file rather than a list, which is not something to iterate over.
+        if (!is_iterable($contents)) {
+            return new JsonResponse([
+                'success' => false,
+                'repository' => $repository,
+                'error' => "$filename not found",
+            ], 404);
+        }
+
         // Find codecheck.yml
         foreach ($contents as $item) {
             if ($item['type'] === 'file' && $item['name'] === $filename) {

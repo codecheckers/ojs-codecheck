@@ -3,6 +3,7 @@
 namespace APP\plugins\generic\codecheck\tests\LogUnitTests;
 
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PKP\tests\PKPTestCase;
 
 /**
@@ -56,9 +57,7 @@ class CodecheckLoggerUnitTest extends PKPTestCase
         }
     }
 
-    /**
-     * @dataProvider logLevelProvider
-     */
+    #[DataProvider('logLevelProvider')]
     public function testWritesPrefixedMessageForLevel(string $level, string $expectedPrefix): void
     {
         CodecheckLogger::$level('a message');

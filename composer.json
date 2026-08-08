@@ -1,4 +1,5 @@
 {
+    "license": "Apache-2.0",
     "require": {
         "knplabs/github-api": "^3.16",
         "guzzlehttp/guzzle": "^7.0.1",
