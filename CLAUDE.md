@@ -56,7 +56,7 @@ make test              # component tests + PHPUnit (no server needed)
 make test-component    # Cypress component tests — runs anywhere, no OJS needed
 make test-php          # PHPUnit — needs the linked OJS install
 make test-e2e          # Cypress e2e — needs `make serve` running
-make screenshots       # capture every UI surface to cypress/screenshots/
+make screenshots       # capture every UI surface to cypress/ui-screenshots/
 ```
 
 See [Testing](#testing) below for what actually runs where.
@@ -435,10 +435,15 @@ Notes that matter when touching this:
   `cypress run` defaults that window to 1280x720. `cypress.config.js` sizes the
   window to the configured viewport in a `before:browser:launch` handler; without
   it every capture is silently cut off at 1280px wide.
-- **`--config` on the Cypress CLI cannot override a key already set in the
-  `e2e` block** of `cypress.config.js` — it is ignored without warning.
-  Environment variables (`CYPRESS_VIEWPORT_WIDTH`, …) do win, which is why
-  `make screenshots` uses those.
+- **CLI `--config` does not reliably override keys already set in the `e2e`
+  block** of `cypress.config.js`, and fails silently when it doesn't.
+  `specPattern` does get through; `viewportWidth`/`viewportHeight` and
+  `screenshotsFolder` do not. The `CYPRESS_*` environment variables do win, so
+  `make screenshots` and the CI job pass viewport and output directory that way.
+- **The visual pass writes to `cypress/ui-screenshots/`, not
+  `cypress/screenshots/`.** Cypress empties `screenshotsFolder` before every
+  run, so sharing one directory means whichever suite runs second destroys the
+  other's output.
 - **`php -S` is single-threaded**, so any page that calls back into OJS
   deadlocks and Cypress hangs rather than fails. `make serve` sets
   `PHP_CLI_SERVER_WORKERS=8`.
@@ -455,8 +460,9 @@ Two paths, both needing `make serve`:
 
 - `make screenshots` — Cypress pass over settings, dashboard column, workflow
   CODECHECK tab, article sidebar, issue TOC and info page; full-page PNGs into
-  `cypress/screenshots/`. Asserts only that pages load. Captures at 1920x1200;
-  override with `make screenshots SHOT_WIDTH=… SHOT_HEIGHT=…`.
+  `cypress/ui-screenshots/`. Asserts only that pages load. Captures at
+  1920x1200; override with `make screenshots SHOT_WIDTH=… SHOT_HEIGHT=…`.
+  Also runs in CI, uploaded as the `ui-screenshots` artifact.
 - `make inspect URL=…` / `node dev/inspect.mjs <url>` — Playwright; logs in,
   dumps screenshot + rendered HTML + console/network log (including failed
   requests and HTTP >=400) into `dev/out/`. Captures at 1920x1200 by default.

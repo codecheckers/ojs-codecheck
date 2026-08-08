@@ -235,7 +235,7 @@ Useful targets:
 | `make db-reset` | drop, recreate and reload from scratch |
 | `make build` / `make watch` | rebuild the Vue bundle |
 | `make test` | component tests + PHPUnit |
-| `make screenshots` | capture every plugin UI surface to `cypress/screenshots/` |
+| `make screenshots` | capture every plugin UI surface to `cypress/ui-screenshots/` |
 | `make inspect URL=…` | open one page and dump screenshot, HTML and console log |
 
 Any value can be overridden, e.g. `make serve PORT=9000` or
@@ -246,7 +246,7 @@ Any value can be overridden, e.g. `make serve PORT=9000` or
 `make screenshots` runs a Cypress pass over the plugin settings form, the
 editorial dashboard column, the workflow CODECHECK tab, the published article
 sidebar, an issue table of contents and the info page, writing full-page PNGs to
-`cypress/screenshots/`.
+`cypress/ui-screenshots/`.
 
 Captures are 1920x1200; change that with
 `make screenshots SHOT_WIDTH=2560 SHOT_HEIGHT=1440`.
@@ -474,7 +474,7 @@ CYPRESS_BASE_URL=http://localhost:8888/ojs npm run test:e2e
 ### Screenshots
 
 `make screenshots` walks every surface the plugin renders and writes full-page
-PNGs to `cypress/screenshots/`. It is a way to look at the UI, not a regression
+PNGs to `cypress/ui-screenshots/`. It is a way to look at the UI, not a regression
 suite — it only asserts that each page loads and carries its CODECHECK element.
 
 ### Continuous integration

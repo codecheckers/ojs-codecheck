@@ -43,6 +43,7 @@ tests/.phpunit.result.cache
 tests/results/
 .phpunit.cache/
 cypress/screenshots/
+cypress/ui-screenshots/
 cypress/videos/
 cypress/downloads/
 

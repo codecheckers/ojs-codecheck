@@ -211,18 +211,22 @@ test-e2e:
 
 SHOT_WIDTH  ?= 1920
 SHOT_HEIGHT ?= 1200
+# Its own directory: cypress empties screenshotsFolder before every run, so
+# sharing one with the e2e suite means whichever runs second wipes the other.
+SHOT_DIR    ?= cypress/ui-screenshots
 
 screenshots:
-	@# The viewport must come from the environment, not --config: a key already
-	@# present in the e2e block of cypress.config.js overrides the command line.
+	@# These must come from the environment, not --config: a key already present
+	@# in the e2e block of cypress.config.js overrides the command line.
 	CYPRESS_BASE_URL=$(BASE_URL) \
 	CYPRESS_VIEWPORT_WIDTH=$(SHOT_WIDTH) CYPRESS_VIEWPORT_HEIGHT=$(SHOT_HEIGHT) \
+	CYPRESS_SCREENSHOTS_FOLDER=$(SHOT_DIR) \
 	npx cypress run --e2e --config specPattern='cypress/tests/visual/**/*.cy.js'
-	@echo "Screenshots written to cypress/screenshots/"
+	@echo "Screenshots written to $(SHOT_DIR)/"
 
 URL ?= $(BASE_URL)/index.php/codecheck
 inspect:
 	node dev/inspect.mjs "$(URL)"
 
 clean:
-	rm -rf public/build cypress/screenshots cypress/videos tests/results dev/out
+	rm -rf public/build cypress/screenshots cypress/ui-screenshots cypress/videos tests/results dev/out
