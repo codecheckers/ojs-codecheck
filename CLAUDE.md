@@ -160,14 +160,9 @@ Migration structure (added for issue #94):
   `resetSchema()` (settings UI "Clear / Reset DB") drops and recreates — the only
   destructive path.
 
-**Known schema inconsistency (pre-existing, documented in `.claude/issue-65-update.md` N2):**
-`schema.xml` is stale (declares `opt_in`, `code_repository`, `data_repository`,
-`dependencies`, `execution_instructions` — none of which exist) and
-`classes/Submission/CodecheckMetadataDAO.php` queries a third, non-existent shape
-(`identifier`, `manifest_files`, `paper_metadata`, `repositories`). That DAO is **dead
-code** — nothing outside its own unit test references it, and every query would throw
-(swallowed by its bare `catch`). The live DAO is `CodecheckSubmissionDAO`.
-Do not "fix" one of the three in isolation; align them or delete the dead ones.
+The migration is the single source of truth for this schema. A stale `schema.xml`
+and a dead `CodecheckMetadataDAO` used to describe two further, contradictory
+shapes; both were removed. `CodecheckSubmissionDAO` is the only DAO.
 
 Submission-level fields (`codecheckOptIn`, `retrieveReserveCertificateIdentifier`,
 `codeRepository`, `dataRepository`, `manifestFiles`, `dataAvailabilityStatement`) live in
@@ -249,7 +244,7 @@ README.md; keep `css/codecheck.css` and inline component styles consistent.
 ### Layout
 
 ```
-tests/                       PHPUnit (18 files, 132 tests)
+tests/                       PHPUnit (17 files, 113 tests)
   bootstrap.php              PKP_STRICT_MODE + BASE_SYS_DIR (OJS_ROOT or ../../../..)
   PKPTestCase.php            local stub extending PHPUnit TestCase
   phpunit.xml                default config (testdox, whole dir)
@@ -261,7 +256,7 @@ tests/                       PHPUnit (18 files, 132 tests)
   FrontEndUnitTests/           ArticleDetails
   LogUnitTests/                CodecheckLogger
   SettingsUnitTests/           Actions, Manage, SettingsForm
-  SubmissionUnitTests/         CodecheckMetadataDAO, CodecheckSubmissionDAO, CodecheckSubmission
+  SubmissionUnitTests/         CodecheckSubmissionDAO, CodecheckSubmission
   WorkflowUnitTests/           CodecheckMetadataHandler, CodecheckYamlValidator
 
 cypress/
@@ -314,7 +309,7 @@ validation, register deposit, and the settings form beyond the sidebar toggle.
 
 ### PHPUnit tests
 
-`make test-php` — 132 tests, green (19 skipped, 1 warning, 2 deprecations).
+`make test-php` — 113 tests, green (19 skipped).
 
 PHPUnit needs an OJS installation: the tests load OJS classes and the runner uses the
 PHPUnit shipped in `lib/pkp`. Both `runTests.sh` and `bootstrap.php` honour `OJS_ROOT`,
@@ -491,8 +486,7 @@ Chrome + Chromium + Firefox, Cypress 14.5.4, Playwright 1.61.
 - `public/build/` gitignored but required — rebuild after pulling or after JS edits
 - `vendor/` required at file-scope `require` — `composer install` before anything PHP
 - `registry/uiLocaleKeysBackend.json` is generated — never hand-edit
-- `CodecheckMetadataDAO` is dead and queries a non-existent schema — don't extend it
-- `schema.xml` does not describe the real table — the migration does
+- `CodecheckSubmissionDAO` is the only DAO; the migration defines the schema
 - Hook argument arrays carry **references** (`[&$page, &$op, …]`). Writing through
   `$args[n]` propagates to the caller even though `$args` itself is by-value — unit
   tests must build the array with references to model this (see

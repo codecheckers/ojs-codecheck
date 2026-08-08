@@ -337,7 +337,6 @@ codecheck/
 ├── package-plugin.sh          # Shell script, that makes packaging this plugin reproducible
 ├── public/build/*             # NPM realese build files
 ├── resources/js/*             # The Vue.js Components
-├── schema.xml                 # CODECHECK metadata table schema file
 ├── templates/*                # HTML templates
 ├── tests/*                    # The ojs-codecheck plugin unit tests
 ├── version.xml                # Plugin metadata and version info
