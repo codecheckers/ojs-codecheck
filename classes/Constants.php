@@ -45,6 +45,7 @@ class Constants
     ];
     
     public const CODECHECK_SHOW_ARTICLE_SIDEBAR = 'showArticleSidebar';
+    public const CODECHECK_SHOW_IN_TOC = 'showInTOC';
 
     public const CODECHECK_AUTHOR_ANONYMITY = 'authorAnonymity';
     public const CODECHECK_API_ENDPOINT = 'codecheckApiEndpoint';
