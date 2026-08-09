@@ -249,9 +249,10 @@ README.md; keep `css/codecheck.css` and inline component styles consistent.
 ### Layout
 
 ```
-tests/                       PHPUnit (18 files, 132 tests)
+tests/                       PHPUnit (16 files, 116 tests)
   bootstrap.php              PKP_STRICT_MODE + BASE_SYS_DIR (OJS_ROOT or ../../../..)
   PKPTestCase.php            local stub extending PHPUnit TestCase
+  FakeTranslator.php         minimal translator so __() works without booting OJS
   phpunit.xml                default config (testdox, whole dir)
   phpunit_with_coverage.xml  + coverage HTML into tests/results/
   runTests.sh                wrapper; honours OJS_ROOT; --coverage-report=true|false
@@ -260,7 +261,7 @@ tests/                       PHPUnit (18 files, 132 tests)
   DataStructuresUnitTests/     UniqueArray
   FrontEndUnitTests/           ArticleDetails
   LogUnitTests/                CodecheckLogger
-  SettingsUnitTests/           Actions, Manage, SettingsForm
+  SettingsUnitTests/           Actions, Manage
   SubmissionUnitTests/         CodecheckMetadataDAO, CodecheckSubmissionDAO, CodecheckSubmission
   WorkflowUnitTests/           CodecheckMetadataHandler, CodecheckYamlValidator
 
@@ -314,16 +315,22 @@ validation, register deposit, and the settings form beyond the sidebar toggle.
 
 ### PHPUnit tests
 
-`make test-php` — 132 tests, green (19 skipped, 1 warning, 2 deprecations).
+`make test-php` — 116 tests, green, none skipped.
 
 PHPUnit needs an OJS installation: the tests load OJS classes and the runner uses the
 PHPUnit shipped in `lib/pkp`. Both `runTests.sh` and `bootstrap.php` honour `OJS_ROOT`,
 falling back to the four-levels-up layout CI uses. `OJS_ROOT` is mandatory here because
 the plugin directory is a symlink — see "Local development environment".
 
-Tests requiring Laravel facades / translator are `markTestSkipped` at `setUp()`:
-all of `SettingsFormUnitTest` (9), `ManageUnitTest` (6), and 4 in `ActionsUnitTest`.
-They are skipped locally *and* in CI.
+`tests/bootstrap.php` binds a `FakeTranslator` into Laravel's container so `__()`
+works without booting the application; it returns the locale key rather than a
+translation, so assert on structure and identifiers, not on translated text.
+
+Nothing is skipped. Anything needing a constructed `SettingsForm` was deleted
+rather than skipped: `PKP\form\Form::__construct` resolves journal locales
+through a database-backed facade, so building one is an integration test, and
+the `*-setting.cy.js` e2e specs already open the settings form, change a value
+and save it. **Prefer an e2e test over booting the application inside PHPUnit.**
 
 Not covered by PHPUnit at all: `CodecheckApiHandler` (1.1k lines, the entire API surface),
 `CodecheckRegisterDepositService`, `CodecheckPublicationValidator`, `CodecheckStatusHandler`,
