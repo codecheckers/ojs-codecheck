@@ -318,6 +318,10 @@ class CodecheckPlugin extends GenericPlugin
         $templateMgr = $args[0];
         $request = Application::get()->getRequest();
         $context = $request->getContext();
+
+        // No context means we're on a site-wide admin page — nothing to inject
+        if (!$context) return false;
+
         $contextId = $context->getId();
 
         // Editorial dashboard — inject dashboard config for the Vue JS layer.
