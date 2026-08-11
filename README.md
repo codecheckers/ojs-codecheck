@@ -26,6 +26,7 @@ The ojs-codecheck plugin development was started as part of the [CHECK-PUB](http
 -->
 - **Certificate display**: Automatically display CODECHECK certificates for verified submissions
 - **Customizable settings**: Configure CODECHECK workflow and display preferences
+- **ORCID deposition**: Automatically deposit CODECHECK peer-review activity to codecheckers' ORCID profiles using the ORCID Member API
 
 ## Installation
 
@@ -130,6 +131,27 @@ function getStatus() {
   return 'pending';
 }
 ```
+
+## ORCID Peer-Review Deposition
+
+The plugin deposits CODECHECK activity as a [peer-review item](https://support.orcid.org/hc/en-us/articles/360006971333-Peer-Reviews) to the codechecker's ORCID record. The following fields are set (see `classes/Orcid/PeerReviewPayloadBuilder.php`):
+
+| Field | Value |
+|---|---|
+| Role | `reviewer` |
+| Reviewer identifier | Codechecker's ORCID iD |
+| Convening organization | Publisher name (Journal Settings → Masthead → Publisher) |
+| Country | Journal Settings → Masthead → Country |
+| City | Not set — OJS has no publisher city field |
+| Group | `issn:{ISSN}` or `orcid-generated:codecheck-ojs` if no ISSN configured |
+| Type | `review` |
+| Date | Check completion date (`codecheck_metadata.check_time`) |
+| Review container name | Journal name |
+| Review identifier | Certificate DOI or source work ID (`codecheck_metadata.certificate`) |
+| Review URL | `https://doi.org/{certificate}` or CODECHECK register URL |
+| Subject name | Submission title |
+| Subject type | `journal-article` |
+| Subject identifier | Article DOI |
 
 ## Development
 
@@ -242,7 +264,7 @@ codecheck/
 ├── composer.lock              # composer lock-file
 ├── css/*                      # CODECHECK CSS stylesheets
 ├── cypress/tests/functional/  # End-to-end testing
-│   └── CodecheckPlugin.cy.js  # Cypress test suite
+│   └── CodecheckPlugin.cy.js  # Cypress test suite
 ├── locale/*                   # Internationalization (language localization strings)
 ├── package-lock.json
 ├── package.json

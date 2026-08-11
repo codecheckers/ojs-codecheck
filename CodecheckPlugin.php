@@ -10,6 +10,8 @@ use APP\plugins\generic\codecheck\classes\Settings\Manage;
 use APP\plugins\generic\codecheck\classes\migration\install\CodecheckSchemaMigration;
 use APP\plugins\generic\codecheck\classes\Submission\Schema;
 use APP\plugins\generic\codecheck\classes\Submission\SubmissionWizardHandler;
+use APP\plugins\generic\codecheck\classes\Orcid\OrcidAuthHandler;
+use APP\plugins\generic\codecheck\classes\Orcid\OrcidDepositService;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use Illuminate\Support\Facades\Schema as DBSchema;
 use PKP\plugins\GenericPlugin;
@@ -34,8 +36,6 @@ class CodecheckPlugin extends GenericPlugin
 {
     public function register($category, $path, $mainContextId = null): bool
     {
-        CodecheckLogger::debug('register() called, path=' . $path);
-
         $success = parent::register($category, $path);
 
         if ($success && $this->getEnabled()) {
@@ -77,6 +77,9 @@ class CodecheckPlugin extends GenericPlugin
                 return $codecheckWizard->addToSubmissionWizardReviewTemplate($hookName, $params);
             });
 
+            // ORCID: automatically deposit when an article is published
+            Hook::add('Publication::publish', $this->onPublicationPublish(...));
+            
             // Test if we can hook into the publication to block it if codecheck failed
             Hook::add('Publication::validatePublish', $this->validatePublicationHook(...));
 
@@ -184,22 +187,52 @@ class CodecheckPlugin extends GenericPlugin
     }
 
     /**
+     * Triggered when an editor publishes an article.
+     */
+    public function onPublicationPublish(string $hookName, array $args): bool
+    {
+        $publication = $args[0];
+        $submission = Repo::submission()->get($publication->getData('submissionId'));
+
+        if (!$submission) return false;
+        if (!$submission->getData('codecheckOptIn')) return false;
+
+        $context = Application::get()->getRequest()->getContext();
+        if (!$this->getSetting($context->getId(), Constants::ORCID_ENABLED)) return false;
+
+        try {
+            $depositService = new OrcidDepositService($this);
+            $results = $depositService->depositForSubmission($submission->getId());
+            foreach ($results as $result) {
+                if ($result['status'] === 'success') {
+                    CodecheckLogger::info('ORCID deposited for ' . $result['orcidId'] . ' put-code=' . $result['putCode']);
+                } else {
+                    CodecheckLogger::error('ORCID deposit failed for ' . $result['orcidId'] . ': ' . ($result['error'] ?? 'unknown'));
+                }
+            }
+        } catch (\Throwable $e) {
+            CodecheckLogger::error('ORCID deposit exception on publish: ' . $e->getMessage());
+        }
+
+        return false;
+    }
+
+    /**
      * Setup the CodecheckApiHandler.
+     * The constructor handles the request and exits — no need to set a router handler.
      */
     public function setupAPIHandler(string $hookName, array $args): void
     {
         $request = $args[0];
-        $router = $request->getRouter();
+        $router  = $request->getRouter();
 
-        if (!($router instanceof \PKP\core\APIRouter)) {
-            return;
-        }
+        if (!($router instanceof \PKP\core\APIRouter)) return;
 
         if (str_contains($request->getRequestPath(), 'api/v1/codecheck')) {
             CodecheckLogger::debug('Instantiating the CODECHECK APIHandler');
 
             $adminRoles = new CodecheckRoleArray([Role::ROLE_ID_MANAGER, Role::ROLE_ID_SITE_ADMIN]);
-            $editRoles = new CodecheckRoleArray([$adminRoles, Role::ROLE_ID_SUB_EDITOR, Role::ROLE_ID_ASSISTANT, Role::ROLE_ID_MANAGER]);
+            $editRoles = new CodecheckRoleArray([$adminRoles, Role::ROLE_ID_SUB_EDITOR, Role::ROLE_ID_ASSISTANT, Role::ROLE_ID_MANAGER, Role::ROLE_ID_REVIEWER]);
             $readRoles = new CodecheckRoleArray([$editRoles, Role::ROLE_ID_READER, Role::ROLE_ID_AUTHOR]);
 
             $roles = new CodecheckRoleManager(
@@ -208,16 +241,8 @@ class CodecheckPlugin extends GenericPlugin
                 admin: $adminRoles,
             );
 
-            $apiHandler = new CodecheckApiHandler($this, $request, $roles);
-            CodecheckLogger::debug('API request: ' . $request->getRequestPath());
+            new CodecheckApiHandler($this, $request, $roles);
         }
-
-        if (!isset($apiHandler)) {
-            return;
-        }
-
-        $router->setHandler($apiHandler);
-        exit;
     }
 
     /**
@@ -226,7 +251,6 @@ class CodecheckPlugin extends GenericPlugin
     public function setCodecheckPageHandler($hookName, $args)
     {
         $request = Application::get()->getRequest();
-        $templateMgr = TemplateManager::getManager($request);
 
         $page    = &$args[0];
         $op      = &$args[1];
@@ -238,6 +262,16 @@ class CodecheckPlugin extends GenericPlugin
         }
         if ($ops = $request->getRequestedArgs()) {
             $path .= '/' . implode('/', $ops);
+        }
+
+        // ORCID OAuth routes
+        if ($page === 'codecheck' && $op === 'orcid') {
+            $subOp = $request->getRequestedArgs()[0] ?? '';
+            if (in_array($subOp, ['startAuth', 'callback'], true)) {
+                $handler = new OrcidAuthHandler($this);
+                $args[1] = $subOp;
+                return true;
+            }
         }
 
         if ($page = 'codecheck' && $op == 'info') {
@@ -284,6 +318,10 @@ class CodecheckPlugin extends GenericPlugin
         $templateMgr = $args[0];
         $request = Application::get()->getRequest();
         $context = $request->getContext();
+
+        // No context means we're on a site-wide admin page — nothing to inject
+        if (!$context) return false;
+
         $contextId = $context->getId();
 
         // Editorial dashboard — inject dashboard config for the Vue JS layer.
@@ -304,24 +342,82 @@ class CodecheckPlugin extends GenericPlugin
                     'priority' => TemplateManager::STYLE_SEQUENCE_LAST,
                 ]
             );
+
+            $orcidAuthUrl = $request->getBaseUrl() . '/index.php/' . $context->getPath() . '/codecheck/orcid/startAuth';
+
+            $orcidConfig = json_encode([
+                'enabled' => (bool) $this->getSetting($contextId, Constants::ORCID_ENABLED),
+                'authUrl' => $orcidAuthUrl,
+                'apiType' => $this->getSetting($contextId, Constants::ORCID_API_TYPE)
+                            ?? Constants::ORCID_API_TYPE_SANDBOX,
+                'apiBaseUrl' => $request->getBaseUrl() . '/index.php/' . $context->getPath(),
+            ]);
+
+            $templateMgr->addJavaScript(
+                'codecheck-orcid-config',
+                'window.codecheckOrcidConfig = ' . $orcidConfig . ';',
+                [
+                    'inline' => true,
+                    'contexts' => ['backend'],
+                    'priority' => TemplateManager::STYLE_SEQUENCE_LAST
+                ]
+            );
         }
 
         // Workflow page — inject submission data for the CODECHECK tab.
         if ($request->getRequestedOp() == 'workflow') {
             $submission = $request->getRouter()->getHandler()->getAuthorizedContextObject(ASSOC_TYPE_SUBMISSION);
-
             if ($submission) {
                 $templateMgr->setState([
                     'codecheckSubmission' => [
-                        'id'                                   => $submission->getId(),
-                        'codecheckOptIn'                       => $submission->getData('codecheckOptIn'),
+                        'id' => $submission->getId(),
+                        'codecheckOptIn' => $submission->getData('codecheckOptIn'),
                         'retrieveReserveCertificateIdentifier' => $submission->getData('retrieveReserveCertificateIdentifier'),
-                        'codeRepository'                       => $submission->getData('codeRepository'),
-                        'dataRepository'                       => $submission->getData('dataRepository'),
-                        'manifestFiles'                        => $submission->getData('manifestFiles'),
-                        'dataAvailabilityStatement'            => $submission->getData('dataAvailabilityStatement'),
-                    ]
+                        'codeRepository' => $submission->getData('codeRepository'),
+                        'dataRepository' => $submission->getData('dataRepository'),
+                        'manifestFiles' => $submission->getData('manifestFiles'),
+                        'dataAvailabilityStatement' => $submission->getData('dataAvailabilityStatement'),
+                    ],
                 ]);
+            }
+        }
+
+        // ----------------------------------------------------------------
+        // Reviewer page — inject submission data + ORCID config for Vue
+        // ----------------------------------------------------------------
+        if ($request->getRequestedPage() == 'reviewer' && $request->getRequestedOp() == 'submission') {
+            $requestArgs  = $request->getRequestedArgs();
+            $submissionId = (int) ($requestArgs[0] ?? 0);
+
+            if ($submissionId) {
+                $context    = $request->getContext();
+                $contextId  = $context->getId();
+                $submission = Repo::submission()->get($submissionId);
+
+                if ($submission && $submission->getData('codecheckOptIn')) {
+                    $orcidAuthUrl = $request->getBaseUrl() . '/index.php/' . $context->getPath() . '/codecheck/orcid/startAuth';
+
+                    $reviewerData = json_encode([
+                        'submissionId'   => $submission->getId(),
+                        'codecheckOptIn' => true,
+                        'orcid'          => [
+                            'enabled'    => (bool) $this->getSetting($contextId, Constants::ORCID_ENABLED),
+                            'authUrl'    => $orcidAuthUrl,
+                            'apiType'    => $this->getSetting($contextId, Constants::ORCID_API_TYPE) ?? Constants::ORCID_API_TYPE_SANDBOX,
+                            'apiBaseUrl' => $request->getBaseUrl() . '/index.php/' . $context->getPath(),
+                        ],
+                    ]);
+
+                    $templateMgr->addJavaScript(
+                        'codecheck-reviewer-data',
+                        'window.codecheckReviewerData = ' . $reviewerData . ';',
+                        [
+                            'inline'   => true,
+                            'contexts' => ['backend'],
+                            'priority' => TemplateManager::STYLE_SEQUENCE_LAST,
+                        ]
+                    );
+                }
             }
         }
 

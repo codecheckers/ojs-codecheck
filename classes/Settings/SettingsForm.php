@@ -168,7 +168,7 @@ class SettingsForm extends Form
             Constants::CODECHECK_SHOW_DASHBOARD_COLUMN,
             $showDashboardColumn === null ? true : (bool) $showDashboardColumn
         );
-        
+
         $updateFields = $this->plugin->getSetting(
             $context->getId(),
             Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_FIELDS
@@ -184,6 +184,47 @@ class SettingsForm extends Form
             $this->plugin->getSetting(
                 $context->getId(),
                 Constants::CODECHECK_PUBLICATION_VALIDATION_EXTENDED
+            )
+        );
+
+        // ORCID integration settings
+        $this->setData(
+            Constants::ORCID_ENABLED,
+            $this->plugin->getSetting(
+                $context->getId(),
+                Constants::ORCID_ENABLED
+            )
+        );
+
+        $this->setData(
+            Constants::ORCID_API_TYPE,
+            $this->plugin->getSetting(
+                $context->getId(),
+                Constants::ORCID_API_TYPE
+            ) ?? Constants::ORCID_API_TYPE_SANDBOX
+        );
+
+        $this->setData(
+            Constants::ORCID_CLIENT_ID,
+            $this->plugin->getSetting(
+                $context->getId(),
+                Constants::ORCID_CLIENT_ID
+            )
+        );
+
+        $this->setData(
+            Constants::ORCID_CLIENT_SECRET,
+            $this->plugin->getSetting(
+                $context->getId(),
+                Constants::ORCID_CLIENT_SECRET
+            )
+        );
+
+        $this->setData(
+            Constants::ORCID_CITY,
+            $this->plugin->getSetting(
+                $context->getId(),
+                Constants::ORCID_CITY
             )
         );
 
@@ -218,6 +259,11 @@ class SettingsForm extends Form
             Constants::CODECHECK_STATUS_KEYS_SELECTED,
             Constants::CODECHECK_PUBLICATION_VALIDATION_EXTENDED,
             Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED,
+            Constants::ORCID_ENABLED,
+            Constants::ORCID_API_TYPE,
+            Constants::ORCID_CLIENT_ID,
+            Constants::ORCID_CLIENT_SECRET,
+            Constants::ORCID_CITY,
         ]);
 
         parent::readInputData();
@@ -243,11 +289,11 @@ class SettingsForm extends Form
             'opt-out'   => __('plugins.generic.codecheck.settings.mode.opt.out'),
             'mandatory' => __('plugins.generic.codecheck.settings.mode.mandatory'),
         ]);
-        
+
         $templateMgr->assign('codecheckBadgeType', $this->getData(Constants::CODECHECK_BADGE_TYPE) ?? 'codeworks');
         $templateMgr->assign('codecheckBadgeCustomUrl', $this->getData(Constants::CODECHECK_BADGE_CUSTOM_URL) ?? '');
         $templateMgr->assign('codecheckBadgeHeight', $this->getData(Constants::CODECHECK_BADGE_HEIGHT) ?? '24');
-        
+
         $templateMgr->assign(
             'showDashboardColumn',
             $this->getData(Constants::CODECHECK_SHOW_DASHBOARD_COLUMN)
@@ -258,6 +304,11 @@ class SettingsForm extends Form
             (array) $this->getData(Constants::CODECHECK_STATUSES_SELECTED) ?? []
         );
         $templateMgr->assign('codecheckStatuses', Constants::CODECHECK_STATUSES);
+
+        $templateMgr->assign('orcidApiTypes', [
+            Constants::ORCID_API_TYPE_SANDBOX    => __('plugins.generic.codecheck.orcid.apiType.sandbox'),
+            Constants::ORCID_API_TYPE_PRODUCTION => __('plugins.generic.codecheck.orcid.apiType.production'),
+        ]);
 
         return parent::fetch($request, $template, $display);
     }
@@ -354,7 +405,7 @@ class SettingsForm extends Form
             Constants::CODECHECK_BADGE_TYPE,
             $this->getData(Constants::CODECHECK_BADGE_TYPE) ?? 'codeworks'
         );
-        
+
         $this->plugin->updateSetting(
             $context->getId(),
             Constants::CODECHECK_STATUS_KEYS_SELECTED,
@@ -378,7 +429,7 @@ class SettingsForm extends Form
             Constants::CODECHECK_SHOW_DASHBOARD_COLUMN,
             (bool) $this->getData(Constants::CODECHECK_SHOW_DASHBOARD_COLUMN)
         );
-        
+
         $updateFields = array_values(array_filter([
             $this->getData(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE) ? Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE : null,
             $this->getData(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY) ? Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY : null,
@@ -395,6 +446,36 @@ class SettingsForm extends Form
             $context->getId(),
             Constants::CODECHECK_PUBLICATION_VALIDATION_EXTENDED,
             $this->getData(Constants::CODECHECK_PUBLICATION_VALIDATION_EXTENDED)
+        );
+        // Save ORCID integration settings
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::ORCID_ENABLED,
+            $this->getData(Constants::ORCID_ENABLED)
+        );
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::ORCID_API_TYPE,
+            $this->getData(Constants::ORCID_API_TYPE)
+        );
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::ORCID_CLIENT_ID,
+            $this->getData(Constants::ORCID_CLIENT_ID)
+        );
+        // Only update secret if a new value was provided
+        $newSecret = $this->getData(Constants::ORCID_CLIENT_SECRET);
+        if (!empty($newSecret)) {
+            $this->plugin->updateSetting(
+                $context->getId(),
+                Constants::ORCID_CLIENT_SECRET,
+                $newSecret
+            );
+        }
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::ORCID_CITY,
+            $this->getData(Constants::ORCID_CITY)
         );
 
         $notificationMgr = new NotificationManager();

@@ -77,6 +77,45 @@
 				}
 			);
 		});
+
+		$('#testOrcidSetup').on('click', function () {
+			const $btn    = $(this);
+			const $result = $('#orcidTestResult');
+
+			const labelTesting  = $btn.data('label-testing');
+			const labelDefault  = $btn.data('label-default');
+			const labelFallback = $btn.data('label-fallback');
+
+			$btn.prop('disabled', true).text(labelTesting);
+			$result.hide().removeClass('orcid-test--success orcid-test--error');
+
+			fetch(pkp.context.apiBaseUrl.replace('/api/v1', '') + '/api/v1/codecheck/orcid-test', {
+				headers: { 'X-Csrf-Token': pkp.currentUser.csrfToken }
+			})
+			.then(r => r.json())
+			.then(data => {
+				if (data.success) {
+					$result
+						.addClass('orcid-test--success')
+						.text('✓ ' + data.message)
+						.show();
+				} else {
+					$result
+						.addClass('orcid-test--error')
+						.text('✗ ' + data.error)
+						.show();
+				}
+			})
+			.catch((err) => {
+				$result
+					.addClass('orcid-test--error')
+					.text('✗ ' + (err.message || labelFallback))
+					.show();
+			})
+			.finally(() => {
+				$btn.prop('disabled', false).text(labelDefault);
+			});
+		});
 	});
 	
 	function toggleCustomBadgeUrl() {
@@ -101,6 +140,26 @@
 </script>
 {/literal}
 
+<style>
+#orcidTestResult {
+	margin-top: 0.75rem;
+	padding: 0.5rem 0.75rem;
+	border-radius: 4px;
+	font-size: 0.875rem;
+	display: none;
+}
+.orcid-test--success {
+	background: #d4edda;
+	color: #155724;
+	border: 1px solid #c3e6cb;
+}
+.orcid-test--error {
+	background: #f8d7da;
+	color: #721c24;
+	border: 1px solid #f5c6cb;
+}
+</style>
+
 <form
 	class="pkp_form"
 	id="codecheckSettings"
@@ -116,9 +175,7 @@
 		<p class="section-description">{translate key="plugins.generic.codecheck.settings.description"}</p>
 		
 		{* Option to enable/ disable CODECHECK *}
-		{fbvFormSection
-			list=true
-		}
+		{fbvFormSection list=true}
 			<div class="field-header">
 				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.enableCodecheck"}</label>
 			</div>
@@ -129,7 +186,7 @@
 				label="plugins.generic.codecheck.settings.enableCodecheck.description"
 			}
 		{/fbvFormSection}
-		
+
 		{fbvFormSection list=true}
 			<div class="field-header">
 				<label class="pkp_form_title">{translate key="plugins.generic.codecheck.settings.submission.title"}</label>
@@ -166,9 +223,7 @@
 		{/fbvFormSection}
 
 		{* Clear / Reset CODECHECK Metadata DB *}
-		{fbvFormSection
-			list=true
-		}
+		{fbvFormSection list=true}
 			<div class="field-header">
 				<label class="pkp_form_label">Clear / Reset CODECHECK Metadata Database</label>
 			</div>
@@ -379,10 +434,101 @@
 			{/fbvFormSection}
 		{/fbvFormSection}
 
-		{* TODO: Add more settings in future development *}
-		{* - ORCID integration settings *}
-		{* - Email template settings *}
-		
+		{* ------------------------------------------------------------------ *}
+		{* ORCID Deposition Settings                                           *}
+		{* ------------------------------------------------------------------ *}
+		{fbvFormSection id="settingsHeader" list=true}
+			<h3 class="section-title">{translate key="plugins.generic.codecheck.orcid.settingsTitle"}</h3>
+			<p class="section-description">{translate key="plugins.generic.codecheck.orcid.settingsDescription"}</p>
+		{/fbvFormSection}
+
+		{fbvFormSection list=true}
+			<div class="field-header">
+				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.orcid.enable"}</label>
+			</div>
+			{fbvElement
+				type="checkbox"
+				id="orcidEnabled"
+				checked=$orcidEnabled
+				label="plugins.generic.codecheck.orcid.enable"
+			}
+		{/fbvFormSection}
+
+		{fbvFormSection list=true}
+			<div class="field-header">
+				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.orcid.apiType"}</label>
+			</div>
+			{fbvElement
+				type="select"
+				id="orcidApiType"
+				class="codecheck-form-select"
+				from=$orcidApiTypes
+				selected=$orcidApiType
+				translate=false
+			}
+		{/fbvFormSection}
+
+		{fbvFormSection list=true}
+			<div class="field-header">
+				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.orcid.clientId"}</label>
+			</div>
+			<label class="description">{translate key="plugins.generic.codecheck.orcid.clientIdDescription"}</label>
+			<input
+				type="text"
+				name="orcidClientId"
+				class="pkpFormField__input"
+				value="{$orcidClientId|escape}"
+				placeholder="APP-XXXXXXXXXXXX"
+			/>
+		{/fbvFormSection}
+
+		{fbvFormSection list=true}
+			<div class="field-header">
+				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.orcid.clientSecret"}</label>
+			</div>
+			<label class="description">{translate key="plugins.generic.codecheck.orcid.clientSecretDescription"}</label>
+			<input
+				type="password"
+				name="orcidClientSecret"
+				class="pkpFormField__input"
+				value=""
+				placeholder="{if $orcidClientSecret}••••••••••••{/if}"
+			/>
+		{/fbvFormSection}
+
+		{fbvFormSection list=true}
+			<div class="field-header">
+				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.orcid.city"}</label>
+			</div>
+			<label class="description">{translate key="plugins.generic.codecheck.orcid.cityDescription"}</label>
+			<input
+				type="text"
+				name="orcidCity"
+				class="pkpFormField__input"
+				value="{$orcidCity|escape}"
+				placeholder="e.g. Amsterdam"
+			/>
+		{/fbvFormSection}
+
+		{fbvFormSection list=true}
+			<div class="field-header">
+				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.orcid.test.title"}</label>
+			</div>
+			<label class="description">{translate key="plugins.generic.codecheck.orcid.test.description"}</label>
+			<button
+				type="button"
+				id="testOrcidSetup"
+				class="pkpButton btn-add"
+				style="margin-top: 0;"
+				data-label-default="{translate key="plugins.generic.codecheck.orcid.test.button"}"
+				data-label-testing="{translate key="plugins.generic.codecheck.orcid.test.button.testing"}"
+				data-label-fallback="{translate key="plugins.generic.codecheck.orcid.test.error.requestFailed"}"
+			>
+				{translate key="plugins.generic.codecheck.orcid.test.button"}
+			</button>
+			<div id="orcidTestResult"></div>
+		{/fbvFormSection}
+
 	{/fbvFormArea}
 
 	{* Badge / Logo setting *}

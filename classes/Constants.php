@@ -2,7 +2,7 @@
 /**
  * @file classes/Constants.php
  *
- * Copyright (c) 2025 CODECHECK Initiative
+ * Copyright (c) 2026 CODECHECK Initiative
  * Distributed under the GNU GPL v3. For full terms see the file docs/COPYING.
  *
  * @class Constants
@@ -48,9 +48,9 @@ class Constants
         Constants::CODECHECK_STATUS_PUBLISHED_PARTIAL_REPRODUCTION,
         Constants::CODECHECK_STATUS_PUBLISHED_FULL_REPRODUCTION,
     ];
-    
+
     /**
-     * Plugin settings keys - NEW ADDITIONS
+     * Plugin settings keys
      */
     public const CODECHECK_ENABLED = 'codecheckEnabled';
     public const CODECHECK_AUTHOR_ANONYMITY = 'authorAnonymity';
@@ -67,21 +67,46 @@ class Constants
     public const CODECHECK_BADGE_HEIGHT = 'codecheckBadgeHeight';
 
     public const CODECHECK_SHOW_DASHBOARD_COLUMN = 'showDashboardColumn';
-    
-    # Update Github Register Issue
+
+    // Update Github Register Issue
     public const CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_FIELDS = 'codecheckGithubUpdateFields';
     public const CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE = 'updateTitle';
     public const CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY = 'updateBody';
     public const CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_STATUS = 'updateStatus';
-    
-    # Codecheck Publication Validation
-    # Codecheck Status
+
+    // Codecheck Status
     public const CODECHECK_STATUS = 'codecheckStatus';
     public const CODECHECK_STATUSES_SELECTED = 'codecheckStatusesSelected';
     public const CODECHECK_STATUS_KEYS_SELECTED = 'codecheckStatusKeysSelected';
-    # Extended Validation
+
+    // Extended Validation
     public const CODECHECK_PUBLICATION_VALIDATION_EXTENDED = 'codecheckPublicationExtendedValidation';
 
-    # Register Deposit (Issue #10)
+    // Register Deposit (Issue #10)
     public const CODECHECK_REGISTER_DEPOSIT_ENABLED = 'codecheckRegisterDepositEnabled';
+
+    // ORCID integration settings
+    public const ORCID_ENABLED = 'orcidEnabled';
+    public const ORCID_API_TYPE = 'orcidApiType';
+    public const ORCID_CLIENT_ID = 'orcidClientId';
+    public const ORCID_CLIENT_SECRET = 'orcidClientSecret';
+    public const ORCID_CITY = 'orcidCity';
+
+    // ORCID API type values
+    public const ORCID_API_TYPE_SANDBOX = 'memberSandbox';
+    public const ORCID_API_TYPE_PRODUCTION = 'member';
+
+    // ORCID API base URLs
+    public const ORCID_URL_SANDBOX = 'https://sandbox.orcid.org';
+    public const ORCID_URL_PRODUCTION = 'https://orcid.org';
+    public const ORCID_API_URL_SANDBOX = 'https://api.sandbox.orcid.org/v3.0';
+    public const ORCID_API_URL_PRODUCTION = 'https://api.orcid.org/v3.0';
+
+    // OAuth scope needed to deposit peer-review items
+    public const ORCID_ACTIVITIES_SCOPE = '/activities/update';
+
+    // Deposit status values stored in codecheck_orcid_tokens
+    public const ORCID_DEPOSIT_STATUS_PENDING = 'pending';
+    public const ORCID_DEPOSIT_STATUS_SUCCESS = 'success';
+    public const ORCID_DEPOSIT_STATUS_FAILED = 'failed';
 }

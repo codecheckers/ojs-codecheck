@@ -8,22 +8,17 @@ class JsonResponse
     private int $httpResponseCode;
 
     /**
-     * The JSON Response with an array as payload and a HTTP Response Code
-     * 
-     * @param $json_array The array that will be json encoded into the response
-     * @param $responseState The HTTP Response Code that will be set accordingly
-     * @return void
+     * @param array $json_array The array that will be json encoded into the response
+     * @param int $httpResponseCode The HTTP Response Code
      */
-    public function __construct(array $json_array, int $httpResponseCode)
+    public function __construct(array $json_array = [], int $httpResponseCode = 200)
     {
         $this->payload = json_encode($json_array);
         $this->httpResponseCode = $httpResponseCode;
     }
 
     /**
-     * This function returns the Payload of the JSON Response
-     * 
-     * @return string The Payload of the JSON Response
+     * Returns the Payload of the JSON Response
      */
     public function getPayload(): string
     {
@@ -71,11 +66,22 @@ class JsonResponse
      */
     public function constructResponse(): void
     {
-        // header for AJAX calls
         define('INDEX_FILE_STARTED', true);
         header('Content-Type: application/json');
         http_response_code($this->httpResponseCode);
         echo $this->payload;
+        exit;
+    }
+
+    /**
+     * Convenience instance method used by CodecheckApiHandler.
+     * Immediately sends the response and exits.
+     */
+    public function response(array $json_array, int $httpResponseCode): void
+    {
+        header('Content-Type: application/json');
+        http_response_code($httpResponseCode);
+        echo json_encode($json_array);
         exit;
     }
 

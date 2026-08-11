@@ -3,6 +3,7 @@ import CodecheckManifestFiles from "./Components/CodecheckManifestFiles.vue";
 import CodecheckRepositoryList from "./Components/CodecheckRepositoryList.vue";
 import CodecheckReviewDisplay from "./Components/CodecheckReviewDisplay.vue";
 import CodecheckDataAndSoftwareAvailability from "./Components/CodecheckDataAndSoftwareAvailability.vue";
+import CodecheckOrcidSection from "./Components/CodecheckOrcidSection.vue";
 import CodecheckMetadataForm from './Components/CodecheckMetadataForm.vue';
 import CodecheckStatusForm from './Components/CodecheckStatusForm.vue';
 import CodecheckGithubIssueDisplay from "./Components/CodecheckGithubIssueDisplay.vue";
@@ -12,6 +13,7 @@ pkp.registry.registerComponent("CodecheckMetadataForm", CodecheckMetadataForm);
 pkp.registry.registerComponent("CodecheckManifestFiles", CodecheckManifestFiles);
 pkp.registry.registerComponent("CodecheckRepositoryList", CodecheckRepositoryList);
 pkp.registry.registerComponent("CodecheckDataAndSoftwareAvailability", CodecheckDataAndSoftwareAvailability);
+pkp.registry.registerComponent("CodecheckOrcidSection", CodecheckOrcidSection);
 pkp.registry.registerComponent("CodecheckStatusForm", CodecheckStatusForm);
 pkp.registry.registerComponent("CodecheckGithubIssueDisplay", CodecheckGithubIssueDisplay);
 
@@ -60,23 +62,39 @@ pkp.registry.storeExtend("workflow", (piniaContext) => {
 
   workflowStore.extender.extendFn("getPrimaryItems", (primaryItems, args) => {
     const submission = args?.submission;
-        
+
     if (
       args?.selectedMenuState?.primaryMenuItem === "workflow" &&
       args?.selectedMenuState?.stageId === 999
     ) {
-      return [
+      const orcidConfig = window.codecheckOrcidConfig ?? {};
+
+      const items = [
         {
           title: "WORKFLOW: CODECHECK",
           component: "CodecheckMetadataForm",
           props: { 
             submission: submission,
             canEdit: true,
-            // Pass the journal mode so the form can show the opt-in warning box (Issue #30)
             codecheckMode: window.codecheckDashboardConfig?.codecheckMode ?? 'opt-in',
           },
         }
       ];
+
+      if (orcidConfig.enabled) {
+        items.push({
+          component: "CodecheckOrcidSection",
+          props: {
+            submission:   submission,
+            orcidEnabled: orcidConfig.enabled,
+            orcidAuthUrl: orcidConfig.authUrl,
+            orcidApiType: orcidConfig.apiType,
+            canAuthorise: false,
+          },
+        });
+      }
+
+      return items;
     }
     
     if (
@@ -97,7 +115,6 @@ pkp.registry.storeExtend("workflow", (piniaContext) => {
   });
 
   workflowStore.extender.extendFn("getSecondaryItems", (sidebarItems, args) => {
-    const store = pkp.registry.stores?.workflow;
     const submission = args?.submission;
 
     if (
@@ -190,7 +207,9 @@ pkp.registry.storeExtend("fileManager_SUBMISSION_FILES", (piniaContext) => {
   });
 });
 
-// Submission wizard field management
+// -----------------------------------------------------------------------
+// Submission wizard: save/load field data via API
+// -----------------------------------------------------------------------
 class CodecheckWizardManager {
   constructor() {
     this.textareas = {};
@@ -275,8 +294,6 @@ class CodecheckWizardManager {
     document.addEventListener('click', (e) => {
       const button = e.target.closest('button');
       if (!button) return;
-      
-      // Save on any button click except cancel
       if (button.id !== 'cancelSubmission') {
         this.saveData();
       }
@@ -289,7 +306,9 @@ class CodecheckWizardManager {
   }
 }
 
-// Review section refresher
+// -----------------------------------------------------------------------
+// Submission wizard: refresh review panel data
+// -----------------------------------------------------------------------
 class CodecheckReviewRefresher {
   constructor() {
     this.refreshedPanels = new Set();
@@ -309,50 +328,31 @@ class CodecheckReviewRefresher {
       }
     });
 
-    observer.observe(document.body, { 
-      childList: true, 
-      subtree: true 
-    });
+    observer.observe(document.body, { childList: true, subtree: true });
   }
 
   isOnReviewStep() {
-    // Find the review step container
     const allSteps = document.querySelectorAll('.pkpStep');
-    
     for (const step of allSteps) {
-      // Check if this step contains review panels AND is not hidden
       const hasReviewPanels = step.querySelectorAll('.submissionWizard__reviewPanel').length >= 3;
       const isVisible = !step.hasAttribute('hidden');
-      
-      if (hasReviewPanels && isVisible) {
-        return true;
-      }
+      if (hasReviewPanels && isVisible) return true;
     }
-    
     return false;
   }
 
   checkForReviewPanel() {
     const allH3s = document.querySelectorAll('.submissionWizard__reviewPanel h3');
-    
     for (const h3 of allH3s) {
       if (h3.textContent.includes('CODECHECK')) {
         const panel = h3.closest('.submissionWizard__reviewPanel');
-        
         if (!panel) continue;
-        
         const rect = panel.getBoundingClientRect();
         if (rect.width === 0 || rect.height === 0) continue;
-        
         const panelContent = panel.innerHTML.substring(0, 100);
-        
         if (!this.refreshedPanels.has(panelContent)) {
           this.refreshedPanels.add(panelContent);
-          
-          setTimeout(() => {
-            this.refreshReviewData(panel);
-          }, 200);
-          
+          setTimeout(() => { this.refreshReviewData(panel); }, 200);
           return;
         }
       }
@@ -366,7 +366,6 @@ class CodecheckReviewRefresher {
     try {
       const response = await fetch(`${pkp.context.apiBaseUrl}/submissions/${submissionId}`);
       const submission = await response.json();
-      
       const publication = submission.publications?.find(p => p.id === submission.currentPublicationId);
       if (!publication) return;
 
@@ -374,65 +373,26 @@ class CodecheckReviewRefresher {
       if (!body) return;
 
       body.innerHTML = '';
-      
       let hasData = false;
-      
+
       if (publication.codeRepository) {
         hasData = true;
-        body.innerHTML += `
-          <div class="submissionWizard__reviewPanel__item">
-            <h4>${this.escapeHtml(t('plugins.generic.codecheck.codeRepository'))}</h4>
-            <div class="review-value">
-              <p>${this.escapeHtml(publication.codeRepository).replace(/\n/g, '<br>')}</p>
-            </div>
-          </div>
-        `;
+        body.innerHTML += `<div class="submissionWizard__reviewPanel__item"><h4>${this.escapeHtml(t('plugins.generic.codecheck.codeRepository'))}</h4><div class="review-value"><p>${this.escapeHtml(publication.codeRepository).replace(/\n/g, '<br>')}</p></div></div>`;
       }
-      
       if (publication.dataRepository) {
         hasData = true;
-        body.innerHTML += `
-          <div class="submissionWizard__reviewPanel__item">
-            <h4>${this.escapeHtml(t('plugins.generic.codecheck.dataRepository'))}</h4>
-            <div class="review-value">
-              <p>${this.escapeHtml(publication.dataRepository).replace(/\n/g, '<br>')}</p>
-            </div>
-          </div>
-        `;
+        body.innerHTML += `<div class="submissionWizard__reviewPanel__item"><h4>${this.escapeHtml(t('plugins.generic.codecheck.dataRepository'))}</h4><div class="review-value"><p>${this.escapeHtml(publication.dataRepository).replace(/\n/g, '<br>')}</p></div></div>`;
       }
-      
       if (publication.manifestFiles) {
         hasData = true;
-        body.innerHTML += `
-          <div class="submissionWizard__reviewPanel__item">
-            <h4>${this.escapeHtml(t('plugins.generic.codecheck.manifestFiles.label'))}</h4>
-            <div class="review-value">
-              <pre>${this.escapeHtml(publication.manifestFiles)}</pre>
-            </div>
-          </div>
-        `;
+        body.innerHTML += `<div class="submissionWizard__reviewPanel__item"><h4>${this.escapeHtml(t('plugins.generic.codecheck.manifestFiles.label'))}</h4><div class="review-value"><pre>${this.escapeHtml(publication.manifestFiles)}</pre></div></div>`;
       }
-      
       if (publication.dataAvailabilityStatement) {
         hasData = true;
-        body.innerHTML += `
-          <div class="submissionWizard__reviewPanel__item">
-            <h4>${this.escapeHtml(t('plugins.generic.codecheck.dataAvailability'))}</h4>
-            <div class="review-value">
-              <div>${publication.dataAvailabilityStatement}</div>
-            </div>
-          </div>
-        `;
+        body.innerHTML += `<div class="submissionWizard__reviewPanel__item"><h4>${this.escapeHtml(t('plugins.generic.codecheck.dataAvailability'))}</h4><div class="review-value"><div>${publication.dataAvailabilityStatement}</div></div></div>`;
       }
-      
       if (!hasData) {
-        body.innerHTML = `
-          <div class="submissionWizard__reviewPanel__item">
-            <p class="description" style="color: #d00a0a;">
-              <em>${this.escapeHtml(t('plugins.generic.codecheck.noDataFound'))}</em>
-            </p>
-          </div>
-        `;
+        body.innerHTML = `<div class="submissionWizard__reviewPanel__item"><p class="description" style="color: #d00a0a;"><em>${this.escapeHtml(t('plugins.generic.codecheck.noDataFound'))}</em></p></div>`;
       }
     } catch (error) {
       console.error('CODECHECK: Failed to refresh review data', error);
@@ -452,20 +412,108 @@ class CodecheckReviewRefresher {
   }
 }
 
-// Initialize — mount Vue components only after WizardManager has loaded saved data
-// into textareas, so components receive the correct initial values
+// -----------------------------------------------------------------------
+// Initialization
+// -----------------------------------------------------------------------
 window.addEventListener('DOMContentLoaded', () => {
-  setTimeout(() => {
-    new CodecheckReviewRefresher();
-  }, 200);
-
   setTimeout(async () => {
     const manager = new CodecheckWizardManager();
     await manager.init();
     mountCodecheckVueComponents();
   }, 100);
+
+  setTimeout(() => {
+    new CodecheckReviewRefresher();
+
+    if (window.codecheckReviewerData) {
+      const tab3Link = document.querySelector('#reviewTabs ul li:nth-child(3) a');
+      if (tab3Link) {
+        const badge = document.createElement('span');
+        badge.style.cssText = 'margin-left: 0.4rem; font-size: 0.7rem; background: #008033; color: white; padding: 0.1rem 0.3rem; border-radius: 3px; vertical-align: middle;';
+        badge.textContent = 'CODECHECK';
+        tab3Link.appendChild(badge);
+      }
+    }
+  }, 1000);
+
+  const observer = new MutationObserver(() => {
+    const step3 = document.querySelector('#reviewStep3');
+    if (step3 && step3.children.length > 0 && !document.querySelector('#codecheck-reviewer-form')) {
+      window.mountCodecheckReviewerForm();
+    }
+  });
+
+  observer.observe(document.body, { childList: true, subtree: true });
 });
 
+// -----------------------------------------------------------------------
+// Reviewer page: mount CODECHECK form inside tab 3 (Download & Review).
+// -----------------------------------------------------------------------
+function mountCodecheckReviewerForm() {
+  if (!window.codecheckReviewerData) return;
+
+  const step3 = document.querySelector('#reviewStep3');
+  if (!step3) return;
+  if (document.querySelector('#codecheck-reviewer-form')) return;
+  if (step3.children.length === 0) return;
+
+  const reviewerData = window.codecheckReviewerData;
+  const submission = {
+    id: reviewerData.submissionId,
+    codecheckOptIn: reviewerData.codecheckOptIn,
+  };
+
+  const details = document.createElement('details');
+  details.id = 'codecheck-reviewer-form';
+  details.style.cssText = 'margin-top: 2rem; border: 1px solid #ddd; border-radius: 4px; background: #fff;';
+
+  const summary = document.createElement('summary');
+  summary.style.cssText = 'padding: 1rem; font-weight: 600; font-size: 1rem; cursor: pointer; list-style: none; display: flex; align-items: center; gap: 0.5rem; background: #f8f8f8; border-radius: 4px;';
+  summary.innerHTML = '<span style="color: #008033;">&#10003;</span> CODECHECK Documentation';
+
+  const content = document.createElement('div');
+  content.style.cssText = 'padding: 1rem;';
+
+  details.appendChild(summary);
+  details.appendChild(content);
+
+  const form = document.querySelector('#reviewStep3Form');
+  if (form) {
+    form.after(details);
+  } else {
+    step3.appendChild(details);
+  }
+
+  const metadataDiv = document.createElement('div');
+  content.appendChild(metadataDiv);
+  const metadataApp = createApp(CodecheckMetadataForm, {
+    submission: submission,
+    canEdit: true,
+  });
+  metadataApp.component('pkp-button', pkp.registry.getComponent('PkpButton'));
+  metadataApp.mount(metadataDiv);
+
+  const orcid = reviewerData.orcid ?? {};
+  if (orcid.enabled) {
+    window.codecheckOrcidConfig = orcid;
+    const orcidDiv = document.createElement('div');
+    content.appendChild(orcidDiv);
+    const orcidApp = createApp(CodecheckOrcidSection, {
+      submission:   submission,
+      orcidEnabled: orcid.enabled,
+      orcidAuthUrl: orcid.authUrl,
+      orcidApiType: orcid.apiType,
+      canAuthorise: true,
+    });
+    orcidApp.component('pkp-button', pkp.registry.getComponent('PkpButton'));
+    orcidApp.mount(orcidDiv);
+  }
+}
+window.mountCodecheckReviewerForm = mountCodecheckReviewerForm;
+
+// -----------------------------------------------------------------------
+// Submission wizard: mount Vue components into textareas
+// -----------------------------------------------------------------------
 function mountCodecheckVueComponents() {
   const manifestContainer = document.querySelector('textarea[name="manifestFiles"]')?.parentElement;
   if (manifestContainer) {
@@ -571,18 +619,8 @@ const CodecheckFileStatus = {
 
 pkp.registry.registerComponent("CodecheckFileStatus", CodecheckFileStatus);
 
-console.log("CODECHECK plugin initialized successfully");
-
 // -----------------------------------------------------------------------
 // Issue #30: Dashboard CODECHECK status column
-//
-// Injects a CODECHECK column into the editorial submissions dashboard.
-// Each cell fetches from api/v1/codecheck/metadata and shows:
-//   - certificate id (green)  if a CODECHECK is complete
-//   - "Add" link              if no CODECHECK certificate exists
-//
-// Controlled by the showDashboardColumn plugin setting (default: true).
-// window.codecheckDashboardConfig is injected by CodecheckPlugin.php.
 // -----------------------------------------------------------------------
 const DashboardCellCodecheck = {
   name: 'DashboardCellCodecheck',
@@ -637,8 +675,6 @@ const DashboardCellCodecheck = {
 pkp.registry.registerComponent("DashboardCellCodecheck", DashboardCellCodecheck);
 
 pkp.registry.storeExtend("dashboard", (piniaContext) => {
-  // Read setting inside the callback so it's evaluated when the store loads,
-  // not at script load time when window.codecheckDashboardConfig may not exist yet.
   if (!(window.codecheckDashboardConfig ?? { showDashboardColumn: true }).showDashboardColumn) {
     return;
   }
