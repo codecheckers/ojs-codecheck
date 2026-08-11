@@ -7,12 +7,13 @@ use APP\template\TemplateManager;
 use APP\plugins\generic\codecheck\classes\FrontEnd\ArticleDetails;
 use APP\plugins\generic\codecheck\classes\Settings\Actions;
 use APP\plugins\generic\codecheck\classes\Settings\Manage;
-use APP\plugins\generic\codecheck\classes\migration\CodecheckSchemaMigration;
+use APP\plugins\generic\codecheck\classes\migration\install\CodecheckSchemaMigration;
 use APP\plugins\generic\codecheck\classes\Submission\Schema;
 use APP\plugins\generic\codecheck\classes\Submission\SubmissionWizardHandler;
 use APP\plugins\generic\codecheck\classes\Orcid\OrcidAuthHandler;
 use APP\plugins\generic\codecheck\classes\Orcid\OrcidDepositService;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
+use Illuminate\Support\Facades\Schema as DBSchema;
 use PKP\plugins\GenericPlugin;
 use PKP\plugins\Hook;
 use PKP\components\forms\FieldOptions;
@@ -26,13 +27,13 @@ use APP\plugins\generic\codecheck\controllers\page\CodecheckPageHandler;
 use APP\plugins\generic\codecheck\classes\CodecheckRoles\CodecheckRoleArray;
 use APP\plugins\generic\codecheck\classes\CodecheckRoles\CodecheckRoleManager;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
+use APP\plugins\generic\codecheck\classes\Workflow\CodecheckPublicationValidator;
+use APP\plugins\generic\codecheck\classes\Workflow\CodecheckRegisterDepositService;
 use PKP\core\Request;
 use \Github\Client;
 
 class CodecheckPlugin extends GenericPlugin
 {
-    private CodecheckSchemaMigration $migration;
-
     public function register($category, $path, $mainContextId = null): bool
     {
         $success = parent::register($category, $path);
@@ -57,22 +58,22 @@ class CodecheckPlugin extends GenericPlugin
             Hook::add('LoadHandler', $this->setCodecheckPageHandler(...));
             // Add hook for the Template Manager
             Hook::add('TemplateManager::display', $this->callbackTemplateManagerDisplay(...));
-            
+
             // Wizard fields schema
             $codecheckSchema = new Schema();
-            Hook::add('Schema::get::publication', function($hookName, $args) use ($codecheckSchema) {
+            Hook::add('Schema::get::publication', function ($hookName, $args) use ($codecheckSchema) {
                 return $codecheckSchema->addToSchemaPublication($hookName, $args);
             });
 
             // Wizard template handlers
             $codecheckWizard = new SubmissionWizardHandler($this);
-            Hook::add('TemplateManager::display', function($hookName, $params) use ($codecheckWizard) {
+            Hook::add('TemplateManager::display', function ($hookName, $params) use ($codecheckWizard) {
                 return $codecheckWizard->addToSubmissionWizardSteps($hookName, $params);
             });
-            Hook::add('Template::SubmissionWizard::Section', function($hookName, $params) use ($codecheckWizard) {
+            Hook::add('Template::SubmissionWizard::Section', function ($hookName, $params) use ($codecheckWizard) {
                 return $codecheckWizard->addToSubmissionWizardTemplate($hookName, $params);
             });
-            Hook::add('Template::SubmissionWizard::Section::Review', function($hookName, $params) use ($codecheckWizard) {
+            Hook::add('Template::SubmissionWizard::Section::Review', function ($hookName, $params) use ($codecheckWizard) {
                 return $codecheckWizard->addToSubmissionWizardReviewTemplate($hookName, $params);
             });
 
@@ -80,7 +81,10 @@ class CodecheckPlugin extends GenericPlugin
             Hook::add('Publication::publish', $this->onPublicationPublish(...));
             
             // Test if we can hook into the publication to block it if codecheck failed
-            Hook::add('Publication::validatePublish', $this->validateCodecheckStatus(...));
+            Hook::add('Publication::validatePublish', $this->validatePublicationHook(...));
+
+            // Deposit a register.csv row when a CODECHECK-opted-in article is published (Issue #10)
+            Hook::add('Publication::publish', $this->depositToRegister(...));
 
             // Add Localizations to Codecheck Status Preview
             Hook::add('TemplateManager::display', $this->addCodecheckStatusLocalizations(...));
@@ -89,50 +93,99 @@ class CodecheckPlugin extends GenericPlugin
         return $success;
     }
 
-    public function validateCodecheckStatus(string $hookName, array $args): bool
+    /**
+     * The publication will be invalid, whenever we ship at least one error in the `$errors` Array. And it will be valid, whenever the array is empty.
+     * The return value of this function doesn't have to do anything with the publication validation. Instead it has to do with how OJS handles this hook. If `true` where to be returned, the Hook: `'Publication::validatePublish'` would stop to be called (meaning that for other plugins & OJS itsself this Hook wouldn't be fired anymore, if we have invalid metadata). This of course means, that e.g. if a submission is in the review stage, but somehow the editor already wants to publish it, we never get to see this error during the publication validation (because our invalid CODECHECK data would stop the hook).
+     * To prevent this, it is best practise to always return `false` on a Hook, so other Plugins and OJS itsself get to call the Hook as well after our plugin did.
+     * 
+     * @param string $hookName The name of the Hook (`'Publication::validatePublish'`)
+     * @param array $args The arguments of the Hook including the validation `$errors` Array at `&$args[0]`
+     * 
+     * @return bool Returns `false` to enable OJS itsself and other Plugins to continue with their implementation for this Hook
+    */
+    public function validatePublicationHook(string $hookName, array $args): bool
     {
+        CodecheckLogger::debug("Validating Publication!");
         $errors = &$args[0];
-        $publication = $args[1]; // sometimes passed by reference depending on version
-        $request = Application::get()->getRequest();
-        $context = $request->getContext();
-        $codecheckMetadataHandler = new CodecheckMetadataHandler($request, new Client(), new CurlApiClient());
-        $codecheckStatus = CodecheckStatusHandler::getCurrentStatusData($codecheckMetadataHandler->getSubmissionId());
+        $codecheckPublicationValidator = new CodecheckPublicationValidator($this);
 
-        CodecheckLogger::debug("Validating CODECHECK before publication!");
+        $validationErrors = $codecheckPublicationValidator->validatePublication();
 
-        $codecheckStatusKeysSelected = $this->getSetting($context->getId(), Constants::CODECHECK_STATUS_KEYS_SELECTED);
-
-        if (empty($codecheckStatus)) {
-            $errors[] = __('plugins.generic.codecheck.status.validation.failed.noStatusSet');
-            return false;
+        if(is_array($validationErrors)) {
+            $errors = array_merge($errors, $validationErrors);
         }
 
-        if (!in_array($codecheckStatus->status, $codecheckStatusKeysSelected)) {
-            $errors[] = __('plugins.generic.codecheck.status.validation.failed', [
-                'codecheckStatus' => __($codecheckStatus->status)
-            ]);
-            return false;
-        }
-
-        return true;
+        /* Returns `false` to enable OJS itsself and other Plugins to continue with their implementation for this Hook */
+        return false;
     }
 
-    public function addCodecheckStatusLocalizations($hookName, $args) {
+    /**
+     * Deposits a register.csv row to the CODECHECK Register when a
+     * CODECHECK-opted-in submission is published.
+     *
+     * Fires on `Publication::publish`, i.e. after the publication has
+     * actually been saved as published (not during pre-publish validation),
+     * matching the hook signature:
+     *   Hook::call('Publication::publish', [&$newPublication, $publication, $submission]);
+     *
+     * Uses whichever GitHub register organization/repository is already
+     * configured in the plugin settings (see CODECHECK_GITHUB_REGISTER_ORGANIZATION /
+     * CODECHECK_GITHUB_REGISTER_REPOSITORY) — currently defaulting to
+     * codecheckers/testing-dev-register for development.
+     *
+     * @param string $hookName
+     * @param array $args [0] => Publication $newPublication, [1] => Publication $publication, [2] => Submission $submission
+     * @return bool
+     */
+    public function depositToRegister(string $hookName, array $args): bool
+    {
+        [$newPublication, $publication, $submission] = $args;
+
+        if (!$submission->getData('codecheckOptIn')) {
+            return false;
+        }
+
+        $context = Application::get()->getRequest()->getContext();
+        if (!$this->getSetting($context->getId(), Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED)) {
+            CodecheckLogger::debug('Register deposit is disabled for this journal; skipping for submission #' . $submission->getId());
+            return false;
+        }
+
+        CodecheckLogger::debug('Depositing register.csv row for submission #' . $submission->getId());
+
+        $depositService = new CodecheckRegisterDepositService($this);
+        $result = $depositService->depositForSubmission($submission->getId());
+
+        if (!$result['success']) {
+            CodecheckLogger::error('Register deposit failed for submission #' . $submission->getId() . ': ' . ($result['error'] ?? 'unknown error'));
+        }
+
+        // Never block publication on a register-deposit failure — this is a
+        // best-effort side effect, not a publish requirement. Failures are
+        // logged; a manual/CI fallback can pick up the deposit later.
+        return false;
+    }
+
+    public function addCodecheckStatusLocalizations($hookName, $args)
+    {
         $templateMgr = $args[0];
+
+        $localeKeys = array_combine(
+            Constants::CODECHECK_STATUSES,
+            array_map(fn($status) => __($status), Constants::CODECHECK_STATUSES)
+        );
+
+        $localeKeys[Constants::CODECHECK_STATUS_PENDING] = __(Constants::CODECHECK_STATUS_PENDING);
+
         $templateMgr->addJavaScript(
             'codecheck-locale-status',
             'pkp.localeKeys = pkp.localeKeys || {};' .
-            'Object.assign(pkp.localeKeys, ' . json_encode(
-                array_combine(
-                    Constants::CODECHECK_STATUSES,
-                    array_map(fn($status) => __($status), Constants::CODECHECK_STATUSES)
-                )
-            ) . ');',
+            'Object.assign(pkp.localeKeys, ' . json_encode($localeKeys) . ');',
             ['inline' => true, 'contexts' => ['backend']]
         );
         return false;
     }
-    
+
     /**
      * Triggered when an editor publishes an article.
      */
@@ -183,9 +236,9 @@ class CodecheckPlugin extends GenericPlugin
             $readRoles = new CodecheckRoleArray([$editRoles, Role::ROLE_ID_READER, Role::ROLE_ID_AUTHOR]);
 
             $roles = new CodecheckRoleManager(
-                readMetadata:  $readRoles,
-                editMetadata:  $editRoles,
-                admin:         $adminRoles,
+                readMetadata: $readRoles,
+                editMetadata: $editRoles,
+                admin: $adminRoles,
             );
 
             new CodecheckApiHandler($this, $request, $roles);
@@ -227,6 +280,7 @@ class CodecheckPlugin extends GenericPlugin
             $handler = new CodecheckPageHandler($this);
             return true;
         }
+
         return false;
     }
 
@@ -234,7 +288,7 @@ class CodecheckPlugin extends GenericPlugin
     {
         $request = Application::get()->getRequest();
         $templateMgr = TemplateManager::getManager($request);
-        
+
         $templateMgr->addJavaScript(
             'codecheck-vue-app',
             "{$request->getBaseUrl()}/{$this->getPluginPath()}/public/build/build.iife.js",
@@ -244,13 +298,13 @@ class CodecheckPlugin extends GenericPlugin
                 'priority' => TemplateManager::STYLE_SEQUENCE_LAST
             ]
         );
-        
+
         $templateMgr->addStyleSheet(
             'codecheck-vue-styles',
             "{$request->getBaseUrl()}/{$this->getPluginPath()}/public/build/build.css",
             ['contexts' => ['backend', 'frontend']]
         );
-        
+
         $cssUrl = $request->getBaseUrl() . '/' . $this->getPluginPath() . '/css/codecheck.css';
         $templateMgr->addStyleSheet(
             'codecheck-styles',
@@ -266,11 +320,7 @@ class CodecheckPlugin extends GenericPlugin
         $context = $request->getContext();
         $contextId = $context->getId();
 
-        // ----------------------------------------------------------------
         // Editorial dashboard — inject dashboard config for the Vue JS layer.
-        // Passes showDashboardColumn (Issue #30) and codecheckMode so the
-        // CODECHECK status column and opt-in warning box can be controlled.
-        // ----------------------------------------------------------------
         if ($request->getRequestedOp() == 'editorial' && $request->getRequestedPage() == 'dashboard') {
             $showDashboardColumn = $this->getSetting($contextId, Constants::CODECHECK_SHOW_DASHBOARD_COLUMN);
 
@@ -310,9 +360,7 @@ class CodecheckPlugin extends GenericPlugin
             );
         }
 
-        // ----------------------------------------------------------------
-        // Workflow page — inject submission data for the CODECHECK tab
-        // ----------------------------------------------------------------
+        // Workflow page — inject submission data for the CODECHECK tab.
         if ($request->getRequestedOp() == 'workflow') {
             $submission = $request->getRouter()->getHandler()->getAuthorizedContextObject(ASSOC_TYPE_SUBMISSION);
             if ($submission) {
@@ -381,19 +429,19 @@ class CodecheckPlugin extends GenericPlugin
     public function addOptInToSchema(string $hookName, array $args): bool
     {
         $schema = $args[0];
-        
+
         $schema->properties->codecheckOptIn = (object) [
-            'type' => 'boolean',
+            'type'       => 'boolean',
             'apiSummary' => true,
             'validation' => ['nullable']
         ];
 
         $schema->properties->retrieveReserveCertificateIdentifier = (object) [
-            'type' => 'string',
+            'type'       => 'string',
             'apiSummary' => true,
             'validation' => ['nullable']
         ];
-        
+
         return false;
     }
 
@@ -435,34 +483,37 @@ class CodecheckPlugin extends GenericPlugin
                 'groupId' => 'default'
             ]));
         }
-        
+
         return false;
     }
 
     public function saveOptIn(string $hookName, array $params): bool
     {
-        $submission = $params[0];
+        $submission   = $params[0];
         $params_array = $params[2];
-        
+
         if (isset($params_array['codecheckOptIn'])) {
             $submission->setData('codecheckOptIn', $params_array['codecheckOptIn']);
         }
-        
+
         return false;
     }
 
     public function saveWizardFieldsFromRequest(string $hookName, array $params): bool
     {
         $submission = $params[1];
-        if (!$submission) return false;
-        
+
+        if (!$submission) {
+            return false;
+        }
+
         $request = Application::get()->getRequest();
-        
-        $codeRepository = $request->getUserVar('codeRepository');
-        $dataRepository = $request->getUserVar('dataRepository');
-        $manifestFiles = $request->getUserVar('manifestFiles');
+
+        $codeRepository            = $request->getUserVar('codeRepository');
+        $dataRepository            = $request->getUserVar('dataRepository');
+        $manifestFiles             = $request->getUserVar('manifestFiles');
         $dataAvailabilityStatement = $request->getUserVar('dataAvailabilityStatement');
-        
+
         if ($codeRepository || $dataRepository || $manifestFiles || $dataAvailabilityStatement) {
             $publication = $submission->getCurrentPublication();
             if ($publication) {
@@ -471,18 +522,18 @@ class CodecheckPlugin extends GenericPlugin
                 if ($dataRepository) $updates['dataRepository'] = $dataRepository;
                 if ($manifestFiles) $updates['manifestFiles'] = $manifestFiles;
                 if ($dataAvailabilityStatement) $updates['dataAvailabilityStatement'] = $dataAvailabilityStatement;
-                
+
                 if (!empty($updates)) {
                     Repo::publication()->edit($publication, $updates);
                 }
             }
         }
-        
+
         return false;
     }
 
     /**
-     * Provide a name for this plugin
+     * Provide a name for this plugin.
      */
     public function getDisplayName(): string
     {
@@ -490,11 +541,20 @@ class CodecheckPlugin extends GenericPlugin
     }
 
     /**
-     * Provide a description for this plugin
+     * Provide a description for this plugin.
      */
     public function getDescription(): string
     {
         return __('plugins.generic.codecheck.description');
+    }
+
+    /**
+     * @copydoc Plugin::getInstallMigration()
+     * Registers the install migration with OJS's plugin installer mechanism.
+     */
+    public function getInstallMigration(): CodecheckSchemaMigration
+    {
+        return new CodecheckSchemaMigration();
     }
 
     /**
@@ -506,6 +566,9 @@ class CodecheckPlugin extends GenericPlugin
         return $actions->execute($request, $actionArgs, parent::getActions($request, $actionArgs));
     }
 
+    /**
+     * Load a form when the `settings` button is clicked and save it when the user saves it.
+     */
     public function manage($args, $request): JSONMessage
     {
         $manage = new Manage($this);
@@ -514,26 +577,33 @@ class CodecheckPlugin extends GenericPlugin
 
     public function setEnabled($enabled, $contextId = null)
     {
-        CodecheckLogger::debug("Plugin Enabled!");
         $result = parent::setEnabled($enabled, $contextId);
-        
+
         if ($enabled) {
-            $this->migration = new CodecheckSchemaMigration();
-            $this->migration->up();
-            $this->migration->issueLabelsUp();
-            $this->migration->codecheckStatusUp();
+            // Single entry point — install migration calls upgrade migrations internally.
+            $this->getInstallMigration()->up();
         }
-        
+
         return $result;
     }
 
+    /**
+     * Drop all CODECHECK tables and recreate them from scratch.
+     *
+     * This is a deliberate, admin-triggered destructive action exposed via
+     * the plugin settings UI ("Clear / Reset DB"). It is intentionally kept
+     * separate from the migration system, which never drops tables.
+     */
     public function resetSchema(): void
     {
-        $this->migration = new CodecheckSchemaMigration();
-        $this->migration->down();
-        $this->migration->up();
-        $this->migration->issueLabelsDown();
-        $this->migration->issueLabelsUp();
+        // Drop in reverse dependency order — codecheck_status references codecheck_metadata.
+        DBSchema::dropIfExists('codecheck_status');
+        DBSchema::dropIfExists('codecheck_orcid_tokens');
+        DBSchema::dropIfExists('codecheck_issue_labels');
+        DBSchema::dropIfExists('codecheck_metadata');
+
+        // Recreate everything fresh via the install migration.
+        $this->getInstallMigration()->up();
     }
 }
 

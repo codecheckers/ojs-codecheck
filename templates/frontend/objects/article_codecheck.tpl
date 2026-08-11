@@ -12,7 +12,11 @@
 
     {* Badge *}
     <div class="sub_item" style="display:flex; align-items:center; margin-bottom:8px;">
-        <img src="{$logoUrl|escape}" alt="{translate key='plugins.generic.codecheck.badge.altText'}" style="height:18px; margin-right:6px;">
+        {if $logoUrl}
+            <img src="{$logoUrl|escape}" alt="{translate key='plugins.generic.codecheck.badge.altText'}" style="{$badgeStyle} margin-right:6px;">
+        {else}
+            <span style="color:#2d7f3e; font-weight:600; margin-right:6px;">{translate key='plugins.generic.codecheck.badge.textOnly'}</span>
+        {/if}
     </div>
 
     {* Codecheckers with ORCIDs *}
@@ -117,7 +121,11 @@
 <div class="item codecheck-pending" style="padding: 15px; margin: 5px 0;">
 
     <div class="sub_item" style="display:flex; align-items:center; margin-bottom:8px;">
-        <img src="{$logoUrl|escape}" alt="{translate key='plugins.generic.codecheck.badge.altText'}" style="height:18px; margin-right:6px;">
+        {if $logoUrl}
+            <img src="{$logoUrl|escape}" alt="{translate key='plugins.generic.codecheck.badge.altText'}" style="{$badgeStyle} margin-right:6px;">
+        {else}
+            <span style="font-size:0.8em; font-weight:600; color:#333; margin-right:6px;">{translate key='plugins.generic.codecheck.badge.textOnly'}</span>
+        {/if}
     </div>
 
     <div class="sub_item">

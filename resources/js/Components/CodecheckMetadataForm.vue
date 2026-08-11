@@ -171,20 +171,41 @@
           </div>
           <p class="field-description">{{ t('plugins.generic.codecheck.repositories.description') }}</p>
           
+          <p
+            v-if="repositoryWarning.message !== null"
+            :class="repositoryWarning.isWarning ? 'codecheck-repository-warning' : 'codecheck-repository-error'"
+          >
+            ⚠ {{ repositoryWarning.message }}
+          </p>
+
           <div v-if="repositories.length > 0" class="repository-list">
             <div v-for="(repo, index) in repositories" :key="'repo-' + index" class="repository-item">
               <input
                 type="url"
-                v-model="repositories[index]"
+                v-model="repo.url"
                 class="pkpFormField__input"
                 :placeholder="t('plugins.generic.codecheck.repository.placeholder')"
               />
+              <label class="repo-private-label" :title="t('plugins.generic.codecheck.repository.markAsPrivate.tooltip')">
+                <input type="checkbox" v-model="repo.isPrivate" class="repo-private-checkbox" />
+                {{ t('plugins.generic.codecheck.repository.markAsPrivate') }}
+                <span class="repo-private-info">ℹ️</span>
+              </label>
               <button
+                v-if="repositoryWithCodecheckYaml === index"
                 type="button"
                 class="pkpButton btn-add"
                 @click="loadMetadataFromRepository(index)"
               >
-                Load Metadata
+                {{ t('plugins.generic.codecheck.repositories.loadMetadata') }}
+              </button>
+              <button
+                type="button"
+                :class="['pkpButton', 'btn-radio', { 'btn-radio__active': repositoryWithCodecheckYaml === index }]"
+                @click="repositoryWithCodecheckMetadata(index)"
+                :title="t('plugins.generic.codecheck.repositories.containsCodecheckYaml')"
+              >
+                📄 codecheck.yml
               </button>
               <button 
                 type="button"
@@ -194,7 +215,7 @@
             </div>
           </div>
           <div v-else class="empty-state">
-            No repositories added yet
+            {{ t('plugins.generic.codecheck.repositories.emptyState') }}
           </div>
         </div>
 
@@ -434,7 +455,12 @@ export default {
         summary: '',
         report: '',
         additionalContent: ''
-      }
+      },
+      repositoryWithCodecheckYaml: null,
+      repositoryWarning: {
+        message: null,
+        isWarning: true,
+      },
     }
   },
   computed: {
@@ -546,12 +572,17 @@ export default {
         };
         
         if (data.codecheck && typeof data.codecheck === 'object') {
+          let repositoryData = typeof data.codecheck.repository === 'string' ? JSON.parse(data.codecheck.repository) :  {
+            repositories: null,
+            repoWithCodecheckYaml: null,
+          };
+
           this.metadata = {
             version: data.codecheck.version || data.codecheck.version || 'latest',
             publicationType: data.codecheck.publicationType || data.codecheck.publication_type || 'doi',
             manifest: Array.isArray(data.codecheck.manifest) ? data.codecheck.manifest : 
                       (typeof data.codecheck.manifest === 'string' ? JSON.parse(data.codecheck.manifest) : []),
-            repository: data.codecheck.repository || '',
+            repository: repositoryData.repositories || '',
             source: data.codecheck.source || '',
             codecheckers: Array.isArray(data.codecheck.codecheckers) ? data.codecheck.codecheckers : 
                           (typeof data.codecheck.codecheckers === 'string' ? JSON.parse(data.codecheck.codecheckers) : []),
@@ -568,8 +599,13 @@ export default {
           this.certificateIdentifier.issue.labelsSelected = data.codecheck.issue.labelsSelected;
           this.certificateIdentifier.isLinked = !!(data.codecheck.issue?.url && data.codecheck.issue?.number);
           
-          if (data.codecheck.repository) {
-            this.repositories = data.codecheck.repository.split(',').map(r => r.trim()).filter(r => r);
+          this.repositoryWithCodecheckYaml = repositoryData.repoWithCodecheckYaml;
+          if (repositoryData.repositories) {
+            if (Array.isArray(repositoryData.repositories)) {
+              this.repositories = repositoryData.repositories;
+            } else {
+              this.repositories = repositoryData.repositories.split(',').map(r => ({ url: r.trim(), isPrivate: false })).filter(r => r.url);
+            }
           }
         }
         
@@ -589,7 +625,11 @@ export default {
     },
 
     async loadMetadataFromRepository(repo_index) {
-      let repository = this.repositories[repo_index];
+      if(this.repositoryWithCodecheckYaml !== repo_index) {
+        throw new Error(t('plugins.generic.codecheck.repositories.doesntContainCodecheckYamlError'));
+      }
+
+      let repository = this.repositories[repo_index].url;
       console.log(repository);
       let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
 
@@ -631,11 +671,66 @@ export default {
                 report: data.metadata?.report ?? this.metadata.report,
                 additionalContent: data.metadata?.additionalContent ?? this.metadata.additionalContent,
               };
+              if(this.repositoryWithCodecheckYaml !== repo_index) {
+                this.repositoryWithCodecheckYaml = repo_index;
+              }
+              this.repositoryWarning = {
+                message: null,
+                isWarning: true,
+              };
           } else {
+              this.repositoryWarning = {
+                message: this.t('plugins.generic.codecheck.repositories.error', {error: data.error}),
+                isWarning: false,
+              };
               console.error('Error:', data.error);
           }
       } catch (error) {
+          this.repositoryWarning = {
+            message: this.t('plugins.generic.codecheck.repositories.error', {error: error}),
+            isWarning: false,
+          };
           console.error('Failed to fetch metadata from existing Repository:', error);
+      }
+    },
+
+    async repositoryWithCodecheckMetadata(repo_index) {
+      this.repositoryWithCodecheckYaml = repo_index;
+      let repository = this.repositories[repo_index];
+      console.log(repository);
+      let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
+      const submissionId = this.submission.id;
+      try {
+          const response = await fetch(`${apiUrl}/repository/validate?submissionId=${submissionId}`, {
+              method: 'POST',
+              headers: {
+              'Content-Type': 'application/json',
+              'X-Csrf-Token': pkp.currentUser.csrfToken,
+              },
+              body: JSON.stringify({
+                repository: repository,
+              }),
+          });
+          const data = await response.json();
+
+          if (data.success) {
+            this.repositoryWarning = {
+              message: null,
+              isWarning: true,
+            };
+          } else {
+            this.repositoryWarning = {
+              message: data.error,
+              isWarning: true,
+            };
+            console.error('Error:', data.error);
+          }
+      } catch (error) {
+          this.repositoryWarning = {
+            message: error,
+            isWarning: true,
+          };
+          console.error('Failed to validate that the CODECHECK Metadata from the Repository is equal to the CODECHECK Metadata in this Form:', error);
       }
     },
 
@@ -673,10 +768,13 @@ export default {
     },
 
     addRepository() {
-      this.repositories.push('');
+      this.repositories.push({ url: '', isPrivate: false });
     },
 
     removeRepository(index) {
+      if(this.repositoryWithCodecheckYaml === index) {
+        this.repositoryWithCodecheckYaml = null;
+      }
       if (confirm(this.t('plugins.generic.codecheck.repositories.removeConfirm'))) {
         this.repositories.splice(index, 1);
       }
@@ -850,7 +948,10 @@ export default {
           version: this.metadata.version,
           publication_type: this.metadata.publicationType,
           manifest: this.metadata.manifest,
-          repository: this.repositories.join(', '),
+          repository: {
+            repositories: this.repositories,
+            repoWithCodecheckYaml: this.repositoryWithCodecheckYaml,
+          },
           source: this.metadata.source,
           codecheckers: this.metadata.codecheckers,
           certificate: this.metadata.certificate,
@@ -1264,10 +1365,6 @@ export default {
         this.showMessage(this.t('plugins.generic.codecheck.validation.manifestRequired'), 'error');
         return false;
       }
-      /*if (this.metadata.codecheckers.length === 0) {
-        this.showMessage(this.t('plugins.generic.codecheck.validation.codecheckersRequired'), 'error');
-        return false;
-      }*/
       if (!this.metadata.certificate) {
         this.showMessage(this.t('plugins.generic.codecheck.validation.certificateRequired'), 'error');
         return false;
@@ -1309,12 +1406,12 @@ export default {
             return true;
         } else {
             console.error('Structural Validation error:', data.error);
-            this.showMessage(`${this.t('plugins.generic.codecheck.yaml.invalid')}\n${this.t('plugins.generic.codecheck.error')}: ${data.error}`, 'error');
+            this.showMessage(this.t('plugins.generic.codecheck.yaml.invalid', {errorMessage: data.error}), 'error');
             return false;
         }
       } catch (error) {
         console.error('Structural Validation API fetch error:', error);
-        this.showMessage(`${this.t('plugins.generic.codecheck.yaml.invalid')}\n${error}`, 'error');
+        this.showMessage(this.t('plugins.generic.codecheck.yaml.invalid', {errorMessage: error}), 'error');
         return false;
       }
     },
@@ -1341,7 +1438,14 @@ export default {
 </script>
 
 <style>
+.codecheck-metadata-form *,
+.codecheck-metadata-form *::before,
+.codecheck-metadata-form *::after {
+  box-sizing: border-box;
+}
+
 .codecheck-optin-warning {
+  box-sizing: border-box;
   margin: 0 0 1rem 0;
   padding: 0.75rem 1rem;
   background: #fff3cd;
@@ -1349,6 +1453,28 @@ export default {
   border-radius: 3px;
   font-size: 14px;
   color: #856404;
+}
+
+.codecheck-repository-warning {
+  box-sizing: border-box;
+  margin: 0 0 1rem 0;
+  padding: 0.75rem 1rem;
+  background: #fff3cd;
+  border-left: 4px solid #ffc107;
+  border-radius: 3px;
+  font-size: 14px;
+  color: #856404;
+}
+
+.codecheck-repository-error {
+  box-sizing: border-box;
+  margin: 0 0 1rem 0;
+  padding: 0.75rem 1rem;
+  border-left: 4px solid #f5c6cb;
+  border-radius: 3px;
+  font-size: 14px;
+  background: #f8d7da;
+  color: #721c24;
 }
 
 .text-bold {
@@ -1714,6 +1840,23 @@ export default {
   flex: 1;
 }
 
+.codecheck-metadata-form .repo-private-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 13px;
+  color: #555;
+  white-space: nowrap;
+  cursor: pointer;
+  font-weight: normal;
+  margin-bottom: 0;
+}
+
+.codecheck-metadata-form .repo-private-checkbox {
+  margin: 0;
+  cursor: pointer;
+}
+
 .codecheck-metadata-form .form-footer {
   padding: 1.5rem;
   border-top: 2px solid #ddd;
@@ -1911,6 +2054,32 @@ export default {
 
 .btn-add:hover {
   background: #005580;
+}
+
+.btn-radio {
+  background: #ccc;
+  color: black;
+  border: none;
+  font-size: .875rem;
+  font-weight: 600;
+  padding: .4375rem .75rem;
+  border-radius: 4px;
+  line-height: 1.25rem;
+  cursor: pointer;
+}
+
+.btn-radio:hover {
+  background: #c0c0c0;
+}
+
+.btn-radio__active {
+  background: #008033;
+  color: #fff;
+}
+
+.btn-radio__active:hover {
+  background: #008033 !important;
+  cursor: default;
 }
 
 a {

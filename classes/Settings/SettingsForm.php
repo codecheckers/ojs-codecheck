@@ -20,6 +20,7 @@ use APP\template\TemplateManager;
 use PKP\form\Form;
 use PKP\form\validation\FormValidatorCSRF;
 use PKP\form\validation\FormValidatorPost;
+use Github\Client;
 
 class SettingsForm extends Form
 {
@@ -126,11 +127,36 @@ class SettingsForm extends Form
         );
 
         $this->setData(
+            Constants::CODECHECK_BADGE_TYPE,
+            $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_TYPE) ?? 'codeworks'
+        );
+
+        $this->setData(
+            Constants::CODECHECK_BADGE_CUSTOM_URL,
+            $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_CUSTOM_URL)
+        );
+
+        $this->setData(
+            Constants::CODECHECK_BADGE_HEIGHT,
+            $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_HEIGHT) ?? '24'
+        );
+
+        $this->setData(
             Constants::CODECHECK_STATUS_KEYS_SELECTED,
             $this->plugin->getSetting(
                 $context->getId(),
                 Constants::CODECHECK_STATUS_KEYS_SELECTED
             ) ?? []
+        );
+
+        // Default to true — register deposit runs unless explicitly disabled
+        $registerDepositEnabled = $this->plugin->getSetting(
+            $context->getId(),
+            Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED
+        );
+        $this->setData(
+            Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED,
+            $registerDepositEnabled === null ? true : (bool) $registerDepositEnabled
         );
 
         // Default to true — show the dashboard column unless explicitly disabled
@@ -151,6 +177,15 @@ class SettingsForm extends Form
         // Unpack so each checkbox gets its own template variable
         $this->setData(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE, in_array(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE, $updateFields));
         $this->setData(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY, in_array(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY, $updateFields));
+        $this->setData(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_STATUS, in_array(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_STATUS, $updateFields));
+
+        $this->setData(
+            Constants::CODECHECK_PUBLICATION_VALIDATION_EXTENDED,
+            $this->plugin->getSetting(
+                $context->getId(),
+                Constants::CODECHECK_PUBLICATION_VALIDATION_EXTENDED
+            )
+        );
 
         // ORCID integration settings
         $this->setData(
@@ -211,13 +246,19 @@ class SettingsForm extends Form
             Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION,
             Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY,
             Constants::CODECHECK_GITHUB_CUSTOM_LABELS,
+            Constants::CODECHECK_BADGE_TYPE,
+            Constants::CODECHECK_BADGE_CUSTOM_URL,
+            Constants::CODECHECK_BADGE_HEIGHT,
             Constants::CODECHECK_SHOW_DASHBOARD_COLUMN,
             Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE,
             Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY,
+            Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_STATUS,
             Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_FIELDS,
             Constants::CODECHECK_STATUS,
             Constants::CODECHECK_STATUSES_SELECTED,
             Constants::CODECHECK_STATUS_KEYS_SELECTED,
+            Constants::CODECHECK_PUBLICATION_VALIDATION_EXTENDED,
+            Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED,
             Constants::ORCID_ENABLED,
             Constants::ORCID_API_TYPE,
             Constants::ORCID_CLIENT_ID,
@@ -248,6 +289,10 @@ class SettingsForm extends Form
             'opt-out'   => __('plugins.generic.codecheck.settings.mode.opt.out'),
             'mandatory' => __('plugins.generic.codecheck.settings.mode.mandatory'),
         ]);
+
+        $templateMgr->assign('codecheckBadgeType', $this->getData(Constants::CODECHECK_BADGE_TYPE) ?? 'codeworks');
+        $templateMgr->assign('codecheckBadgeCustomUrl', $this->getData(Constants::CODECHECK_BADGE_CUSTOM_URL) ?? '');
+        $templateMgr->assign('codecheckBadgeHeight', $this->getData(Constants::CODECHECK_BADGE_HEIGHT) ?? '24');
 
         $templateMgr->assign(
             'showDashboardColumn',
@@ -328,6 +373,26 @@ class SettingsForm extends Form
 
         $this->plugin->updateSetting(
             $context->getId(),
+            Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED,
+            (bool) $this->getData(Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED)
+        );
+
+        $registerWarning = $this->validateRegisterFileExists(
+            $this->getData(Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION),
+            $this->getData(Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY)
+        );
+
+        if ($registerWarning !== null) {
+            $notificationMgr = new NotificationManager();
+            $notificationMgr->createTrivialNotification(
+                Application::get()->getRequest()->getUser()->getId(),
+                Notification::NOTIFICATION_TYPE_WARNING,
+                ['contents' => $registerWarning]
+            );
+        }
+
+        $this->plugin->updateSetting(
+            $context->getId(),
             Constants::CODECHECK_GITHUB_CUSTOM_LABELS,
             array_values(array_filter(
                 (array) $this->getData(Constants::CODECHECK_GITHUB_CUSTOM_LABELS),
@@ -337,8 +402,26 @@ class SettingsForm extends Form
 
         $this->plugin->updateSetting(
             $context->getId(),
+            Constants::CODECHECK_BADGE_TYPE,
+            $this->getData(Constants::CODECHECK_BADGE_TYPE) ?? 'codeworks'
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
             Constants::CODECHECK_STATUS_KEYS_SELECTED,
             (array) $this->getData(Constants::CODECHECK_STATUS_KEYS_SELECTED)
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_BADGE_CUSTOM_URL,
+            $this->getData(Constants::CODECHECK_BADGE_CUSTOM_URL)
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_BADGE_HEIGHT,
+            (int) ($this->getData(Constants::CODECHECK_BADGE_HEIGHT) ?? 24)
         );
 
         $this->plugin->updateSetting(
@@ -350,6 +433,7 @@ class SettingsForm extends Form
         $updateFields = array_values(array_filter([
             $this->getData(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE) ? Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE : null,
             $this->getData(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY) ? Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY : null,
+            $this->getData(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_STATUS) ? Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_STATUS : null,
         ]));
 
         $this->plugin->updateSetting(
@@ -358,25 +442,27 @@ class SettingsForm extends Form
             $updateFields
         );
 
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_PUBLICATION_VALIDATION_EXTENDED,
+            $this->getData(Constants::CODECHECK_PUBLICATION_VALIDATION_EXTENDED)
+        );
         // Save ORCID integration settings
         $this->plugin->updateSetting(
             $context->getId(),
             Constants::ORCID_ENABLED,
             $this->getData(Constants::ORCID_ENABLED)
         );
-
         $this->plugin->updateSetting(
             $context->getId(),
             Constants::ORCID_API_TYPE,
             $this->getData(Constants::ORCID_API_TYPE)
         );
-
         $this->plugin->updateSetting(
             $context->getId(),
             Constants::ORCID_CLIENT_ID,
             $this->getData(Constants::ORCID_CLIENT_ID)
         );
-
         // Only update secret if a new value was provided
         $newSecret = $this->getData(Constants::ORCID_CLIENT_SECRET);
         if (!empty($newSecret)) {
@@ -386,7 +472,6 @@ class SettingsForm extends Form
                 $newSecret
             );
         }
-
         $this->plugin->updateSetting(
             $context->getId(),
             Constants::ORCID_CITY,
@@ -401,5 +486,28 @@ class SettingsForm extends Form
         );
 
         return parent::execute();
+    }
+
+    /**
+     * Checks whether `register.csv` exists at the root of the configured
+     * GitHub register repository, so a misconfigured target is caught at
+     * settings-save time instead of silently failing on the next publish.
+     */
+    private function validateRegisterFileExists(string $organization, string $repository): ?string
+    {
+        if (empty($organization) || empty($repository)) {
+            return null; // nothing to check yet
+        }
+
+        try {
+            $client = new Client();
+            $client->api('repo')->contents()->show($organization, $repository, 'register.csv');
+            return null; // found, no warning needed
+        } catch (\Throwable $e) {
+            return __('plugins.generic.codecheck.settings.github.registerRepository.missingCsvWarning', [
+                'organization' => $organization,
+                'repository' => $repository,
+            ]);
+        }
     }
 }

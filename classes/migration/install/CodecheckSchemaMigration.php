@@ -1,16 +1,39 @@
 <?php
-namespace APP\plugins\generic\codecheck\classes\migration;
 
-use APP\plugins\generic\codecheck\classes\Submission\Schema as SubmissionSchema;
-use Illuminate\Database\Migrations\Migration;
+/**
+ * @file classes/migration/install/CodecheckSchemaMigration.php
+ *
+ * Copyright (c) 2026 CODECHECK Initiative
+ * Distributed under the GNU GPL v3. For full terms see the file docs/COPYING.
+ *
+ * @class CodecheckSchemaMigration
+ * @brief Create all CODECHECK database tables on fresh install.
+ *        Also calls all upgrade migrations so that fresh installs
+ *        and existing installs both end up at the same schema state.
+ *
+ * Upgrade migrations are called at the end of runUp() in the order
+ * they are listed. This order matters — later migrations may depend
+ * on changes made by earlier ones.
+ *
+ * Upgrade scripts can do more than add columns. They may also:
+ * - Rename columns or tables
+ * - Migrate or transform existing data values
+ * - Insert default content (e.g. initial settings or lookup data)
+ * - Remove columns, tables, or fields no longer in use
+ */
+
+namespace APP\plugins\generic\codecheck\classes\migration\install;
+
+use APP\plugins\generic\codecheck\classes\migration\CodecheckMigration;
+use APP\plugins\generic\codecheck\classes\migration\upgrade\I94_AddMissingColumns;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 
-class CodecheckSchemaMigration extends Migration
+class CodecheckSchemaMigration extends CodecheckMigration
 {
-    public function up(): void
+    protected function runUp(): void
     {
+        // codecheck_metadata — core CODECHECK data per submission
         if (!Schema::hasTable('codecheck_metadata')) {
             Schema::create('codecheck_metadata', function (Blueprint $table) {
                 $table->bigInteger('submission_id')->primary();
@@ -31,6 +54,7 @@ class CodecheckSchemaMigration extends Migration
             });
         }
 
+        // codecheck_orcid_tokens — ORCID OAuth tokens per submission/codechecker
         if (!Schema::hasTable('codecheck_orcid_tokens')) {
             Schema::create('codecheck_orcid_tokens', function (Blueprint $table) {
                 $table->bigIncrements('id');
@@ -48,28 +72,24 @@ class CodecheckSchemaMigration extends Migration
                 $table->index(['submission_id', 'orcid_id']);
             });
         }
-        
-        $this->createCodecheckGenres();
-    }
 
-    public function issueLabelsUp(): void
-    {
-        if(!Schema::hasTable('codecheck_issue_labels')) {
-            CodecheckLogger::debug("Creating Issue Label DB Schema");
+        // codecheck_issue_labels — cached GitHub issue labels
+        if (!Schema::hasTable('codecheck_issue_labels')) {
             Schema::create('codecheck_issue_labels', function (Blueprint $table) {
                 $table->string('label', 200)->default('');
                 $table->string('labels_last_updated', 100)->default(date('Y-m-d H:i:s'));
             });
         }
-    }
-    
-    public function codecheckStatusUp(): void
-    {
+
+        // codecheck_status — CODECHECK status history per submission
         if (!Schema::hasTable('codecheck_status')) {
             Schema::create('codecheck_status', function (Blueprint $table) {
                 $table->bigInteger('status_id')->autoIncrement()->primary();
                 $table->bigInteger('submission_id');
-                $table->foreign('submission_id', 'codecheck_status_metadata')->references('submission_id')->on('codecheck_metadata')->onDelete('cascade');
+                $table->foreign('submission_id', 'codecheck_status_metadata')
+                    ->references('submission_id')
+                    ->on('codecheck_metadata')
+                    ->onDelete('cascade');
                 $table->string('status', 300);
                 $table->timestamp('timestamp');
                 $table->bigInteger('user_id');
@@ -77,25 +97,35 @@ class CodecheckSchemaMigration extends Migration
                 $table->index('status_id');
             });
         }
+
+        $this->createCodecheckGenres();
+
+        // Run upgrade migrations in order — each is idempotent so safe to run
+        // on both fresh installs and existing ones. Add new migrations here.
+        (new I94_AddMissingColumns())->up();
     }
 
+    /**
+     * Create the codecheck.yml genre for all existing journal contexts.
+     * Skips contexts that already have it.
+     */
     private function createCodecheckGenres(): void
     {
         $contextDao = \APP\core\Application::getContextDAO();
         $genreDao = \PKP\db\DAORegistry::getDAO('GenreDAO');
-        
+
         $contexts = $contextDao->getAll();
         while ($context = $contexts->next()) {
             $existingGenres = $genreDao->getByContextId($context->getId());
             $ymlExists = false;
-            
+
             while ($genre = $existingGenres->next()) {
                 if ($genre->getLocalizedName() === 'codecheck.yml') {
                     $ymlExists = true;
                     break;
                 }
             }
-            
+
             if (!$ymlExists) {
                 $ymlGenre = $genreDao->newDataObject();
                 $ymlGenre->setContextId($context->getId());
@@ -107,17 +137,5 @@ class CodecheckSchemaMigration extends Migration
                 $genreDao->insertObject($ymlGenre);
             }
         }
-    }
-
-    public function down(): void
-    {
-        Schema::dropIfExists('codecheck_orcid_tokens');
-        Schema::dropIfExists('codecheck_status');
-        Schema::dropIfExists('codecheck_metadata');
-    }
-
-    public function issueLabelsDown(): void
-    {
-        Schema::dropIfExists('codecheck_issue_labels');
     }
 }

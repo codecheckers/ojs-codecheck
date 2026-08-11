@@ -26,7 +26,31 @@ class JsonResponse
     }
 
     /**
-     * Returns the HTTP Response Code of the JSON Response
+     * This function returns the Payload of the JSON Response as an associative Array
+     * 
+     * @return array The Payload of the JSON Response
+     */
+    public function getPayloadArray(): array
+    {
+        return json_decode($this->payload, true);
+    }
+
+    /**
+     * This function returns whether the JSON Response was a success or not
+     * 
+     * @return bool JSON Response is success
+     */
+    public function isSuccess(): bool
+    {
+        if(!isset($this->getPayloadArray()['success'])) { return false; }
+
+        return $this->getPayloadArray()['success'];
+    }
+
+    /**
+     * This function returns the HTTP Response Code of the JSON Response
+     * 
+     * @return int The HTTP Response Code of the JSON Response
      */
     public function getHttpResponseCode(): int
     {
@@ -34,7 +58,11 @@ class JsonResponse
     }
 
     /**
-     * Echoes the response and exits.
+     * This function creates a new JSON Response, echoes it to the HTML page it was calles upon and sets the according HTTP Response Code
+     * 
+     * @param $json_array The array that will be json encoded into the response
+     * @param $responseState The HTTP Response Code that will be set accordingly
+     * @return void
      */
     public function constructResponse(): void
     {
@@ -58,7 +86,11 @@ class JsonResponse
     }
 
     /**
-     * Static helper to create and send a response immediately.
+     * This function creates a new JSON Response, echoes it to the HTML page it was calles upon and sets the according HTTP Response Code
+     * 
+     * @param $json_array The array that will be json encoded into the response
+     * @param $responseState The HTTP Response Code that will be set accordingly
+     * @return void
      */
     public static function staticResponse(array $json_array, int $httpResponseCode): void
     {
