@@ -108,7 +108,17 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 - The bundled test dataset carries the complete CODECHECK schema, so loading it
   produces a working instance without a separate repair step.
 
+### Removed
+
+- The `codecheckApiEndpoint` and `codecheckApiKey` settings. Both were written on
+  every save but no field ever rendered them and nothing ever read them, so they
+  could not be set and had no effect.
+
 ### Fixed
+
+- Saving the plugin settings no longer makes a GitHub request every time. The
+  register repository is only checked for its `register.csv` when the configured
+  organisation or repository actually changes, instead of on every save.
 
 - Viewing a published article could fail with a fatal error when the stored repository
   data was not in the expected format, because the logger had no `warning()` method.

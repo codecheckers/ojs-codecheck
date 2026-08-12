@@ -223,15 +223,10 @@ added to the form must be added in three places: `Constants`, `SettingsForm::ini
 + `readInputData()`, and the template. `SettingsForm::validate()` also warns when the
 configured register repo lacks a `register.csv`.
 
-Two things to know before touching this:
-
-- **Saving makes a live GitHub call.** `SettingsForm::execute()` runs
-  `validateRegisterFileExists()`, which fetches `register.csv` from the configured
-  register repository on every save. It is unauthenticated, so it counts against
-  GitHub's 60/hour per-IP limit — a consideration for tests that save repeatedly.
-- **`codecheckApiEndpoint` and `codecheckApiKey` are orphaned.** Both are handled by
-  `initData()`, `readInputData()` and `execute()`, but `settings.tpl` renders no
-  field for either and nothing reads them, so they are always empty.
+`SettingsForm::execute()` reaches out to GitHub through
+`validateRegisterFileExists()` — but only when the register organisation or
+repository actually changed. The request is unauthenticated and counts against
+GitHub's 60/hour per-IP limit, so do not move that call back onto every save.
 
 ### Logging
 
