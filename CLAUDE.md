@@ -254,7 +254,7 @@ README.md; keep `css/codecheck.css` and inline component styles consistent.
 ### Layout
 
 ```
-tests/                       PHPUnit (16 files, 116 tests)
+tests/                       PHPUnit (18 files, 131 tests)
   bootstrap.php              PKP_STRICT_MODE + BASE_SYS_DIR (OJS_ROOT or ../../../..)
   PKPTestCase.php            local stub extending PHPUnit TestCase
   FakeTranslator.php         minimal translator so __() works without booting OJS
@@ -266,6 +266,7 @@ tests/                       PHPUnit (16 files, 116 tests)
   DataStructuresUnitTests/     UniqueArray
   FrontEndUnitTests/           ArticleDetails
   LogUnitTests/                CodecheckLogger
+  ApiUnitTests/                ApiEndpoint, CodecheckRoleArray
   SettingsUnitTests/           Actions, Manage
   SubmissionUnitTests/         CodecheckMetadataDAO, CodecheckSubmissionDAO, CodecheckSubmission
   WorkflowUnitTests/           CodecheckMetadataHandler, CodecheckYamlValidator
@@ -323,7 +324,7 @@ validation, register deposit, and the settings form beyond the sidebar toggle.
 
 ### PHPUnit tests
 
-`make test-php` — 116 tests, green, none skipped.
+`make test-php` — 131 tests, green, none skipped.
 
 PHPUnit needs an OJS installation: the tests load OJS classes and the runner uses the
 PHPUnit shipped in `lib/pkp`. Both `runTests.sh` and `bootstrap.php` honour `OJS_ROOT`,
@@ -340,7 +341,16 @@ through a database-backed facade, so building one is an integration test, and
 the `*-setting.cy.js` e2e specs already open the settings form, change a value
 and save it. **Prefer an e2e test over booting the application inside PHPUnit.**
 
-Not covered by PHPUnit at all: `CodecheckApiHandler` (1.1k lines, the entire API surface),
+The API's routing table (`ApiEndpoint`) and role sets (`CodecheckRoleArray`) are
+covered; `CodecheckApiHandler` itself is not, because its constructor routes,
+authorizes and serves, so it cannot be instantiated without side effects.
+
+Worth knowing before adding coverage there: **OJS's own API router answers routes
+and methods the plugin's endpoint table does not cover, before the handler is
+reached.** Verified against a running instance — an unknown route and a valid
+route with the wrong method both return OJS's `api.404.endpointNotFound`.
+
+Not covered by PHPUnit at all: `CodecheckApiHandler` (1.1k lines, its endpoint bodies),
 `CodecheckRegisterDepositService`, `CodecheckPublicationValidator`, `CodecheckStatusHandler`,
 migrations, `IssueTOC`, `CodecheckPageHandler`.
 
