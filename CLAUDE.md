@@ -223,6 +223,16 @@ added to the form must be added in three places: `Constants`, `SettingsForm::ini
 + `readInputData()`, and the template. `SettingsForm::validate()` also warns when the
 configured register repo lacks a `register.csv`.
 
+Two things to know before touching this:
+
+- **Saving makes a live GitHub call.** `SettingsForm::execute()` runs
+  `validateRegisterFileExists()`, which fetches `register.csv` from the configured
+  register repository on every save. It is unauthenticated, so it counts against
+  GitHub's 60/hour per-IP limit — a consideration for tests that save repeatedly.
+- **`codecheckApiEndpoint` and `codecheckApiKey` are orphaned.** Both are handled by
+  `initData()`, `readInputData()` and `execute()`, but `settings.tpl` renders no
+  field for either and nothing reads them, so they are always empty.
+
 ### Logging
 
 Use `CodecheckLogger::debug|info|error()` (`classes/Log/CodecheckLogger.php`) — writes
@@ -298,7 +308,7 @@ columns), and the wizard DOM-scraping classes.
 
 ### E2E tests
 
-`make test-e2e` — 10 tests across 3 specs, driving a real OJS instance.
+`make test-e2e` — 13 tests across 4 specs, driving a real OJS instance.
 
 - `yaml-generation.cy.js` — YAML preview vs. download parity, preview-button gating
 - `article-sidebar-setting.cy.js` — the `showArticleSidebar` setting, driven through
@@ -306,6 +316,9 @@ columns), and the wizard DOM-scraping classes.
   unaffected
 - `private-repository.cy.js` — a repository flagged private is visible to editors in
   the workflow form and absent from the published article and the issue TOC
+- `settings-roundtrip.cy.js` — every field the settings form renders keeps its value
+  across a save. Derives the field list from the rendered form, so a setting added
+  without being wired into `readInputData()`/`execute()` fails here automatically
 
 Requires `make serve` running with the dataset loaded; `make setup` satisfies the
 rest (plugin enabled, `public/build/` present, composer deps installed, `admin`/`admin`).
