@@ -108,6 +108,13 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 - The bundled test dataset carries the complete CODECHECK schema, so loading it
   produces a working instance without a separate repair step.
 
+### Security
+
+- Updated dependencies to clear 16 advisories reported by `composer audit`, affecting
+  `guzzlehttp/guzzle` (9, high and medium), `guzzlehttp/psr7` (4, medium) and
+  `symfony/yaml` (3, low). All were resolved within the existing version constraints,
+  so no dependency requirement changed.
+
 ### Fixed
 
 - Viewing a published article could fail with a fatal error when the stored repository
