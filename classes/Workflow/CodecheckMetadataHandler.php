@@ -73,9 +73,6 @@ class CodecheckMetadataHandler
                 'title' => $publication ? $publication->getLocalizedTitle() : '',
                 'authors' => $this->getAuthors($publication),
                 'doi' => $publication ? $publication->getStoredPubId('doi') : null,
-                'codeRepository' => $submission->getData('codeRepository'),
-                'dataRepository' => $submission->getData('dataRepository'),
-                'manifestFiles' => $submission->getData('manifestFiles'),
                 'dataAvailabilityStatement' => $submission->getData('dataAvailabilityStatement'),
             ],
             'codecheck' => $metadata ? [

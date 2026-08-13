@@ -27,6 +27,7 @@ use APP\plugins\generic\codecheck\classes\CodecheckRoles\CodecheckRoleManager;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckPublicationValidator;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckRegisterDepositService;
+use APP\plugins\generic\codecheck\classes\Submission\CodecheckAuthorMetadata;
 use PKP\core\Request;
 use \Github\Client;
 
@@ -396,6 +397,18 @@ class CodecheckPlugin extends GenericPlugin
         return false;
     }
 
+    /**
+     * Persist what the author entered in the submission wizard.
+     *
+     * Repositories and expected output files go straight into
+     * `codecheck_metadata`, the same record the codechecker edits later, so
+     * there is one list rather than two that have to be reconciled. Entries
+     * are marked `providedByAuthor` so the workflow form can show where they
+     * came from and refuse to delete them.
+     *
+     * The availability statement stays on the publication: it has no
+     * counterpart in codecheck.yml and no codechecker view.
+     */
     public function saveWizardFieldsFromRequest(string $hookName, array $params): bool
     {
         $submission = $params[1];
@@ -406,27 +419,51 @@ class CodecheckPlugin extends GenericPlugin
 
         $request = Application::get()->getRequest();
 
-        $codeRepository            = $request->getUserVar('codeRepository');
-        $dataRepository            = $request->getUserVar('dataRepository');
-        $manifestFiles             = $request->getUserVar('manifestFiles');
         $dataAvailabilityStatement = $request->getUserVar('dataAvailabilityStatement');
-
-        if ($codeRepository || $dataRepository || $manifestFiles || $dataAvailabilityStatement) {
+        if ($dataAvailabilityStatement) {
             $publication = $submission->getCurrentPublication();
             if ($publication) {
-                $updates = [];
-                if ($codeRepository) $updates['codeRepository'] = $codeRepository;
-                if ($dataRepository) $updates['dataRepository'] = $dataRepository;
-                if ($manifestFiles) $updates['manifestFiles'] = $manifestFiles;
-                if ($dataAvailabilityStatement) $updates['dataAvailabilityStatement'] = $dataAvailabilityStatement;
-
-                if (!empty($updates)) {
-                    Repo::publication()->edit($publication, $updates);
-                }
+                Repo::publication()->edit($publication, [
+                    'dataAvailabilityStatement' => $dataAvailabilityStatement,
+                ]);
             }
         }
 
+        $repositories = $request->getUserVar('repositories');
+        $manifestFiles = $request->getUserVar('manifestFiles');
+
+        if ($repositories === null && $manifestFiles === null) {
+            return false;
+        }
+
+        $authorMetadata = new CodecheckAuthorMetadata($submission->getId());
+
+        if ($repositories !== null) {
+            $authorMetadata->setRepositories(self::splitLines($repositories));
+        }
+
+        if ($manifestFiles !== null) {
+            $authorMetadata->setManifest(self::splitLines($manifestFiles));
+        }
+
+        $authorMetadata->save();
+
         return false;
+    }
+
+    /**
+     * One entry per non-empty line, trimmed.
+     */
+    private static function splitLines(?string $value): array
+    {
+        if ($value === null) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            array_map('trim', preg_split('/\r\n|\r|\n/', $value)),
+            fn ($line) => $line !== ''
+        ));
     }
 
     /**

@@ -162,6 +162,12 @@ msgstr "CODECHECK Information"
 msgid "plugins.generic.codecheck.submission.description"
 msgstr "Please provide information about your code and data repositories."
 
+msgid "plugins.generic.codecheck.repositories.label"
+msgstr "Repository or repositories"
+
+msgid "plugins.generic.codecheck.repositories.label.description"
+msgstr "Link(s) to code or data repositories that your workflow relies on, e.g., GitHub, Gitlab, Zenodo, institutional repository."
+
 msgid "plugins.generic.codecheck.codeRepository"
 msgstr "Code Repository URLs"
 
@@ -184,7 +190,7 @@ msgid "plugins.generic.codecheck.manifestFiles.label"
 msgstr "Expected Output Files"
 
 msgid "plugins.generic.codecheck.manifestFiles.description"
-msgstr "List the main figures, tables, and results your code should produce."
+msgstr "List the files your workflow is expected to produce, one per line. Use paths relative to your main working directory, if that applies, and use the comment to ensure outputs are matched to Figures, Tables, or key statistics in the manuscript."
 
 msgid "plugins.generic.codecheck.dataAvailability"
 msgstr "Data and Software Availability"

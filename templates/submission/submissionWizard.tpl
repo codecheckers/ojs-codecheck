@@ -11,33 +11,16 @@
 
         <div class="pkpFormField">
             <div class="pkpFormField__heading">
-                <label for="codeRepository">
-                    {translate key="plugins.generic.codecheck.codeRepository"}
+                <label for="repositories">
+                    {translate key="plugins.generic.codecheck.repositories.label"}
                 </label>
             </div>
             <div class="pkpFormField__description">
-                {translate key="plugins.generic.codecheck.codeRepository.description"}
+                {translate key="plugins.generic.codecheck.repositories.label.description"}
             </div>
             <textarea 
-                id="codeRepository" 
-                name="codeRepository" 
-                class="pkpFormField__input pkpFormField--textarea"
-                rows="3"
-            ></textarea>
-        </div>
-
-        <div class="pkpFormField">
-            <div class="pkpFormField__heading">
-                <label for="dataRepository">
-                    {translate key="plugins.generic.codecheck.dataRepository"}
-                </label>
-            </div>
-            <div class="pkpFormField__description">
-                {translate key="plugins.generic.codecheck.dataRepository.description"}
-            </div>
-            <textarea 
-                id="dataRepository" 
-                name="dataRepository" 
+                id="repositories" 
+                name="repositories" 
                 class="pkpFormField__input pkpFormField--textarea"
                 rows="3"
             ></textarea>
