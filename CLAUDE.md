@@ -495,6 +495,41 @@ Host toolchain: PHP 8.2.31 (+ xdebug, mysqli, intl, gd), Node 18.20.8,
 npm 10.8.2, Composer 2.8.12, MariaDB 10.6 on 3306, Docker 29.6 / Compose v5.2,
 Chrome + Chromium + Firefox, Cypress 14.5.4, Playwright 1.61.
 
+## Working agreements
+
+### Plans in `.claude/`
+
+**When a task is fully completed, check `.claude/` for unimplemented plans and
+propose the next task from one.** `ls .claude/plan-*.md` lists what is there.
+Read the plan before proposing, and say which one the proposal comes from.
+Each states its own status; treat "not started" or "not settled" as available,
+and update the status when work on it begins or lands.
+
+A plan earns its keep by recording what would otherwise be rederived: what was
+already established by experiment, what turned out to be false, and what still
+needs a decision rather than an implementation.
+
+**Plans are deliberately not committed.** `.claude/` is gitignored, because a
+plan is ephemeral — it describes a moment in the work and goes stale as soon as
+the code moves. Keeping them out of the repository avoids a second set of
+documentation to maintain and contradict. The consequence is that they are
+local to one working copy: a fresh clone has none, and nothing in `.claude/` is
+shared by pushing.
+
+So anything that needs to outlive this working copy has to leave it:
+
+- **A plan that is extensive, or that needs discussion or a decision from
+  someone else, belongs as a comment on the related GitHub issue** — not in
+  `.claude/`, where nobody else will see it. Post it there, and leave the local
+  plan as a short pointer to the issue.
+- Conclusions that should shape future work belong in this file.
+- Anything user-visible belongs in `CHANGELOG.md`.
+
+`.claude/ISSUE_CODE_IMPROVEMENTS.md` and `.claude/issue-65-update.md` are
+earlier point-in-time reviews rather than plans. Several of their findings are
+now fixed and at least one is stale — check against the code before acting on
+them.
+
 ## Conventions
 
 - PSR-12; speaking names, verbs in function names; document public methods/classes
