@@ -497,6 +497,19 @@ Chrome + Chromium + Firefox, Cypress 14.5.4, Playwright 1.61.
 
 ## Working agreements
 
+### Never create GitHub issues without confirmation
+
+**Always ask for confirmation before creating an issue, and show the full
+title and the full body text you intend to post.** Not a summary of it, not a
+description of what it will say — the exact text, so it can be corrected
+before it exists. Wait for an explicit yes. An issue is published under the
+repository owner's name and is visible to the whole project; a wrong or
+half-thought-out one costs someone else's attention to read and to close.
+
+The same applies to anything else published on someone's behalf: comments on
+issues and pull requests, PR titles and descriptions, and review comments.
+Show the text, get a yes, then post.
+
 ### Plans in `.claude/`
 
 **When a task is fully completed, check `.claude/` for unimplemented plans and
