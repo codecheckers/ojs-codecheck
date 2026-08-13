@@ -160,14 +160,9 @@ Migration structure (added for issue #94):
   `resetSchema()` (settings UI "Clear / Reset DB") drops and recreates — the only
   destructive path.
 
-**Known schema inconsistency (pre-existing, documented in `.claude/issue-65-update.md` N2):**
-`schema.xml` is stale (declares `opt_in`, `code_repository`, `data_repository`,
-`dependencies`, `execution_instructions` — none of which exist) and
-`classes/Submission/CodecheckMetadataDAO.php` queries a third, non-existent shape
-(`identifier`, `manifest_files`, `paper_metadata`, `repositories`). That DAO is **dead
-code** — nothing outside its own unit test references it, and every query would throw
-(swallowed by its bare `catch`). The live DAO is `CodecheckSubmissionDAO`.
-Do not "fix" one of the three in isolation; align them or delete the dead ones.
+The migration is the single source of truth for this schema. A stale `schema.xml`
+and a dead `CodecheckMetadataDAO` used to describe two further, contradictory
+shapes; both were removed. `CodecheckSubmissionDAO` is the only DAO.
 
 Submission-level fields (`codecheckOptIn`, `retrieveReserveCertificateIdentifier`,
 `codeRepository`, `dataRepository`, `manifestFiles`, `dataAvailabilityStatement`) live in
@@ -223,6 +218,11 @@ added to the form must be added in three places: `Constants`, `SettingsForm::ini
 + `readInputData()`, and the template. `SettingsForm::validate()` also warns when the
 configured register repo lacks a `register.csv`.
 
+`SettingsForm::execute()` reaches out to GitHub through
+`validateRegisterFileExists()` — but only when the register organisation or
+repository actually changed. The request is unauthenticated and counts against
+GitHub's 60/hour per-IP limit, so do not move that call back onto every save.
+
 ### Logging
 
 Use `CodecheckLogger::debug|info|error()` (`classes/Log/CodecheckLogger.php`) — writes
@@ -249,9 +249,10 @@ README.md; keep `css/codecheck.css` and inline component styles consistent.
 ### Layout
 
 ```
-tests/                       PHPUnit (18 files, 132 tests)
+tests/                       PHPUnit (18 files, 131 tests)
   bootstrap.php              PKP_STRICT_MODE + BASE_SYS_DIR (OJS_ROOT or ../../../..)
   PKPTestCase.php            local stub extending PHPUnit TestCase
+  FakeTranslator.php         minimal translator so __() works without booting OJS
   phpunit.xml                default config (testdox, whole dir)
   phpunit_with_coverage.xml  + coverage HTML into tests/results/
   runTests.sh                wrapper; honours OJS_ROOT; --coverage-report=true|false
@@ -260,7 +261,8 @@ tests/                       PHPUnit (18 files, 132 tests)
   DataStructuresUnitTests/     UniqueArray
   FrontEndUnitTests/           ArticleDetails
   LogUnitTests/                CodecheckLogger
-  SettingsUnitTests/           Actions, Manage, SettingsForm
+  ApiUnitTests/                ApiEndpoint, CodecheckRoleArray
+  SettingsUnitTests/           Actions, Manage
   SubmissionUnitTests/         CodecheckMetadataDAO, CodecheckSubmissionDAO, CodecheckSubmission
   WorkflowUnitTests/           CodecheckMetadataHandler, CodecheckYamlValidator
 
@@ -307,10 +309,12 @@ columns), and the wizard DOM-scraping classes.
   the workflow form and absent from the published article and the issue TOC
 - `issue-toc-setting.cy.js` — the `showInTOC` setting, and that it is independent of
   the article sidebar
-
-`cy.setCodecheckSetting(fieldId, enabled)` (in `cypress/support/e2e.js`) drives a
-plugin checkbox setting through the real settings form; specs that toggle settings
-restore them in an `after()` hook.
+- `cy.setCodecheckSetting(fieldId, enabled)` (in `cypress/support/e2e.js`) drives a
+  plugin checkbox setting through the real settings form; specs that toggle settings
+  restore them in an `after()` hook.
+- `settings-roundtrip.cy.js` — every field the settings form renders keeps its value
+  across a save. Derives the field list from the rendered form, so a setting added
+  without being wired into `readInputData()`/`execute()` fails here automatically
 
 Requires `make serve` running with the dataset loaded; `make setup` satisfies the
 rest (plugin enabled, `public/build/` present, composer deps installed, `admin`/`admin`).
@@ -320,18 +324,33 @@ validation, register deposit, and the settings form beyond the sidebar toggle.
 
 ### PHPUnit tests
 
-`make test-php` — 132 tests, green (19 skipped, 1 warning, 2 deprecations).
+`make test-php` — 131 tests, green, none skipped.
 
 PHPUnit needs an OJS installation: the tests load OJS classes and the runner uses the
 PHPUnit shipped in `lib/pkp`. Both `runTests.sh` and `bootstrap.php` honour `OJS_ROOT`,
 falling back to the four-levels-up layout CI uses. `OJS_ROOT` is mandatory here because
 the plugin directory is a symlink — see "Local development environment".
 
-Tests requiring Laravel facades / translator are `markTestSkipped` at `setUp()`:
-all of `SettingsFormUnitTest` (9), `ManageUnitTest` (6), and 4 in `ActionsUnitTest`.
-They are skipped locally *and* in CI.
+`tests/bootstrap.php` binds a `FakeTranslator` into Laravel's container so `__()`
+works without booting the application; it returns the locale key rather than a
+translation, so assert on structure and identifiers, not on translated text.
 
-Not covered by PHPUnit at all: `CodecheckApiHandler` (1.1k lines, the entire API surface),
+Nothing is skipped. Anything needing a constructed `SettingsForm` was deleted
+rather than skipped: `PKP\form\Form::__construct` resolves journal locales
+through a database-backed facade, so building one is an integration test, and
+the `*-setting.cy.js` e2e specs already open the settings form, change a value
+and save it. **Prefer an e2e test over booting the application inside PHPUnit.**
+
+The API's routing table (`ApiEndpoint`) and role sets (`CodecheckRoleArray`) are
+covered; `CodecheckApiHandler` itself is not, because its constructor routes,
+authorizes and serves, so it cannot be instantiated without side effects.
+
+Worth knowing before adding coverage there: **OJS's own API router answers routes
+and methods the plugin's endpoint table does not cover, before the handler is
+reached.** Verified against a running instance — an unknown route and a valid
+route with the wrong method both return OJS's `api.404.endpointNotFound`.
+
+Not covered by PHPUnit at all: `CodecheckApiHandler` (1.1k lines, its endpoint bodies),
 `CodecheckRegisterDepositService`, `CodecheckPublicationValidator`, `CodecheckStatusHandler`,
 migrations, `IssueTOC`, `CodecheckPageHandler`.
 
@@ -499,8 +518,7 @@ Chrome + Chromium + Firefox, Cypress 14.5.4, Playwright 1.61.
 - `public/build/` gitignored but required — rebuild after pulling or after JS edits
 - `vendor/` required at file-scope `require` — `composer install` before anything PHP
 - `registry/uiLocaleKeysBackend.json` is generated — never hand-edit
-- `CodecheckMetadataDAO` is dead and queries a non-existent schema — don't extend it
-- `schema.xml` does not describe the real table — the migration does
+- `CodecheckSubmissionDAO` is the only DAO; the migration defines the schema
 - Hook argument arrays carry **references** (`[&$page, &$op, …]`). Writing through
   `$args[n]` propagates to the caller even though `$args` itself is by-value — unit
   tests must build the array with references to model this (see
