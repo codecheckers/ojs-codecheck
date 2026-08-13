@@ -186,10 +186,10 @@
                 class="pkpFormField__input"
                 :placeholder="t('plugins.generic.codecheck.repository.placeholder')"
               />
-              <label class="repo-private-label" :title="t('plugins.generic.codecheck.repository.markAsPrivate.tooltip')">
-                <input type="checkbox" v-model="repo.isPrivate" class="repo-private-checkbox" />
-                {{ t('plugins.generic.codecheck.repository.markAsPrivate') }}
-                <span class="repo-private-info">ℹ️</span>
+              <label class="repo-hidden-label" :title="t('plugins.generic.codecheck.repository.markAsHidden.tooltip')">
+                <input type="checkbox" v-model="repo.hidden" class="repo-hidden-checkbox" />
+                {{ t('plugins.generic.codecheck.repository.markAsHidden') }}
+                <span class="repo-hidden-info">ℹ️</span>
               </label>
               <button
                 v-if="repositoryWithCodecheckYaml === index"
@@ -618,7 +618,7 @@ export default {
             // the list empty would look like "no repositories" rather than a
             // problem, so say so.
             console.error(
-              'CODECHECK: ignoring repository data in an unexpected format, expected an array of {url, isPrivate}:',
+              'CODECHECK: ignoring repository data in an unexpected format, expected an array of {url, hidden}:',
               repositoryData.repositories
             );
           }
@@ -783,7 +783,7 @@ export default {
     },
 
     addRepository() {
-      this.repositories.push({ url: '', isPrivate: false });
+      this.repositories.push({ url: '', hidden: false });
     },
 
     removeRepository(index) {
@@ -1855,7 +1855,7 @@ export default {
   flex: 1;
 }
 
-.codecheck-metadata-form .repo-private-label {
+.codecheck-metadata-form .repo-hidden-label {
   display: flex;
   align-items: center;
   gap: 0.4rem;
@@ -1867,7 +1867,7 @@ export default {
   margin-bottom: 0;
 }
 
-.codecheck-metadata-form .repo-private-checkbox {
+.codecheck-metadata-form .repo-hidden-checkbox {
   margin: 0;
   cursor: pointer;
 }

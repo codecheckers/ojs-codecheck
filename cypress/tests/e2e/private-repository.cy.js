@@ -52,12 +52,12 @@ describe('Private repositories', () => {
 
     cy.get('.repository-item').each(($item) => {
       const url = $item.find('input[type="url"]').val();
-      const isPrivate = $item.find('.repo-private-checkbox').is(':checked');
+      const hidden = $item.find('.repo-hidden-checkbox').is(':checked');
 
       if (url === PRIVATE_URL) {
-        expect(isPrivate, `${url} marked private`).to.be.true;
+        expect(hidden, `${url} marked private`).to.be.true;
       } else if (url === PUBLIC_URL) {
-        expect(isPrivate, `${url} not marked private`).to.be.false;
+        expect(hidden, `${url} not marked private`).to.be.false;
       }
     });
   });

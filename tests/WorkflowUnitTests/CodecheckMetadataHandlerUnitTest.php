@@ -507,8 +507,8 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
             'manifest'           => '[]',
             'repository' => json_encode([
                 'repositories' => [
-                    ['url' => 'https://github.com/public/repo', 'isPrivate' => false],
-                    ['url' => 'https://github.com/private/repo', 'isPrivate' => true],
+                    ['url' => 'https://github.com/public/repo', 'hidden' => false],
+                    ['url' => 'https://github.com/private/repo', 'hidden' => true],
                 ],
                 'repoWithCodecheckYaml' => null,
             ]),
@@ -540,8 +540,8 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
             'manifest'           => '[]',
             'repository' => json_encode([
                 'repositories' => [
-                    ['url' => 'https://github.com/private/repo-one', 'isPrivate' => true],
-                    ['url' => 'https://github.com/private/repo-two', 'isPrivate' => true],
+                    ['url' => 'https://github.com/private/repo-one', 'hidden' => true],
+                    ['url' => 'https://github.com/private/repo-two', 'hidden' => true],
                 ],
                 'repoWithCodecheckYaml' => null,
             ]),
@@ -572,8 +572,8 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
             'manifest'           => '[]',
             'repository' => json_encode([
                 'repositories' => [
-                    ['url' => 'https://github.com/public/repo-one', 'isPrivate' => false],
-                    ['url' => 'https://github.com/public/repo-two', 'isPrivate' => false],
+                    ['url' => 'https://github.com/public/repo-one', 'hidden' => false],
+                    ['url' => 'https://github.com/public/repo-two', 'hidden' => false],
                 ],
                 'repoWithCodecheckYaml' => null,
             ]),

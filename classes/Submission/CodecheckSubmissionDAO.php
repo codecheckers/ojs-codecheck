@@ -106,7 +106,7 @@ class CodecheckSubmission
         if (is_array($decoded) && isset($decoded['repositories']) && is_array($decoded['repositories'])) {
             $publicUrls = array_filter(
                 $decoded['repositories'],
-                fn($r) => empty($r['isPrivate'])
+                fn($r) => empty($r['hidden'])
             );
             $urls = array_map(fn($r) => $r['url'] ?? '', $publicUrls);
             return array_values(array_filter($urls));

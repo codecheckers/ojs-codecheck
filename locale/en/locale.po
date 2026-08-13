@@ -841,10 +841,10 @@ msgstr "not set"
 msgid "plugins.generic.codecheck.github.issue.display.registerRepository"
 msgstr "Register Repository: {$repository}"
 
-msgid "plugins.generic.codecheck.repository.markAsPrivate"
-msgstr "Keep private"
+msgid "plugins.generic.codecheck.repository.markAsHidden"
+msgstr "Hide from public record"
 
-msgid "plugins.generic.codecheck.repository.markAsPrivate.tooltip"
+msgid "plugins.generic.codecheck.repository.markAsHidden.tooltip"
 msgstr "This repository will not be shown on the article landing page, not included in the codecheck.yml file, and not posted to the GitHub register issue."
 
 msgid "plugins.generic.codecheck.settings.github.registerRepository.missingCsvWarning"

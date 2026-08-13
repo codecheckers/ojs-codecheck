@@ -471,7 +471,7 @@ describe('CodecheckMetadataForm Component', () => {
     cy.get('.version-select option[value="1.0"]').should('exist');
   });
 
-  it('new repository has private checkbox unchecked by default', () => {
+  it('new repository has its hidden checkbox unchecked by default', () => {
     cy.mount(CodecheckMetadataForm, {
       props: {
         submission: { id: 1 },
@@ -486,10 +486,10 @@ describe('CodecheckMetadataForm Component', () => {
       .find('.btn-add')
       .click();
 
-    cy.get('.repo-private-checkbox').should('exist').and('not.be.checked');
+    cy.get('.repo-hidden-checkbox').should('exist').and('not.be.checked');
   });
 
-  it('checking private checkbox marks repository as private', () => {
+  it('checking the hidden checkbox marks the repository hidden', () => {
     cy.mount(CodecheckMetadataForm, {
       props: {
         submission: { id: 1 },
@@ -504,11 +504,11 @@ describe('CodecheckMetadataForm Component', () => {
       .find('.btn-add')
       .click();
 
-    cy.get('.repo-private-checkbox').check();
-    cy.get('.repo-private-checkbox').should('be.checked');
+    cy.get('.repo-hidden-checkbox').check();
+    cy.get('.repo-hidden-checkbox').should('be.checked');
   });
 
-  it('private flag is independent per repository', () => {
+  it('hidden flag is independent per repository', () => {
     cy.mount(CodecheckMetadataForm, {
       props: {
         submission: { id: 1 },
@@ -530,13 +530,13 @@ describe('CodecheckMetadataForm Component', () => {
       .click();
 
     // Check only the first one
-    cy.get('.repo-private-checkbox').eq(0).check();
+    cy.get('.repo-hidden-checkbox').eq(0).check();
 
-    cy.get('.repo-private-checkbox').eq(0).should('be.checked');
-    cy.get('.repo-private-checkbox').eq(1).should('not.be.checked');
+    cy.get('.repo-hidden-checkbox').eq(0).should('be.checked');
+    cy.get('.repo-hidden-checkbox').eq(1).should('not.be.checked');
   });
   
-  it('private checkbox state is preserved after save', () => {
+  it('hidden checkbox state is preserved after save', () => {
     cy.intercept('POST', '**/codecheck/metadata*', {
       statusCode: 200,
       body: { success: true }
@@ -556,7 +556,7 @@ describe('CodecheckMetadataForm Component', () => {
     cy.get('.repository-item input[type="url"]').first()
       .type('https://github.com/test/private-repo');
 
-    cy.get('.repo-private-checkbox').first().check();
-    cy.get('.repo-private-checkbox').first().should('be.checked');
+    cy.get('.repo-hidden-checkbox').first().check();
+    cy.get('.repo-hidden-checkbox').first().should('be.checked');
   });
 });

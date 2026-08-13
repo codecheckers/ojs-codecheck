@@ -244,7 +244,7 @@ class CodecheckMetadataHandler
         if ($repository && isset($repository->repositories) && is_array($repository->repositories)) {
             $publicUrls = array_values(array_map(
                 fn($r) => isset($r->url) ? $r->url : '',
-                array_filter($repository->repositories, fn($r) => empty($r->isPrivate))
+                array_filter($repository->repositories, fn($r) => empty($r->hidden))
             ));
             $publicUrls = array_filter($publicUrls);
             $filteredCount = count($repository->repositories) - count($publicUrls);
