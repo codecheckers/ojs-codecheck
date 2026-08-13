@@ -87,22 +87,6 @@ class SettingsForm extends Form
         );
 
         $this->setData(
-            Constants::CODECHECK_API_ENDPOINT,
-            $this->plugin->getSetting(
-                $context->getId(),
-                Constants::CODECHECK_API_ENDPOINT
-            )
-        );
-
-        $this->setData(
-            Constants::CODECHECK_API_KEY,
-            $this->plugin->getSetting(
-                $context->getId(),
-                Constants::CODECHECK_API_KEY
-            )
-        );
-
-        $this->setData(
             Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION,
             $this->plugin->getSetting(
                 $context->getId(),
@@ -200,8 +184,6 @@ class SettingsForm extends Form
             Constants::CODECHECK_MODE,
             Constants::CODECHECK_AUTHOR_ANONYMITY,
             Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN,
-            Constants::CODECHECK_API_ENDPOINT,
-            Constants::CODECHECK_API_KEY,
             Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION,
             Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY,
             Constants::CODECHECK_GITHUB_CUSTOM_LABELS,
@@ -296,28 +278,30 @@ class SettingsForm extends Form
             $this->getData(Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN)
         );
 
-        $this->plugin->updateSetting(
+        // Remember what the register pointed at before this save, so the
+        // repository is only looked up when it actually changed.
+        $previousOrganization = $this->plugin->getSetting(
             $context->getId(),
-            Constants::CODECHECK_API_ENDPOINT,
-            $this->getData(Constants::CODECHECK_API_ENDPOINT)
+            Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION
+        );
+        $previousRepository = $this->plugin->getSetting(
+            $context->getId(),
+            Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY
         );
 
-        $this->plugin->updateSetting(
-            $context->getId(),
-            Constants::CODECHECK_API_KEY,
-            $this->getData(Constants::CODECHECK_API_KEY)
-        );
+        $organization = $this->getData(Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION);
+        $repository = $this->getData(Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY);
 
         $this->plugin->updateSetting(
             $context->getId(),
             Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION,
-            $this->getData(Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION)
+            $organization
         );
 
         $this->plugin->updateSetting(
             $context->getId(),
             Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY,
-            $this->getData(Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY)
+            $repository
         );
 
         $this->plugin->updateSetting(
@@ -326,10 +310,15 @@ class SettingsForm extends Form
             (bool) $this->getData(Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED)
         );
 
-        $registerWarning = $this->validateRegisterFileExists(
-            $this->getData(Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION),
-            $this->getData(Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY)
-        );
+        // Only reach out to GitHub when the register actually changed. This is
+        // an unauthenticated request against a 60/hour per-IP limit, and every
+        // unrelated settings save used to spend one.
+        $registerChanged = $organization !== $previousOrganization
+            || $repository !== $previousRepository;
+
+        $registerWarning = $registerChanged
+            ? $this->validateRegisterFileExists($organization, $repository)
+            : null;
 
         if ($registerWarning !== null) {
             $notificationMgr = new NotificationManager();
