@@ -110,6 +110,10 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 
 ### Removed
 
+- `CodecheckMetadataDAO` and `schema.xml`. Neither was reachable: the DAO queried
+  columns that do not exist and was referenced only by its own unit test, and OJS 3.5
+  installs plugin schemas through the migration rather than an ADODB schema file. Both
+  described table shapes that disagreed with the one the plugin actually creates.
 - The `codecheckApiEndpoint` and `codecheckApiKey` settings. Both were written on
   every save but no field ever rendered them and nothing ever read them, so they
   could not be set and had no effect.
