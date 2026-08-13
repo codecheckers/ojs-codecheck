@@ -43,6 +43,16 @@ require_once $autoloader;
 // Load our PKPTestCase stub
 require_once __DIR__ . '/PKPTestCase.php';
 
+// Make __() usable without booting the application. See FakeTranslator.
+require_once __DIR__ . '/FakeTranslator.php';
+
+if (!\Illuminate\Container\Container::getInstance()->bound('translator')) {
+    \Illuminate\Container\Container::getInstance()->singleton(
+        'translator',
+        fn () => new \APP\plugins\generic\codecheck\tests\FakeTranslator()
+    );
+}
+
 // Set include path
 set_include_path(
     BASE_SYS_DIR . PATH_SEPARATOR .

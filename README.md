@@ -443,10 +443,9 @@ sh runTests.sh --coverage-report=true   # writes tests/results/index.html
 resolves `__FILE__` through symlinks and the default "four levels up" lookup
 then points outside the OJS tree.
 
-**Some tests are skipped**, not run: `SettingsFormUnitTest`, `ManageUnitTest`
-and parts of `ActionsUnitTest` call `markTestSkipped()` in `setUp()` because they
-need Laravel facades and the translator that a bare test bootstrap does not
-provide. They are skipped locally *and* in CI.
+No tests are skipped. Coverage that would need the application booted — anything
+constructing a settings form — lives in the end-to-end suite instead, which
+exercises the real form in a real journal.
 
 ### End-to-end tests
 
