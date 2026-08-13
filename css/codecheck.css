@@ -158,6 +158,16 @@ textarea[name="dataAvailabilityStatement"] {
 }
 
 /* Wizard section header (used in template) */
+/* Give each field's title room to breathe, matching the rhythm of the
+   Title, Keywords and Abstract fields above this section. */
+.codecheck-wizard-section .pkpFormField + .pkpFormField {
+    margin-top: 2rem;
+}
+
+.codecheck-wizard-section .pkpFormField__heading {
+    margin-bottom: 0.25rem;
+}
+
 .codecheck-wizard-section .label {
   font-weight: 600;
   font-size: 1.1rem;
