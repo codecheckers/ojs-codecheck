@@ -4,6 +4,7 @@ namespace APP\plugins\generic\codecheck\tests;
 
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionDAO;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmission;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PKP\tests\PKPTestCase;
 use Illuminate\Support\Facades\DB;
 
@@ -155,5 +156,52 @@ class CodecheckSubmissionDAOUnitTest extends PKPTestCase
         ]);
 
         $this->expectNotToPerformAssertions();
+    }
+
+    /**
+     * Regression test: this branch logs through CodecheckLogger::warning(),
+     * which did not exist, so malformed stored repository data raised
+     * "Call to undefined method" instead of degrading to an empty list.
+     */
+    #[DataProvider('malformedRepositoryProvider')]
+    public function testGetRepositoriesReturnsEmptyListForMalformedRepositoryData(string $repository)
+    {
+        $submission = new CodecheckSubmission([
+            'submission_id' => 123,
+            'repository' => $repository,
+        ]);
+
+        $this->assertSame([], $submission->getRepositories());
+    }
+
+    public static function malformedRepositoryProvider(): array
+    {
+        return [
+            'legacy comma-separated string' => ['https://github.com/a/b, https://github.com/c/d'],
+            'plain url'                     => ['https://github.com/a/b'],
+            'json without repositories key' => ['{"repoWithCodecheckYaml": 0}'],
+            'json repositories not a list'  => ['{"repositories": "https://github.com/a/b"}'],
+            'invalid json'                  => ['{not json'],
+        ];
+    }
+
+    public function testGetRepositoriesFiltersOutPrivateRepositories()
+    {
+        $submission = new CodecheckSubmission([
+            'submission_id' => 123,
+            'repository' => json_encode([
+                'repositories' => [
+                    ['url' => 'https://github.com/public/one', 'isPrivate' => false],
+                    ['url' => 'https://github.com/private/one', 'isPrivate' => true],
+                    ['url' => 'https://github.com/public/two'],
+                ],
+                'repoWithCodecheckYaml' => 0,
+            ]),
+        ]);
+
+        $this->assertSame(
+            ['https://github.com/public/one', 'https://github.com/public/two'],
+            $submission->getRepositories()
+        );
     }
 }

@@ -13,6 +13,8 @@
     "test:component:open": "cypress open --component",
     "test:e2e": "cypress run --e2e",
     "test:e2e:open": "cypress open --e2e",
+    "test:visual": "cypress run --e2e --config specPattern='cypress/tests/visual/**/*.cy.js'",
+    "inspect": "node dev/inspect.mjs",
     "test:headed": "cypress run --headed",
     "test:chrome": "cypress run --browser chrome",
     "test:firefox": "cypress run --browser firefox",
@@ -25,6 +27,7 @@
     "@vitejs/plugin-vue": "^5.0.0",
     "cypress": "^14.5.4",
     "pinia": "^3.0.4",
+    "playwright": "^1.61.1",
     "vite": "^5.4.0",
     "vue": "^3.4.0"
   }

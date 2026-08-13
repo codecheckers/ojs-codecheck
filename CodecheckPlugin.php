@@ -225,22 +225,11 @@ class CodecheckPlugin extends GenericPlugin
      */
     public function setCodecheckPageHandler($hookName, $args)
     {
-        $request = Application::get()->getRequest();
-        $templateMgr = TemplateManager::getManager($request);
-
         $page    = &$args[0];
         $op      = &$args[1];
         $handler = &$args[3];
 
-        $path = $page;
-        if ($op !== 'index') {
-            $path .= "/{$op}";
-        }
-        if ($ops = $request->getRequestedArgs()) {
-            $path .= '/' . implode('/', $ops);
-        }
-
-        if ($page = 'codecheck' && $op == 'info') {
+        if ($page === 'codecheck' && $op === 'info') {
             $page = 'pages';
             $op = 'view';
             $handler = new CodecheckPageHandler($this);

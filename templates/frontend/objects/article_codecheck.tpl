@@ -8,7 +8,7 @@
  *}
 
 {if $codecheckStatus == 'completed'}
-<div class="item certificate" style="padding: 15px; margin: 5px 0;">
+<div class="item certificate" data-testid="codecheck-article-sidebar" style="padding: 15px; margin: 5px 0;">
 
     {* Badge *}
     <div class="sub_item" style="display:flex; align-items:center; margin-bottom:8px;">
@@ -118,7 +118,7 @@
 </div>
 
 {elseif $codecheckStatus == 'pending'}
-<div class="item codecheck-pending" style="padding: 15px; margin: 5px 0;">
+<div class="item codecheck-pending" data-testid="codecheck-article-sidebar" style="padding: 15px; margin: 5px 0;">
 
     <div class="sub_item" style="display:flex; align-items:center; margin-bottom:8px;">
         {if $logoUrl}

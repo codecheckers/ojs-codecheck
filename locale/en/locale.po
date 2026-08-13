@@ -50,8 +50,8 @@ msgstr "Reset"
 msgid "plugins.generic.codecheck.settings.submission.title"
 msgstr "Submission Settings"
 
-msgid "plugins.generic.codecheck.settings.enableCodecheck"
-msgstr "Enable CODECHECK for this journal"
+msgid "plugins.generic.codecheck.settings.showArticleSidebar"
+msgstr "CODECHECK information on published articles"
 
 msgid "plugins.generic.codecheck.settings.mode"
 msgstr "Select the CODECHECK mode for submissions"
@@ -65,8 +65,8 @@ msgstr "opt-out by the author"
 msgid "plugins.generic.codecheck.settings.mode.mandatory"
 msgstr "CODECHECK is mandatory"
 
-msgid "plugins.generic.codecheck.settings.enableCodecheck.description"
-msgstr "Allow editors to assign codecheckers to submissions"
+msgid "plugins.generic.codecheck.settings.showArticleSidebar.description"
+msgstr "Show the CODECHECK certificate, codecheckers and materials in the sidebar of published articles"
 
 msgid "plugins.generic.codecheck.settings.authorAnonymity"
 msgstr "Author anonymity in the GitHub register repository"

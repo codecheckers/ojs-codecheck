@@ -42,6 +42,12 @@ public/*
 tests/.phpunit.result.cache
 tests/results/
 .phpunit.cache/
-CLAUDE.md
+cypress/screenshots/
+cypress/ui-screenshots/
+cypress/videos/
+cypress/downloads/
+
+# output of dev/inspect.mjs
+dev/out/
 
 .claude/

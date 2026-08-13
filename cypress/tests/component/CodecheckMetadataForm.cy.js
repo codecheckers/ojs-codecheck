@@ -26,7 +26,7 @@ describe('CodecheckMetadataForm Component', () => {
           version: 'latest',
           publicationType: 'doi',
           manifest: [],
-          repository: JSON.stringify({ repositories: null, repoWithCodecheckYaml: null }),
+          repository: { repositories: null, repoWithCodecheckYaml: null },
           source: '',
           codecheckers: [],
           certificate: '',

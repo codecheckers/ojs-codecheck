@@ -129,8 +129,8 @@ class CodecheckRegisterDepositService
     }
 
     /**
-     * Resolve `repoWithCodecheckYaml` (an index into the comma-separated
-     * `repositories` string) into the actual URL string.
+     * Resolve `repoWithCodecheckYaml` (an index into the `repositories` list)
+     * into the actual URL string.
      */
     private function resolveSelectedRepositoryUrl(array $codecheckMetadata): ?string
     {
@@ -140,14 +140,19 @@ class CodecheckRegisterDepositService
             return null;
         }
 
-        $index = $repositoryData['repoWithCodecheckYaml'] ?? null;
-        if (!is_int($index)) {
+        $repositories = $repositoryData['repositories'];
+        if (!is_array($repositories)) {
             return null;
         }
 
-        $repositories = array_map('trim', explode(',', $repositoryData['repositories']));
+        $index = $repositoryData['repoWithCodecheckYaml'] ?? null;
+        if (!is_int($index) || !isset($repositories[$index])) {
+            return null;
+        }
 
-        return $repositories[$index] ?? null;
+        $url = $repositories[$index]['url'] ?? null;
+
+        return is_string($url) && $url !== '' ? trim($url) : null;
     }
 
     /**

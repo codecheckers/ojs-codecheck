@@ -24,7 +24,7 @@ jobs:
     
     steps:
       - name: Checkout OJS
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: pkp/ojs
           ref: stable-3_5_0
@@ -43,7 +43,7 @@ jobs:
         run: composer install --no-interaction --no-progress --optimize-autoloader
       
       - name: Checkout plugin
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: ojs/plugins/generic/codecheck
       
@@ -85,7 +85,7 @@ jobs:
       
       - name: Upload coverage report
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: phpunit-coverage
           path: ojs/plugins/generic/codecheck/tests/results/
@@ -93,7 +93,7 @@ jobs:
       
       - name: Upload test logs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: phpunit-logs
           path: |
@@ -107,10 +107,10 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '18'
           cache: 'npm'
@@ -123,7 +123,7 @@ jobs:
       
       - name: Upload screenshots
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cypress-screenshots
           path: cypress/screenshots
@@ -145,7 +145,7 @@ jobs:
 
     steps:
       - name: Checkout OJS
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: pkp/ojs
           ref: stable-3_5_0
@@ -153,12 +153,12 @@ jobs:
           submodules: recursive
 
       - name: Checkout plugin
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: ojs/plugins/generic/codecheck
 
       - name: Checkout PKP datasets
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: pkp/datasets
           path: datasets
@@ -228,7 +228,7 @@ jobs:
         run: composer install --no-interaction || true
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '18'
           cache: 'npm'
@@ -300,15 +300,38 @@ jobs:
 
       - name: Upload E2E screenshots
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: e2e-screenshots
           path: ojs/plugins/generic/codecheck/cypress/screenshots
           if-no-files-found: ignore
 
+      # Captures every surface the plugin renders, so UI changes can be reviewed
+      # from a pull request without a local environment. The viewport and output
+      # directory are passed as environment variables because --config does not
+      # take effect for them once they are set in the e2e block of
+      # cypress.config.js. A separate output directory keeps this run from
+      # emptying the e2e screenshots uploaded above.
+      - name: Capture CODECHECK UI screenshots
+        working-directory: ojs/plugins/generic/codecheck
+        run: npm run test:visual
+        env:
+          CYPRESS_BASE_URL: http://localhost:8888/ojs
+          CYPRESS_VIEWPORT_WIDTH: 1920
+          CYPRESS_VIEWPORT_HEIGHT: 1200
+          CYPRESS_SCREENSHOTS_FOLDER: cypress/ui-screenshots
+
+      - name: Upload CODECHECK UI screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-screenshots
+          path: ojs/plugins/generic/codecheck/cypress/ui-screenshots
+          if-no-files-found: warn
+
       - name: Upload E2E videos
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: e2e-videos
           path: ojs/plugins/generic/codecheck/cypress/videos

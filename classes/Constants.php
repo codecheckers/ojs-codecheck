@@ -19,11 +19,6 @@ class Constants
     public const SETTINGS_TEMPLATE = 'settings.tpl';
 
     /**
-     * Basic plugin setting
-     */
-    public const SETTING_ENABLE_CODECHECK = 'enableCodecheck';
-
-    /**
      * The possible Codecheck Statuses
      */
     public const CODECHECK_STATUS_PENDING = 'plugins.generic.codecheck.status.pending';
@@ -49,10 +44,8 @@ class Constants
         Constants::CODECHECK_STATUS_PUBLISHED_FULL_REPRODUCTION,
     ];
     
-    /**
-     * Plugin settings keys - NEW ADDITIONS
-     */
-    public const CODECHECK_ENABLED = 'codecheckEnabled';
+    public const CODECHECK_SHOW_ARTICLE_SIDEBAR = 'showArticleSidebar';
+
     public const CODECHECK_AUTHOR_ANONYMITY = 'authorAnonymity';
     public const CODECHECK_API_ENDPOINT = 'codecheckApiEndpoint';
     public const CODECHECK_API_KEY = 'codecheckApiKey';

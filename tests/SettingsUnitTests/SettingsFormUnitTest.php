@@ -81,7 +81,7 @@ class SettingsFormUnitTest extends PKPTestCase
         $dataProperty->setAccessible(true);
 
         // Simulate form submission by setting $_POST data
-        $_POST[Constants::CODECHECK_ENABLED] = '1';
+        $_POST[Constants::CODECHECK_SHOW_ARTICLE_SIDEBAR] = '1';
         $_POST[Constants::CODECHECK_API_ENDPOINT] = 'https://api.example.com';
         $_POST[Constants::CODECHECK_API_KEY] = 'test_api_key';
 
@@ -89,12 +89,12 @@ class SettingsFormUnitTest extends PKPTestCase
 
         $data = $dataProperty->getValue($this->form);
 
-        $this->assertArrayHasKey(Constants::CODECHECK_ENABLED, $data);
+        $this->assertArrayHasKey(Constants::CODECHECK_SHOW_ARTICLE_SIDEBAR, $data);
         $this->assertArrayHasKey(Constants::CODECHECK_API_ENDPOINT, $data);
         $this->assertArrayHasKey(Constants::CODECHECK_API_KEY, $data);
 
         // Clean up
-        unset($_POST[Constants::CODECHECK_ENABLED]);
+        unset($_POST[Constants::CODECHECK_SHOW_ARTICLE_SIDEBAR]);
         unset($_POST[Constants::CODECHECK_API_ENDPOINT]);
         unset($_POST[Constants::CODECHECK_API_KEY]);
     }
@@ -121,7 +121,7 @@ class SettingsFormUnitTest extends PKPTestCase
     public function testFormUsesCorrectConstantsForSettingKeys()
     {
         // Verify that the form uses the correct constant values
-        $this->assertSame('enabled', Constants::CODECHECK_ENABLED);
+        $this->assertSame('enabled', Constants::CODECHECK_SHOW_ARTICLE_SIDEBAR);
         $this->assertSame('codecheckApiEndpoint', Constants::CODECHECK_API_ENDPOINT);
         $this->assertSame('codecheckApiKey', Constants::CODECHECK_API_KEY);
         $this->assertSame('settings.tpl', Constants::SETTINGS_TEMPLATE);
@@ -129,7 +129,7 @@ class SettingsFormUnitTest extends PKPTestCase
 
     public function testSetDataAndGetData()
     {
-        $testKey = Constants::CODECHECK_ENABLED;
+        $testKey = Constants::CODECHECK_SHOW_ARTICLE_SIDEBAR;
         $testValue = true;
 
         $this->form->setData($testKey, $testValue);
@@ -140,11 +140,11 @@ class SettingsFormUnitTest extends PKPTestCase
 
     public function testSetDataWithMultipleKeys()
     {
-        $this->form->setData(Constants::CODECHECK_ENABLED, true);
+        $this->form->setData(Constants::CODECHECK_SHOW_ARTICLE_SIDEBAR, true);
         $this->form->setData(Constants::CODECHECK_API_ENDPOINT, 'https://api.test.com');
         $this->form->setData(Constants::CODECHECK_API_KEY, 'secret_key');
 
-        $this->assertTrue($this->form->getData(Constants::CODECHECK_ENABLED));
+        $this->assertTrue($this->form->getData(Constants::CODECHECK_SHOW_ARTICLE_SIDEBAR));
         $this->assertSame('https://api.test.com', $this->form->getData(Constants::CODECHECK_API_ENDPOINT));
         $this->assertSame('secret_key', $this->form->getData(Constants::CODECHECK_API_KEY));
     }

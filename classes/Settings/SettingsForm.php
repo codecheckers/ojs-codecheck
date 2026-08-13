@@ -55,10 +55,10 @@ class SettingsForm extends Form
             ->getContext();
 
         $this->setData(
-            Constants::CODECHECK_ENABLED,
+            Constants::CODECHECK_SHOW_ARTICLE_SIDEBAR,
             $this->plugin->getSetting(
                 $context->getId(),
-                Constants::CODECHECK_ENABLED
+                Constants::CODECHECK_SHOW_ARTICLE_SIDEBAR
             )
         );
 
@@ -196,7 +196,7 @@ class SettingsForm extends Form
     public function readInputData(): void
     {
         $this->readUserVars([
-            Constants::CODECHECK_ENABLED,
+            Constants::CODECHECK_SHOW_ARTICLE_SIDEBAR,
             Constants::CODECHECK_MODE,
             Constants::CODECHECK_AUTHOR_ANONYMITY,
             Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN,
@@ -274,8 +274,8 @@ class SettingsForm extends Form
 
         $this->plugin->updateSetting(
             $context->getId(),
-            Constants::CODECHECK_ENABLED,
-            $this->getData(Constants::CODECHECK_ENABLED)
+            Constants::CODECHECK_SHOW_ARTICLE_SIDEBAR,
+            (bool) $this->getData(Constants::CODECHECK_SHOW_ARTICLE_SIDEBAR)
         );
 
         $this->plugin->updateSetting(

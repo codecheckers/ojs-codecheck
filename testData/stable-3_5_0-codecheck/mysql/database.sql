@@ -357,6 +357,7 @@ CREATE TABLE `codecheck_metadata` (
   `source` text,
   `codecheckers` text,
   `certificate` varchar(100) DEFAULT NULL,
+  `issue` varchar(500) NOT NULL DEFAULT '{"url":null,"number":null,"labelsSelected":[]}',
   `check_time` timestamp NULL DEFAULT NULL,
   `summary` text,
   `report` varchar(500) DEFAULT NULL,
@@ -370,14 +371,66 @@ CREATE TABLE `codecheck_metadata` (
 --
 
 INSERT INTO `codecheck_metadata` (`submission_id`, `version`, `publication_type`, `manifest`, `repository`, `source`, `codecheckers`, `certificate`, `check_time`, `summary`, `report`, `additional_content`, `created_at`, `updated_at`) VALUES
-(2, '1.0', 'doi', '[{\"file\":\"Figure2.png\",\"size\":41513,\"comment\":\"manuscript Figure 2\",\"checked\":false},{\"file\":\"Figure3.png\",\"size\":41489,\"comment\":\"manuscript Figure 3\",\"checked\":false},{\"file\":\"Figure4.png\",\"size\":46935,\"comment\":\"manuscript Figure 4\",\"checked\":false},{\"file\":\"Figure5.png\",\"size\":33332,\"comment\":\"manuscript Figure 5\",\"checked\":false},{\"file\":\"Figure6.png\",\"size\":63185,\"comment\":\"manuscript Figure 6\",\"checked\":false},{\"file\":\"Figure7.png\",\"size\":71145,\"comment\":\"manuscript Figure 7\",\"checked\":false},{\"file\":\"Figure8.png\",\"size\":293243,\"comment\":\"manuscript Figure 8\",\"checked\":false}]', JSON_OBJECT('repositories', 'https://github.com/codecheckers/Reproduction-Hancock', 'repoWithCodecheckYaml', NULL), NULL, '[{\"name\":\"Stephen J. Eglen\",\"orcid\":\"0000-0001-8607-8025\"},{\"name\":\"Daniel N\\u00fcst\",\"orcid\":\"0000-0002-0024-5046\"}]', '2020-002', '2020-04-13 09:00:00', 'Matlab code written by Iain Davies to reproduce original paper; natural images provided by Peter Hancock.', 'http://doi.org/10.5281/zenodo.3750741', NULL, '2026-03-19 23:38:02', '2026-03-26 06:26:08'),
-(3, '1.0', 'doi', '[{\"file\":\"Datasets_Basic_AUROC.pdf\",\"size\":8078,\"comment\":\"Figure 2 of manuscript\",\"checked\":false},{\"file\":\"Predictions_Histograms.pdf\",\"size\":8727,\"comment\":\"Figure 3 of manuscript\",\"checked\":false},{\"file\":\"Algorithms_ParamsImprovement_AUROC.pdf\",\"size\":7837,\"comment\":\"Figure 4 of manuscript\",\"checked\":false},{\"file\":\"Algorithms_FSImprovement_AUROC.pdf\",\"size\":8190,\"comment\":\"Figure 5 of manuscript\",\"checked\":false},{\"file\":\"FS_vs_CL.pdf\",\"size\":6521,\"comment\":\"Figure 6 of manuscript\",\"checked\":false},{\"file\":\"FS_NumFeatures.pdf\",\"size\":5810,\"comment\":\"Figure 7 of manuscript\",\"checked\":false},{\"file\":\"Basic_DiffFromMedian.tsv\",\"size\":619,\"comment\":\"Example output table 1 (not in manuscript)\",\"checked\":false},{\"file\":\"ParamOpt_Improvement.tsv\",\"size\":14216,\"comment\":\"Example output table 2 (not in manuscript)\",\"checked\":false}]', JSON_OBJECT('repositories', 'https://github.com/codecheckers/Piccolo-2020', 'repoWithCodecheckYaml', NULL), NULL, '[{\"name\":\"Stephen J. Eglen\",\"orcid\":\"0000-0001-8607-8025\"}]', '2020-001', '2019-02-14 09:00:00', 'Only visualiation steps performed, rather than machine learning (which could take several hours/days).', 'http://doi.org/10.5281/zenodo.3674056', 'reference: https://doi.org/10.1093/gigascience/giaa026', '2026-03-26 06:42:22', '2026-03-26 06:43:48'),
-(4, '1.0', 'doi', '[{\"file\":\"figure1.png\",\"size\":460634,\"comment\":\"Figure 1: Housing data and different census areas scales ...\",\"checked\":false},{\"file\":\"table2.md\",\"size\":407,\"comment\":\"Table 2: The model coefficient estimates for the individual input variables ...\",\"checked\":false},{\"file\":\"table3.md\",\"size\":322,\"comment\":\"Table 3: The variable importance (expressed as a percentage) ...\",\"checked\":false}]', JSON_OBJECT('repositories', 'https://github.com/codecheckers/OpeningPractice', 'repoWithCodecheckYaml', NULL), NULL, '[{\"name\":\"Daniel N\\u00fcst\",\"orcid\":\"0000-0002-0024-5046\"}]', '2020-016', '2020-06-02 11:00:00', 'A small R script to render a map and two tables. Minor code adjustments were made, but reproduction of results (one figure, two tables) was successful.', 'https://doi.org/10.5281/zenodo.3981253', 'reference: https://doi.org/10.1007/s10109-020-00334-2', '2026-03-26 06:50:09', '2026-03-26 06:50:09'),
-(5, '1.0', 'doi', '[{\"file\":\"NA\",\"size\":0,\"comment\":\"The AGILE 2020 Reproducibility Review did not include manifest documentation, see https:\\/\\/github.com\\/codecheckers\\/register\\/issues\\/25\",\"checked\":false}]', JSON_OBJECT('repositories', 'https://github.com/reproducible-agile/AGILECA', 'repoWithCodecheckYaml', NULL), NULL, '[{\"name\":\"Daniel N\\u00fcst\",\"orcid\":\"0000-0002-0024-5046\"}]', '2020-018', '2020-07-13 10:32:00', 'The check was straightforward as all material was provided and documented well, but computations took about 3 hours to run.', 'https://doi.org/10.17605/OSF.IO/ZTC7M', 'reference: https://doi.org/10.5194/agile-giss-1-6-2020', '2026-03-26 06:57:00', '2026-03-26 06:57:00'),
-(7, '1.0', 'doi', '[{\"file\":\"NA\",\"size\":0,\"comment\":\"he AGILE 2022 Reproducibility Review did not include manifest documentation, see https:\\/\\/github.com\\/codecheckers\\/register\\/issues\\/38\",\"checked\":false}]', JSON_OBJECT('repositories', 'https://doi.org/10.6084/m9.figshare.19794289.v1', 'repoWithCodecheckYaml', NULL), NULL, '[{\"name\":\"Frank O. Ostermann\",\"orcid\":\"0000-0002-9317-8291\"}]', '2022-009', '2022-07-09 11:00:00', 'The paper presents a type of study that is highly valuable as a scientific contribution yet almost impossible to reproduce: a survey and user study involving participants from a convenience sample of a university course, implemented in several phases and using a particular geographic locale. The  study aims to learn more about user preferences on route choice, i.e., whether users prefer the  shortest route or a slightly longer route including landmarks. However, the difficult pandemic conditions under which the study had to be carried out had at least one positive aspect on replicability: The entire communication and survey had to be carried out online, facilitating a similar setup elsewhere. This review there fore attempts not a full reproduction of the study, but evaluates two distinct things:  First, whether there is sufficient information available to replicate the study elsewhere and compare results. Second, whether the statistical analysis of the survey and experimental data is indeed reproducible. The evaluation for both is positive.', 'https://doi.org/10.17605/osf.io/94vnx', 'reference: https://doi.org/10.5194/agile-giss-3-12-2022', '2026-03-26 07:01:08', '2026-03-26 07:01:08'),
-(8, '1.0', 'doi', '[{\"file\":\"figure-2b.png\",\"size\":188596,\"comment\":\"Figure 2(b) of the article\",\"checked\":false},{\"file\":\"figure-3b.png\",\"size\":142875,\"comment\":\"Figure 3(b) of the article\",\"checked\":false},{\"file\":\"figure-4.png\",\"size\":62928,\"comment\":\"Figure 4 of the article\",\"checked\":false},{\"file\":\"figure-5.pdf\",\"size\":157893,\"comment\":\"Figure 5 of the article\",\"checked\":false},{\"file\":\"figure-6.pdf\",\"size\":4768,\"comment\":\"Figure 6 of the article\",\"checked\":false}]', JSON_OBJECT('repositories', 'https://gitlab.com/cdchck/community-codechecks/2022-svaRetro-svaNUMT.git', 'repoWithCodecheckYaml', NULL), NULL, '[{\"name\":\"Raniere Silva\",\"orcid\":\"0000-0002-8381-3749\"}]', '2022-018', '2022-09-26 23:00:00', 'Only visualisation steps performed. All created figures match those in the article.', 'https://doi.org/10.5281/zenodo.7084333', 'reference: https://doi.org/10.46471/gigabyte.70', '2026-03-26 07:17:27', '2026-03-26 07:17:27'),
-(9, 'latest', 'doi', '[{\"file\":\"NA\",\"size\":0,\"comment\":\"The AGILE 2022 Reproducibility Review did not include manifest documentation, see https:\\/\\/github.com\\/codecheckers\\/register\\/issues\\/38\",\"checked\":false}]', JSON_OBJECT('repositories', 'https://github.com/zilongliu-geo/Geoparsing-Solved-Or-Biased', 'repoWithCodecheckYaml', NULL), NULL, '[{\"name\":\"Daniel N\\u00fcst\",\"orcid\":\"0000-0002-0024-5046\"},{\"name\":\"Eleni Tomai\",\"orcid\":\"0000-0003-1162-7389\"}]', '2022-007', '2022-07-09 11:00:00', 'The article presents an evaluation of geoparsing performance using a number of different datasets and methods from various sources.\nThough preprocessing steps and a core analysis step based on proprietary software could not be evaluated, one of two toponym resolution models could be executed successfully.\nThe provided notebooks for exploratory analysis, calculating statistical values, and geographic bias evaluation could be run and the outputs match the data and figures presented in the paper.\nTherefore, this reproducibility report can confirm a partially successful reproduction of a complex pipeline, for which authors provide reasonable but improvable documentation and share all details (code, data) of their computational workflow.', 'https://doi.org/10.17605/OSF.IO/3DSMV', 'reference: https://doi.org/10.5194/agile-giss-3-9-2022', '2026-03-26 07:10:10', '2026-03-26 07:10:10'),
-(10, '1.0', 'doi', '[{\"file\":\"NA\",\"size\":0,\"comment\":\"The AGILE 2023 Reproducibility Review did not include manifest documentation, see https:\\/\\/github.com\\/codecheckers\\/register\\/issues\\/49\",\"checked\":false}]', JSON_OBJECT('repositories', 'https://doi.org/10.6084/m9.figshare.22109987', 'repoWithCodecheckYaml', NULL), NULL, '[{\"name\":\"Philipp A. Friese\",\"orcid\":\"0000-0002-3124-5364\"}]', '2023-001', '2023-06-13 11:00:00', 'The data of the paper under reproduction is published on figshare under a CC-BY-4.0 license.\nIn total, three tables, three figures, and two data points embedded into the text are eligible for reproduction.\nAll have been successfully reproduced. The authors showed concern and dedication to support reproducibility of their work.\nReproduction was successful.', 'https://doi.org/10.17605/osf.io/c7vx3', 'reference: https://doi.org/10.5194/agile-giss-4-9-2023', '2026-03-26 07:06:00', '2026-03-26 07:17:50');
+(2, '1.0', 'doi', '[{\"file\":\"Figure2.png\",\"size\":41513,\"comment\":\"manuscript Figure 2\",\"checked\":false},{\"file\":\"Figure3.png\",\"size\":41489,\"comment\":\"manuscript Figure 3\",\"checked\":false},{\"file\":\"Figure4.png\",\"size\":46935,\"comment\":\"manuscript Figure 4\",\"checked\":false},{\"file\":\"Figure5.png\",\"size\":33332,\"comment\":\"manuscript Figure 5\",\"checked\":false},{\"file\":\"Figure6.png\",\"size\":63185,\"comment\":\"manuscript Figure 6\",\"checked\":false},{\"file\":\"Figure7.png\",\"size\":71145,\"comment\":\"manuscript Figure 7\",\"checked\":false},{\"file\":\"Figure8.png\",\"size\":293243,\"comment\":\"manuscript Figure 8\",\"checked\":false}]', JSON_OBJECT('repositories', JSON_ARRAY(JSON_OBJECT('url', 'https://github.com/codecheckers/Reproduction-Hancock', 'isPrivate', FALSE)), 'repoWithCodecheckYaml', NULL), NULL, '[{\"name\":\"Stephen J. Eglen\",\"orcid\":\"0000-0001-8607-8025\"},{\"name\":\"Daniel N\\u00fcst\",\"orcid\":\"0000-0002-0024-5046\"}]', '2020-002', '2020-04-13 09:00:00', 'Matlab code written by Iain Davies to reproduce original paper; natural images provided by Peter Hancock.', 'http://doi.org/10.5281/zenodo.3750741', NULL, '2026-03-19 23:38:02', '2026-03-26 06:26:08'),
+(3, '1.0', 'doi', '[{\"file\":\"Datasets_Basic_AUROC.pdf\",\"size\":8078,\"comment\":\"Figure 2 of manuscript\",\"checked\":false},{\"file\":\"Predictions_Histograms.pdf\",\"size\":8727,\"comment\":\"Figure 3 of manuscript\",\"checked\":false},{\"file\":\"Algorithms_ParamsImprovement_AUROC.pdf\",\"size\":7837,\"comment\":\"Figure 4 of manuscript\",\"checked\":false},{\"file\":\"Algorithms_FSImprovement_AUROC.pdf\",\"size\":8190,\"comment\":\"Figure 5 of manuscript\",\"checked\":false},{\"file\":\"FS_vs_CL.pdf\",\"size\":6521,\"comment\":\"Figure 6 of manuscript\",\"checked\":false},{\"file\":\"FS_NumFeatures.pdf\",\"size\":5810,\"comment\":\"Figure 7 of manuscript\",\"checked\":false},{\"file\":\"Basic_DiffFromMedian.tsv\",\"size\":619,\"comment\":\"Example output table 1 (not in manuscript)\",\"checked\":false},{\"file\":\"ParamOpt_Improvement.tsv\",\"size\":14216,\"comment\":\"Example output table 2 (not in manuscript)\",\"checked\":false}]', JSON_OBJECT('repositories', JSON_ARRAY(JSON_OBJECT('url', 'https://github.com/codecheckers/Piccolo-2020', 'isPrivate', FALSE)), 'repoWithCodecheckYaml', NULL), NULL, '[{\"name\":\"Stephen J. Eglen\",\"orcid\":\"0000-0001-8607-8025\"}]', '2020-001', '2019-02-14 09:00:00', 'Only visualiation steps performed, rather than machine learning (which could take several hours/days).', 'http://doi.org/10.5281/zenodo.3674056', 'reference: https://doi.org/10.1093/gigascience/giaa026', '2026-03-26 06:42:22', '2026-03-26 06:43:48'),
+(4, '1.0', 'doi', '[{\"file\":\"figure1.png\",\"size\":460634,\"comment\":\"Figure 1: Housing data and different census areas scales ...\",\"checked\":false},{\"file\":\"table2.md\",\"size\":407,\"comment\":\"Table 2: The model coefficient estimates for the individual input variables ...\",\"checked\":false},{\"file\":\"table3.md\",\"size\":322,\"comment\":\"Table 3: The variable importance (expressed as a percentage) ...\",\"checked\":false}]', JSON_OBJECT('repositories', JSON_ARRAY(JSON_OBJECT('url', 'https://github.com/codecheckers/OpeningPractice', 'isPrivate', FALSE)), 'repoWithCodecheckYaml', NULL), NULL, '[{\"name\":\"Daniel N\\u00fcst\",\"orcid\":\"0000-0002-0024-5046\"}]', '2020-016', '2020-06-02 11:00:00', 'A small R script to render a map and two tables. Minor code adjustments were made, but reproduction of results (one figure, two tables) was successful.', 'https://doi.org/10.5281/zenodo.3981253', 'reference: https://doi.org/10.1007/s10109-020-00334-2', '2026-03-26 06:50:09', '2026-03-26 06:50:09'),
+(5, '1.0', 'doi', '[{\"file\":\"NA\",\"size\":0,\"comment\":\"The AGILE 2020 Reproducibility Review did not include manifest documentation, see https:\\/\\/github.com\\/codecheckers\\/register\\/issues\\/25\",\"checked\":false}]', JSON_OBJECT('repositories', JSON_ARRAY(JSON_OBJECT('url', 'https://github.com/reproducible-agile/AGILECA', 'isPrivate', FALSE)), 'repoWithCodecheckYaml', NULL), NULL, '[{\"name\":\"Daniel N\\u00fcst\",\"orcid\":\"0000-0002-0024-5046\"}]', '2020-018', '2020-07-13 10:32:00', 'The check was straightforward as all material was provided and documented well, but computations took about 3 hours to run.', 'https://doi.org/10.17605/OSF.IO/ZTC7M', 'reference: https://doi.org/10.5194/agile-giss-1-6-2020', '2026-03-26 06:57:00', '2026-03-26 06:57:00'),
+(7, '1.0', 'doi', '[{\"file\":\"NA\",\"size\":0,\"comment\":\"he AGILE 2022 Reproducibility Review did not include manifest documentation, see https:\\/\\/github.com\\/codecheckers\\/register\\/issues\\/38\",\"checked\":false}]', JSON_OBJECT('repositories', JSON_ARRAY(JSON_OBJECT('url', 'https://doi.org/10.6084/m9.figshare.19794289.v1', 'isPrivate', FALSE), JSON_OBJECT('url', 'https://github.com/codecheckers/private-supplement-2022-009', 'isPrivate', TRUE)), 'repoWithCodecheckYaml', NULL), NULL, '[{\"name\":\"Frank O. Ostermann\",\"orcid\":\"0000-0002-9317-8291\"}]', '2022-009', '2022-07-09 11:00:00', 'The paper presents a type of study that is highly valuable as a scientific contribution yet almost impossible to reproduce: a survey and user study involving participants from a convenience sample of a university course, implemented in several phases and using a particular geographic locale. The  study aims to learn more about user preferences on route choice, i.e., whether users prefer the  shortest route or a slightly longer route including landmarks. However, the difficult pandemic conditions under which the study had to be carried out had at least one positive aspect on replicability: The entire communication and survey had to be carried out online, facilitating a similar setup elsewhere. This review there fore attempts not a full reproduction of the study, but evaluates two distinct things:  First, whether there is sufficient information available to replicate the study elsewhere and compare results. Second, whether the statistical analysis of the survey and experimental data is indeed reproducible. The evaluation for both is positive.', 'https://doi.org/10.17605/osf.io/94vnx', 'reference: https://doi.org/10.5194/agile-giss-3-12-2022', '2026-03-26 07:01:08', '2026-03-26 07:01:08'),
+(8, '1.0', 'doi', '[{\"file\":\"figure-2b.png\",\"size\":188596,\"comment\":\"Figure 2(b) of the article\",\"checked\":false},{\"file\":\"figure-3b.png\",\"size\":142875,\"comment\":\"Figure 3(b) of the article\",\"checked\":false},{\"file\":\"figure-4.png\",\"size\":62928,\"comment\":\"Figure 4 of the article\",\"checked\":false},{\"file\":\"figure-5.pdf\",\"size\":157893,\"comment\":\"Figure 5 of the article\",\"checked\":false},{\"file\":\"figure-6.pdf\",\"size\":4768,\"comment\":\"Figure 6 of the article\",\"checked\":false}]', JSON_OBJECT('repositories', JSON_ARRAY(JSON_OBJECT('url', 'https://gitlab.com/cdchck/community-codechecks/2022-svaRetro-svaNUMT.git', 'isPrivate', FALSE)), 'repoWithCodecheckYaml', NULL), NULL, '[{\"name\":\"Raniere Silva\",\"orcid\":\"0000-0002-8381-3749\"}]', '2022-018', '2022-09-26 23:00:00', 'Only visualisation steps performed. All created figures match those in the article.', 'https://doi.org/10.5281/zenodo.7084333', 'reference: https://doi.org/10.46471/gigabyte.70', '2026-03-26 07:17:27', '2026-03-26 07:17:27'),
+(9, 'latest', 'doi', '[{\"file\":\"NA\",\"size\":0,\"comment\":\"The AGILE 2022 Reproducibility Review did not include manifest documentation, see https:\\/\\/github.com\\/codecheckers\\/register\\/issues\\/38\",\"checked\":false}]', JSON_OBJECT('repositories', JSON_ARRAY(JSON_OBJECT('url', 'https://github.com/zilongliu-geo/Geoparsing-Solved-Or-Biased', 'isPrivate', FALSE)), 'repoWithCodecheckYaml', NULL), NULL, '[{\"name\":\"Daniel N\\u00fcst\",\"orcid\":\"0000-0002-0024-5046\"},{\"name\":\"Eleni Tomai\",\"orcid\":\"0000-0003-1162-7389\"}]', '2022-007', '2022-07-09 11:00:00', 'The article presents an evaluation of geoparsing performance using a number of different datasets and methods from various sources.\nThough preprocessing steps and a core analysis step based on proprietary software could not be evaluated, one of two toponym resolution models could be executed successfully.\nThe provided notebooks for exploratory analysis, calculating statistical values, and geographic bias evaluation could be run and the outputs match the data and figures presented in the paper.\nTherefore, this reproducibility report can confirm a partially successful reproduction of a complex pipeline, for which authors provide reasonable but improvable documentation and share all details (code, data) of their computational workflow.', 'https://doi.org/10.17605/OSF.IO/3DSMV', 'reference: https://doi.org/10.5194/agile-giss-3-9-2022', '2026-03-26 07:10:10', '2026-03-26 07:10:10'),
+(10, '1.0', 'doi', '[{\"file\":\"NA\",\"size\":0,\"comment\":\"The AGILE 2023 Reproducibility Review did not include manifest documentation, see https:\\/\\/github.com\\/codecheckers\\/register\\/issues\\/49\",\"checked\":false}]', JSON_OBJECT('repositories', JSON_ARRAY(JSON_OBJECT('url', 'https://doi.org/10.6084/m9.figshare.22109987', 'isPrivate', FALSE)), 'repoWithCodecheckYaml', NULL), NULL, '[{\"name\":\"Philipp A. Friese\",\"orcid\":\"0000-0002-3124-5364\"}]', '2023-001', '2023-06-13 11:00:00', 'The data of the paper under reproduction is published on figshare under a CC-BY-4.0 license.\nIn total, three tables, three figures, and two data points embedded into the text are eligible for reproduction.\nAll have been successfully reproduced. The authors showed concern and dedication to support reproducibility of their work.\nReproduction was successful.', 'https://doi.org/10.17605/osf.io/c7vx3', 'reference: https://doi.org/10.5194/agile-giss-4-9-2023', '2026-03-26 07:06:00', '2026-03-26 07:17:50');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `codecheck_orcid_tokens`
+--
+
+CREATE TABLE `codecheck_orcid_tokens` (
+  `id` bigint UNSIGNED NOT NULL,
+  `submission_id` bigint UNSIGNED NOT NULL,
+  `orcid_id` varchar(20) DEFAULT NULL,
+  `access_token` varchar(255) DEFAULT NULL,
+  `refresh_token` varchar(255) DEFAULT NULL,
+  `token_expires_at` timestamp NULL DEFAULT NULL,
+  `put_code` varchar(50) DEFAULT NULL,
+  `deposit_status` enum('pending','success','failed') NOT NULL DEFAULT 'pending',
+  `error_message` text,
+  `deposited_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `codecheck_status`
+--
+
+CREATE TABLE `codecheck_status` (
+  `status_id` bigint NOT NULL,
+  `submission_id` bigint NOT NULL,
+  `status` varchar(300) NOT NULL,
+  `timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `user_id` bigint NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `codecheck_issue_labels`
+--
+-- Cache of the GitHub issue labels fetched from the CODECHECK API. Left empty
+-- on purpose: the plugin refills it on first use when the cached copy is more
+-- than six hours old, so a seeded value would only ever be stale.
+--
+
+CREATE TABLE `codecheck_issue_labels` (
+  `label` varchar(200) NOT NULL DEFAULT '',
+  `labels_last_updated` varchar(100) NOT NULL DEFAULT '2000-01-01 00:00:00'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 
 -- --------------------------------------------------------
 
@@ -2013,7 +2066,8 @@ INSERT INTO `plugin_settings` (`plugin_setting_id`, `plugin_name`, `context_id`,
 (27, 'htmlarticlegalleyplugin', 1, 'enabled', '1', 'bool'),
 (28, 'pdfjsviewerplugin', 1, 'enabled', '1', 'bool'),
 (29, 'jatstemplateplugin', 1, 'enabled', '1', 'bool'),
-(30, 'codecheckplugin', 1, 'enabled', '1', 'bool');
+(30, 'codecheckplugin', 1, 'enabled', '1', 'bool'),
+(31, 'codecheckplugin', 1, 'showArticleSidebar', '1', 'bool');
 
 -- --------------------------------------------------------
 
@@ -5473,6 +5527,22 @@ ALTER TABLE `codecheck_metadata`
   ADD KEY `codecheck_metadata_submission_id_index` (`submission_id`);
 
 --
+-- Indexes for table `codecheck_orcid_tokens`
+--
+ALTER TABLE `codecheck_orcid_tokens`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `codecheck_orcid_tokens_submission_id_index` (`submission_id`),
+  ADD KEY `codecheck_orcid_tokens_submission_id_orcid_id_index` (`submission_id`,`orcid_id`);
+
+--
+-- Indexes for table `codecheck_status`
+--
+ALTER TABLE `codecheck_status`
+  ADD PRIMARY KEY (`status_id`),
+  ADD KEY `codecheck_status_metadata` (`submission_id`),
+  ADD KEY `codecheck_status_status_id_index` (`status_id`);
+
+--
 -- Indexes for table `completed_payments`
 --
 ALTER TABLE `completed_payments`
@@ -6566,6 +6636,18 @@ ALTER TABLE `citation_settings`
   MODIFY `citation_setting_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `codecheck_orcid_tokens`
+--
+ALTER TABLE `codecheck_orcid_tokens`
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `codecheck_status`
+--
+ALTER TABLE `codecheck_status`
+  MODIFY `status_id` bigint NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `completed_payments`
 --
 ALTER TABLE `completed_payments`
@@ -6941,7 +7023,7 @@ ALTER TABLE `oai_resumption_tokens`
 -- AUTO_INCREMENT for table `plugin_settings`
 --
 ALTER TABLE `plugin_settings`
-  MODIFY `plugin_setting_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
+  MODIFY `plugin_setting_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
 
 --
 -- AUTO_INCREMENT for table `publications`
@@ -7270,6 +7352,12 @@ ALTER TABLE `versions`
 --
 -- Constraints for dumped tables
 --
+
+--
+-- Constraints for table `codecheck_status`
+--
+ALTER TABLE `codecheck_status`
+  ADD CONSTRAINT `codecheck_status_metadata` FOREIGN KEY (`submission_id`) REFERENCES `codecheck_metadata` (`submission_id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `announcements`

@@ -38,10 +38,10 @@ class ArticleDetails
 
         // Get the CODECHECK settings for this journal or press
         $context = Application::get()->getRequest()->getContext();
-        $codecheckEnabled = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_ENABLED);
+        $showArticleSidebar = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_SHOW_ARTICLE_SIDEBAR);
 
-        // Do not modify the output if CODECHECK is not enabled
-        if (!$codecheckEnabled) {
+        // Do not modify the output if the sidebar display is switched off
+        if (!$showArticleSidebar) {
             return false;
         }
 
