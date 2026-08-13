@@ -3,7 +3,6 @@
 namespace APP\plugins\generic\codecheck\tests\SettingsUnitTests;
 
 use APP\plugins\generic\codecheck\classes\Settings\Manage;
-use APP\plugins\generic\codecheck\classes\Settings\SettingsForm;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
 use APP\core\Request;
 use PKP\core\JSONMessage;
@@ -15,110 +14,52 @@ use PKP\tests\PKPTestCase;
  * @class ManageUnitTest
  *
  * @brief Tests for the Settings Manage class
+ *
+ * Only the verb dispatch is covered here. The `settings` verb builds a real
+ * SettingsForm, which resolves journal locales through a database-backed
+ * facade, so exercising it means booting the application — and the end-to-end
+ * suite already opens the settings form, changes a value and saves it. What
+ * remains is the fall-through for verbs Manage does not handle, which e2e has
+ * no straightforward way to trigger.
  */
 class ManageUnitTest extends PKPTestCase
 {
     private Manage $manage;
     private CodecheckPlugin $mockPlugin;
 
-    /**
-     * Set up the test environment
-     */
     protected function setUp(): void
     {
         parent::setUp();
-        
-        $this->markTestSkipped('Manage tests require full OJS environment with Laravel facades');
+
         $this->mockPlugin = $this->createMock(CodecheckPlugin::class);
         $this->manage = new Manage($this->mockPlugin);
     }
 
-    public function testConstructorSetsPluginProperty()
+    private function requestWithVerb(?string $verb): Request
     {
-        $plugin = $this->createMock(CodecheckPlugin::class);
-        $manage = new Manage($plugin);
-        
-        $this->assertInstanceOf(Manage::class, $manage);
-        $this->assertSame($plugin, $manage->plugin);
-    }
-
-    public function testExecuteReturnsJSONMessageForSettingsVerb()
-    {
-        $mockRequest = $this->createMock(Request::class);
-        $mockRequest->method('getUserVar')
+        $request = $this->createMock(Request::class);
+        $request->method('getUserVar')
             ->willReturnMap([
-                ['verb', 'settings'],
+                ['verb', $verb],
                 ['save', null]
             ]);
 
-        $this->mockPlugin->method('getTemplateResource')
-            ->willReturn('settings.tpl');
-
-        $result = $this->manage->execute([], $mockRequest);
-
-        $this->assertInstanceOf(JSONMessage::class, $result);
+        return $request;
     }
 
-    public function testExecuteInitializesFormWhenNotSaving()
+    public function testExecuteReportsFailureForAnUnknownVerb()
     {
-        $mockRequest = $this->createMock(Request::class);
-        $mockRequest->method('getUserVar')
-            ->willReturnMap([
-                ['verb', 'settings'],
-                ['save', null]
-            ]);
-
-        $this->mockPlugin->method('getTemplateResource')
-            ->willReturn('settings.tpl');
-
-        $result = $this->manage->execute([], $mockRequest);
-
-        $this->assertInstanceOf(JSONMessage::class, $result);
-        $this->assertTrue($result->getStatus());
-    }
-
-    public function testExecuteReturnsJSONMessageWithFalseStatusForInvalidVerb()
-    {
-        $mockRequest = $this->createMock(Request::class);
-        $mockRequest->method('getUserVar')
-            ->willReturnMap([
-                ['verb', 'invalid_verb'],
-                ['save', null]
-            ]);
-
-        $result = $this->manage->execute([], $mockRequest);
+        $result = $this->manage->execute([], $this->requestWithVerb('invalid_verb'));
 
         $this->assertInstanceOf(JSONMessage::class, $result);
         $this->assertFalse($result->getStatus());
     }
 
-    public function testExecuteReturnsJSONMessageWithFalseStatusForNoVerb()
+    public function testExecuteReportsFailureWhenNoVerbIsGiven()
     {
-        $mockRequest = $this->createMock(Request::class);
-        $mockRequest->method('getUserVar')
-            ->willReturn(null);
-
-        $result = $this->manage->execute([], $mockRequest);
+        $result = $this->manage->execute([], $this->requestWithVerb(null));
 
         $this->assertInstanceOf(JSONMessage::class, $result);
         $this->assertFalse($result->getStatus());
-    }
-
-    public function testExecuteHandlesSaveRequest()
-    {
-        $mockRequest = $this->createMock(Request::class);
-        $mockRequest->method('getUserVar')
-            ->willReturnMap([
-                ['verb', 'settings'],
-                ['save', true]
-            ]);
-
-        $this->mockPlugin->method('getTemplateResource')
-            ->willReturn('settings.tpl');
-
-        // This will test the save path, though validation will fail in unit test
-        $result = $this->manage->execute([], $mockRequest);
-
-        $this->assertInstanceOf(JSONMessage::class, $result);
     }
 }
