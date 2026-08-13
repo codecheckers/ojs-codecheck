@@ -10,9 +10,11 @@
         </p>
 
         <div class="pkpFormField">
-            <label for="codeRepository">
-                {translate key="plugins.generic.codecheck.codeRepository"}
-            </label>
+            <div class="pkpFormField__heading">
+                <label for="codeRepository">
+                    {translate key="plugins.generic.codecheck.codeRepository"}
+                </label>
+            </div>
             <div class="pkpFormField__description">
                 {translate key="plugins.generic.codecheck.codeRepository.description"}
             </div>
@@ -25,9 +27,11 @@
         </div>
 
         <div class="pkpFormField">
-            <label for="dataRepository">
-                {translate key="plugins.generic.codecheck.dataRepository"}
-            </label>
+            <div class="pkpFormField__heading">
+                <label for="dataRepository">
+                    {translate key="plugins.generic.codecheck.dataRepository"}
+                </label>
+            </div>
             <div class="pkpFormField__description">
                 {translate key="plugins.generic.codecheck.dataRepository.description"}
             </div>
@@ -40,9 +44,11 @@
         </div>
 
         <div class="pkpFormField">
-            <label for="manifestFiles">
-                {translate key="plugins.generic.codecheck.manifestFiles.label"}
-            </label>
+            <div class="pkpFormField__heading">
+                <label for="manifestFiles">
+                    {translate key="plugins.generic.codecheck.manifestFiles.label"}
+                </label>
+            </div>
             <div class="pkpFormField__description">
                 {translate key="plugins.generic.codecheck.manifestFiles.description"}
             </div>
@@ -55,9 +61,11 @@
         </div>
 
         <div class="pkpFormField">
-            <label for="dataAvailabilityStatement">
-                {translate key="plugins.generic.codecheck.dataAvailability"}
-            </label>
+            <div class="pkpFormField__heading">
+                <label for="dataAvailabilityStatement">
+                    {translate key="plugins.generic.codecheck.dataAvailability"}
+                </label>
+            </div>
             <div class="pkpFormField__description">
                 {translate key="plugins.generic.codecheck.dataAvailability.description"}
             </div>
