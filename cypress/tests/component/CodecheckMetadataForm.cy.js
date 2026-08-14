@@ -83,6 +83,26 @@ describe('CodecheckMetadataForm Component', () => {
     cy.contains('10.1234/test.2024').should('exist');
   });
 
+  it('renders the specification link into the introduction', () => {
+    // The introduction is one message with a {$specLink} parameter rather than
+    // a sentence assembled from several keys, so that word order and
+    // punctuation stay with the translator. The mock t() substitutes the
+    // parameter and throws if the message and the call disagree about it.
+    cy.mount(CodecheckMetadataForm, {
+      props: {
+        submission: { id: 1 },
+        canEdit: true
+      }
+    });
+
+    cy.wait('@loadMetadata');
+
+    cy.get('.codecheck-intro a')
+      .should('have.attr', 'href', 'https://codecheck.org.uk/spec/config/latest/')
+      .and('have.attr', 'target', '_blank');
+    cy.get('.codecheck-intro').should('not.contain', '{$specLink}');
+  });
+
   it('displays read-only paper metadata with proper styling', () => {
     cy.mount(CodecheckMetadataForm, {
       props: {
@@ -119,7 +139,7 @@ describe('CodecheckMetadataForm Component', () => {
     }, { force: true });
     
     cy.get('.manifest-table').should('exist');
-    cy.contains(fileName).should('exist');
+    cy.get('input.file-name').should('have.value', fileName);
   });
 
   it('can add and remove manifest files', () => {
@@ -139,7 +159,7 @@ describe('CodecheckMetadataForm Component', () => {
       mimeType: 'text/csv'
     }, { force: true });
     
-    cy.contains('test.csv').should('exist');
+    cy.get('input.file-name').should('have.value', 'test.csv');
     
     // Remove file
     cy.get('.pkpButton--close').first().click();
@@ -166,10 +186,10 @@ describe('CodecheckMetadataForm Component', () => {
       mimeType: 'image/png'
     }, { force: true });
     
-    cy.get('.manifest-table input[type="text"]')
+    cy.get('.manifest-table input.file-comment')
       .type('This is the main result figure');
-    
-    cy.get('.manifest-table input[type="text"]')
+
+    cy.get('.manifest-table input.file-comment')
       .should('have.value', 'This is the main result figure');
   });
 
@@ -560,6 +580,23 @@ describe('CodecheckMetadataForm Component', () => {
     cy.get('.repo-hidden-checkbox').first().should('be.checked');
   });
 
+  it('fills the completion time with the current moment via the Now link', () => {
+    cy.mount(CodecheckMetadataForm, {
+      props: { submission: { id: 1 }, canEdit: true }
+    });
+    cy.wait('@loadMetadata');
+
+    cy.get('input[type="datetime-local"]').should('have.value', '');
+    cy.get('.check-time-now').click();
+
+    // Native datetime-local wants YYYY-MM-DDTHH:mm, and it should be now.
+    cy.get('input[type="datetime-local"]').invoke('val').should((value) => {
+      expect(value).to.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
+      const minutesApart = Math.abs(new Date(value) - new Date()) / 60000;
+      expect(minutesApart, 'set to roughly now').to.be.lessThan(5);
+    });
+  });
+
   describe('author-provided entries', () => {
     beforeEach(() => {
       cy.intercept('GET', '**/codecheck/metadata*', {
@@ -614,6 +651,18 @@ describe('CodecheckMetadataForm Component', () => {
     it('offers no delete control on an author manifest entry', () => {
       cy.get('.manifest-row').eq(0).find('.pkpButton--close').should('not.exist');
       cy.get('.manifest-row').eq(1).find('.pkpButton--close').should('exist');
+    });
+
+    it('allows the output file name to be edited, including the author\'s', () => {
+      cy.get('.manifest-row').eq(0).find('input.file-name')
+        .should('have.value', 'figure2.png')
+        .clear()
+        .type('figures/figure2.png')
+        .should('have.value', 'figures/figure2.png');
+
+      cy.get('.manifest-row').eq(1).find('input.file-name')
+        .should('have.value', 'extra.csv')
+        .should('not.be.disabled');
     });
 
     it('still allows an author entry to be edited and hidden', () => {

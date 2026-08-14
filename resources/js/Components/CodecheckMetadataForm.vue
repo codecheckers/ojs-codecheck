@@ -17,6 +17,7 @@
       </div>
       <div class="codecheck-header">
         <div class="header-content">
+          <p class="codecheck-intro" v-html="introText"></p>
           <div class="version-selector">
             <label class="version-label">{{ t('plugins.generic.codecheck.configVersion') }}</label>
             <select v-model="metadata.version" class="version-select">
@@ -131,20 +132,20 @@
                 </td>
                 <td>
                   <div class="file-info">
-                    <span class="file-name">{{ file.file }}</span>
+                    <input
+                      type="text"
+                      v-model="file.file"
+                      class="pkpFormField__input file-name"
+                      :placeholder="t('plugins.generic.codecheck.manifest.outputFilePlaceholder')"
+                    />
                     <span class="file-size" v-if="file.size">({{ formatFileSize(file.size) }})</span>
-                    <span
-                      v-if="file.providedByAuthor"
-                      class="provided-by-author"
-                      :title="t('plugins.generic.codecheck.providedByAuthor.tooltip')"
-                    >✍️ {{ t('plugins.generic.codecheck.providedByAuthor') }}</span>
                   </div>
                 </td>
                 <td>
                   <input
                     type="text"
                     v-model="file.comment"
-                    class="pkpFormField__input"
+                    class="pkpFormField__input file-comment"
                     :placeholder="t('plugins.generic.codecheck.manifestFiles.commentPlaceholder')"
                   />
                 </td>
@@ -154,8 +155,13 @@
                   </label>
                 </td>
                 <td>
+                  <span
+                    v-if="file.providedByAuthor"
+                    class="provided-by-author"
+                    :title="t('plugins.generic.codecheck.providedByAuthor.tooltip')"
+                  >✍️ {{ t('plugins.generic.codecheck.providedByAuthor') }}</span>
                   <button
-                    v-if="!file.providedByAuthor"
+                    v-else
                     type="button"
                     class="pkpButton pkpButton--close"
                     @click="removeManifestFile(index)"
@@ -192,11 +198,6 @@
 
           <div v-if="repositories.length > 0" class="repository-list">
             <div v-for="(repo, index) in repositories" :key="'repo-' + index" class="repository-item">
-              <span
-                v-if="repo.providedByAuthor"
-                class="provided-by-author"
-                :title="t('plugins.generic.codecheck.providedByAuthor.tooltip')"
-              >✍️ {{ t('plugins.generic.codecheck.providedByAuthor') }}</span>
               <input
                 type="url"
                 v-model="repo.url"
@@ -224,8 +225,13 @@
               >
                 📄 codecheck.yml
               </button>
+              <span
+                v-if="repo.providedByAuthor"
+                class="provided-by-author"
+                :title="t('plugins.generic.codecheck.providedByAuthor.tooltip')"
+              >✍️ {{ t('plugins.generic.codecheck.providedByAuthor') }}</span>
               <button
-                v-if="!repo.providedByAuthor"
+                v-else
                 type="button"
                 class="pkpButton codecheck-btn pkpButton--close"
                 @click="removeRepository(index)"
@@ -295,7 +301,14 @@
         </div>
 
         <div class="field-group">
-          <label class="field-label">{{ t('plugins.generic.codecheck.completionTime.label') }}</label>
+          <label class="field-label">
+            {{ t('plugins.generic.codecheck.completionTime.label') }}
+            <button
+              type="button"
+              class="link-button check-time-now"
+              @click="setCheckTimeToNow"
+            >{{ t('plugins.generic.codecheck.completionTime.now') }}</button>
+          </label>
           <input
             type="datetime-local"
             v-model="metadata.check_time"
@@ -417,6 +430,8 @@
 <script>
 const { useLocalize } = pkp.modules.useLocalize;
 
+const CODECHECK_SPEC_URL = 'https://codecheck.org.uk/spec/config/latest/';
+
 export default {
   name: 'CodecheckMetadataForm',
   props: {
@@ -482,6 +497,20 @@ export default {
     }
   },
   computed: {
+    /**
+     * The introduction is a single translatable sentence with the link passed
+     * in as a parameter, rather than a prefix key concatenated with a link
+     * label. Splitting a sentence across keys fixes English word order and
+     * breaks in right-to-left languages — see the PKP translating guide,
+     * https://docs.pkp.sfu.ca/translating-guide/en/coders#semantics
+     */
+    introText() {
+      const link = '<a href="' + CODECHECK_SPEC_URL + '" target="_blank" rel="noopener noreferrer">'
+        + this.t('plugins.generic.codecheck.form.intro.specLinkLabel')
+        + '</a>';
+      return this.t('plugins.generic.codecheck.form.intro', {specLink: link});
+    },
+
     canPreview() {
       return this.metadata.manifest.length > 0 && 
             this.metadata.codecheckers.length > 0 &&
@@ -1465,6 +1494,15 @@ export default {
       }, 5000);
     },
 
+    /**
+     * The field is a native datetime-local input, so its calendar is the
+     * browser's own and cannot be extended without replacing the control with
+     * a picker library. A link beside the label does the same job.
+     */
+    setCheckTimeToNow() {
+      this.metadata.check_time = this.formatDateTimeLocal(new Date());
+    },
+
     formatDateTimeLocal(timestamp) {
       const date = new Date(timestamp);
       const year = date.getFullYear();
@@ -1548,6 +1586,30 @@ export default {
   text-transform: uppercase;
   line-height: 1.75;
   color: #333;
+}
+
+.codecheck-metadata-form .link-button {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-inline-start: 0.5rem;
+  color: #007ab2;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.codecheck-metadata-form .link-button:hover {
+  color: #00659b;
+}
+
+.codecheck-metadata-form .codecheck-intro {
+  margin: 0 0 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #495057;
+  max-width: 70ch;
 }
 
 .codecheck-metadata-form .version-selector {
@@ -1810,9 +1872,17 @@ export default {
   gap: 0.25rem;
 }
 
+/* The output-file cell is taller than its neighbours because it carries the
+   size below the input. Align cells to the top so every control in a row
+   starts on the same line. */
+.codecheck-metadata-form .manifest-table td {
+  vertical-align: top;
+}
+
 .codecheck-metadata-form .file-name {
   font-weight: 600;
   font-size: 14px;
+  width: 100%;
 }
 
 .codecheck-metadata-form .file-size {
@@ -1883,6 +1953,7 @@ export default {
 
 .codecheck-metadata-form .provided-by-author {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 0.2rem;
   padding: 0.1rem 0.4rem;

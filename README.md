@@ -176,6 +176,11 @@ component tests substitute a mock `pkp` global.
 `t('…')` calls in the Vue sources. Do not edit it by hand; add the key to
 `locale/en/locale.po` and rebuild.
 
+Keep each sentence in a single message and pass variable parts in as `{$name}`
+placeholders instead of concatenating several keys — see the
+[PKP Translating Guide](https://docs.pkp.sfu.ca/translating-guide/en/), in particular
+its [chapter for coders](https://docs.pkp.sfu.ca/translating-guide/en/coders#semantics).
+
 ### Frontend Structure
 ```bash
 ├── resources/

@@ -239,6 +239,37 @@ exist** — that branch fatals. Either add the level or change the call.
   `npm run build` by regexing `t('…')` / `tk('…')` out of `.vue`/`.js`. Never hand-edit;
   rebuild instead. New UI strings need a `.po` entry *and* a rebuild.
 
+**One sentence is one key.** Never assemble a sentence from several keys, and never
+concatenate a key with markup or a link label in the template. Word order, punctuation
+placement and direction all differ between languages, so a message split into
+"prefix" + link + "." can only ever come out right in English and breaks outright in
+right-to-left languages. Put the whole sentence in one message with a `{$name}`
+placeholder and pass the variable part in:
+
+```po
+msgid "plugins.generic.codecheck.form.intro"
+msgstr "… For background and technical details see {$specLink}."
+```
+
+```js
+// CodecheckMetadataForm.vue
+this.t('plugins.generic.codecheck.form.intro', {specLink: '<a href="…">' + label + '</a>'})
+```
+
+When the parameter carries markup, the result has to be rendered with `v-html`
+(Vue) or an unescaped Smarty variable — so build the markup in code and keep it out
+of the translatable string. `CodecheckPlugin.php` does the same for
+`{$codecheckLink}` on the submission form. This follows PKP's
+[Semantics](https://docs.pkp.sfu.ca/translating-guide/en/coders#semantics) guidance.
+
+Reference documentation:
+
+- [PKP Translating Guide](https://docs.pkp.sfu.ca/translating-guide/en/) — locale file
+  format, and [the coders' chapter](https://docs.pkp.sfu.ca/translating-guide/en/coders)
+  on writing translatable strings
+- [PKP Plugin Guide](https://docs.pkp.sfu.ca/dev/plugin-guide/en/) — plugin structure,
+  hooks, settings forms and the release/packaging expectations
+
 ### Color scheme
 
 CODECHECK brand: primary `#008033`, dark `#006629`, light `#e8f5e8`. Documented in
@@ -272,7 +303,7 @@ cypress/
                                this first in every component spec
   support/e2e.js               cy.ojsLogin(), cy.getCsrfToken(), swallow uncaught exceptions
   support/component-index.html
-  tests/component/*.cy.js      5 specs, 48 tests
+  tests/component/*.cy.js      5 specs, 54 tests
   tests/e2e/*.cy.js            3 specs, 10 tests
                                yaml-generation, article-sidebar-setting,
                                private-repository
@@ -285,13 +316,26 @@ dev/
 ### Component tests (the reliable suite)
 
 `npm run test:component` — **passes locally with no OJS, no database, no build step**
-(48/48, ~60 s; `CodecheckMetadataForm.cy.js` alone is ~56 s). Cypress mounts the `.vue`
-sources directly through Vite and stubs the API with `cy.intercept`.
+(54/54, ~25 s). Cypress mounts the `.vue` sources directly through Vite and stubs the
+API with `cy.intercept`.
 
 Covered: metadata form load/render, manifest files add/remove/comment, repository list
 add/remove + private flag, certificate identifier reservation + labels, required-field
 validation, YAML preview gating, codechecker modal, review display states, data &
 software availability field.
+
+`cypress/support/pkp-mock.js` reads the real `locale/en/locale.po` and its `t()`
+behaves in two ways on purpose:
+
+- a message **without** placeholders resolves to the locale key, so specs assert on a
+  stable identifier instead of English copy that changes whenever wording is edited
+- a message **with** placeholders resolves to the translated text with the parameters
+  substituted, and **throws** when the message and the call site disagree — a missing
+  parameter, an extra one, or a plugin key with no entry in the `.po` at all. That is
+  what stops a renamed placeholder from silently rendering `{$specLink}` to the user
+
+Keys outside `plugins.generic.codecheck.` come from OJS's own locale files
+(`common.loading`), so they are passed through unchecked.
 
 Not covered: `CodecheckStatusForm.vue`, `CodecheckGithubIssueDisplay.vue`, the
 `storeExtend` wiring in `main.js` (menu injection, dashboard column, file-manager

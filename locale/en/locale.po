@@ -222,6 +222,12 @@ msgstr "This submission will be codechecked"
 msgid "plugins.generic.codecheck.workflow.title"
 msgstr "WORKFLOW: CODECHECK"
 
+msgid "plugins.generic.codecheck.form.intro"
+msgstr "What you record here becomes the codecheck.yml file that accompanies the certificate: the materials that were checked, who checked them, and what the check produced. The config version fixes which version of the specification that file follows. For background and technical details see {$specLink}."
+
+msgid "plugins.generic.codecheck.form.intro.specLinkLabel"
+msgstr "the CODECHECK config file specification"
+
 msgid "plugins.generic.codecheck.configVersion"
 msgstr "CODECHECK config version"
 
@@ -314,6 +320,9 @@ msgstr "No repositories added yet"
 
 msgid "plugins.generic.codecheck.completionTime.title"
 msgstr "Time the CODECHECK was completed"
+
+msgid "plugins.generic.codecheck.completionTime.now"
+msgstr "Now"
 
 msgid "plugins.generic.codecheck.completionTime.label"
 msgstr "Time the CODECHECK was completed"
@@ -852,6 +861,9 @@ msgstr "Submitted by author"
 
 msgid "plugins.generic.codecheck.providedByAuthor.tooltip"
 msgstr "The submitting author provided this entry. You can edit it or hide it from the public record, but it cannot be removed."
+
+msgid "plugins.generic.codecheck.manifest.outputFilePlaceholder"
+msgstr "e.g. figures/figure2.png"
 
 msgid "plugins.generic.codecheck.manifest.hidden"
 msgstr "Hidden"

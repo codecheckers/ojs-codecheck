@@ -27,9 +27,10 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 - CODECHECK opt-in checkbox on the submission start form, and a journal-wide mode
   setting choosing whether codechecking is opt-in, opt-out or mandatory for authors
   (Issue #128)
-- CODECHECK section in the submission wizard for code and data repositories, the
-  manifest of expected outputs, and a data and software availability statement,
-  shown in the wizard's review step
+- CODECHECK section in the submission wizard for repositories, the manifest of
+  expected outputs, and a data and software availability statement, shown in the
+  wizard's review step. What the author enters goes straight into the CODECHECK
+  record the codechecker works on, rather than into a separate copy (Issue #152)
 - Public CODECHECK information page explaining the process to authors, linked from
   the opt-in checkbox
 
@@ -48,9 +49,19 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   `codecheck.yml` file (Issue #146)
 - Import of existing CODECHECK metadata from a repository — GitHub, GitLab, Zenodo and
   OSF, including DOI resolution (Issue #145)
-- Repositories can be marked "Keep private". Private repositories stay visible to
+- Repositories and manifest entries can be hidden. Hidden entries stay visible to
   editors and codecheckers but are excluded from the generated `codecheck.yml` and
   from everything readers see (Issue #134)
+- Repositories and manifest entries the submitting author provided are marked
+  "Submitted by author". A codechecker can edit them or hide them, but cannot
+  remove them, so what the author supplied cannot silently disappear from the
+  record (Issue #152)
+- Output file names in the manifest are editable, so a codechecker can correct a
+  path without removing the entry and adding it again (Issue #152)
+- A "Now" link beside "Time the check was completed" fills in the current date
+  and time
+- The metadata form opens with a short explanation of what the form produces,
+  linking to the CODECHECK config file specification for the details
 - Validation warnings and errors for repository metadata shown directly in the
   repositories field (Issue #144)
 - `codecheck.yml` generation with preview and download, and file upload/download for
@@ -119,6 +130,10 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   could not be set and had no effect.
 
 ### Fixed
+
+- Rows in the manifest table line up again. Entries submitted by the author were
+  taller than the others, and the output file and description inputs sat on
+  different lines in every row because the file cell also carries the file size.
 
 - Saving the plugin settings no longer makes a GitHub request every time. The
   register repository is only checked for its `register.csv` when the configured
