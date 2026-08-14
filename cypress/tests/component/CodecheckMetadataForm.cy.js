@@ -559,4 +559,71 @@ describe('CodecheckMetadataForm Component', () => {
     cy.get('.repo-hidden-checkbox').first().check();
     cy.get('.repo-hidden-checkbox').first().should('be.checked');
   });
+
+  describe('author-provided entries', () => {
+    beforeEach(() => {
+      cy.intercept('GET', '**/codecheck/metadata*', {
+        statusCode: 200,
+        body: {
+          success: true,
+          submissionId: 1,
+          submission: { id: 1, title: 'Test Article Title', authors: [], doi: null },
+          codecheck: {
+            version: 'latest',
+            publicationType: 'doi',
+            manifest: [
+              { file: 'figure2.png', comment: 'Figure 2', hidden: false, providedByAuthor: true },
+              { file: 'extra.csv', comment: 'added by the codechecker', hidden: false, providedByAuthor: false },
+            ],
+            repository: {
+              repositories: [
+                { url: 'https://github.com/author/repo', hidden: false, providedByAuthor: true },
+                { url: 'https://github.com/codechecker/repo', hidden: false, providedByAuthor: false },
+              ],
+              repoWithCodecheckYaml: null,
+            },
+            source: '',
+            codecheckers: [],
+            certificate: '',
+            check_time: '',
+            summary: '',
+            report: '',
+            additionalContent: '',
+            issue: { url: null, number: null, labels: [], labelsSelected: [] },
+          },
+        }
+      }).as('loadAuthored');
+
+      cy.mount(CodecheckMetadataForm, { props: { submission: { id: 1 }, canEdit: true } });
+      cy.wait('@loadAuthored');
+    });
+
+    it('marks the entries the author submitted', () => {
+      cy.get('.repository-item').eq(0).find('.provided-by-author').should('exist');
+      cy.get('.repository-item').eq(1).find('.provided-by-author').should('not.exist');
+
+      cy.get('.manifest-row').eq(0).find('.provided-by-author').should('exist');
+      cy.get('.manifest-row').eq(1).find('.provided-by-author').should('not.exist');
+    });
+
+    it('offers no delete control on an author repository', () => {
+      cy.get('.repository-item').eq(0).find('.pkpButton--close').should('not.exist');
+      cy.get('.repository-item').eq(1).find('.pkpButton--close').should('exist');
+    });
+
+    it('offers no delete control on an author manifest entry', () => {
+      cy.get('.manifest-row').eq(0).find('.pkpButton--close').should('not.exist');
+      cy.get('.manifest-row').eq(1).find('.pkpButton--close').should('exist');
+    });
+
+    it('still allows an author entry to be edited and hidden', () => {
+      cy.get('.repository-item').eq(0).find('input[type="url"]')
+        .should('not.be.disabled')
+        .clear()
+        .type('https://github.com/author/repo-corrected');
+
+      cy.get('.repository-item').eq(0).find('.repo-hidden-checkbox').check().should('be.checked');
+      cy.get('.manifest-row').eq(0).find('.manifest-hidden-checkbox').check().should('be.checked');
+    });
+  });
 });

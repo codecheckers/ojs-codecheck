@@ -120,6 +120,7 @@
                 <th width="20"></th>
                 <th>{{ t('plugins.generic.codecheck.manifest.outputFile') }}</th>
                 <th>{{ t('plugins.generic.codecheck.manifest.description') }}</th>
+                <th width="90">{{ t('plugins.generic.codecheck.manifest.hidden') }}</th>
                 <th width="80"></th>
               </tr>
             </thead>
@@ -132,6 +133,11 @@
                   <div class="file-info">
                     <span class="file-name">{{ file.file }}</span>
                     <span class="file-size" v-if="file.size">({{ formatFileSize(file.size) }})</span>
+                    <span
+                      v-if="file.providedByAuthor"
+                      class="provided-by-author"
+                      :title="t('plugins.generic.codecheck.providedByAuthor.tooltip')"
+                    >✍️ {{ t('plugins.generic.codecheck.providedByAuthor') }}</span>
                   </div>
                 </td>
                 <td>
@@ -143,9 +149,15 @@
                   />
                 </td>
                 <td>
-                  <button 
+                  <label class="manifest-hidden-label" :title="t('plugins.generic.codecheck.repository.markAsHidden.tooltip')">
+                    <input type="checkbox" v-model="file.hidden" class="manifest-hidden-checkbox" />
+                  </label>
+                </td>
+                <td>
+                  <button
+                    v-if="!file.providedByAuthor"
                     type="button"
-                    class="pkpButton pkpButton--close" 
+                    class="pkpButton pkpButton--close"
                     @click="removeManifestFile(index)"
                   >×</button>
                 </td>
@@ -180,6 +192,11 @@
 
           <div v-if="repositories.length > 0" class="repository-list">
             <div v-for="(repo, index) in repositories" :key="'repo-' + index" class="repository-item">
+              <span
+                v-if="repo.providedByAuthor"
+                class="provided-by-author"
+                :title="t('plugins.generic.codecheck.providedByAuthor.tooltip')"
+              >✍️ {{ t('plugins.generic.codecheck.providedByAuthor') }}</span>
               <input
                 type="url"
                 v-model="repo.url"
@@ -207,9 +224,10 @@
               >
                 📄 codecheck.yml
               </button>
-              <button 
+              <button
+                v-if="!repo.providedByAuthor"
                 type="button"
-                class="pkpButton codecheck-btn pkpButton--close" 
+                class="pkpButton codecheck-btn pkpButton--close"
                 @click="removeRepository(index)"
               >×</button>
             </div>
@@ -777,16 +795,24 @@ export default {
     },
 
     removeManifestFile(index) {
+      // Author-provided entries can be hidden but never removed.
+      if (this.metadata.manifest[index]?.providedByAuthor) {
+        return;
+      }
       if (confirm(this.t('plugins.generic.codecheck.manifest.removeConfirm'))) {
         this.metadata.manifest.splice(index, 1);
       }
     },
 
     addRepository() {
-      this.repositories.push({ url: '', hidden: false });
+      this.repositories.push({ url: '', hidden: false, providedByAuthor: false });
     },
 
     removeRepository(index) {
+      // Author-provided entries can be hidden but never removed.
+      if (this.repositories[index]?.providedByAuthor) {
+        return;
+      }
       if(this.repositoryWithCodecheckYaml === index) {
         this.repositoryWithCodecheckYaml = null;
       }
@@ -1853,6 +1879,20 @@ export default {
 
 .codecheck-metadata-form .repository-item input {
   flex: 1;
+}
+
+.codecheck-metadata-form .provided-by-author {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  background: #e8f5e8;
+  color: #006629;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: help;
 }
 
 .codecheck-metadata-form .repo-hidden-label {

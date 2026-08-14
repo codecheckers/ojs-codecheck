@@ -847,6 +847,15 @@ msgstr "not set"
 msgid "plugins.generic.codecheck.github.issue.display.registerRepository"
 msgstr "Register Repository: {$repository}"
 
+msgid "plugins.generic.codecheck.providedByAuthor"
+msgstr "Submitted by author"
+
+msgid "plugins.generic.codecheck.providedByAuthor.tooltip"
+msgstr "The submitting author provided this entry. You can edit it or hide it from the public record, but it cannot be removed."
+
+msgid "plugins.generic.codecheck.manifest.hidden"
+msgstr "Hidden"
+
 msgid "plugins.generic.codecheck.repository.markAsHidden"
 msgstr "Hide from public record"
 
