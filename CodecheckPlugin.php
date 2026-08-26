@@ -225,7 +225,13 @@ class CodecheckPlugin extends GenericPlugin
             return;
         }
 
-        $router->setHandler($apiHandler);
+        // Not registered with the router: setHandler() takes a PKPHandler and
+        // CodecheckApiHandler is not one. The call used to stand here and was
+        // simply never reached, because constructing the handler authorized,
+        // served and exited. Serving from execute() made it reachable, and it
+        // raised a TypeError inside the hook — which PKP swallows, leaving OJS
+        // to answer every plugin API call with its own 404.
+        $apiHandler->execute();
         exit;
     }
 

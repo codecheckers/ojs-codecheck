@@ -139,6 +139,19 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   the hook itself, so a status the journal does not accept blocks publication as
   it was meant to
 
+- The plugin API answers requests from `CodecheckApiHandler::execute()` rather than
+  from its constructor, and sends responses through a `JsonResponseEmitter` instead
+  of a static call that echoes and exits. The handler can now be built and driven in
+  a test, and its CSRF check, role check and route parsing are covered — they are the
+  only thing standing in front of nineteen endpoints, several of which write to the
+  public CODECHECK register. While registering the API, the plugin no longer calls
+  `$router->setHandler()`: it takes a PKP handler and this is not one
+
+- A POST to reserve a certificate identifier or update the register issue that
+  leaves out a required field is answered with a 400 naming the field, rather than
+  raising "Undefined array key" on its way to a 500. The guards moved into
+  `IdentifierParameterValidator`
+
 - Custom API under `api/v1/codecheck` with CSRF and role-based access control
 - Database schema managed by an install migration with versioned upgrade steps, run
   when the plugin is enabled (Issue #94)

@@ -129,12 +129,26 @@ Components (`resources/js/Components/`):
 hook and `exit`ing after serving. It is **not** a PKP API handler and does not
 participate in PKP's authorization policies.
 
-- Route matching: `preg_match('#api/v1/codecheck/(.*)#', …)` → `ApiEndpoint` lookup in
-  `$this->endpoints[$method]`
+- Constructing a handler does nothing but wire it up. The request cycle is
+  `execute()`: route → CSRF → roles → endpoint. It used to be the constructor,
+  which meant nothing could build one without it answering a request and exiting
+- Route matching: `CodecheckApiHandler::routeFromPath()` (static and pure) →
+  `ApiEndpoint` lookup in `$this->endpoints[$method]`
 - Auth: `X-Csrf-Token` header compared against `$request->getSession()->token()`, then
   `$user->hasRole($pkpRoles, $contextId)` using `CodecheckRoleManager`
-  (`readMetadata` / `editMetadata` / `admin` role sets built in `CodecheckPlugin::setupAPIHandler()`)
-- Responses via `JsonResponse::staticResponse([...], $httpCode)`
+  (`readMetadata` / `editMetadata` / `admin` role sets built in `CodecheckPlugin::setupAPIHandler()`).
+  The token is checked before the route is resolved, so an unauthorized caller
+  learns nothing about which routes exist
+- Responses via `$this->respond([...], $httpCode)`, which hands a `JsonResponse`
+  to a `JsonResponseEmitter`. `HttpResponseEmitter` echoes and `exit`s;
+  `emit()` is declared `never` because every endpoint body is written on the
+  assumption that responding ends the request. A test emitter throws instead,
+  which is what makes the handler testable at all
+- `setupAPIHandler()` does **not** call `$router->setHandler()`. It takes a
+  `PKPHandler` and this is not one; the call stood there for a long time purely
+  because the constructor exited before reaching it, and calling it for real
+  raises a TypeError that PKP swallows, leaving OJS to answer every plugin API
+  call with its own 404
 
 Endpoints: `GET labels|metadata|download|yaml|register|status|status/history`,
 `POST identifier|issue|metadata|upload|repository|repository/validate|yaml/validate|status/update|users/roles/validation`.
@@ -335,7 +349,7 @@ README.md; keep `css/codecheck.css` and inline component styles consistent.
 ### Layout
 
 ```
-tests/                       PHPUnit (27 files, 176 tests)
+tests/                       PHPUnit (29 files, 201 tests)
   bootstrap.php              PKP_STRICT_MODE + BASE_SYS_DIR (OJS_ROOT or ../../../..)
   PKPTestCase.php            local stub extending PHPUnit TestCase
   FakeTranslator.php         minimal translator so __() works without booting OJS
@@ -348,7 +362,8 @@ tests/                       PHPUnit (27 files, 176 tests)
   DataStructuresUnitTests/     UniqueArray, UniqueIdentifierArray
   FrontEndUnitTests/           ArticleAvailability, ArticleDetails, Badge, IssueTOC
   LogUnitTests/                CodecheckLogger
-  ApiUnitTests/                ApiEndpoint, CodecheckRoleArray, JsonResponse
+  ApiUnitTests/                ApiEndpoint, CodecheckApiHandler, CodecheckRoleArray,
+                               IdentifierParameterValidator, JsonResponse
   SettingsUnitTests/           Actions, Manage
   SubmissionUnitTests/         CodecheckSubmissionDAO, CodecheckSubmission, Schema
   WorkflowUnitTests/           CodecheckMetadataHandler, CodecheckPublicationValidator,
@@ -455,7 +470,7 @@ Still uncovered: opt-in, the submission wizard, and register deposit.
 
 ### PHPUnit tests
 
-`make test-php` — 176 tests, green, none skipped.
+`make test-php` — 201 tests, green, none skipped.
 
 PHPUnit needs an OJS installation: the tests load OJS classes and the runner uses the
 PHPUnit shipped in `lib/pkp`. Both `runTests.sh` and `bootstrap.php` honour `OJS_ROOT`,
@@ -472,16 +487,25 @@ through a database-backed facade, so building one is an integration test, and
 the `*-setting.cy.js` e2e specs already open the settings form, change a value
 and save it. **Prefer an e2e test over booting the application inside PHPUnit.**
 
-The API's routing table (`ApiEndpoint`) and role sets (`CodecheckRoleArray`) are
-covered; `CodecheckApiHandler` itself is not, because its constructor routes,
-authorizes and serves, so it cannot be instantiated without side effects.
+The API's routing table (`ApiEndpoint`), role sets (`CodecheckRoleArray`) and the
+handler's own request cycle are covered. What is tested of the handler is what
+guards it: route parsing, the CSRF check, the role check, their order, and that
+an authorized request really reaches its endpoint method. `CodecheckApiHandlerUnitTest`
+substitutes a recording `JsonResponseEmitter` that throws where the production
+one exits — an emitter that returned normally would run code no served request
+ever reaches.
+
+The endpoint *bodies* are still not unit tested: nearly all of them reach the
+database or GitHub in their first lines, and the e2e specs cover them through
+real HTTP. The exception used in the unit test is `GET register`, which reads
+two settings and nothing else.
 
 Worth knowing before adding coverage there: **OJS's own API router answers routes
 and methods the plugin's endpoint table does not cover, before the handler is
 reached.** Verified against a running instance — an unknown route and a valid
 route with the wrong method both return OJS's `api.404.endpointNotFound`.
 
-Not covered by PHPUnit at all: `CodecheckApiHandler` (1.1k lines, its endpoint bodies),
+Not covered by PHPUnit at all: the `CodecheckApiHandler` endpoint bodies,
 `CodecheckRegisterDepositService`, `SubmissionWizardHandler`, `CurlApiClient`,
 migrations, `CodecheckPageHandler`. All of
 them reach the database, the network or a booted application in their first few lines,

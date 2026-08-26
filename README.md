@@ -369,7 +369,7 @@ $this->endpoints = [
 ];
 ```
 
-Then define what `yourFunction()` should do when your Endpoint is called. It is important, that the function creates a JSON response.
+Then define what `yourFunction()` should do when your Endpoint is called. It is important, that the function ends by sending a JSON response with `$this->respond()`.
 
 ```php
 private function yourFunction(): void
@@ -378,12 +378,21 @@ private function yourFunction(): void
 
     // Serve your Api endpoint route
     // success should be true or false along with a matching HTML response code like 200 or 404
-    JsonResponse::staticResponse([
+    $this->respond([
         'success' => true,
         'payload' => $test,
     ], 200);
 }
 ```
+
+`respond()` does not return: in a served request it writes the response and ends
+the process, and under test it unwinds. Nothing after it runs, so send exactly one
+response per request and put any cleanup before it.
+
+The request itself is answered by `CodecheckApiHandler::execute()`, not by the
+constructor — constructing a handler wires it up and nothing more, which is what
+lets `tests/ApiUnitTests/CodecheckApiHandlerUnitTest.php` drive it with a
+recording `JsonResponseEmitter` in place of the one that echoes and exits.
 
 Finally your defined `CodecheckRoleArray` can have the following PKP rules (`PKP\security\Role`):
 
