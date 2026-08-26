@@ -237,6 +237,19 @@ Two settings deliberately treat "unset" and "empty" as *not* the stored value:
   is the ordinary kind, defaulting to **off**: an article with no statement says
   "No {$heading} provided for this work." rather than dropping the section, since
   silence cannot be told apart from a journal that never asked
+- `CODECHECK_ENABLED_CONFIG_VERSIONS` defaults to `CODECHECK_DEFAULT_CONFIG_VERSIONS`
+  — `1.0` alone, not every known version — so a journal that has not chosen records
+  checks against the current stable specification rather than a moving target. An
+  empty selection falls back to the same default, because an empty list would leave
+  the metadata form with no version to offer at all
+
+`Constants::CODECHECK_DEFAULT_CONFIG_VERSIONS` and `getConfigSpecUrl()` are mirrored by
+`CODECHECK_DEFAULT_CONFIG_VERSIONS` / `CODECHECK_SPEC_URL` in `CodecheckMetadataForm.vue`.
+The JS copies are only the pre-load fallback — the authoritative list arrives with the
+`GET metadata` response as `settings.enabledConfigVersions`. `tests/ConstantsUnitTest.php`
+pins the PHP side. `CodecheckMetadataHandler::buildYaml()` emits the version recorded
+for the check through the same helper, so the generated file declares the specification
+the form was filled in against.
 
 `SettingsForm::execute()` reaches out to GitHub through
 `validateRegisterFileExists()` — but only when the register organisation or
@@ -300,7 +313,7 @@ README.md; keep `css/codecheck.css` and inline component styles consistent.
 ### Layout
 
 ```
-tests/                       PHPUnit (19 files, 127 tests)
+tests/                       PHPUnit (20 files, 133 tests)
   bootstrap.php              PKP_STRICT_MODE + BASE_SYS_DIR (OJS_ROOT or ../../../..)
   PKPTestCase.php            local stub extending PHPUnit TestCase
   FakeTranslator.php         minimal translator so __() works without booting OJS
@@ -323,7 +336,7 @@ cypress/
                                this first in every component spec
   support/e2e.js               cy.ojsLogin(), cy.getCsrfToken(), swallow uncaught exceptions
   support/component-index.html
-  tests/component/*.cy.js      5 specs, 54 tests
+  tests/component/*.cy.js      5 specs, 59 tests
   tests/e2e/*.cy.js            4 specs, 16 tests
                                yaml-generation, article-sidebar-setting,
                                private-repository, settings-roundtrip
@@ -336,13 +349,13 @@ dev/
 ### Component tests (the reliable suite)
 
 `npm run test:component` — **passes locally with no OJS, no database, no build step**
-(54/54, ~25 s). Cypress mounts the `.vue` sources directly through Vite and stubs the
+(59/59, ~20 s). Cypress mounts the `.vue` sources directly through Vite and stubs the
 API with `cy.intercept`.
 
 Covered: metadata form load/render, manifest files add/remove/comment, repository list
 add/remove + private flag, certificate identifier reservation + labels, required-field
 validation, YAML preview gating, codechecker modal, review display states, data &
-software availability field.
+software availability field, and the config version selector.
 
 `cypress/support/pkp-mock.js` reads the real `locale/en/locale.po` and its `t()`
 behaves in two ways on purpose:
@@ -383,7 +396,7 @@ validation, register deposit, and the settings form beyond the sidebar toggle.
 
 ### PHPUnit tests
 
-`make test-php` — 127 tests, green, none skipped.
+`make test-php` — 133 tests, green, none skipped.
 
 PHPUnit needs an OJS installation: the tests load OJS classes and the runner uses the
 PHPUnit shipped in `lib/pkp`. Both `runTests.sh` and `bootstrap.php` honour `OJS_ROOT`,

@@ -61,7 +61,9 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 - A "Now" link beside "Time the check was completed" fills in the current date
   and time
 - The metadata form opens with a short explanation of what the form produces,
-  linking to the CODECHECK config file specification for the details
+  linking to the CODECHECK config file specification for the details. The link
+  follows the selected config version, so it points at the specification that
+  actually governs the fields below it
 - Validation warnings and errors for repository metadata shown directly in the
   repositories field (Issue #144)
 - `codecheck.yml` generation with preview and download, and file upload/download for
@@ -98,6 +100,12 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   CODECHECK statuses permit publication
 - Setting to enable or disable the register deposit, with a warning when the configured
   register repository has no `register.csv` (Issue #156)
+- Setting listing which CODECHECK config versions codecheckers can choose from in the
+  metadata form. Only the enabled versions are offered, and the selector is inactive
+  when a journal has settled on a single version. Journals offer version 1.0 until
+  they choose otherwise, so a check records the specification it was done against
+  rather than a moving target. The generated `codecheck.yml` declares the version
+  recorded for the check instead of always claiming 1.0
 
 #### Under the hood
 

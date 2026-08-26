@@ -430,6 +430,28 @@ fieldset:disabled .settings-droptown .dropdown-content {
   display: block;
 }
 
+/* The config version choices are a plain list rather than a dropdown: with only
+   a handful of versions a dropdown hides more than it saves. OJS's settings
+   form styles a bare checkbox list as label-below-the-box, so the row is laid
+   out here instead. */
+.codecheck-version-choices {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.codecheck-version-choices .codecheck-version-choice {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.15rem 0;
+}
+
+.codecheck-version-choices .codecheck-version-choice label {
+  font-weight: normal;
+  margin: 0;
+}
+
 .settings-droptown.dropdown .dropdown-content label {
   font-style: italic;
   margin-left: 5px;

@@ -89,6 +89,12 @@ msgstr "Heading for the availability statement"
 msgid "plugins.generic.codecheck.settings.availabilityStatementHeading.description"
 msgstr "The heading shown above the statement on published articles. Leave empty to use the default, \"Data and Software Availability\"."
 
+msgid "plugins.generic.codecheck.settings.configVersions"
+msgstr "Available CODECHECK config versions"
+
+msgid "plugins.generic.codecheck.settings.configVersions.description"
+msgstr "Which versions of the CODECHECK config file specification codecheckers can choose from in the metadata form. Selecting a single version fixes it for every submission. If nothing is selected, all versions remain available."
+
 msgid "plugins.generic.codecheck.settings.authorAnonymity"
 msgstr "Author anonymity in the GitHub register repository"
 
@@ -248,6 +254,9 @@ msgstr "What you record here becomes the codecheck.yml file that accompanies the
 
 msgid "plugins.generic.codecheck.form.intro.specLinkLabel"
 msgstr "the CODECHECK config file specification"
+
+msgid "plugins.generic.codecheck.configVersion.onlyOne"
+msgstr "This journal offers a single CODECHECK config version."
 
 msgid "plugins.generic.codecheck.configVersion"
 msgstr "CODECHECK config version"

@@ -80,4 +80,37 @@ class Constants
 
     # Register Deposit (Issue #10)
     public const CODECHECK_REGISTER_DEPOSIT_ENABLED = 'codecheckRegisterDepositEnabled';
+
+    # CODECHECK config file specification versions offered in the metadata form
+    public const CODECHECK_ENABLED_CONFIG_VERSIONS = 'codecheckEnabledConfigVersions';
+
+    /**
+     * Every config version the plugin knows about, newest first. A journal may
+     * narrow this to a subset; see CODECHECK_ENABLED_CONFIG_VERSIONS.
+     */
+    public const CODECHECK_CONFIG_VERSIONS = [
+        'latest',
+        '1.0',
+    ];
+
+    /**
+     * What a journal offers before it has chosen: the current stable
+     * specification only. A journal that wants the moving target adds
+     * 'latest' in the settings form.
+     */
+    public const CODECHECK_DEFAULT_CONFIG_VERSIONS = [
+        '1.0',
+    ];
+
+    /** Where the specification for a given config version is published. */
+    public const CODECHECK_CONFIG_SPEC_URL = 'https://codecheck.org.uk/spec/config/';
+
+    /**
+     * Builds the specification URL for a config version. Kept here so the PHP
+     * side and CodecheckMetadataForm.vue cannot drift apart.
+     */
+    public static function getConfigSpecUrl(string $version): string
+    {
+        return self::CODECHECK_CONFIG_SPEC_URL . $version . '/';
+    }
 }

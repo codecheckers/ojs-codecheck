@@ -1,48 +1,58 @@
 import '../../support/pkp-mock.js';
 import CodecheckMetadataForm from '../../../resources/js/Components/CodecheckMetadataForm.vue';
 
+/**
+ * The metadata response the form loads from. Built fresh per call so a test
+ * can adjust one field — the journal's enabled config versions, say — without
+ * leaking the change into the next test.
+ */
+const metadataResponseBody = () => ({
+  success: true,
+  submissionId: 1,
+  submission: {
+    id: 1,
+    title: 'Test Article Title',
+    authors: [
+      { name: 'John Doe', orcid: '0000-0001-2345-6789' },
+      { name: 'Jane Smith', orcid: '0000-0002-3456-7890' }
+    ],
+    doi: '10.1234/test.2024',
+    codeRepository: 'https://github.com/example/code',
+    dataRepository: 'https://zenodo.org/record/123',
+    manifestFiles: 'output.png\nresults.csv',
+    dataAvailabilityStatement: 'Data is available at Zenodo'
+  },
+  codecheck: {
+    version: 'latest',
+    publicationType: 'doi',
+    manifest: [],
+    repository: { repositories: null, repoWithCodecheckYaml: null },
+    source: '',
+    codecheckers: [],
+    certificate: '',
+    check_time: '',
+    summary: '',
+    report: '',
+    additionalContent: '',
+    issue: {
+      url: "https://github.come/example/repo/issues/0",
+      number: 0,
+      labels: ["test-label-1", "test-label-2"],
+      labelsSelected: ["test-label-2"]
+    },
+  },
+});
+
+/** Serve the metadata endpoint, optionally with fields overridden. */
+const interceptMetadata = (overrides = {}, alias = 'loadMetadata') =>
+  cy.intercept('GET', '**/codecheck/metadata*', {
+    statusCode: 200,
+    body: { ...metadataResponseBody(), ...overrides }
+  }).as(alias);
+
 describe('CodecheckMetadataForm Component', () => {
   beforeEach(() => {
-    // Mock the metadata API
-    cy.intercept('GET', '**/codecheck/metadata*', {
-      statusCode: 200,
-      body: {
-        success: true,
-        submissionId: 1,
-        submission: {
-          id: 1,
-          title: 'Test Article Title',
-          authors: [
-            { name: 'John Doe', orcid: '0000-0001-2345-6789' },
-            { name: 'Jane Smith', orcid: '0000-0002-3456-7890' }
-          ],
-          doi: '10.1234/test.2024',
-          codeRepository: 'https://github.com/example/code',
-          dataRepository: 'https://zenodo.org/record/123',
-          manifestFiles: 'output.png\nresults.csv',
-          dataAvailabilityStatement: 'Data is available at Zenodo'
-        },
-        codecheck: {
-          version: 'latest',
-          publicationType: 'doi',
-          manifest: [],
-          repository: { repositories: null, repoWithCodecheckYaml: null },
-          source: '',
-          codecheckers: [],
-          certificate: '',
-          check_time: '',
-          summary: '',
-          report: '',
-          additionalContent: '',
-          issue: {
-            url: "https://github.come/example/repo/issues/0",
-            number: 0,
-            labels: ["test-label-1", "test-label-2"],
-            labelsSelected: ["test-label-2"]
-          },
-        },
-      }
-    }).as('loadMetadata');
+    interceptMetadata();
 
     cy.intercept('GET', '**/codecheck/labels*', {
       statusCode: 200,
@@ -101,6 +111,115 @@ describe('CodecheckMetadataForm Component', () => {
       .should('have.attr', 'href', 'https://codecheck.org.uk/spec/config/latest/')
       .and('have.attr', 'target', '_blank');
     cy.get('.codecheck-intro').should('not.contain', '{$specLink}');
+  });
+
+  it('points the specification link at the selected config version', () => {
+    cy.mount(CodecheckMetadataForm, {
+      props: {
+        submission: { id: 1 },
+        canEdit: true
+      }
+    });
+
+    cy.wait('@loadMetadata');
+
+    cy.get('.version-select').select('1.0');
+    cy.get('.codecheck-intro a')
+      .should('have.attr', 'href', 'https://codecheck.org.uk/spec/config/1.0/');
+
+    cy.get('.version-select').select('latest');
+    cy.get('.codecheck-intro a')
+      .should('have.attr', 'href', 'https://codecheck.org.uk/spec/config/latest/');
+  });
+
+  it('falls back to the current stable specification when the journal has not chosen', () => {
+    // No settings block in the response and no version on the record: the form
+    // lands on 1.0 rather than on 'latest', matching the plugin's default.
+    interceptMetadata(
+      { codecheck: { ...metadataResponseBody().codecheck, version: '' } },
+      'loadWithoutVersion'
+    );
+
+    cy.mount(CodecheckMetadataForm, {
+      props: {
+        submission: { id: 1 },
+        canEdit: true
+      }
+    });
+
+    cy.wait('@loadWithoutVersion');
+
+    cy.get('.version-select').should('have.value', '1.0');
+    cy.get('.version-select option').should('have.length', 1);
+    cy.get('.version-select').should('be.disabled');
+    cy.get('.codecheck-intro a')
+      .should('have.attr', 'href', 'https://codecheck.org.uk/spec/config/1.0/');
+  });
+
+  it('offers only the config versions the journal enabled', () => {
+    interceptMetadata(
+      { settings: { enabledConfigVersions: ['1.0'] } },
+      'loadRestrictedMetadata'
+    );
+
+    cy.mount(CodecheckMetadataForm, {
+      props: {
+        submission: { id: 1 },
+        canEdit: true
+      }
+    });
+
+    cy.wait('@loadRestrictedMetadata');
+
+    // 'latest' is stored on this record, so it stays selectable rather than
+    // being silently rewritten — which also means the control is not disabled.
+    cy.get('.version-select option').should('have.length', 2);
+    cy.get('.version-select').should('not.be.disabled');
+  });
+
+  it('keeps a superseded version selectable after switching away from it', () => {
+    // The record is on 'latest', which the journal no longer offers. Selecting
+    // 1.0 must not remove 'latest' from the list, or the codechecker could
+    // leave the recorded version but never return to it.
+    interceptMetadata(
+      { settings: { enabledConfigVersions: ['1.0'] } },
+      'loadSupersededVersion'
+    );
+
+    cy.mount(CodecheckMetadataForm, {
+      props: {
+        submission: { id: 1 },
+        canEdit: true
+      }
+    });
+
+    cy.wait('@loadSupersededVersion');
+
+    cy.get('.version-select').select('1.0');
+    cy.get('.version-select option').should('have.length', 2);
+    cy.get('.version-select').should('not.be.disabled');
+
+    cy.get('.version-select').select('latest');
+    cy.get('.version-select').should('have.value', 'latest');
+  });
+
+  it('disables the version selector when a single version is on offer', () => {
+    interceptMetadata(
+      { settings: { enabledConfigVersions: ['latest'] } },
+      'loadSingleVersionMetadata'
+    );
+
+    cy.mount(CodecheckMetadataForm, {
+      props: {
+        submission: { id: 1 },
+        canEdit: true
+      }
+    });
+
+    cy.wait('@loadSingleVersionMetadata');
+
+    cy.get('.version-select option').should('have.length', 1);
+    cy.get('.version-select').should('be.disabled');
   });
 
   it('displays read-only paper metadata with proper styling', () => {

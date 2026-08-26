@@ -92,6 +92,19 @@ class SettingsForm extends Form
             ) ?? ''
         );
 
+        // Default to the current stable specification only; a journal that
+        // wants more adds them.
+        $enabledConfigVersions = $this->plugin->getSetting(
+            $context->getId(),
+            Constants::CODECHECK_ENABLED_CONFIG_VERSIONS
+        );
+        $this->setData(
+            Constants::CODECHECK_ENABLED_CONFIG_VERSIONS,
+            empty($enabledConfigVersions)
+                ? Constants::CODECHECK_DEFAULT_CONFIG_VERSIONS
+                : (array) $enabledConfigVersions
+        );
+
         $this->setData(
             Constants::CODECHECK_MODE,
             $this->plugin->getSetting(
@@ -214,6 +227,7 @@ class SettingsForm extends Form
             Constants::CODECHECK_SHOW_AVAILABILITY_STATEMENT,
             Constants::CODECHECK_AVAILABILITY_STATEMENT_HEADING,
             Constants::CODECHECK_HIDE_EMPTY_AVAILABILITY_STATEMENT,
+            Constants::CODECHECK_ENABLED_CONFIG_VERSIONS,
             Constants::CODECHECK_MODE,
             Constants::CODECHECK_AUTHOR_ANONYMITY,
             Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN,
@@ -278,6 +292,12 @@ class SettingsForm extends Form
             $this->getData(Constants::CODECHECK_HIDE_EMPTY_AVAILABILITY_STATEMENT)
         );
 
+        $templateMgr->assign('codecheckConfigVersions', Constants::CODECHECK_CONFIG_VERSIONS);
+        $templateMgr->assign(
+            Constants::CODECHECK_ENABLED_CONFIG_VERSIONS,
+            (array) $this->getData(Constants::CODECHECK_ENABLED_CONFIG_VERSIONS)
+        );
+
         $templateMgr->assign(
             Constants::CODECHECK_STATUSES_SELECTED,
             (array) $this->getData(Constants::CODECHECK_STATUSES_SELECTED) ?? []
@@ -319,6 +339,21 @@ class SettingsForm extends Form
             $context->getId(),
             Constants::CODECHECK_HIDE_EMPTY_AVAILABILITY_STATEMENT,
             (bool) $this->getData(Constants::CODECHECK_HIDE_EMPTY_AVAILABILITY_STATEMENT)
+        );
+
+        // An empty selection would leave the metadata form with no version to
+        // offer at all, so it falls back to the default rather than being
+        // stored as an empty list.
+        $enabledConfigVersions = array_values(array_intersect(
+            Constants::CODECHECK_CONFIG_VERSIONS,
+            (array) $this->getData(Constants::CODECHECK_ENABLED_CONFIG_VERSIONS)
+        ));
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_ENABLED_CONFIG_VERSIONS,
+            empty($enabledConfigVersions)
+                ? Constants::CODECHECK_DEFAULT_CONFIG_VERSIONS
+                : $enabledConfigVersions
         );
 
         $this->plugin->updateSetting(

@@ -13,6 +13,7 @@ use Github\Client;
 use Symfony\Component\Yaml\Yaml;
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CodecheckRegisterGithubIssuesApiParser;
 use APP\plugins\generic\codecheck\api\v1\CurlApiClient;
+use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitException;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
@@ -179,9 +180,11 @@ class CodecheckMetadataHandler
         $codecheckers = json_decode($metadata->codecheckers ?? '[]', true);
         $repository = json_decode($metadata->repository ?? '{"repositories":null,"repoWithCodecheckYaml":null}', false);
 
-        // Build YAML data structure
+        // Build YAML data structure. The version follows the one recorded for
+        // this check rather than a fixed one, so the file declares the
+        // specification the codechecker actually filled the form in against.
         $data = [
-            'version' => 'https://codecheck.org.uk/spec/config/1.0/'
+            'version' => Constants::getConfigSpecUrl($metadata->version ?: 'latest')
         ];
 
         // Add source if present

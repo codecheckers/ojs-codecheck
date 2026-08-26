@@ -766,7 +766,40 @@ class CodecheckApiHandler
             JsonResponse::staticResponse($result, 404);
         }
 
+        $result['settings'] = [
+            'enabledConfigVersions' => $this->getEnabledConfigVersions(),
+        ];
+
         JsonResponse::staticResponse(array_merge($result, ['success' => true]), 200);
+    }
+
+    /**
+     * The config file specification versions this journal offers in the
+     * metadata form. Unset or empty means the default: the current stable
+     * specification only.
+     *
+     * @return string[]
+     */
+    private function getEnabledConfigVersions(): array
+    {
+        $context = $this->request->getContext();
+        if (!$context) {
+            return Constants::CODECHECK_DEFAULT_CONFIG_VERSIONS;
+        }
+
+        $enabled = $this->plugin->getSetting(
+            $context->getId(),
+            Constants::CODECHECK_ENABLED_CONFIG_VERSIONS
+        );
+
+        // Intersect rather than trust the stored value, so a version dropped
+        // from the plugin cannot reappear in the form.
+        $enabled = array_values(array_intersect(
+            Constants::CODECHECK_CONFIG_VERSIONS,
+            (array) $enabled
+        ));
+
+        return empty($enabled) ? Constants::CODECHECK_DEFAULT_CONFIG_VERSIONS : $enabled;
     }
 
     /**

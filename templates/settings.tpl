@@ -209,6 +209,30 @@
 					translate=false
 				}
 			{/fbvFormSection}
+
+			{* Which codecheck.yml config versions the metadata form offers *}
+			{fbvFormSection
+				list=true
+			}
+				<div class="field-header">
+					<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.configVersions"}</label>
+				</div>
+				<label class="description">{translate key="plugins.generic.codecheck.settings.configVersions.description"}</label>
+				<fieldset class="codecheck-version-choices">
+					{foreach from=$codecheckConfigVersions item=configVersion}
+						<div class="codecheck-version-choice">
+							<input
+								type="checkbox"
+								name="codecheckEnabledConfigVersions[]"
+								id="configVersion-{$configVersion|escape}"
+								value="{$configVersion|escape}"
+								{if in_array($configVersion, $codecheckEnabledConfigVersions)}checked{/if}
+							/>
+							<label for="configVersion-{$configVersion|escape}">{$configVersion|escape}</label>
+						</div>
+					{/foreach}
+				</fieldset>
+			{/fbvFormSection}
 		{/fbvFormSection}
 
 		{* Clear / Reset CODECHECK Metadata DB *}

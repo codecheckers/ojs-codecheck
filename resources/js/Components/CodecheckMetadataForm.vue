@@ -20,9 +20,15 @@
           <p class="codecheck-intro" v-html="introText"></p>
           <div class="version-selector">
             <label class="version-label">{{ t('plugins.generic.codecheck.configVersion') }}</label>
-            <select v-model="metadata.version" class="version-select">
-              <option value="latest">latest</option>
-              <option value="1.0">1.0</option>
+            <select
+              v-model="metadata.version"
+              class="version-select"
+              :disabled="versionOptions.length < 2"
+              :title="versionOptions.length < 2 ? t('plugins.generic.codecheck.configVersion.onlyOne') : null"
+            >
+              <option v-for="version in versionOptions" :key="version" :value="version">
+                {{ version }}
+              </option>
             </select>
           </div>
         </div>
@@ -430,7 +436,12 @@
 <script>
 const { useLocalize } = pkp.modules.useLocalize;
 
-const CODECHECK_SPEC_URL = 'https://codecheck.org.uk/spec/config/latest/';
+// Mirrors Constants::CODECHECK_CONFIG_SPEC_URL / getConfigSpecUrl() on the PHP side.
+const CODECHECK_SPEC_URL = 'https://codecheck.org.uk/spec/config/';
+
+// What the form offers until the journal's own list arrives with the metadata
+// response; mirrors Constants::CODECHECK_DEFAULT_CONFIG_VERSIONS.
+const CODECHECK_DEFAULT_CONFIG_VERSIONS = ['1.0'];
 
 export default {
   name: 'CodecheckMetadataForm',
@@ -454,6 +465,12 @@ export default {
       saveMessage: '',
       saveMessageType: '',
       repositories: [],
+      // Replaced by the journal's "Available CODECHECK config versions"
+      // setting, which arrives with the metadata response.
+      enabledConfigVersions: CODECHECK_DEFAULT_CONFIG_VERSIONS,
+      // The version this record was loaded with, which stays on offer for the
+      // whole session even if the journal no longer enables it.
+      loadedVersion: '',
       hasUnsavedChanges: false,
       submissionData: {
         id: null,
@@ -477,7 +494,7 @@ export default {
         isLinked: false
       },
       metadata: {
-        version: 'latest',
+        version: CODECHECK_DEFAULT_CONFIG_VERSIONS[0],
         publicationType: 'doi',
         manifest: [],
         repository: '',
@@ -505,10 +522,37 @@ export default {
      * https://docs.pkp.sfu.ca/translating-guide/en/coders#semantics
      */
     introText() {
-      const link = '<a href="' + CODECHECK_SPEC_URL + '" target="_blank" rel="noopener noreferrer">'
+      const link = '<a href="' + this.specUrl + '" target="_blank" rel="noopener noreferrer">'
         + this.t('plugins.generic.codecheck.form.intro.specLinkLabel')
         + '</a>';
       return this.t('plugins.generic.codecheck.form.intro', {specLink: link});
+    },
+
+    /**
+     * The specification the form currently describes. It follows the selected
+     * config version, so switching the version points the link at the document
+     * that actually governs the fields below it.
+     */
+    specUrl() {
+      return CODECHECK_SPEC_URL + (this.metadata.version || this.enabledConfigVersions[0]) + '/';
+    },
+
+    /**
+     * The versions the dropdown offers: those the journal enabled, plus the
+     * one this record was loaded with if it is no longer among them. A version
+     * disabled after the fact would otherwise leave the control blank and
+     * rewrite the record on the next save.
+     *
+     * Deliberately the loaded version rather than the selected one: keying off
+     * the selection would drop the extra option the moment it is unselected,
+     * so a codechecker could switch away from it but never back.
+     */
+    versionOptions() {
+      const loaded = this.loadedVersion;
+      if (loaded && !this.enabledConfigVersions.includes(loaded)) {
+        return [loaded, ...this.enabledConfigVersions];
+      }
+      return this.enabledConfigVersions;
     },
 
     canPreview() {
@@ -607,6 +651,10 @@ export default {
         
         console.log(data)
 
+        if (Array.isArray(data.settings?.enabledConfigVersions) && data.settings.enabledConfigVersions.length) {
+          this.enabledConfigVersions = data.settings.enabledConfigVersions;
+        }
+
         this.submissionData = {
           id: data.submission?.id || submissionId,
           title: data.submission?.title || '',
@@ -634,8 +682,10 @@ export default {
             }
           }
 
+          this.loadedVersion = data.codecheck.version || this.enabledConfigVersions[0];
+
           this.metadata = {
-            version: data.codecheck.version || data.codecheck.version || 'latest',
+            version: this.loadedVersion,
             publicationType: data.codecheck.publicationType || data.codecheck.publication_type || 'doi',
             manifest: Array.isArray(data.codecheck.manifest) ? data.codecheck.manifest : 
                       (typeof data.codecheck.manifest === 'string' ? JSON.parse(data.codecheck.manifest) : []),
@@ -1628,6 +1678,14 @@ export default {
   border: 1px solid #ccc;
   border-radius: 3px;
   font-size: 13px;
+}
+
+/* Only one version on offer — the control stays visible so the version in
+   force is still readable, but it cannot be changed. */
+.codecheck-metadata-form .version-select:disabled {
+  background-color: #f1f3f5;
+  color: #495057;
+  cursor: not-allowed;
 }
 
 .codecheck-metadata-form .publication-section {

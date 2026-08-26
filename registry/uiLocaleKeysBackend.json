@@ -30,6 +30,7 @@
   "plugins.generic.codecheck.completionTime.label",
   "plugins.generic.codecheck.completionTime.now",
   "plugins.generic.codecheck.configVersion",
+  "plugins.generic.codecheck.configVersion.onlyOne",
   "plugins.generic.codecheck.dashboard.add",
   "plugins.generic.codecheck.dashboard.columnHeader",
   "plugins.generic.codecheck.dataAvailability",
