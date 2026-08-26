@@ -78,6 +78,10 @@ See [Testing](#testing) below for what actually runs where.
 
 - `Templates::Issue::Issue::Article` → `IssueTOC::addCodecheckBadge` (badge in issue TOC)
 - `Templates::Article::Details` → `ArticleDetails::addCodecheckInfo` (article sidebar)
+- `Templates::Article::Main` → `ArticleAvailability::addAvailabilityStatement` (data and
+  software availability statement, in the main column below the abstract). A *different*
+  hook from the sidebar one above: it fires inside `.main_entry` right after the abstract
+  section, which is why neither needs a template override
 - `Schema::get::submission` → adds `codecheckOptIn`, `retrieveReserveCertificateIdentifier`
 - `Schema::get::publication` → `classes/Submission/Schema.php` (wizard fields)
 - `Form::config::before` → opt-in checkbox on the submission start form
@@ -218,6 +222,22 @@ added to the form must be added in three places: `Constants`, `SettingsForm::ini
 + `readInputData()`, and the template. `SettingsForm::validate()` also warns when the
 configured register repo lacks a `register.csv`.
 
+Note the "three places" is really four for anything with a non-trivial default or a
+list of options: `fetch()` assigns the template variables the field renders from.
+`settings-roundtrip.cy.js` derives its field list from the rendered form, so a new
+setting is covered there automatically — but only if it actually renders.
+
+Two settings deliberately treat "unset" and "empty" as *not* the stored value:
+
+- `CODECHECK_SHOW_AVAILABILITY_STATEMENT` and `CODECHECK_SHOW_DASHBOARD_COLUMN` default
+  to **on** when null, so the feature is present until a journal switches it off
+- `CODECHECK_AVAILABILITY_STATEMENT_HEADING` falls back to the localised
+  `plugins.generic.codecheck.dataSoftwareAvailability` when cleared, so the article
+  page never renders an empty heading. `CODECHECK_HIDE_EMPTY_AVAILABILITY_STATEMENT`
+  is the ordinary kind, defaulting to **off**: an article with no statement says
+  "No {$heading} provided for this work." rather than dropping the section, since
+  silence cannot be told apart from a journal that never asked
+
 `SettingsForm::execute()` reaches out to GitHub through
 `validateRegisterFileExists()` — but only when the register organisation or
 repository actually changed. The request is unauthenticated and counts against
@@ -280,7 +300,7 @@ README.md; keep `css/codecheck.css` and inline component styles consistent.
 ### Layout
 
 ```
-tests/                       PHPUnit (18 files, 131 tests)
+tests/                       PHPUnit (19 files, 127 tests)
   bootstrap.php              PKP_STRICT_MODE + BASE_SYS_DIR (OJS_ROOT or ../../../..)
   PKPTestCase.php            local stub extending PHPUnit TestCase
   FakeTranslator.php         minimal translator so __() works without booting OJS
@@ -290,7 +310,7 @@ tests/                       PHPUnit (18 files, 131 tests)
   CodecheckPluginUnitTest.php
   CodecheckRegisterUnitTests/  CertificateIdentifier(List), GithubRegisterApiClient, IssueLabels
   DataStructuresUnitTests/     UniqueArray
-  FrontEndUnitTests/           ArticleDetails
+  FrontEndUnitTests/           ArticleAvailability, ArticleDetails
   LogUnitTests/                CodecheckLogger
   ApiUnitTests/                ApiEndpoint, CodecheckRoleArray
   SettingsUnitTests/           Actions, Manage
@@ -304,9 +324,9 @@ cypress/
   support/e2e.js               cy.ojsLogin(), cy.getCsrfToken(), swallow uncaught exceptions
   support/component-index.html
   tests/component/*.cy.js      5 specs, 54 tests
-  tests/e2e/*.cy.js            3 specs, 10 tests
+  tests/e2e/*.cy.js            4 specs, 16 tests
                                yaml-generation, article-sidebar-setting,
-                               private-repository
+                               private-repository, settings-roundtrip
   tests/visual/ui-screenshots.cy.js  screenshot pass — `make screenshots`
 
 dev/
@@ -343,7 +363,7 @@ columns), and the wizard DOM-scraping classes.
 
 ### E2E tests
 
-`make test-e2e` — 13 tests across 4 specs, driving a real OJS instance.
+`make test-e2e` — 16 tests across 4 specs, driving a real OJS instance.
 
 - `yaml-generation.cy.js` — YAML preview vs. download parity, preview-button gating
 - `article-sidebar-setting.cy.js` — the `showArticleSidebar` setting, driven through
@@ -363,7 +383,7 @@ validation, register deposit, and the settings form beyond the sidebar toggle.
 
 ### PHPUnit tests
 
-`make test-php` — 131 tests, green, none skipped.
+`make test-php` — 127 tests, green, none skipped.
 
 PHPUnit needs an OJS installation: the tests load OJS classes and the runner uses the
 PHPUnit shipped in `lib/pkp`. Both `runTests.sh` and `bootstrap.php` honour `OJS_ROOT`,

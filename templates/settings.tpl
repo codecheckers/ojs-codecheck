@@ -129,7 +129,53 @@
 				label="plugins.generic.codecheck.settings.showArticleSidebar.description"
 			}
 		{/fbvFormSection}
-		
+
+		{* Data and software availability statement below the abstract *}
+		{fbvFormSection
+			list=true
+		}
+			<div class="field-header">
+				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.showAvailabilityStatement"}</label>
+			</div>
+			{fbvElement
+				type="checkbox"
+				id="showAvailabilityStatement"
+				checked=$showAvailabilityStatement
+				label="plugins.generic.codecheck.settings.showAvailabilityStatement.description"
+			}
+		{/fbvFormSection}
+
+		{* What an article with no statement shows *}
+		{fbvFormSection
+			list=true
+		}
+			<div class="field-header">
+				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.hideEmptyAvailabilityStatement"}</label>
+			</div>
+			{fbvElement
+				type="checkbox"
+				id="hideEmptyAvailabilityStatement"
+				checked=$hideEmptyAvailabilityStatement
+				label="plugins.generic.codecheck.settings.hideEmptyAvailabilityStatement.description"
+			}
+		{/fbvFormSection}
+
+		{* Heading for that section, so a journal can call it something else *}
+		{fbvFormSection
+			list=true
+		}
+			<div class="field-header">
+				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.availabilityStatementHeading"}</label>
+			</div>
+			<label class="description">{translate key="plugins.generic.codecheck.settings.availabilityStatementHeading.description"}</label>
+			{fbvElement
+				type="text"
+				id="availabilityStatementHeading"
+				value=$availabilityStatementHeading
+				placeholder="plugins.generic.codecheck.dataSoftwareAvailability"
+			}
+		{/fbvFormSection}
+
 		{fbvFormSection list=true}
 			<div class="field-header">
 				<label class="pkp_form_title">{translate key="plugins.generic.codecheck.settings.submission.title"}</label>

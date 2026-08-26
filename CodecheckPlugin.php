@@ -4,6 +4,7 @@ namespace APP\plugins\generic\codecheck;
 use PKP\security\Role;
 use APP\core\Application;
 use APP\template\TemplateManager;
+use APP\plugins\generic\codecheck\classes\FrontEnd\ArticleAvailability;
 use APP\plugins\generic\codecheck\classes\FrontEnd\ArticleDetails;
 use APP\plugins\generic\codecheck\classes\Settings\Actions;
 use APP\plugins\generic\codecheck\classes\Settings\Manage;
@@ -43,9 +44,12 @@ class CodecheckPlugin extends GenericPlugin
             $this->addAssets();
 
             $articleDetails = new ArticleDetails($this);
+            $articleAvailability = new ArticleAvailability($this);
             $issueTOC = new \APP\plugins\generic\codecheck\classes\FrontEnd\IssueTOC($this);
             Hook::add('Templates::Issue::Issue::Article', $issueTOC->addCodecheckBadge(...));
             Hook::add('Templates::Article::Details', $articleDetails->addCodecheckInfo(...));
+            // Fires inside .main_entry after the abstract, unlike the sidebar hook above
+            Hook::add('Templates::Article::Main', $articleAvailability->addAvailabilityStatement(...));
 
             // Opt-in checkbox on submission start
             Hook::add('Schema::get::submission', $this->addOptInToSchema(...));
@@ -301,15 +305,17 @@ class CodecheckPlugin extends GenericPlugin
             $submission = $request->getRouter()->getHandler()->getAuthorizedContextObject(ASSOC_TYPE_SUBMISSION);
 
             if ($submission) {
+                // The author's repositories and manifest entries are no longer publication
+                // fields — they go straight into codecheck_metadata — so only the two
+                // submission-level flags and the publication's statement are left here.
+                $publication = $submission->getCurrentPublication();
+
                 $templateMgr->setState([
                     'codecheckSubmission' => [
                         'id'                                   => $submission->getId(),
                         'codecheckOptIn'                       => $submission->getData('codecheckOptIn'),
                         'retrieveReserveCertificateIdentifier' => $submission->getData('retrieveReserveCertificateIdentifier'),
-                        'codeRepository'                       => $submission->getData('codeRepository'),
-                        'dataRepository'                       => $submission->getData('dataRepository'),
-                        'manifestFiles'                        => $submission->getData('manifestFiles'),
-                        'dataAvailabilityStatement'            => $submission->getData('dataAvailabilityStatement'),
+                        'dataAvailabilityStatement'            => $publication ? $publication->getData('dataAvailabilityStatement') : null,
                     ]
                 ]);
             }

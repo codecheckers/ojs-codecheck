@@ -62,6 +62,36 @@ class SettingsForm extends Form
             )
         );
 
+        // Default to true — the availability statement shows unless switched off
+        $showAvailabilityStatement = $this->plugin->getSetting(
+            $context->getId(),
+            Constants::CODECHECK_SHOW_AVAILABILITY_STATEMENT
+        );
+        $this->setData(
+            Constants::CODECHECK_SHOW_AVAILABILITY_STATEMENT,
+            $showAvailabilityStatement === null ? true : (bool) $showAvailabilityStatement
+        );
+
+        // Default to false — an article without a statement says so rather
+        // than dropping the section.
+        $this->setData(
+            Constants::CODECHECK_HIDE_EMPTY_AVAILABILITY_STATEMENT,
+            (bool) $this->plugin->getSetting(
+                $context->getId(),
+                Constants::CODECHECK_HIDE_EMPTY_AVAILABILITY_STATEMENT
+            )
+        );
+
+        // Empty means "use the localised default", which the article page
+        // substitutes rather than rendering an empty heading.
+        $this->setData(
+            Constants::CODECHECK_AVAILABILITY_STATEMENT_HEADING,
+            $this->plugin->getSetting(
+                $context->getId(),
+                Constants::CODECHECK_AVAILABILITY_STATEMENT_HEADING
+            ) ?? ''
+        );
+
         $this->setData(
             Constants::CODECHECK_MODE,
             $this->plugin->getSetting(
@@ -181,6 +211,9 @@ class SettingsForm extends Form
     {
         $this->readUserVars([
             Constants::CODECHECK_SHOW_ARTICLE_SIDEBAR,
+            Constants::CODECHECK_SHOW_AVAILABILITY_STATEMENT,
+            Constants::CODECHECK_AVAILABILITY_STATEMENT_HEADING,
+            Constants::CODECHECK_HIDE_EMPTY_AVAILABILITY_STATEMENT,
             Constants::CODECHECK_MODE,
             Constants::CODECHECK_AUTHOR_ANONYMITY,
             Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN,
@@ -236,6 +269,16 @@ class SettingsForm extends Form
         );
 
         $templateMgr->assign(
+            Constants::CODECHECK_SHOW_AVAILABILITY_STATEMENT,
+            $this->getData(Constants::CODECHECK_SHOW_AVAILABILITY_STATEMENT)
+        );
+
+        $templateMgr->assign(
+            Constants::CODECHECK_HIDE_EMPTY_AVAILABILITY_STATEMENT,
+            $this->getData(Constants::CODECHECK_HIDE_EMPTY_AVAILABILITY_STATEMENT)
+        );
+
+        $templateMgr->assign(
             Constants::CODECHECK_STATUSES_SELECTED,
             (array) $this->getData(Constants::CODECHECK_STATUSES_SELECTED) ?? []
         );
@@ -258,6 +301,24 @@ class SettingsForm extends Form
             $context->getId(),
             Constants::CODECHECK_SHOW_ARTICLE_SIDEBAR,
             (bool) $this->getData(Constants::CODECHECK_SHOW_ARTICLE_SIDEBAR)
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_SHOW_AVAILABILITY_STATEMENT,
+            (bool) $this->getData(Constants::CODECHECK_SHOW_AVAILABILITY_STATEMENT)
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_AVAILABILITY_STATEMENT_HEADING,
+            trim((string) $this->getData(Constants::CODECHECK_AVAILABILITY_STATEMENT_HEADING))
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_HIDE_EMPTY_AVAILABILITY_STATEMENT,
+            (bool) $this->getData(Constants::CODECHECK_HIDE_EMPTY_AVAILABILITY_STATEMENT)
         );
 
         $this->plugin->updateSetting(

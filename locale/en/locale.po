@@ -68,6 +68,27 @@ msgstr "CODECHECK is mandatory"
 msgid "plugins.generic.codecheck.settings.showArticleSidebar.description"
 msgstr "Show the CODECHECK certificate, codecheckers and materials in the sidebar of published articles"
 
+msgid "plugins.generic.codecheck.settings.showAvailabilityStatement"
+msgstr "Data and software availability on published articles"
+
+msgid "plugins.generic.codecheck.settings.showAvailabilityStatement.description"
+msgstr "Show the author's data and software availability statement below the abstract of published articles"
+
+msgid "plugins.generic.codecheck.settings.hideEmptyAvailabilityStatement"
+msgstr "Articles without a statement"
+
+msgid "plugins.generic.codecheck.settings.hideEmptyAvailabilityStatement.description"
+msgstr "Leave the section out of articles whose authors provided no statement, instead of noting that none was provided"
+
+msgid "plugins.generic.codecheck.availabilityStatement.none"
+msgstr "No {$heading} provided for this work."
+
+msgid "plugins.generic.codecheck.settings.availabilityStatementHeading"
+msgstr "Heading for the availability statement"
+
+msgid "plugins.generic.codecheck.settings.availabilityStatementHeading.description"
+msgstr "The heading shown above the statement on published articles. Leave empty to use the default, \"Data and Software Availability\"."
+
 msgid "plugins.generic.codecheck.settings.authorAnonymity"
 msgstr "Author anonymity in the GitHub register repository"
 

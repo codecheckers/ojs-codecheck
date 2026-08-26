@@ -73,7 +73,9 @@ class CodecheckMetadataHandler
                 'title' => $publication ? $publication->getLocalizedTitle() : '',
                 'authors' => $this->getAuthors($publication),
                 'doi' => $publication ? $publication->getStoredPubId('doi') : null,
-                'dataAvailabilityStatement' => $submission->getData('dataAvailabilityStatement'),
+                // The statement lives on the publication (see Submission/Schema.php),
+                // which is also where the wizard writes it and where the article page reads it.
+                'dataAvailabilityStatement' => $publication ? $publication->getData('dataAvailabilityStatement') : null,
             ],
             'codecheck' => $metadata ? [
                 'version' => $metadata->version ?? 'latest',

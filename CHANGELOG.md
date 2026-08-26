@@ -86,6 +86,10 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 - CODECHECK badge in the issue table of contents (Issue #27)
 - Configurable badge: CODE WORKS badge, CODECHECK logo, a custom image or text only,
   with a configurable height (Issue #27)
+- The author's data and software availability statement is shown below the abstract
+  on the article landing page. An article whose author provided no statement says so
+  instead of staying silent. Three settings: hide the section entirely, rename its
+  heading, or leave the section out of articles with no statement (Issue #152)
 
 #### Configuration
 

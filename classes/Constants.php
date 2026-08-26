@@ -46,6 +46,11 @@ class Constants
     
     public const CODECHECK_SHOW_ARTICLE_SIDEBAR = 'showArticleSidebar';
 
+    # Data and software availability statement on the article landing page
+    public const CODECHECK_SHOW_AVAILABILITY_STATEMENT = 'showAvailabilityStatement';
+    public const CODECHECK_AVAILABILITY_STATEMENT_HEADING = 'availabilityStatementHeading';
+    public const CODECHECK_HIDE_EMPTY_AVAILABILITY_STATEMENT = 'hideEmptyAvailabilityStatement';
+
     public const CODECHECK_AUTHOR_ANONYMITY = 'authorAnonymity';
     public const CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN = 'githubPersonalAccessToken';
     public const CODECHECK_GITHUB_REGISTER_ORGANIZATION = 'githubRegisterOrganization';
