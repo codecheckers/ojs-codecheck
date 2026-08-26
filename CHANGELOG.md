@@ -102,6 +102,12 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 
 #### Configuration
 
+- Setting for where the CODECHECK badge links to: the certificate's page in the
+  CODECHECK register, or its DOI. The badge on the article landing page is now a
+  link as well, and both badges follow the same setting. Until now the link was
+  built only for a `CODECHECK-YYYY-NNN` certificate while identifiers are stored as
+  `YYYY-NNN`, so every badge and the article page's certificate link pointed nowhere
+
 - Plugin settings for the GitHub personal access token, the register organisation and
   repository, custom issue labels, author anonymity in register issues, and which
   CODECHECK statuses permit publication
@@ -130,6 +136,26 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   recorded for the check instead of always claiming 1.0
 
 #### Under the hood
+
+- CODECHECK publication validation works again. It asked the router for the page
+  handler to find the submission, but publishing goes through the REST API where
+  there is none, so every publish attempt threw inside the hook; OJS logged
+  "failed to handle the hook" and published anyway. The submission now comes from
+  the hook itself, so a status the journal does not accept blocks publication as
+  it was meant to
+
+- The plugin API answers requests from `CodecheckApiHandler::execute()` rather than
+  from its constructor, and sends responses through a `JsonResponseEmitter` instead
+  of a static call that echoes and exits. The handler can now be built and driven in
+  a test, and its CSRF check, role check and route parsing are covered — they are the
+  only thing standing in front of nineteen endpoints, several of which write to the
+  public CODECHECK register. While registering the API, the plugin no longer calls
+  `$router->setHandler()`: it takes a PKP handler and this is not one
+
+- A POST to reserve a certificate identifier or update the register issue that
+  leaves out a required field is answered with a 400 naming the field, rather than
+  raising "Undefined array key" on its way to a 500. The guards moved into
+  `IdentifierParameterValidator`
 
 - Custom API under `api/v1/codecheck` with CSRF and role-based access control
 - Database schema managed by an install migration with versioned upgrade steps, run

@@ -114,7 +114,11 @@ class CodecheckPlugin extends GenericPlugin
     {
         CodecheckLogger::debug("Validating Publication!");
         $errors = &$args[0];
-        $codecheckPublicationValidator = new CodecheckPublicationValidator($this);
+        // The hook hands over the submission being published. Passing it on
+        // matters: publishing goes through the REST API, where there is no page
+        // handler to ask for the authorized submission.
+        $submission = $args[2] ?? null;
+        $codecheckPublicationValidator = new CodecheckPublicationValidator($this, $submission);
 
         $validationErrors = $codecheckPublicationValidator->validatePublication();
 
@@ -226,7 +230,13 @@ class CodecheckPlugin extends GenericPlugin
             return;
         }
 
-        $router->setHandler($apiHandler);
+        // Not registered with the router: setHandler() takes a PKPHandler and
+        // CodecheckApiHandler is not one. The call used to stand here and was
+        // simply never reached, because constructing the handler authorized,
+        // served and exited. Serving from execute() made it reachable, and it
+        // raised a TypeError inside the hook — which PKP swallows, leaving OJS
+        // to answer every plugin API call with its own 404.
+        $apiHandler->execute();
         exit;
     }
 

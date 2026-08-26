@@ -865,6 +865,18 @@ msgstr "Colour of the text"
 msgid "plugins.generic.codecheck.settings.badge.textColor.description"
 msgstr "The colour the text is written in, on the article landing page and in the issue table of contents."
 
+msgid "plugins.generic.codecheck.settings.badge.linkTarget.label"
+msgstr "Where the badge links to"
+
+msgid "plugins.generic.codecheck.settings.badge.linkTarget.description"
+msgstr "What a reader opens when they click the badge, on the article landing page and in the issue table of contents."
+
+msgid "plugins.generic.codecheck.settings.badge.linkTarget.register"
+msgstr "The certificate's page in the CODECHECK register"
+
+msgid "plugins.generic.codecheck.settings.badge.linkTarget.doi"
+msgstr "The certificate's DOI"
+
 msgid "plugins.generic.codecheck.settings.badge.height.label"
 msgstr "Badge display height"
 

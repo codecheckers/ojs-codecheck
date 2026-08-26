@@ -173,6 +173,12 @@ class SettingsForm extends Form
             $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_TEXT) ?? ''
         );
 
+        $this->setData(
+            Constants::CODECHECK_BADGE_LINK_TARGET,
+            $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_LINK_TARGET)
+                ?: Constants::CODECHECK_BADGE_LINK_TARGET_REGISTER
+        );
+
         // A colour input needs a value to open on, so unset means the default
         // rather than an empty string.
         $this->setData(
@@ -261,6 +267,7 @@ class SettingsForm extends Form
             Constants::CODECHECK_BADGE_TYPE,
             Constants::CODECHECK_BADGE_TEXT,
             Constants::CODECHECK_BADGE_TEXT_COLOR,
+            Constants::CODECHECK_BADGE_LINK_TARGET,
             Constants::CODECHECK_BADGE_CUSTOM_URL,
             Constants::CODECHECK_BADGE_HEIGHT,
             Constants::CODECHECK_SHOW_DASHBOARD_COLUMN,
@@ -301,6 +308,19 @@ class SettingsForm extends Form
         
         $templateMgr->assign('codecheckBadgeType', $this->getData(Constants::CODECHECK_BADGE_TYPE) ?? 'codeworks');
         $templateMgr->assign('codecheckBadgeText', $this->getData(Constants::CODECHECK_BADGE_TEXT) ?? '');
+
+        // The select renders label => value pairs, like the CODECHECK mode above.
+        $templateMgr->assign('codecheckBadgeLinkTargets', array_combine(
+            Constants::CODECHECK_BADGE_LINK_TARGETS,
+            array_map(
+                fn ($target) => __('plugins.generic.codecheck.settings.badge.linkTarget.' . $target),
+                Constants::CODECHECK_BADGE_LINK_TARGETS
+            )
+        ));
+        $templateMgr->assign(
+            'codecheckBadgeLinkTarget',
+            $this->getData(Constants::CODECHECK_BADGE_LINK_TARGET) ?: Constants::CODECHECK_BADGE_LINK_TARGET_REGISTER
+        );
         $templateMgr->assign(
             'codecheckBadgeTextColor',
             $this->getData(Constants::CODECHECK_BADGE_TEXT_COLOR) ?: Constants::CODECHECK_BADGE_TEXT_COLOR_DEFAULT
@@ -487,6 +507,16 @@ class SettingsForm extends Form
             $context->getId(),
             Constants::CODECHECK_BADGE_TEXT,
             trim((string) $this->getData(Constants::CODECHECK_BADGE_TEXT))
+        );
+
+        // Only one of the two known targets is ever stored.
+        $linkTarget = (string) $this->getData(Constants::CODECHECK_BADGE_LINK_TARGET);
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_BADGE_LINK_TARGET,
+            in_array($linkTarget, Constants::CODECHECK_BADGE_LINK_TARGETS, true)
+                ? $linkTarget
+                : Constants::CODECHECK_BADGE_LINK_TARGET_REGISTER
         );
 
         // Store only a real hex colour, so nothing else can end up in a style

@@ -79,6 +79,46 @@ class Badge
             : Constants::CODECHECK_BADGE_TEXT_COLOR_DEFAULT;
     }
 
+    /**
+     * Where the badge takes a reader.
+     *
+     * The journal picks which of the two it prefers; the other stands in when
+     * the preferred one is missing, because a badge that links nowhere is worse
+     * than one that links to the second choice. Both may be missing — a check
+     * recorded with neither an identifier nor a DOI — and then the caller gets
+     * an empty string and renders the badge unlinked.
+     *
+     * @param string $certificate the identifier or URL recorded for the check
+     * @param string $doiLink the certificate's DOI as a URL, if there is one
+     */
+    public function getCertificateUrl(string $certificate, string $doiLink = ''): string
+    {
+        $certificate = trim($certificate);
+
+        // A journal that recorded the certificate as a URL means that URL.
+        $register = filter_var($certificate, FILTER_VALIDATE_URL)
+            ? $certificate
+            : Constants::getRegisterCertificateUrl($certificate);
+
+        return $this->getLinkTarget() === Constants::CODECHECK_BADGE_LINK_TARGET_DOI
+            ? ($doiLink ?: $register)
+            : ($register ?: $doiLink);
+    }
+
+    /**
+     * Which of the two targets the journal prefers. Unset means the register:
+     * it can be built from the identifier every check has, while a DOI is
+     * recorded separately and is often not there at all.
+     */
+    public function getLinkTarget(): string
+    {
+        $target = (string) $this->getSetting(Constants::CODECHECK_BADGE_LINK_TARGET);
+
+        return in_array($target, Constants::CODECHECK_BADGE_LINK_TARGETS, true)
+            ? $target
+            : Constants::CODECHECK_BADGE_LINK_TARGET_REGISTER;
+    }
+
     /** The height the image is rendered at, as a ready-made style attribute. */
     public function getStyle(): string
     {

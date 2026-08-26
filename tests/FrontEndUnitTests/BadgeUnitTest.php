@@ -86,6 +86,69 @@ class BadgeUnitTest extends PKPTestCase
         }
     }
 
+    public function testTheBadgeLinksToTheRegisterUntilTheJournalChoosesOtherwise()
+    {
+        $badge = $this->badgeWithSettings([]);
+
+        $this->assertSame(Constants::CODECHECK_BADGE_LINK_TARGET_REGISTER, $badge->getLinkTarget());
+        $this->assertSame(
+            'https://codecheck.org.uk/register/certs/2020-001/',
+            $badge->getCertificateUrl('2020-001', 'https://doi.org/10.5281/zenodo.123')
+        );
+    }
+
+    public function testAJournalCanSendReadersToTheDoiInstead()
+    {
+        $badge = $this->badgeWithSettings([
+            Constants::CODECHECK_BADGE_LINK_TARGET => Constants::CODECHECK_BADGE_LINK_TARGET_DOI,
+        ]);
+
+        $this->assertSame(
+            'https://doi.org/10.5281/zenodo.123',
+            $badge->getCertificateUrl('2020-001', 'https://doi.org/10.5281/zenodo.123')
+        );
+    }
+
+    public function testTheOtherTargetStandsInWhenThePreferredOneIsMissing()
+    {
+        // A badge linking nowhere is worse than one linking to the second
+        // choice, and either value can be absent on a real record.
+        $doiPreferred = $this->badgeWithSettings([
+            Constants::CODECHECK_BADGE_LINK_TARGET => Constants::CODECHECK_BADGE_LINK_TARGET_DOI,
+        ]);
+        $this->assertSame(
+            'https://codecheck.org.uk/register/certs/2020-001/',
+            $doiPreferred->getCertificateUrl('2020-001', '')
+        );
+
+        $this->assertSame(
+            'https://doi.org/10.5281/zenodo.123',
+            $this->badgeWithSettings([])->getCertificateUrl('', 'https://doi.org/10.5281/zenodo.123')
+        );
+    }
+
+    public function testWithNeitherATargetThereIsNoLink()
+    {
+        // The caller renders the badge unlinked rather than with href="".
+        $this->assertSame('', $this->badgeWithSettings([])->getCertificateUrl('', ''));
+        $this->assertSame('', $this->badgeWithSettings([])->getCertificateUrl('not an identifier', ''));
+    }
+
+    public function testACertificateRecordedAsAUrlIsUsedAsIs()
+    {
+        $this->assertSame(
+            'https://example.org/certificates/7',
+            $this->badgeWithSettings([])->getCertificateUrl('https://example.org/certificates/7', '')
+        );
+    }
+
+    public function testAnUnknownStoredTargetFallsBackToTheRegister()
+    {
+        $badge = $this->badgeWithSettings([Constants::CODECHECK_BADGE_LINK_TARGET => 'somewhere else']);
+
+        $this->assertSame(Constants::CODECHECK_BADGE_LINK_TARGET_REGISTER, $badge->getLinkTarget());
+    }
+
     public function testTheHeightDefaultsToTwentyFourPixels()
     {
         $this->assertSame('height:24px; width:auto;', $this->badgeWithSettings([])->getStyle());

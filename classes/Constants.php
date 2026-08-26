@@ -65,6 +65,35 @@ class Constants
     # Shown where the image would be when the badge type is 'none'
     public const CODECHECK_BADGE_TEXT = 'codecheckBadgeText';
     public const CODECHECK_BADGE_TEXT_COLOR = 'codecheckBadgeTextColor';
+
+    # Where the badge takes a reader: the certificate's DOI, or its landing
+    # page in the CODECHECK register
+    public const CODECHECK_BADGE_LINK_TARGET = 'codecheckBadgeLinkTarget';
+    public const CODECHECK_BADGE_LINK_TARGET_REGISTER = 'register';
+    public const CODECHECK_BADGE_LINK_TARGET_DOI = 'doi';
+    public const CODECHECK_BADGE_LINK_TARGETS = [
+        self::CODECHECK_BADGE_LINK_TARGET_REGISTER,
+        self::CODECHECK_BADGE_LINK_TARGET_DOI,
+    ];
+
+    /** Where a certificate's landing page lives in the register. */
+    public const CODECHECK_REGISTER_CERTIFICATE_URL = 'https://codecheck.org.uk/register/certs/';
+
+    /**
+     * The register landing page for a certificate identifier, or an empty
+     * string when the value is not an identifier this can build a URL from.
+     *
+     * Identifiers are stored as they appear in the register, `YYYY-NNN`; a
+     * `CODECHECK-` prefix is tolerated because older records carry one.
+     */
+    public static function getRegisterCertificateUrl(string $certificate): string
+    {
+        $identifier = preg_replace('/^CODECHECK-/', '', trim($certificate));
+
+        return preg_match('/^\d{4}-\d+$/', $identifier)
+            ? self::CODECHECK_REGISTER_CERTIFICATE_URL . $identifier . '/'
+            : '';
+    }
     /** The green the badge text has always been rendered in. */
     public const CODECHECK_BADGE_TEXT_COLOR_DEFAULT = '#2d7f3e';
 
