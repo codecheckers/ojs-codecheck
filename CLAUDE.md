@@ -277,12 +277,9 @@ GitHub's 60/hour per-IP limit, so do not move that call back onto every save.
 
 ### Logging
 
-Use `CodecheckLogger::debug|info|error()` (`classes/Log/CodecheckLogger.php`) — writes
+Use `CodecheckLogger::debug|info|warning|error()` (`classes/Log/CodecheckLogger.php`) — writes
 `[codecheck][level] …` via `error_log()`. Do not add bare `error_log()` calls; a few
 legacy ones remain (e.g. `CodecheckApiHandler` label handler).
-
-⚠️ `CodecheckSubmissionDAO.php:114` calls `CodecheckLogger::warning()`, which **does not
-exist** — that branch fatals. Either add the level or change the call.
 
 ### i18n
 
@@ -356,9 +353,10 @@ cypress/
   support/e2e.js               cy.ojsLogin(), cy.getCsrfToken(), swallow uncaught exceptions
   support/component-index.html
   tests/component/*.cy.js      5 specs, 61 tests
-  tests/e2e/*.cy.js            4 specs, 16 tests
+  tests/e2e/*.cy.js            5 specs, 19 tests
                                yaml-generation, article-sidebar-setting,
-                               private-repository, settings-roundtrip
+                               issue-toc-setting, private-repository,
+                               settings-roundtrip
   tests/visual/ui-screenshots.cy.js  screenshot pass — `make screenshots`
 
 dev/
@@ -396,7 +394,7 @@ columns), and the wizard DOM-scraping classes.
 
 ### E2E tests
 
-`make test-e2e` — 16 tests across 4 specs, driving a real OJS instance.
+`make test-e2e` — 19 tests across 5 specs, driving a real OJS instance.
 
 - `yaml-generation.cy.js` — YAML preview vs. download parity, preview-button gating
 - `article-sidebar-setting.cy.js` — the `showArticleSidebar` setting, driven through
@@ -463,9 +461,6 @@ Three jobs on push/PR to `main`:
    `testData/stable-3_5_0-codecheck` dump, `loadfiles.sh`, OJS npm build, plugin npm
    build, Apache + mod_php on :8888, then `npm run test:e2e`.
 
-Note the README badge points at `component-tests.yml`, which no longer exists — all three
-jobs live in `tests.yml`.
-
 ### Test data (`testData/stable-3_5_0-codecheck/`)
 
 A PKP-datasets-shaped MySQL dump + article files for a "CODECHECK Demo Journal"
@@ -494,8 +489,8 @@ leaves the seeded articles silently broken while the tests still pass.
 This has already happened once. Commit `efaf1ed` removed the comma-separated
 `repositories` format without migrating the dump, so
 `CodecheckSubmission::getRepositories()` returned `[]` for every seeded article
-— and that was the branch calling the missing `CodecheckLogger::warning()`,
-which made viewing any seeded article page fatal.
+— and that was the branch calling `CodecheckLogger::warning()`, which did not
+exist at the time, so viewing any seeded article page was fatal.
 
 Columns are handled by upgrade migrations under `classes/migration/upgrade/`;
 the dump has no such mechanism, so it must be edited directly. After changing
@@ -651,8 +646,8 @@ them.
 
 - PSR-12; speaking names, verbs in function names; document public methods/classes
 - Vue SFCs use `<script setup>`-style composition where already present — match the file
-- Every user-visible change belongs in `CHANGELOG.md` (note: the changelog is currently
-  far behind the code — it stops at "initial plugin structure")
+- Every user-visible change belongs in `CHANGELOG.md`, under `[Unreleased]` in the
+  section it fits (Frontend, Configuration, Under the hood, …)
 - Release process, packaging (`package-plugin.sh`) and the API-extension recipe are in
   `README.md`
 - `.claude/ISSUE_CODE_IMPROVEMENTS.md` and `.claude/issue-65-update.md` hold earlier
