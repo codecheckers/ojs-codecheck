@@ -531,6 +531,22 @@
 				</div>
 			{/fbvFormSection}
 
+			{* Where clicking the badge takes a reader *}
+			{fbvFormSection list=true}
+				<div class="field-header">
+					<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.badge.linkTarget.label"}</label>
+				</div>
+				<label class="description">{translate key="plugins.generic.codecheck.settings.badge.linkTarget.description"}</label>
+				{fbvElement
+					type="select"
+					id="codecheckBadgeLinkTarget"
+					class="codecheck-form-select"
+					from=$codecheckBadgeLinkTargets
+					selected=$codecheckBadgeLinkTarget
+					translate=false
+				}
+			{/fbvFormSection}
+
 			{fbvFormSection list=true}
 				<div class="field-header">
 					<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.badge.height.label"}</label>

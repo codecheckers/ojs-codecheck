@@ -57,16 +57,42 @@ class CodecheckSubmissionUnitTest extends PKPTestCase
         $this->assertTrue($submission->hasAssignedChecker());
     }
 
-    public function testGetCertificateLinkBuildsUrlForCodecheckId()
+    public function testGetCertificateLinkBuildsUrlForARegisterIdentifier()
+    {
+        // Identifiers are stored the way the register writes them. This test
+        // used to expect a "CODECHECK-2025-001" form the plugin never produces,
+        // so it passed while every real record produced an empty link.
+        $submission = new CodecheckSubmission([
+            'submission_id' => 1,
+            'certificate' => '2025-001'
+        ]);
+        $this->assertSame(
+            'https://codecheck.org.uk/register/certs/2025-001/',
+            $submission->getCertificateLink()
+        );
+    }
+
+    public function testGetCertificateLinkToleratesAnOlderPrefixedIdentifier()
     {
         $submission = new CodecheckSubmission([
             'submission_id' => 1,
             'certificate' => 'CODECHECK-2025-001'
         ]);
         $this->assertSame(
-            'https://codecheck.org.uk/certificate/CODECHECK-2025-001',
+            'https://codecheck.org.uk/register/certs/2025-001/',
             $submission->getCertificateLink()
         );
+    }
+
+    public function testGetCertificateLinkIsEmptyWhenThereIsNoIdentifier()
+    {
+        foreach (['', 'not an identifier', '2025'] as $certificate) {
+            $submission = new CodecheckSubmission([
+                'submission_id' => 1,
+                'certificate' => $certificate
+            ]);
+            $this->assertSame('', $submission->getCertificateLink());
+        }
     }
 
     public function testGetCertificateLinkReturnsUrlAsIs()

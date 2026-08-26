@@ -97,6 +97,12 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 
 #### Configuration
 
+- Setting for where the CODECHECK badge links to: the certificate's page in the
+  CODECHECK register, or its DOI. The badge on the article landing page is now a
+  link as well, and both badges follow the same setting. Until now the link was
+  built only for a `CODECHECK-YYYY-NNN` certificate while identifiers are stored as
+  `YYYY-NNN`, so every badge and the article page's certificate link pointed nowhere
+
 - Plugin settings for the GitHub personal access token, the register organisation and
   repository, custom issue labels, author anonymity in register issues, and which
   CODECHECK statuses permit publication

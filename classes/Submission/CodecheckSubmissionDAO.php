@@ -1,6 +1,7 @@
 <?php
 namespace APP\plugins\generic\codecheck\classes\Submission;
 
+use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use Illuminate\Support\Facades\DB;
 
@@ -218,12 +219,10 @@ class CodecheckSubmission
             return $certificate;
         }
         
-        // If it's a CODECHECK ID, build the URL
-        if (preg_match('/^CODECHECK-\d{4}-\d+$/', $certificate)) {
-            return 'https://codecheck.org.uk/certificate/' . $certificate;
-        }
-        
-        return '';
+        // Otherwise it is a register identifier — stored as YYYY-NNN, though
+        // older records carry a CODECHECK- prefix — and the link is its landing
+        // page in the register.
+        return Constants::getRegisterCertificateUrl($certificate);
     }
 
     /**

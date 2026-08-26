@@ -10,13 +10,15 @@
 {if $codecheckStatus == 'completed'}
 <div class="item certificate" data-testid="codecheck-article-sidebar" style="padding: 15px; margin: 5px 0;">
 
-    {* Badge *}
+    {* Badge — linked to whichever certificate target the journal configured *}
     <div class="sub_item" style="display:flex; align-items:center; margin-bottom:8px;">
+        {if $badgeLink}<a href="{$badgeLink|escape}" target="_blank" class="codecheck-badge" title="{translate key='plugins.generic.codecheck.viewCertificate'}">{/if}
         {if $logoUrl}
-            <img src="{$logoUrl|escape}" alt="{translate key='plugins.generic.codecheck.badge.altText'}" style="{$badgeStyle} margin-right:6px;">
+            <img src="{$logoUrl|escape}" alt="{translate key='plugins.generic.codecheck.badge.altText'}" class="codecheck-badge-img" style="{$badgeStyle} margin-right:6px;">
         {else}
-            <span style="color:{$badgeTextColor|escape}; font-weight:600; margin-right:6px;">{$badgeText|escape}</span>
+            <span class="codecheck-badge--text" style="color:{$badgeTextColor|escape}; font-weight:600; margin-right:6px;">{$badgeText|escape}</span>
         {/if}
+        {if $badgeLink}</a>{/if}
     </div>
 
     {* Codecheckers with ORCIDs *}
@@ -122,9 +124,9 @@
 
     <div class="sub_item" style="display:flex; align-items:center; margin-bottom:8px;">
         {if $logoUrl}
-            <img src="{$logoUrl|escape}" alt="{translate key='plugins.generic.codecheck.badge.altText'}" style="{$badgeStyle} margin-right:6px;">
+            <img src="{$logoUrl|escape}" alt="{translate key='plugins.generic.codecheck.badge.altText'}" class="codecheck-badge-img" style="{$badgeStyle} margin-right:6px;">
         {else}
-            <span style="font-size:0.8em; font-weight:600; color:{$badgeTextColor|escape}; margin-right:6px;">{$badgeText|escape}</span>
+            <span class="codecheck-badge--text" style="font-size:0.8em; font-weight:600; color:{$badgeTextColor|escape}; margin-right:6px;">{$badgeText|escape}</span>
         {/if}
     </div>
 
