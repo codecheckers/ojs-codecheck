@@ -75,6 +75,8 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 - CODECHECK badge in the issue table of contents (Issue #27)
 - Configurable badge: CODE WORKS badge, CODECHECK logo, a custom image or text only,
   with a configurable height (Issue #27)
+- Setting to show or hide the badge in issue tables of contents, independent of the
+  article sidebar, so a journal can use either display on its own
 
 #### Configuration
 
@@ -114,8 +116,21 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   `guzzlehttp/guzzle` (9, high and medium), `guzzlehttp/psr7` (4, medium) and
   `symfony/yaml` (3, low). All were resolved within the existing version constraints,
   so no dependency requirement changed.
+### Removed
+
+- `CodecheckMetadataDAO` and `schema.xml`. Neither was reachable: the DAO queried
+  columns that do not exist and was referenced only by its own unit test, and OJS 3.5
+  installs plugin schemas through the migration rather than an ADODB schema file. Both
+  described table shapes that disagreed with the one the plugin actually creates.
+- The `codecheckApiEndpoint` and `codecheckApiKey` settings. Both were written on
+  every save but no field ever rendered them and nothing ever read them, so they
+  could not be set and had no effect.
 
 ### Fixed
+
+- Saving the plugin settings no longer makes a GitHub request every time. The
+  register repository is only checked for its `register.csv` when the configured
+  organisation or repository actually changes, instead of on every save.
 
 - Viewing a published article could fail with a fatal error when the stored repository
   data was not in the expected format, because the logger had no `warning()` method.
