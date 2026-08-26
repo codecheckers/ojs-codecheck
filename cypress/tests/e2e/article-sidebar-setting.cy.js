@@ -15,41 +15,6 @@ const SIDEBAR = '[data-testid="codecheck-article-sidebar"]';
 /** A published submission that has a CODECHECK certificate. */
 let articleId;
 
-/**
- * Open the CODECHECK plugin settings modal from the plugin grid.
- * The settings link lives in the row's collapsed "extras" area.
- */
-function openCodecheckSettings() {
-  cy.visit(`/index.php/${JOURNAL}/management/settings/website`);
-
-  // Every settings tab is rendered into the DOM up front, so the plugin grid
-  // is present without switching tabs; the row's action links are collapsed,
-  // hence the forced click.
-  cy.get('a[href*="verb=settings"][href*="plugin=codecheckplugin"]', { timeout: 20000 })
-    .first()
-    .click({ force: true });
-
-  // The form is rendered into a modal.
-  cy.get('#showArticleSidebar', { timeout: 20000 }).should('exist');
-}
-
-function setArticleSidebar(enabled) {
-  openCodecheckSettings();
-
-  cy.get('#showArticleSidebar').then(($checkbox) => {
-    if ($checkbox.is(':checked') !== enabled) {
-      cy.wrap($checkbox).click();
-    }
-  });
-
-  cy.get('#showArticleSidebar').should(enabled ? 'be.checked' : 'not.be.checked');
-
-  cy.get('form#codecheckSettings').find('button[type="submit"]').first().click();
-
-  // The modal closes once the form has been saved.
-  cy.get('#showArticleSidebar', { timeout: 20000 }).should('not.exist');
-}
-
 describe('Article sidebar display setting', () => {
   before(() => {
     cy.ojsLogin('admin', 'admin');
@@ -75,30 +40,31 @@ describe('Article sidebar display setting', () => {
   // assertion above failed partway through.
   after(() => {
     cy.ojsLogin('admin', 'admin');
-    setArticleSidebar(true);
+    cy.setCodecheckSetting('showArticleSidebar', true);
   });
 
   it('shows the CODECHECK sidebar on a published article when enabled', () => {
-    setArticleSidebar(true);
+    cy.setCodecheckSetting('showArticleSidebar', true);
 
     cy.visit(`/index.php/${JOURNAL}/article/view/${articleId}`);
     cy.get(SIDEBAR).should('exist');
   });
 
   it('hides the CODECHECK sidebar when disabled', () => {
-    setArticleSidebar(false);
+    cy.setCodecheckSetting('showArticleSidebar', false);
 
     cy.visit(`/index.php/${JOURNAL}/article/view/${articleId}`);
     cy.get(SIDEBAR).should('not.exist');
   });
 
   it('does not affect the issue table of contents badge', () => {
-    // IssueTOC deliberately does not consult this setting, so badges stay put.
-    setArticleSidebar(false);
+    // The two displays are controlled independently; showInTOC governs the badge.
+    cy.setCodecheckSetting('showInTOC', true);
+    cy.setCodecheckSetting('showArticleSidebar', false);
 
     cy.visit(`/index.php/${JOURNAL}/issue/archive`);
     cy.get('a[href*="/issue/view/"]').first().click();
     cy.get('.obj_article_summary, .article_summary').should('exist');
-    cy.get('img[alt*="CODE"], .codecheck-badge').should('exist');
+    cy.get('.codecheck-badge').should('exist');
   });
 });

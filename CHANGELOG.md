@@ -88,6 +88,8 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 - CODECHECK badge in the issue table of contents (Issue #27)
 - Configurable badge: CODE WORKS badge, CODECHECK logo, a custom image or text only,
   with a configurable height (Issue #27)
+- Setting to show or hide the badge in issue tables of contents, independent of the
+  article sidebar, so a journal can use either display on its own
 - The author's data and software availability statement is shown below the abstract
   on the article landing page. An article whose author provided no statement says so
   instead of staying silent. Three settings: hide the section entirely, rename its
@@ -146,6 +148,12 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 - The bundled test dataset carries the complete CODECHECK schema, so loading it
   produces a working instance without a separate repair step.
 
+### Security
+
+- Updated dependencies to clear 16 advisories reported by `composer audit`, affecting
+  `guzzlehttp/guzzle` (9, high and medium), `guzzlehttp/psr7` (4, medium) and
+  `symfony/yaml` (3, low). All were resolved within the existing version constraints,
+  so no dependency requirement changed.
 ### Removed
 
 - `CodecheckMetadataDAO` and `schema.xml`. Neither was reachable: the DAO queried

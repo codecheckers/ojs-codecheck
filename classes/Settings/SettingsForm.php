@@ -106,6 +106,14 @@ class SettingsForm extends Form
         );
 
         $this->setData(
+            Constants::CODECHECK_SHOW_IN_TOC,
+            $this->plugin->getSetting(
+                $context->getId(),
+                Constants::CODECHECK_SHOW_IN_TOC
+            ) ?? true
+        );
+
+        $this->setData(
             Constants::CODECHECK_MODE,
             $this->plugin->getSetting(
                 $context->getId(),
@@ -239,6 +247,7 @@ class SettingsForm extends Form
     {
         $this->readUserVars([
             Constants::CODECHECK_SHOW_ARTICLE_SIDEBAR,
+            Constants::CODECHECK_SHOW_IN_TOC,
             Constants::CODECHECK_SHOW_AVAILABILITY_STATEMENT,
             Constants::CODECHECK_AVAILABILITY_STATEMENT_HEADING,
             Constants::CODECHECK_HIDE_EMPTY_AVAILABILITY_STATEMENT,
@@ -343,6 +352,12 @@ class SettingsForm extends Form
             $context->getId(),
             Constants::CODECHECK_SHOW_ARTICLE_SIDEBAR,
             (bool) $this->getData(Constants::CODECHECK_SHOW_ARTICLE_SIDEBAR)
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_SHOW_IN_TOC,
+            (bool) $this->getData(Constants::CODECHECK_SHOW_IN_TOC)
         );
 
         $this->plugin->updateSetting(

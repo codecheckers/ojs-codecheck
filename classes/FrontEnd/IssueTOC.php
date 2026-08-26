@@ -3,6 +3,7 @@ namespace APP\plugins\generic\codecheck\classes\FrontEnd;
 
 use APP\core\Application;
 use APP\template\TemplateManager;
+use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionDAO;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
 
@@ -20,6 +21,15 @@ class IssueTOC
         $templateMgr = $params[1];
         $output = &$params[2];
 
+        // Unset means "show": the badge predates this setting, so journals that
+        // never configured it keep the behaviour they already had.
+        $request = Application::get()->getRequest();
+        $context = $request->getContext();
+        $showInTOC = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_SHOW_IN_TOC);
+        if ($showInTOC !== null && !$showInTOC) {
+            return false;
+        }
+
         $article = $templateMgr->getTemplateVars('article');
 
         if (!$article || !$article->getData('codecheckOptIn')) {
@@ -33,8 +43,6 @@ class IssueTOC
             return false;
         }
 
-        $request = Application::get()->getRequest();
-        $context = $request->getContext();
         $badge = new Badge($this->plugin, $context->getId());
 
         $badgeTemplateManager = TemplateManager::getManager($request);

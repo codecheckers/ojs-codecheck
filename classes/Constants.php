@@ -45,6 +45,7 @@ class Constants
     ];
     
     public const CODECHECK_SHOW_ARTICLE_SIDEBAR = 'showArticleSidebar';
+    public const CODECHECK_SHOW_IN_TOC = 'showInTOC';
 
     # Data and software availability statement on the article landing page
     public const CODECHECK_SHOW_AVAILABILITY_STATEMENT = 'showAvailabilityStatement';

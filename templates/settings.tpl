@@ -131,6 +131,21 @@
 			}
 		{/fbvFormSection}
 
+		{* Option to show or hide the CODECHECK badge in issue tables of contents *}
+		{fbvFormSection
+			list=true
+		}
+			<div class="field-header">
+				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.showInTOC"}</label>
+			</div>
+			{fbvElement
+				type="checkbox"
+				id="showInTOC"
+				checked=$showInTOC
+				label="plugins.generic.codecheck.settings.showInTOC.description"
+			}
+		{/fbvFormSection}
+
 		{* Everything about the data and software availability statement on the
 		   article landing page *}
 		{fbvFormSection list=true}
