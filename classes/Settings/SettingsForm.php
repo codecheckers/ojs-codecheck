@@ -158,6 +158,21 @@ class SettingsForm extends Form
             $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_TYPE) ?? 'codeworks'
         );
 
+        // Empty means "use the localised default", which the badge substitutes
+        // rather than rendering nothing where the image would be.
+        $this->setData(
+            Constants::CODECHECK_BADGE_TEXT,
+            $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_TEXT) ?? ''
+        );
+
+        // A colour input needs a value to open on, so unset means the default
+        // rather than an empty string.
+        $this->setData(
+            Constants::CODECHECK_BADGE_TEXT_COLOR,
+            $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_TEXT_COLOR)
+                ?: Constants::CODECHECK_BADGE_TEXT_COLOR_DEFAULT
+        );
+
         $this->setData(
             Constants::CODECHECK_BADGE_CUSTOM_URL,
             $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_CUSTOM_URL)
@@ -235,6 +250,8 @@ class SettingsForm extends Form
             Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY,
             Constants::CODECHECK_GITHUB_CUSTOM_LABELS,
             Constants::CODECHECK_BADGE_TYPE,
+            Constants::CODECHECK_BADGE_TEXT,
+            Constants::CODECHECK_BADGE_TEXT_COLOR,
             Constants::CODECHECK_BADGE_CUSTOM_URL,
             Constants::CODECHECK_BADGE_HEIGHT,
             Constants::CODECHECK_SHOW_DASHBOARD_COLUMN,
@@ -274,6 +291,11 @@ class SettingsForm extends Form
         ]);
         
         $templateMgr->assign('codecheckBadgeType', $this->getData(Constants::CODECHECK_BADGE_TYPE) ?? 'codeworks');
+        $templateMgr->assign('codecheckBadgeText', $this->getData(Constants::CODECHECK_BADGE_TEXT) ?? '');
+        $templateMgr->assign(
+            'codecheckBadgeTextColor',
+            $this->getData(Constants::CODECHECK_BADGE_TEXT_COLOR) ?: Constants::CODECHECK_BADGE_TEXT_COLOR_DEFAULT
+        );
         $templateMgr->assign('codecheckBadgeCustomUrl', $this->getData(Constants::CODECHECK_BADGE_CUSTOM_URL) ?? '');
         $templateMgr->assign('codecheckBadgeHeight', $this->getData(Constants::CODECHECK_BADGE_HEIGHT) ?? '24');
         
@@ -444,6 +466,23 @@ class SettingsForm extends Form
             $context->getId(),
             Constants::CODECHECK_STATUS_KEYS_SELECTED,
             (array) $this->getData(Constants::CODECHECK_STATUS_KEYS_SELECTED)
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_BADGE_TEXT,
+            trim((string) $this->getData(Constants::CODECHECK_BADGE_TEXT))
+        );
+
+        // Store only a real hex colour, so nothing else can end up in a style
+        // attribute on the article page.
+        $badgeTextColor = trim((string) $this->getData(Constants::CODECHECK_BADGE_TEXT_COLOR));
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_BADGE_TEXT_COLOR,
+            preg_match('/^#[0-9a-fA-F]{6}$/', $badgeTextColor)
+                ? $badgeTextColor
+                : Constants::CODECHECK_BADGE_TEXT_COLOR_DEFAULT
         );
 
         $this->plugin->updateSetting(

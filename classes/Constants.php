@@ -61,6 +61,11 @@ class Constants
     public const CODECHECK_BADGE_TYPE = 'codecheckBadgeType';
     public const CODECHECK_BADGE_CUSTOM_URL = 'codecheckBadgeCustomUrl';
     public const CODECHECK_BADGE_HEIGHT = 'codecheckBadgeHeight';
+    # Shown where the image would be when the badge type is 'none'
+    public const CODECHECK_BADGE_TEXT = 'codecheckBadgeText';
+    public const CODECHECK_BADGE_TEXT_COLOR = 'codecheckBadgeTextColor';
+    /** The green the badge text has always been rendered in. */
+    public const CODECHECK_BADGE_TEXT_COLOR_DEFAULT = '#2d7f3e';
 
     public const CODECHECK_SHOW_DASHBOARD_COLUMN = 'showDashboardColumn';
     

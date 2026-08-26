@@ -18,13 +18,13 @@
     <a href="{$certificateLink|escape}"
        target="_blank"
        class="codecheck-badge codecheck-badge--text"
-       style="color:#2d7f3e; font-weight:600;">
-        {translate key="plugins.generic.codecheck.badge.textOnly"}
+       style="color:{$badgeTextColor|escape}; font-weight:600;">
+        {$badgeText|escape}
     </a>
     {else}
     <span class="codecheck-badge codecheck-badge--text"
-          style="color:#2d7f3e; font-weight:600;">
-        {translate key="plugins.generic.codecheck.badge.textOnly"}
+          style="color:{$badgeTextColor|escape}; font-weight:600;">
+        {$badgeText|escape}
     </span>
     {/if}
 {/if}

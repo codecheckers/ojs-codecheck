@@ -106,6 +106,15 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   manifest lists are no longer repeated above them
 - The data and software availability settings are grouped into their own section on
   the plugin settings page, alongside the submission, GitHub and publication groups
+- The badge / logo settings are shown in the same bordered group as every other
+  setting instead of loose at the end of the page
+- The statuses that permit publication are chosen from a plain list of checkboxes
+  rather than a hover menu, matching the other multiple-choice settings
+- The text shown in place of the badge, when a journal chooses "No badge", is
+  configurable, as is the colour it is written in; cleared, the text falls back to
+  "CODECHECK" and the colour to the CODECHECK green
+- The destructive "Clear / Reset DB" action sits at the very bottom of the settings
+  page instead of between the submission and GitHub settings
 - Setting listing which CODECHECK config versions codecheckers can choose from in the
   metadata form. Only the enabled versions are offered, and the selector is inactive
   when a journal has settled on a single version. Journals offer version 1.0 until

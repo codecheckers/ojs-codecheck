@@ -237,6 +237,13 @@ Two settings deliberately treat "unset" and "empty" as *not* the stored value:
   is the ordinary kind, defaulting to **off**: an article with no statement says
   "No {$heading} provided for this work." rather than dropping the section, since
   silence cannot be told apart from a journal that never asked
+- `CODECHECK_BADGE_TEXT` falls back to the localised
+  `plugins.generic.codecheck.badge.textOnly` when cleared, so a journal showing text
+  instead of a badge never shows nothing. `CODECHECK_BADGE_TEXT_COLOR` falls back to
+  `CODECHECK_BADGE_TEXT_COLOR_DEFAULT` for anything that is not a six-digit hex
+  colour — it is written into a `style` attribute on a public page, so it is
+  validated both on save and on read, as OJS's own theme colour option is
+  (pkp/pkp-lib#11974)
 - `CODECHECK_ENABLED_CONFIG_VERSIONS` defaults to `CODECHECK_DEFAULT_CONFIG_VERSIONS`
   — `1.0` alone, not every known version — so a journal that has not chosen records
   checks against the current stable specification rather than a moving target. An
@@ -250,6 +257,18 @@ The JS copies are only the pre-load fallback — the authoritative list arrives 
 pins the PHP side. `CodecheckMetadataHandler::buildYaml()` emits the version recorded
 for the check through the same helper, so the generated file declares the specification
 the form was filled in against.
+
+Anything rendered outside `{fbvFormArea}` in `settings.tpl` loses the bordered box:
+`#codecheckSettings #codecheckSettingsArea .section` is what draws it. That is what
+left the badge / logo group looking unlike every other group until it was moved
+inside. Multiple-choice settings use `.codecheck-choice-list`; there is no dropdown
+on the settings form any more. A field belonging to one radio option — the custom
+badge URL, the text shown instead of a badge — is a `.badge-dependent-field`, shown
+and hidden by `toggleCustomBadgeUrl()` in the template.
+
+`classes/FrontEnd/Badge.php` resolves the badge settings (image URL, text, height)
+for both `ArticleDetails` and `IssueTOC`, which used to carry a copy each of the
+`match` on badge type.
 
 `SettingsForm::execute()` reaches out to GitHub through
 `validateRegisterFileExists()` — but only when the register organisation or
@@ -313,7 +332,7 @@ README.md; keep `css/codecheck.css` and inline component styles consistent.
 ### Layout
 
 ```
-tests/                       PHPUnit (20 files, 133 tests)
+tests/                       PHPUnit (21 files, 139 tests)
   bootstrap.php              PKP_STRICT_MODE + BASE_SYS_DIR (OJS_ROOT or ../../../..)
   PKPTestCase.php            local stub extending PHPUnit TestCase
   FakeTranslator.php         minimal translator so __() works without booting OJS
@@ -323,7 +342,7 @@ tests/                       PHPUnit (20 files, 133 tests)
   CodecheckPluginUnitTest.php
   CodecheckRegisterUnitTests/  CertificateIdentifier(List), GithubRegisterApiClient, IssueLabels
   DataStructuresUnitTests/     UniqueArray
-  FrontEndUnitTests/           ArticleAvailability, ArticleDetails
+  FrontEndUnitTests/           ArticleAvailability, ArticleDetails, Badge
   LogUnitTests/                CodecheckLogger
   ApiUnitTests/                ApiEndpoint, CodecheckRoleArray
   SettingsUnitTests/           Actions, Manage
@@ -397,7 +416,7 @@ validation, register deposit, and the settings form beyond the sidebar toggle.
 
 ### PHPUnit tests
 
-`make test-php` — 133 tests, green, none skipped.
+`make test-php` — 139 tests, green, none skipped.
 
 PHPUnit needs an OJS installation: the tests load OJS classes and the runner uses the
 PHPUnit shipped in `lib/pkp`. Both `runTests.sh` and `bootstrap.php` honour `OJS_ROOT`,

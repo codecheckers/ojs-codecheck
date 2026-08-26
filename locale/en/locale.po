@@ -817,6 +817,9 @@ msgstr "Additional information"
 msgid "plugins.generic.codecheck.settings.badge.title"
 msgstr "Badge / Logo"
 
+msgid "plugins.generic.codecheck.settings.badge.image"
+msgstr "Badge image"
+
 msgid "plugins.generic.codecheck.settings.badge.description"
 msgstr "Choose the image displayed as the CODECHECK badge on the article landing page sidebar and in the issue table of contents."
 
@@ -840,6 +843,18 @@ msgstr "No badge (text only)"
 
 msgid "plugins.generic.codecheck.badge.textOnly"
 msgstr "CODECHECK"
+
+msgid "plugins.generic.codecheck.settings.badge.text.label"
+msgstr "Text shown instead of a badge"
+
+msgid "plugins.generic.codecheck.settings.badge.text.description"
+msgstr "The wording shown where the badge image would be. Leave empty to use the default, \"CODECHECK\"."
+
+msgid "plugins.generic.codecheck.settings.badge.textColor.label"
+msgstr "Colour of the text"
+
+msgid "plugins.generic.codecheck.settings.badge.textColor.description"
+msgstr "The colour the text is written in, on the article landing page and in the issue table of contents."
 
 msgid "plugins.generic.codecheck.settings.badge.height.label"
 msgstr "Badge display height"
