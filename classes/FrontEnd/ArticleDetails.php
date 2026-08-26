@@ -84,6 +84,10 @@ class ArticleDetails
         $badge = new Badge($this->plugin, $context->getId());
 
         $templateMgr->assign([
+            'badgeLink'    => $badge->getCertificateUrl(
+                $codecheckData->getCertificate(),
+                $codecheckData->getDoiLink()
+            ),
             'logoUrl'      => $badge->getUrl(),
             'badgeText'    => $badge->getText(),
             'badgeTextColor' => $badge->getTextColor(),

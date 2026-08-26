@@ -17,6 +17,7 @@ use APP\facades\Repo;
 use \Github\Client;
 use APP\plugins\generic\codecheck\classes\CodecheckRoles\CodecheckRoleManager;
 use APP\plugins\generic\codecheck\classes\Exceptions\RoleExceptions\RoleNotFoundException;
+use APP\plugins\generic\codecheck\classes\Exceptions\EndpointNotFoundException;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckIssueLabels;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckPublicationValidator;
 use Exception;
@@ -29,20 +30,32 @@ class CodecheckApiHandler
     private JsonResponse $response;
     private CodecheckRoleManager $roles;
     private array $endpoints;
-    private string $route;
+    private ?string $route = null;
+    private JsonResponseEmitter $emitter;
     private CodecheckPlugin $plugin;
     private Request $request;
     private CodecheckMetadataHandler $codecheckMetadataHandler;
 
     /**
      * Initialize the Codecheck APIHandler class
-     * 
+     *
+     * Constructing a handler does not answer anything: the request cycle is
+     * `execute()`. It used to be the constructor, which meant the class could
+     * not be built at all without it authorizing and serving, and serving ends
+     * in `exit`.
+     *
      * @param Request $request API Request
      * @param CodecheckRoleManager $roles The CODECHECK roles for `read`, `write` and `standard` access to the API routes
+     * @param JsonResponseEmitter $emitter How a finished response reaches the caller
      * @return void
      */
-    public function __construct(CodecheckPlugin $plugin, Request $request, CodecheckRoleManager $roles)
-    {
+    public function __construct(
+        CodecheckPlugin $plugin,
+        Request $request,
+        CodecheckRoleManager $roles,
+        JsonResponseEmitter $emitter = new HttpResponseEmitter()
+    ) {
+        $this->emitter = $emitter;
         $this->plugin = $plugin;
 
         $this->response = new JsonResponse([
@@ -142,14 +155,46 @@ class CodecheckApiHandler
         ];
 
         $this->request = $request;
+    }
 
-        // Get the API Route that was called from the request
-        $this->route = $this->getRouteFromRequest();
+    /**
+     * Answer the request: resolve the route, authorize, then serve.
+     *
+     * Ends by emitting a response, which for a served request means the process
+     * stops here.
+     *
+     * @throws EndpointNotFoundException when the route and method resolve to no
+     *  endpoint. OJS's own API router answers those before the plugin is
+     *  reached, so this is defensive rather than a live path.
+     */
+    public function execute(): void
+    {
+        $this->route = self::routeFromPath($this->request->getRequestPath());
 
-        $this->authorize();
+        // The token is checked before the route is resolved, so an unauthorized
+        // caller learns nothing about which routes exist.
+        $this->assertCsrfTokenMatches();
 
-        // Serve the Request
-        $this->serveRequest();
+        $endpoint = $this->getEndpoint();
+
+        $this->assertUserHasRole($endpoint);
+
+        call_user_func($endpoint->getHandler());
+    }
+
+    /**
+     * The route the request addresses, without the api/v1/codecheck/ prefix.
+     *
+     * Static and pure so it can be exercised on its own; null for a path this
+     * plugin does not serve.
+     */
+    public static function routeFromPath(string $requestPath): ?string
+    {
+        if (preg_match('#api/v1/codecheck/(.*)#', $requestPath, $matches)) {
+            return $matches[1];
+        }
+
+        return null;
     }
 
     private function getEndpoint(): ApiEndpoint
@@ -159,81 +204,67 @@ class CodecheckApiHandler
 
         CodecheckLogger::debug("API Request: " . $requestMethod . " - " . $this->request->getRequestPath());
 
-        return new ApiEndpoint($this->endpoints, $this->route, $requestMethod);
+        return new ApiEndpoint($this->endpoints, $this->route ?? '', $requestMethod);
     }
 
     /**
-     * Authorize the API connection
-     * 
-     * @return void
+     * The API is reached from the Dispatcher hook rather than through PKP's
+     * authorization policies, so it checks the session's CSRF token itself.
+     *
+     * Emits a 400 and ends the request when the token is missing or wrong.
      */
-    public function authorize()
+    private function assertCsrfTokenMatches(): void
     {
-        // Check if the CSRF Token is present and valid
+        // Read from $_SERVER rather than the Request: the header is not among
+        // the ones PKP's Request exposes.
         $csrfInHeader = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? null;
 
         if(!($csrfInHeader && $csrfInHeader === $this->request->getSession()->token())) {
-            JsonResponse::staticResponse([
+            $this->respond([
                 'success'   => false,
                 'error'     => 'No or wrong CSRF Token'
             ], 400);
-            return;
         }
+    }
 
-        // Check if the user that accesses this resource has at least one valid Role and if user exists
+    /**
+     * Check that the user holds one of the roles the endpoint requires.
+     *
+     * Emits a 400 and ends the request when there is no user, or the user has
+     * none of them.
+     */
+    private function assertUserHasRole(ApiEndpoint $endpoint): void
+    {
         $user = $this->request->getUser() ?? null;
         $contextId = $this->request->getContext()->getId();
-        $apiEndpoint = $this->getEndpoint();
-        $codecheckRole = $apiEndpoint->getRoles();
-        
+
         try {
-            $pkpRoles = $codecheckRole->getRoles();
+            $pkpRoles = $endpoint->getRoles()->getRoles();
 
             if(!($user && $user->hasRole($pkpRoles, $contextId))) {
-                JsonResponse::staticResponse([
+                $this->respond([
                     'success'   => false,
                     'error'     => "User has no assigned Role or doesn't have the right roles assigned to access this resource"
                 ], 400);
-                return;
             }
         } catch (RoleNotFoundException $roleNotFoundException) {
-            JsonResponse::staticResponse([
+            // Defensive: nothing in the role classes raises this today.
+            $this->respond([
                 'success'   => false,
                 'error'     => $roleNotFoundException->getMessage()
             ], $roleNotFoundException->getCode());
-            return;
         }
     }
 
     /**
-     * Gets the route from the entire API Request
-     * 
-     * @return ?string If Request is correct, this returns the route and else it returns `null`
+     * Send a response and end the request.
+     *
+     * Every endpoint below finishes this way. The emitter does not return —
+     * see JsonResponseEmitter — so nothing after a call to this runs.
      */
-    private function getRouteFromRequest(): ?string
+    private function respond(array $payload, int $httpResponseCode): never
     {
-        if (preg_match('#api/v1/codecheck/(.*)#', $this->request->getRequestPath(), $matches)) {
-            return $matches[1];
-        } else {
-            return null;
-        }
-    }
-
-    /**
-     * Serves the API request -> calls the function based on the called endpoint in the route
-     * 
-     * @return void
-     */
-    private function serveRequest(): void
-    {
-        // get the request Method like POST or GET
-        $requestMethod = $this->request->getRequestMethod();
-
-        CodecheckLogger::debug('Method: ' . $requestMethod);
-
-        $apiEndpoint = $this->getEndpoint();
-
-        call_user_func($apiEndpoint->getHandler());
+        $this->emitter->emit(new JsonResponse($payload, $httpResponseCode));
     }
 
     /**
@@ -248,7 +279,7 @@ class CodecheckApiHandler
         try {
             $issueLabelsLastUpdated = strtotime($this->getIssueLabelsLastUpdated());
         } catch (\Throwable $e) {
-            JsonResponse::staticResponse([
+            $this->respond([
                 'success'   => false,
                 'error'     => $e->getMessage(),
             ], $e->getCode());
@@ -267,7 +298,7 @@ class CodecheckApiHandler
             try {
                 $codecheckIssueLabels = CodecheckIssueLabels::fromApi("https://codecheck.org.uk/register/venues/index.json");
             } catch (\Throwable $e) {
-                JsonResponse::staticResponse([
+                $this->respond([
                     'success'   => false,
                     'error'     => $e->getMessage(),
                 ], $e->getCode());
@@ -284,7 +315,7 @@ class CodecheckApiHandler
         error_log(print_r($codecheckStatuses, true));
 
         // Serve the getCodecheckIssueLabels API route
-        JsonResponse::staticResponse([
+        $this->respond([
             'success' => true,
             'labels' => $codecheckIssueLabels->get()->toArray(),
         ], 200);
@@ -296,7 +327,7 @@ class CodecheckApiHandler
         $githubRegisterRepositoryOrganization = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION);
         $githubRegisterRepositoryRepository = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY);
 
-        JsonResponse::staticResponse([
+        $this->respond([
             'success' => true,
             'url' => "github.com/$githubRegisterRepositoryOrganization/$githubRegisterRepositoryRepository",
         ], 200);
@@ -347,73 +378,6 @@ class CodecheckApiHandler
     }
 
     /**
-     * Validates general POST parameters for reserveIdentifier & updateGithubIssue, returning an error message string
-     * on the first failed guard, or null if all parameters are valid.
-     */
-    private function validateIdentifierPostParameters(array $postParams): ?string
-    {
-        if(!is_array($postParams['issue'])) {
-            return "The parameter 'issue' must be an array!";
-        }
-        if(!is_array($postParams['issue']['labelsSelected'])) {
-            return "The parameter 'issue.labelsSelected' must be an array!";
-        }
-        if (!is_array($postParams['submission'])) {
-            return "Parameter 'submission' must be an array.";
-        }
-        if (!is_string($postParams['submission']['title'] ?? null)) {
-            return "Parameter 'submission.title' must be a string.";
-        }
-        if (!is_string($postParams['submission']['authorString'])) {
-            return "Parameter 'submission.authorString' must be a string.";
-        }
-        if (!is_array($postParams['repositories'])) {
-            return "Parameter 'repositories' must be an array.";
-        }
-        if (!is_array($postParams['codecheckers'])) {
-            return "Parameter 'codecheckers' must be an array.";
-        }
-
-        return null;
-    }
-
-    /**
-     * Validates POST parameters for reserveIdentifier, returning an error message string
-     * on the first failed guard, or null if all parameters are valid.
-     */
-    private function validateReserveIdentifierParameters(array $postParams): ?string
-    {
-        $error = $this->validateIdentifierPostParameters($postParams);
-        if(!is_null($error)) {
-            return $error;
-        }
-        if (!is_string($postParams['reserveIdentifierMode'])) {
-            return "No Reserve Identifier Mode was specified.";
-        }
-        if ($postParams['reserveIdentifierMode'] === 'linkExistingIdentifier' && !is_string($postParams['identifier'] ?? null)) {
-            return "Parameter 'identifier' must be a string when using mode 'linkExistingIdentifier'.";
-        }
-
-        return null;
-    }
-
-    private function validateUpdateGithubIssueParameters(array $postParams): ?string
-    {
-        $error = $this->validateIdentifierPostParameters($postParams);
-        if(!is_null($error)) {
-            return $error;
-        }
-        if(!is_int($postParams['issue']['number'])) {
-            return "The parameter 'issue.number' must be an integer!";
-        }
-        if(!is_string($postParams['issue']['url'])) {
-            return "The parameter 'issue.url' must be a string!";
-        }
-
-        return null;
-    }
-
-    /**
      * This reserves a new Identifier
      * 
      * @return void
@@ -422,10 +386,10 @@ class CodecheckApiHandler
     {
         $postParams = json_decode(file_get_contents('php://input'), true);
         
-        $parameterValidationError = $this->validateReserveIdentifierParameters($postParams);
+        $parameterValidationError = IdentifierParameterValidator::forReserveIdentifier($postParams);
 
         if ($parameterValidationError !== null) {
-            JsonResponse::staticResponse([
+            $this->respond([
                 'success'   => false,
                 'error'     => $parameterValidationError,
             ], 400);
@@ -447,7 +411,7 @@ class CodecheckApiHandler
         $authorString = $this->getAuthorStringBasedOnAuthorAnonymity();
 
         if (!in_array($reserveIdentifierMode, ['api', 'newIssueUrl', 'linkExistingIdentifier'])) {
-            JsonResponse::staticResponse([
+            $this->respond([
                 'success' => false,
                 'error'   => "An unexpected mode for the reservation of the Certificate Identifier was given: " . $reserveIdentifierMode,
             ], 400);
@@ -512,14 +476,14 @@ class CodecheckApiHandler
                 $issueNumber = null;
             }
         } catch (\Throwable $e) {
-            JsonResponse::staticResponse([
+            $this->respond([
                 'success'   => false,
                 'error'     => $e->getMessage(),
             ], $e->getCode());
             return;
         }
 
-        JsonResponse::staticResponse([
+        $this->respond([
             'success' => true,
             'identifier' => $newIdentifier->toStr(),
             'issueUrl' => $issueGithubUrl,
@@ -532,10 +496,10 @@ class CodecheckApiHandler
     {
         $postParams = json_decode(file_get_contents('php://input'), true);
 
-        $parameterValidationError = $this->validateUpdateGithubIssueParameters($postParams);
+        $parameterValidationError = IdentifierParameterValidator::forGithubIssueUpdate($postParams);
 
         if ($parameterValidationError !== null) {
-            JsonResponse::staticResponse([
+            $this->respond([
                 'success'   => false,
                 'error'     => $parameterValidationError,
             ], 400);
@@ -581,14 +545,14 @@ class CodecheckApiHandler
                 $repositories
             );
 
-            JsonResponse::staticResponse([
+            $this->respond([
                 'success' => true,
                 'identifier' => $identifier->toStr(),
                 'issueUrl' => $updatedIssue['html_url'],
                 'issueNumber' => $updatedIssue['number'],
             ], 200);
         } catch (\Throwable $e) {
-            JsonResponse::staticResponse([
+            $this->respond([
                 'success' => false,
                 'identifier' => $identifier->toStr(),
                 'error' => $e->getMessage()
@@ -669,7 +633,7 @@ class CodecheckApiHandler
         $title =  "a | " . $identifierStr;
         $rawIdentifier = CertificateIdentifierList::getRawIdentifier($title);
         if($rawIdentifier == null) {
-            JsonResponse::staticResponse([
+            $this->respond([
                 'success'   => false,
                 'identifier' => $identifierStr,
                 'error'     => "The identifier: " . $identifierStr . " isn't matching the required format (YYYY-NNN or YYYY-NNN/YYYY-NNN).",
@@ -679,7 +643,7 @@ class CodecheckApiHandler
         $identifier = CertificateIdentifier::fromStr($rawIdentifier);
         $issue = $certificateIdentifierList->getIssueInformationByIdentifier($identifier);
         if(!is_array($issue) || !is_string($issue['issueUrl']) || !is_int($issue['issueNumber'])) {
-            JsonResponse::staticResponse([
+            $this->respond([
                 'success'   => false,
                 'identifier' => $identifierStr,
                 'error'     => "The certificate with the Identifier: ". $identifierStr . " doesn't exist in the GitHub Register.",
@@ -687,7 +651,7 @@ class CodecheckApiHandler
             return;
         }
 
-        JsonResponse::staticResponse([
+        $this->respond([
             'success' => true,
             'identifier' => $identifier->toStr(),
             'issueUrl' => $issue['issueUrl'],
@@ -708,7 +672,7 @@ class CodecheckApiHandler
         $repository = $postParams["repository"];
 
         if(!is_string($repository)) {
-            JsonResponse::staticResponse([
+            $this->respond([
                 'success' => false,
                 'error' => 'The provided Repository must be of the type string.'
             ], 400);
@@ -729,7 +693,7 @@ class CodecheckApiHandler
         $repository = $postParams["repository"];
 
         if(!is_string($repository)) {
-            JsonResponse::staticResponse([
+            $this->respond([
                 'success' => false,
                 'error' => 'The provided Repository must be of the type string.'
             ], 400);
@@ -740,13 +704,13 @@ class CodecheckApiHandler
         $errors = $publicationValidator->getErrors();
 
         if(count($errors) > 0) {
-            JsonResponse::staticResponse([
+            $this->respond([
                 'success' => false,
                 'error' => implode(' ,', $errors),
             ], 500);
             return;
         }
-        JsonResponse::staticResponse([
+        $this->respond([
             'success' => true,
         ], 200);
     }
@@ -763,14 +727,14 @@ class CodecheckApiHandler
 
         if(isset($result['error'])) {
             $result = array_merge($result, ['success' => false, 'submissionID' => $submissionId]);
-            JsonResponse::staticResponse($result, 404);
+            $this->respond($result, 404);
         }
 
         $result['settings'] = [
             'enabledConfigVersions' => $this->getEnabledConfigVersions(),
         ];
 
-        JsonResponse::staticResponse(array_merge($result, ['success' => true]), 200);
+        $this->respond(array_merge($result, ['success' => true]), 200);
     }
 
     /**
@@ -814,10 +778,10 @@ class CodecheckApiHandler
 
         if(isset($result['error'])) {
             $result = array_merge($result, ['success' => false, 'submissionID' => $submissionId]);
-            JsonResponse::staticResponse($result, 404);
+            $this->respond($result, 404);
         }
 
-        JsonResponse::staticResponse(array_merge($result, ['success' => true]), 200);
+        $this->respond(array_merge($result, ['success' => true]), 200);
     }
 
     /**
@@ -835,7 +799,7 @@ class CodecheckApiHandler
         $submission = Repo::submission()->get($submissionId);
         
         if (!$submission) {
-            JsonResponse::staticResponse([
+            $this->respond([
                 'success' => false,
                 'error' => 'Submission not found',
                 'submissionID' => $submissionId,
@@ -844,7 +808,7 @@ class CodecheckApiHandler
         }
 
         if (!isset($_FILES['file'])) {
-            JsonResponse::staticResponse([
+            $this->respond([
                 'success' => false,
                 'error' => 'No file uploaded'
             ], 400);
@@ -857,7 +821,7 @@ class CodecheckApiHandler
         
         // Validate file
         if ($file['error'] !== UPLOAD_ERR_OK) {
-            JsonResponse::staticResponse([
+            $this->respond([
                 'success' => false,
                 'error' => 'Upload error: ' . $file['error']
             ], 400);
@@ -872,7 +836,7 @@ class CodecheckApiHandler
         
         if (!file_exists($uploadDir)) {
             if (!mkdir($uploadDir, 0755, true)) {
-                JsonResponse::staticResponse([
+                $this->respond([
                     'success' => false,
                     'error' => 'Failed to create directory'
                 ], 500);
@@ -888,7 +852,7 @@ class CodecheckApiHandler
         
         // Move uploaded file
         if (!move_uploaded_file($file['tmp_name'], $filepath)) {
-            JsonResponse::staticResponse([
+            $this->respond([
                 'success' => false,
                 'error' => 'Failed to save file'
             ], 500);
@@ -900,7 +864,7 @@ class CodecheckApiHandler
         // Return relative path for storage
         $relativePath = 'files/journals/' . $context->getId() . '/codecheck/' . $submissionId . '/' . $filename;
 
-        JsonResponse::staticResponse([
+        $this->respond([
             'success' => true,
             'filePath' => $relativePath,
             'filename' => $originalName,
@@ -918,7 +882,7 @@ class CodecheckApiHandler
         $filePath = $this->request->getUserVar('file');
         
         if (!$filePath) {
-            JsonResponse::staticResponse([
+            $this->respond([
                 'success' => false,
                 'error' => 'No file specified'
             ], 400);
@@ -932,7 +896,7 @@ class CodecheckApiHandler
         
         // Security: ensure file is in codecheck directory
         if (strpos($filePath, 'codecheck') === false || !file_exists($fullPath)) {
-            JsonResponse::staticResponse([
+            $this->respond([
                 'success' => false,
                 'error' => 'File not found'
             ], 404);
@@ -967,10 +931,10 @@ class CodecheckApiHandler
 
         if(isset($result['error'])) {
             $result = array_merge($result, ['success' => false, 'submissionID' => $submissionId]);
-            JsonResponse::staticResponse($result, 404);
+            $this->respond($result, 404);
         }
 
-        JsonResponse::staticResponse(array_merge($result, ['success' => true]), 200);
+        $this->respond(array_merge($result, ['success' => true]), 200);
     }
 
     /**
@@ -990,7 +954,7 @@ class CodecheckApiHandler
         } catch (\Throwable $e) {
             CodecheckLogger::error('YAML Parse Exception: ' . $e->getMessage());
 
-            JsonResponse::staticResponse([
+            $this->respond([
                 'success' => false,
                 'error' => $e->getMessage(),
             ], $e->getCode());
@@ -998,7 +962,7 @@ class CodecheckApiHandler
 
         CodecheckLogger::info('The generated YAML content is structurally valid');
 
-        JsonResponse::staticResponse([
+        $this->respond([
             'success' => true,
         ], 200);
     }
@@ -1009,7 +973,7 @@ class CodecheckApiHandler
 
         $statusRecord = CodecheckStatusHandler::getCurrentStatusData($submissionId);
 
-        JsonResponse::staticResponse([
+        $this->respond([
             'success' => true,
             'statusRecord' => $statusRecord,
             'allStatuses' => Constants::CODECHECK_STATUSES,
@@ -1026,14 +990,14 @@ class CodecheckApiHandler
         CodecheckLogger::debug(print_r($statusHistory, true));
 
         if(empty($statusHistory)) {
-            JsonResponse::staticResponse([
+            $this->respond([
                 'success' => false,
                 'error' => "Currently there is no recorded CODECHECK status history for this submission ID in the OJS database.",
                 'statusHistory' => null,
             ], 400);
         }
 
-        JsonResponse::staticResponse([
+        $this->respond([
             'success' => true,
             'statusHistory' => $statusHistory,
         ], 200);
@@ -1048,7 +1012,7 @@ class CodecheckApiHandler
         $userId = $postParams["userId"];
 
         if(!is_string($status) || !is_int($userId)) {
-            JsonResponse::staticResponse([
+            $this->respond([
                 'success' => false,
                 'statusRecord' => [
                     'status' => $status,
@@ -1062,7 +1026,7 @@ class CodecheckApiHandler
         if($userId == -1) {
             $submissionMetadata = $this->codecheckMetadataHandler->getMetadata($this->request, $submissionId);
             if(array_key_exists("error",$submissionMetadata)) {
-                JsonResponse::staticResponse([
+                $this->respond([
                     'success' => false,
                     'error' => $submissionMetadata["error"],
                     'allStatuses' => Constants::CODECHECK_STATUSES,
@@ -1071,14 +1035,14 @@ class CodecheckApiHandler
             $statusUpdate = CodecheckStatusHandler::automaticStatusUpdate($submissionMetadata);
 
             if(empty($statusUpdate)) {
-                JsonResponse::staticResponse([
+                $this->respond([
                     'success' => false,
                     'statusRecord' => $statusUpdate,
                     'allStatuses' => Constants::CODECHECK_STATUSES,
                     'error' => "Status doesn't need to be automatically updated."
                 ], 400);
             } else {
-                JsonResponse::staticResponse([
+                $this->respond([
                     'success' => true,
                     'statusRecord' => $statusUpdate,
                     'allStatuses' => Constants::CODECHECK_STATUSES,
@@ -1089,7 +1053,7 @@ class CodecheckApiHandler
         $statusUpdate = CodecheckStatusHandler::updateStatus($submissionId, $status, $userId);
 
         if($statusUpdate == false) {
-            JsonResponse::staticResponse([
+            $this->respond([
                 'success' => true,
                 'statusRecord' => [
                     'status' => $status,
@@ -1100,7 +1064,7 @@ class CodecheckApiHandler
             ], 500);
         }
 
-        JsonResponse::staticResponse([
+        $this->respond([
             'success' => true,
             'statusRecord' => $statusUpdate,
             'allStatuses' => Constants::CODECHECK_STATUSES,
@@ -1113,7 +1077,7 @@ class CodecheckApiHandler
         $user = $postParams["user"];
 
         if(!is_array($user["roles"])) {
-            JsonResponse::staticResponse([
+            $this->respond([
                 'success' => false,
                 'error' => 'Bad Request: Please provide the current User in your request.'
             ], 400);
@@ -1129,7 +1093,7 @@ class CodecheckApiHandler
             }
         }
 
-        JsonResponse::staticResponse([
+        $this->respond([
             'success' => true,
             'userAllowedToAccess' => $allowedToAccess,
         ], 200);

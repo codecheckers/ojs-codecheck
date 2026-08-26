@@ -15,12 +15,22 @@ class CodecheckPublicationValidator {
     private Request $request;
     private mixed $context;
     private CodecheckMetadataHandler $codecheckMetadataHandler;
-    private bool $validPublication;
     private array $errors;
     private CodecheckPlugin $plugin;
 
-    public function __construct(CodecheckPlugin $plugin)
+    /** The submission being published, as the hook hands it over. */
+    private mixed $submission;
+
+    /**
+     * @param CodecheckPlugin $plugin
+     * @param mixed $submission the submission from the `Publication::validatePublish`
+     *  hook. Required in practice: publishing happens through the REST API, where
+     *  there is no page handler to ask for the authorized submission — the router
+     *  returns null there and asking it anything is fatal.
+     */
+    public function __construct(CodecheckPlugin $plugin, mixed $submission = null)
     {
+        $this->submission = $submission;
         $this->errors = [];
         $this->validationChecks = [
             fn() => $this->validateCodecheckStatus(),
@@ -35,13 +45,46 @@ class CodecheckPublicationValidator {
         $this->plugin = $plugin;
     }
 
+    /**
+     * The submission being validated: the one the hook handed over, or — for a
+     * caller that did not pass one — whatever the page handler has authorized.
+     *
+     * The handler is null under the API router, which is how publishing
+     * actually happens, so that fallback is guarded rather than assumed.
+     */
+    private function getSubmission(): mixed
+    {
+        if ($this->submission) {
+            return $this->submission;
+        }
+
+        $handler = $this->request->getRouter()?->getHandler();
+
+        return $handler ? $handler->getAuthorizedContextObject(ASSOC_TYPE_SUBMISSION) : null;
+    }
+
     private function isOptedInToCodecheck(): bool {
-        $submission = $this->request->getRouter()->getHandler()->getAuthorizedContextObject(ASSOC_TYPE_SUBMISSION);
+        $submission = $this->getSubmission();
+
         return $submission && $submission->getData('codecheckOptIn');
     }
 
+    /**
+     * The submission the checks below run against.
+     *
+     * Not the metadata handler's own id: that reads a `submissionId` request
+     * variable, which the publish endpoint does not carry — its id is in the
+     * URL path.
+     */
+    private function getSubmissionId(): int
+    {
+        $submission = $this->getSubmission();
+
+        return $submission ? (int) $submission->getId() : (int) $this->codecheckMetadataHandler->getSubmissionId();
+    }
+
     private function validateCodecheckStatus(): bool {
-        $codecheckStatus = CodecheckStatusHandler::getCurrentStatusData($this->codecheckMetadataHandler->getSubmissionId());
+        $codecheckStatus = CodecheckStatusHandler::getCurrentStatusData($this->getSubmissionId());
         $codecheckStatusKeysSelected = $this->plugin->getSetting($this->context->getId(), Constants::CODECHECK_STATUS_KEYS_SELECTED);
 
         if(empty($codecheckStatus)) {
@@ -77,7 +120,7 @@ class CodecheckPublicationValidator {
 
     public function validateMetadataFromRepository(string|null $repository = null): bool {
         if(empty($repository)) {
-            $codecheckMetadata = $this->codecheckMetadataHandler->getMetadata($this->request, $this->codecheckMetadataHandler->getSubmissionId());
+            $codecheckMetadata = $this->codecheckMetadataHandler->getMetadata($this->request, $this->getSubmissionId());
         
             if(isset($codecheckMetadata['error']) || !is_array($codecheckMetadata['codecheck']) || !isset($codecheckMetadata['codecheck']['repository']) || !isset($codecheckMetadata['codecheck']['repository']['repositories'])) {
                 $this->errors[] = __('plugins.generic.codecheck.publication.validation.invalidRepository', [
@@ -140,7 +183,7 @@ class CodecheckPublicationValidator {
 
     /*private function validateCodechecker(array $codecheckMetadata): bool {
         $codecheckersFromRepository = $codecheckMetadata['codechecker'];
-        $codecheckersFromOjsSubmission = $this->codecheckMetadataHandler->getMetadata($this->request, $this->codecheckMetadataHandler->getSubmissionId());
+        $codecheckersFromOjsSubmission = $this->codecheckMetadataHandler->getMetadata($this->request, $this->getSubmissionId());
 
         foreach ($codecheckersFromRepository as $codecheckerFromRepository) {
             foreach ($codecheckersFromOjsSubmission as $codecheckerFromOjsSubmission) {
@@ -160,7 +203,7 @@ class CodecheckPublicationValidator {
     }*/
 
     private function validatePaperTitle(array $codecheckMetadata): bool {
-        $metadataFromOjsSubmission = $this->codecheckMetadataHandler->getMetadata($this->request, $this->codecheckMetadataHandler->getSubmissionId());
+        $metadataFromOjsSubmission = $this->codecheckMetadataHandler->getMetadata($this->request, $this->getSubmissionId());
         return $codecheckMetadata['paper']['title'] === $metadataFromOjsSubmission['submission']['title'];
     }
 

@@ -47,7 +47,10 @@ class IssueTOC
 
         $badgeTemplateManager = TemplateManager::getManager($request);
         $badgeTemplateManager->assign([
-            'certificateLink' => $codecheckData->getCertificateLink(),
+            'certificateLink' => $badge->getCertificateUrl(
+                $codecheckData->getCertificate(),
+                $codecheckData->getDoiLink()
+            ),
             'badgeUrl'        => $badge->getUrl(),
             'badgeText'       => $badge->getText(),
             'badgeTextColor'  => $badge->getTextColor(),

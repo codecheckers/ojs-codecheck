@@ -129,12 +129,26 @@ Components (`resources/js/Components/`):
 hook and `exit`ing after serving. It is **not** a PKP API handler and does not
 participate in PKP's authorization policies.
 
-- Route matching: `preg_match('#api/v1/codecheck/(.*)#', …)` → `ApiEndpoint` lookup in
-  `$this->endpoints[$method]`
+- Constructing a handler does nothing but wire it up. The request cycle is
+  `execute()`: route → CSRF → roles → endpoint. It used to be the constructor,
+  which meant nothing could build one without it answering a request and exiting
+- Route matching: `CodecheckApiHandler::routeFromPath()` (static and pure) →
+  `ApiEndpoint` lookup in `$this->endpoints[$method]`
 - Auth: `X-Csrf-Token` header compared against `$request->getSession()->token()`, then
   `$user->hasRole($pkpRoles, $contextId)` using `CodecheckRoleManager`
-  (`readMetadata` / `editMetadata` / `admin` role sets built in `CodecheckPlugin::setupAPIHandler()`)
-- Responses via `JsonResponse::staticResponse([...], $httpCode)`
+  (`readMetadata` / `editMetadata` / `admin` role sets built in `CodecheckPlugin::setupAPIHandler()`).
+  The token is checked before the route is resolved, so an unauthorized caller
+  learns nothing about which routes exist
+- Responses via `$this->respond([...], $httpCode)`, which hands a `JsonResponse`
+  to a `JsonResponseEmitter`. `HttpResponseEmitter` echoes and `exit`s;
+  `emit()` is declared `never` because every endpoint body is written on the
+  assumption that responding ends the request. A test emitter throws instead,
+  which is what makes the handler testable at all
+- `setupAPIHandler()` does **not** call `$router->setHandler()`. It takes a
+  `PKPHandler` and this is not one; the call stood there for a long time purely
+  because the constructor exited before reaching it, and calling it for real
+  raises a TypeError that PKP swallows, leaving OJS to answer every plugin API
+  call with its own 404
 
 Endpoints: `GET labels|metadata|download|yaml|register|status|status/history`,
 `POST identifier|issue|metadata|upload|repository|repository/validate|yaml/validate|status/update|users/roles/validation`.
@@ -266,9 +280,15 @@ on the settings form any more. A field belonging to one radio option — the cus
 badge URL, the text shown instead of a badge — is a `.badge-dependent-field`, shown
 and hidden by `toggleCustomBadgeUrl()` in the template.
 
-`classes/FrontEnd/Badge.php` resolves the badge settings (image URL, text, height)
-for both `ArticleDetails` and `IssueTOC`, which used to carry a copy each of the
-`match` on badge type.
+`classes/FrontEnd/Badge.php` resolves the badge settings (image URL, text, colour,
+height, and where the badge links to) for both `ArticleDetails` and `IssueTOC`,
+which used to carry a copy each of the `match` on badge type.
+
+`CODECHECK_BADGE_LINK_TARGET` picks between the certificate's register page
+(`Constants::getRegisterCertificateUrl()`, built from the `YYYY-NNN` identifier)
+and its DOI; whichever the journal did not pick stands in when the preferred one
+is missing, because a badge linking nowhere is worse than one linking to the
+second choice.
 
 `SettingsForm::execute()` reaches out to GitHub through
 `validateRegisterFileExists()` — but only when the register organisation or
@@ -329,7 +349,7 @@ README.md; keep `css/codecheck.css` and inline component styles consistent.
 ### Layout
 
 ```
-tests/                       PHPUnit (21 files, 139 tests)
+tests/                       PHPUnit (29 files, 201 tests)
   bootstrap.php              PKP_STRICT_MODE + BASE_SYS_DIR (OJS_ROOT or ../../../..)
   PKPTestCase.php            local stub extending PHPUnit TestCase
   FakeTranslator.php         minimal translator so __() works without booting OJS
@@ -337,14 +357,17 @@ tests/                       PHPUnit (21 files, 139 tests)
   phpunit_with_coverage.xml  + coverage HTML into tests/results/
   runTests.sh                wrapper; honours OJS_ROOT; --coverage-report=true|false
   CodecheckPluginUnitTest.php
-  CodecheckRegisterUnitTests/  CertificateIdentifier(List), GithubRegisterApiClient, IssueLabels
-  DataStructuresUnitTests/     UniqueArray
-  FrontEndUnitTests/           ArticleAvailability, ArticleDetails, Badge
+  CodecheckRegisterUnitTests/  CertificateIdentifier(List), GithubRegisterApiClient,
+                               GithubRegisterIssue, IssueLabels
+  DataStructuresUnitTests/     UniqueArray, UniqueIdentifierArray
+  FrontEndUnitTests/           ArticleAvailability, ArticleDetails, Badge, IssueTOC
   LogUnitTests/                CodecheckLogger
-  ApiUnitTests/                ApiEndpoint, CodecheckRoleArray
+  ApiUnitTests/                ApiEndpoint, CodecheckApiHandler, CodecheckRoleArray,
+                               IdentifierParameterValidator, JsonResponse
   SettingsUnitTests/           Actions, Manage
-  SubmissionUnitTests/         CodecheckMetadataDAO, CodecheckSubmissionDAO, CodecheckSubmission
-  WorkflowUnitTests/           CodecheckMetadataHandler, CodecheckYamlValidator
+  SubmissionUnitTests/         CodecheckSubmissionDAO, CodecheckSubmission, Schema
+  WorkflowUnitTests/           CodecheckMetadataHandler, CodecheckPublicationValidator,
+                               CodecheckYamlValidator
 
 cypress/
   support/component.js         mounts via @cypress/vue, imports css/codecheck.css
@@ -353,10 +376,11 @@ cypress/
   support/e2e.js               cy.ojsLogin(), cy.getCsrfToken(), swallow uncaught exceptions
   support/component-index.html
   tests/component/*.cy.js      5 specs, 61 tests
-  tests/e2e/*.cy.js            5 specs, 19 tests
+  tests/e2e/*.cy.js            9 specs, 40 tests
                                yaml-generation, article-sidebar-setting,
-                               issue-toc-setting, private-repository,
-                               settings-roundtrip
+                               issue-toc-setting, issue-toc-badge,
+                               private-repository, publication-validation,
+                               settings-roundtrip, status-handler
   tests/visual/ui-screenshots.cy.js  screenshot pass — `make screenshots`
 
 dev/
@@ -394,7 +418,7 @@ columns), and the wizard DOM-scraping classes.
 
 ### E2E tests
 
-`make test-e2e` — 19 tests across 5 specs, driving a real OJS instance.
+`make test-e2e` — 40 tests across 9 specs, driving a real OJS instance.
 
 - `yaml-generation.cy.js` — YAML preview vs. download parity, preview-button gating
 - `article-sidebar-setting.cy.js` — the `showArticleSidebar` setting, driven through
@@ -407,6 +431,26 @@ columns), and the wizard DOM-scraping classes.
 - `cy.setCodecheckSetting(fieldId, enabled)` (in `cypress/support/e2e.js`) drives a
   plugin checkbox setting through the real settings form; specs that toggle settings
   restore them in an `after()` hook.
+- `issue-toc-badge.cy.js` — what the badge renders: image variants, height, the
+  text-only form with its configured wording and colour, and where it links.
+  Each variant is also captured to `cypress/screenshots/`, so the settings can be
+  looked at rather than inferred
+- `publication-validation.cy.js` — the CODECHECK gate on publishing, driven
+  through the endpoint OJS publishes with. Most of it uses submission 8, in
+  review with no issue, which OJS refuses whatever CODECHECK says, so those
+  tests assert on which errors come back. One test is the other half: it
+  unpublishes submission 5 — production stage, assigned to an issue, nothing for
+  OJS to object to — shows CODECHECK blocking it, then accepts the status and
+  really does publish it, putting the journal back as it was. It calls
+  `ensurePublished()` first rather than trusting the state it finds, and
+  switches the register deposit off so `Publication::publish` does not reach
+  for GitHub
+- `status-handler.cy.js` — the status API end to end: pending until recorded,
+  newest record wins, append-only history newest first, rejected payloads, and
+  the automatic update that picks a status from whether a codechecker is
+  assigned and then stops deciding once a person has. It writes rows nothing
+  deletes — the table is an append-only log with no delete endpoint — so it
+  restores only the *current* status of the submissions it touches
 - `settings-roundtrip.cy.js` — every field the settings form renders keeps its value
   across a save. Derives the field list from the rendered form, so a setting added
   without being wired into `readInputData()`/`execute()` fails here automatically
@@ -414,12 +458,19 @@ columns), and the wizard DOM-scraping classes.
 Requires `make serve` running with the dataset loaded; `make setup` satisfies the
 rest (plugin enabled, `public/build/` present, composer deps installed, `admin`/`admin`).
 
-Still uncovered: opt-in, the submission wizard, status transitions, publication
-validation, register deposit, and the settings form beyond the sidebar toggle.
+`CodecheckPublicationValidator` is covered the same way as `IssueTOC`: the
+opt-in gate and the no-submission case are unit tested, and the checks that read
+the database are covered by `publication-validation.cy.js`. **Publishing goes
+through the REST API**, where `$request->getRouter()->getHandler()` is null —
+anything that reaches for the authorized submission that way fatals inside the
+hook, and PKP swallows it with "failed to handle the hook". Take the submission
+from the hook arguments instead (`$args[2]`).
+
+Still uncovered: opt-in, the submission wizard, and register deposit.
 
 ### PHPUnit tests
 
-`make test-php` — 139 tests, green, none skipped.
+`make test-php` — 201 tests, green, none skipped.
 
 PHPUnit needs an OJS installation: the tests load OJS classes and the runner uses the
 PHPUnit shipped in `lib/pkp`. Both `runTests.sh` and `bootstrap.php` honour `OJS_ROOT`,
@@ -436,18 +487,38 @@ through a database-backed facade, so building one is an integration test, and
 the `*-setting.cy.js` e2e specs already open the settings form, change a value
 and save it. **Prefer an e2e test over booting the application inside PHPUnit.**
 
-The API's routing table (`ApiEndpoint`) and role sets (`CodecheckRoleArray`) are
-covered; `CodecheckApiHandler` itself is not, because its constructor routes,
-authorizes and serves, so it cannot be instantiated without side effects.
+The API's routing table (`ApiEndpoint`), role sets (`CodecheckRoleArray`) and the
+handler's own request cycle are covered. What is tested of the handler is what
+guards it: route parsing, the CSRF check, the role check, their order, and that
+an authorized request really reaches its endpoint method. `CodecheckApiHandlerUnitTest`
+substitutes a recording `JsonResponseEmitter` that throws where the production
+one exits — an emitter that returned normally would run code no served request
+ever reaches.
+
+The endpoint *bodies* are still not unit tested: nearly all of them reach the
+database or GitHub in their first lines, and the e2e specs cover them through
+real HTTP. The exception used in the unit test is `GET register`, which reads
+two settings and nothing else.
 
 Worth knowing before adding coverage there: **OJS's own API router answers routes
 and methods the plugin's endpoint table does not cover, before the handler is
 reached.** Verified against a running instance — an unknown route and a valid
 route with the wrong method both return OJS's `api.404.endpointNotFound`.
 
-Not covered by PHPUnit at all: `CodecheckApiHandler` (1.1k lines, its endpoint bodies),
-`CodecheckRegisterDepositService`, `CodecheckPublicationValidator`, `CodecheckStatusHandler`,
-migrations, `IssueTOC`, `CodecheckPageHandler`.
+Not covered by PHPUnit at all: the `CodecheckApiHandler` endpoint bodies,
+`CodecheckRegisterDepositService`, `SubmissionWizardHandler`, `CurlApiClient`,
+migrations, `CodecheckPageHandler`. All of
+them reach the database, the network or a booted application in their first few lines,
+which is what makes them awkward rather than merely unwritten. `CodecheckStatusHandler`
+is the same shape — every line a database query — and is covered by
+`status-handler.cy.js` instead.
+
+`IssueTOC` is covered up to the point where it needs the database: the setting and
+opt-in gates are unit tested with a stub application in `PKP\core\Registry`, and what
+it renders is covered by `issue-toc-badge.cy.js`. `TemplateManager` cannot be mocked in
+these tests — it extends Smarty, whose class body requires plugin files off a relative
+include path that only resolves inside a booted OJS, so a hand-written stand-in is used
+instead.
 
 ### CI (`.github/workflows/tests.yml`)
 
