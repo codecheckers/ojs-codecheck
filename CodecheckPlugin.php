@@ -109,7 +109,11 @@ class CodecheckPlugin extends GenericPlugin
     {
         CodecheckLogger::debug("Validating Publication!");
         $errors = &$args[0];
-        $codecheckPublicationValidator = new CodecheckPublicationValidator($this);
+        // The hook hands over the submission being published. Passing it on
+        // matters: publishing goes through the REST API, where there is no page
+        // handler to ask for the authorized submission.
+        $submission = $args[2] ?? null;
+        $codecheckPublicationValidator = new CodecheckPublicationValidator($this, $submission);
 
         $validationErrors = $codecheckPublicationValidator->validatePublication();
 

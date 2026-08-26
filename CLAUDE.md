@@ -335,7 +335,7 @@ README.md; keep `css/codecheck.css` and inline component styles consistent.
 ### Layout
 
 ```
-tests/                       PHPUnit (26 files, 173 tests)
+tests/                       PHPUnit (27 files, 176 tests)
   bootstrap.php              PKP_STRICT_MODE + BASE_SYS_DIR (OJS_ROOT or ../../../..)
   PKPTestCase.php            local stub extending PHPUnit TestCase
   FakeTranslator.php         minimal translator so __() works without booting OJS
@@ -351,7 +351,8 @@ tests/                       PHPUnit (26 files, 173 tests)
   ApiUnitTests/                ApiEndpoint, CodecheckRoleArray, JsonResponse
   SettingsUnitTests/           Actions, Manage
   SubmissionUnitTests/         CodecheckSubmissionDAO, CodecheckSubmission, Schema
-  WorkflowUnitTests/           CodecheckMetadataHandler, CodecheckYamlValidator
+  WorkflowUnitTests/           CodecheckMetadataHandler, CodecheckPublicationValidator,
+                               CodecheckYamlValidator
 
 cypress/
   support/component.js         mounts via @cypress/vue, imports css/codecheck.css
@@ -360,11 +361,11 @@ cypress/
   support/e2e.js               cy.ojsLogin(), cy.getCsrfToken(), swallow uncaught exceptions
   support/component-index.html
   tests/component/*.cy.js      5 specs, 61 tests
-  tests/e2e/*.cy.js            8 specs, 35 tests
+  tests/e2e/*.cy.js            9 specs, 40 tests
                                yaml-generation, article-sidebar-setting,
                                issue-toc-setting, issue-toc-badge,
-                               private-repository, settings-roundtrip,
-                               status-handler
+                               private-repository, publication-validation,
+                               settings-roundtrip, status-handler
   tests/visual/ui-screenshots.cy.js  screenshot pass — `make screenshots`
 
 dev/
@@ -402,7 +403,7 @@ columns), and the wizard DOM-scraping classes.
 
 ### E2E tests
 
-`make test-e2e` — 35 tests across 8 specs, driving a real OJS instance.
+`make test-e2e` — 40 tests across 9 specs, driving a real OJS instance.
 
 - `yaml-generation.cy.js` — YAML preview vs. download parity, preview-button gating
 - `article-sidebar-setting.cy.js` — the `showArticleSidebar` setting, driven through
@@ -419,6 +420,16 @@ columns), and the wizard DOM-scraping classes.
   text-only form with its configured wording and colour, and where it links.
   Each variant is also captured to `cypress/screenshots/`, so the settings can be
   looked at rather than inferred
+- `publication-validation.cy.js` — the CODECHECK gate on publishing, driven
+  through the endpoint OJS publishes with. Most of it uses submission 8, in
+  review with no issue, which OJS refuses whatever CODECHECK says, so those
+  tests assert on which errors come back. One test is the other half: it
+  unpublishes submission 5 — production stage, assigned to an issue, nothing for
+  OJS to object to — shows CODECHECK blocking it, then accepts the status and
+  really does publish it, putting the journal back as it was. It calls
+  `ensurePublished()` first rather than trusting the state it finds, and
+  switches the register deposit off so `Publication::publish` does not reach
+  for GitHub
 - `status-handler.cy.js` — the status API end to end: pending until recorded,
   newest record wins, append-only history newest first, rejected payloads, and
   the automatic update that picks a status from whether a codechecker is
@@ -432,12 +443,19 @@ columns), and the wizard DOM-scraping classes.
 Requires `make serve` running with the dataset loaded; `make setup` satisfies the
 rest (plugin enabled, `public/build/` present, composer deps installed, `admin`/`admin`).
 
-Still uncovered: opt-in, the submission wizard, publication validation, and
-register deposit.
+`CodecheckPublicationValidator` is covered the same way as `IssueTOC`: the
+opt-in gate and the no-submission case are unit tested, and the checks that read
+the database are covered by `publication-validation.cy.js`. **Publishing goes
+through the REST API**, where `$request->getRouter()->getHandler()` is null —
+anything that reaches for the authorized submission that way fatals inside the
+hook, and PKP swallows it with "failed to handle the hook". Take the submission
+from the hook arguments instead (`$args[2]`).
+
+Still uncovered: opt-in, the submission wizard, and register deposit.
 
 ### PHPUnit tests
 
-`make test-php` — 173 tests, green, none skipped.
+`make test-php` — 176 tests, green, none skipped.
 
 PHPUnit needs an OJS installation: the tests load OJS classes and the runner uses the
 PHPUnit shipped in `lib/pkp`. Both `runTests.sh` and `bootstrap.php` honour `OJS_ROOT`,
@@ -464,8 +482,8 @@ reached.** Verified against a running instance — an unknown route and a valid
 route with the wrong method both return OJS's `api.404.endpointNotFound`.
 
 Not covered by PHPUnit at all: `CodecheckApiHandler` (1.1k lines, its endpoint bodies),
-`CodecheckRegisterDepositService`, `CodecheckPublicationValidator`,
-`SubmissionWizardHandler`, `CurlApiClient`, migrations, `CodecheckPageHandler`. All of
+`CodecheckRegisterDepositService`, `SubmissionWizardHandler`, `CurlApiClient`,
+migrations, `CodecheckPageHandler`. All of
 them reach the database, the network or a booted application in their first few lines,
 which is what makes them awkward rather than merely unwritten. `CodecheckStatusHandler`
 is the same shape — every line a database query — and is covered by

@@ -132,6 +132,13 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 
 #### Under the hood
 
+- CODECHECK publication validation works again. It asked the router for the page
+  handler to find the submission, but publishing goes through the REST API where
+  there is none, so every publish attempt threw inside the hook; OJS logged
+  "failed to handle the hook" and published anyway. The submission now comes from
+  the hook itself, so a status the journal does not accept blocks publication as
+  it was meant to
+
 - Custom API under `api/v1/codecheck` with CSRF and role-based access control
 - Database schema managed by an install migration with versioned upgrade steps, run
   when the plugin is enabled (Issue #94)
