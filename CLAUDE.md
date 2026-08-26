@@ -307,6 +307,11 @@ columns), and the wizard DOM-scraping classes.
   unaffected
 - `private-repository.cy.js` — a repository flagged private is visible to editors in
   the workflow form and absent from the published article and the issue TOC
+- `issue-toc-setting.cy.js` — the `showInTOC` setting, and that it is independent of
+  the article sidebar
+- `cy.setCodecheckSetting(fieldId, enabled)` (in `cypress/support/e2e.js`) drives a
+  plugin checkbox setting through the real settings form; specs that toggle settings
+  restore them in an `after()` hook.
 - `settings-roundtrip.cy.js` — every field the settings form renders keeps its value
   across a save. Derives the field list from the rendered form, so a setting added
   without being wired into `readInputData()`/`execute()` fails here automatically
@@ -467,12 +472,14 @@ Notes that matter when touching this:
 - **`php -S` is single-threaded**, so any page that calls back into OJS
   deadlocks and Cypress hangs rather than fails. `make serve` sets
   `PHP_CLI_SERVER_WORKERS=8`.
-- **Two independent "enabled" switches.** `plugin_settings.enabled` turns the
-  plugin on; the separate `showArticleSidebar` setting gates the reader-facing
-  article sidebar in `ArticleDetails`. The dataset only has the first, so the
-  frontend renders nothing without the second; the test dataset ships it.
-  `IssueTOC` does *not* check it, so TOC badges appear either way — an
-  inconsistency, not a feature.
+- **Three independent display switches.** `plugin_settings.enabled` turns the
+  plugin on; `showArticleSidebar` gates the reader-facing article sidebar in
+  `ArticleDetails`; `showInTOC` gates the badge in `IssueTOC`. Their defaults
+  differ on purpose: `showInTOC` treats unset as on, because the badge predates
+  the setting and journals that never configured it should keep what they had,
+  while `showArticleSidebar` treats unset as off. The test dataset sets
+  `showArticleSidebar` explicitly and leaves `showInTOC` unset, so the
+  default-on path gets exercised.
 
 ### Inspecting the UI
 
@@ -517,8 +524,9 @@ Chrome + Chromium + Firefox, Cypress 14.5.4, Playwright 1.61.
   tests must build the array with references to model this (see
   `CodecheckPluginUnitTest::buildLoadHandlerArgs()`)
 - `stageId: 999` is a sentinel for the CODECHECK workflow menu item, not an OJS stage
-- Two separate enable switches: `plugin_settings.enabled` and the
-  `showArticleSidebar` setting. `ArticleDetails` checks the second, `IssueTOC` does not
+- Three independent display switches: `plugin_settings.enabled` turns the plugin
+  on, `showArticleSidebar` gates the article sidebar, `showInTOC` gates the issue
+  TOC badge. The latter two default differently — see the dev-environment notes
 - Data-structure changes must be mirrored into `testData/` in the same commit —
   see "Keep the test dataset in sync with data-structure changes"
 - The API handler `exit`s after serving; it bypasses PKP authorization policies and

@@ -21,6 +21,14 @@ class IssueTOC
         $templateMgr = $params[1];
         $output = &$params[2];
 
+        // Unset means "show": the badge predates this setting, so journals that
+        // never configured it keep the behaviour they already had.
+        $context = Application::get()->getRequest()->getContext();
+        $showInTOC = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_SHOW_IN_TOC);
+        if ($showInTOC !== null && !$showInTOC) {
+            return false;
+        }
+
         $article = $templateMgr->getTemplateVars('article');
 
         if (!$article || !$article->getData('codecheckOptIn')) {

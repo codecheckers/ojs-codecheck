@@ -75,6 +75,8 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 - CODECHECK badge in the issue table of contents (Issue #27)
 - Configurable badge: CODE WORKS badge, CODECHECK logo, a custom image or text only,
   with a configurable height (Issue #27)
+- Setting to show or hide the badge in issue tables of contents, independent of the
+  article sidebar, so a journal can use either display on its own
 
 #### Configuration
 
