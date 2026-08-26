@@ -84,7 +84,15 @@ See [Testing](#testing) below for what actually runs where.
   section, which is why neither needs a template override
 - `Schema::get::submission` → adds `codecheckOptIn`, `retrieveReserveCertificateIdentifier`
 - `Schema::get::publication` → `classes/Submission/Schema.php` (wizard fields)
-- `Form::config::before` → opt-in checkbox on the submission start form
+- `Form::config::before` → two separate callbacks: the opt-in checkbox on the
+  submission start form, and `AvailabilityStatementField` adding the data and
+  software availability statement to OJS's publication **Metadata** form so an
+  editor can correct it after submission (Issue #167). The second matches
+  `PKPMetadataForm::FORM_METADATA` **by id, never `instanceof`** — `ForTheEditors`
+  extends that class and is the wizard's "For the Editors" step, so an
+  `instanceof` check would put the field in the wizard as well. Nothing saves it:
+  the form is a `PUT` against the publication API and the field is on the
+  publication schema, so it round-trips on its own
 - `Submission::edit` → persists `codecheckOptIn`
 - `Submission::validate` → `saveWizardFieldsFromRequest()` writes wizard fields onto the publication
 - `Dispatcher::dispatch` → installs `CodecheckApiHandler` for `api/v1/codecheck/*`
@@ -329,7 +337,7 @@ README.md; keep `css/codecheck.css` and inline component styles consistent.
 ### Layout
 
 ```
-tests/                       PHPUnit (21 files, 139 tests)
+tests/                       PHPUnit (22 files, 145 tests)
   bootstrap.php              PKP_STRICT_MODE + BASE_SYS_DIR (OJS_ROOT or ../../../..)
   PKPTestCase.php            local stub extending PHPUnit TestCase
   FakeTranslator.php         minimal translator so __() works without booting OJS
@@ -343,7 +351,8 @@ tests/                       PHPUnit (21 files, 139 tests)
   LogUnitTests/                CodecheckLogger
   ApiUnitTests/                ApiEndpoint, CodecheckRoleArray
   SettingsUnitTests/           Actions, Manage
-  SubmissionUnitTests/         CodecheckMetadataDAO, CodecheckSubmissionDAO, CodecheckSubmission
+  SubmissionUnitTests/         AvailabilityStatementField, CodecheckMetadataDAO,
+                               CodecheckSubmissionDAO, CodecheckSubmission
   WorkflowUnitTests/           CodecheckMetadataHandler, CodecheckYamlValidator
 
 cypress/
@@ -394,7 +403,7 @@ columns), and the wizard DOM-scraping classes.
 
 ### E2E tests
 
-`make test-e2e` — 19 tests across 5 specs, driving a real OJS instance.
+`make test-e2e` — 23 tests across 6 specs, driving a real OJS instance.
 
 - `yaml-generation.cy.js` — YAML preview vs. download parity, preview-button gating
 - `article-sidebar-setting.cy.js` — the `showArticleSidebar` setting, driven through
@@ -410,6 +419,13 @@ columns), and the wizard DOM-scraping classes.
 - `settings-roundtrip.cy.js` — every field the settings form renders keeps its value
   across a save. Derives the field list from the rendered form, so a setting added
   without being wired into `readInputData()`/`execute()` fails here automatically
+- `availability-statement-editing.cy.js` — the availability statement on OJS's
+  publication Metadata form: that the field reaches the form OJS serves to the
+  workflow, sits in a group the renderer draws (a field whose `groupId` is not one
+  of the form's groups is silently dropped), carries the recorded value, saves
+  through the form's own endpoint and reaches the article page — and that it is
+  not on the other publication forms. Which form the field lands on is unit
+  tested; the round trip belongs to OJS, which is why it is pinned here
 
 Requires `make serve` running with the dataset loaded; `make setup` satisfies the
 rest (plugin enabled, `public/build/` present, composer deps installed, `admin`/`admin`).
@@ -419,7 +435,7 @@ validation, register deposit, and the settings form beyond the sidebar toggle.
 
 ### PHPUnit tests
 
-`make test-php` — 139 tests, green, none skipped.
+`make test-php` — 145 tests, green, none skipped.
 
 PHPUnit needs an OJS installation: the tests load OJS classes and the runner uses the
 PHPUnit shipped in `lib/pkp`. Both `runTests.sh` and `bootstrap.php` honour `OJS_ROOT`,

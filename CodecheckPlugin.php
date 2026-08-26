@@ -9,6 +9,7 @@ use APP\plugins\generic\codecheck\classes\FrontEnd\ArticleDetails;
 use APP\plugins\generic\codecheck\classes\Settings\Actions;
 use APP\plugins\generic\codecheck\classes\Settings\Manage;
 use APP\plugins\generic\codecheck\classes\migration\install\CodecheckSchemaMigration;
+use APP\plugins\generic\codecheck\classes\Submission\AvailabilityStatementField;
 use APP\plugins\generic\codecheck\classes\Submission\Schema;
 use APP\plugins\generic\codecheck\classes\Submission\SubmissionWizardHandler;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
@@ -57,6 +58,10 @@ class CodecheckPlugin extends GenericPlugin
             Hook::add('Submission::edit', $this->saveOptIn(...));
 
             Hook::add('Submission::validate', $this->saveWizardFieldsFromRequest(...));
+
+            // Let editors correct the availability statement after submission (Issue #167)
+            $availabilityStatementField = new AvailabilityStatementField();
+            Hook::add('Form::config::before', $availabilityStatementField->addToMetadataForm(...));
             // Add hook for Ajax API calls
             Hook::add('Dispatcher::dispatch', [$this, 'setupAPIHandler']);
             // Add hook for the custom CODECHECK Pages

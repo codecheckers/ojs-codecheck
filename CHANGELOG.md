@@ -36,6 +36,11 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 
 #### Editorial workflow
 
+- Editors can edit the data and software availability statement on the publication
+  **Metadata** form. It could previously only be written by the author in the
+  submission wizard or through the REST API, so a statement left empty or entered in
+  the wrong place could not be corrected by anyone — while being shown on every
+  article landing page (Issue #167)
 - CODECHECK tab in the editorial workflow with a metadata form covering the paper
   reference, codecheckers, manifest, repositories, summary, report and certificate
   (Issue #64)
