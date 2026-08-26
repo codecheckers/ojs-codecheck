@@ -48,7 +48,7 @@ class CodecheckSubmissionDAOUnitTest extends PKPTestCase
             'manifest' => '[]',
             'repository' => json_encode([
                 'repositories' => [
-                    ['url' => 'https://github.com/test/repo', 'isPrivate' => false],
+                    ['url' => 'https://github.com/test/repo', 'hidden' => false],
                 ],
                 'repoWithCodecheckYaml' => null,
             ]),
@@ -191,8 +191,8 @@ class CodecheckSubmissionDAOUnitTest extends PKPTestCase
             'submission_id' => 123,
             'repository' => json_encode([
                 'repositories' => [
-                    ['url' => 'https://github.com/public/one', 'isPrivate' => false],
-                    ['url' => 'https://github.com/private/one', 'isPrivate' => true],
+                    ['url' => 'https://github.com/public/one', 'hidden' => false],
+                    ['url' => 'https://github.com/private/one', 'hidden' => true],
                     ['url' => 'https://github.com/public/two'],
                 ],
                 'repoWithCodecheckYaml' => 0,

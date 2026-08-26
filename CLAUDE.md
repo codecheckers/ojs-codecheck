@@ -78,6 +78,10 @@ See [Testing](#testing) below for what actually runs where.
 
 - `Templates::Issue::Issue::Article` → `IssueTOC::addCodecheckBadge` (badge in issue TOC)
 - `Templates::Article::Details` → `ArticleDetails::addCodecheckInfo` (article sidebar)
+- `Templates::Article::Main` → `ArticleAvailability::addAvailabilityStatement` (data and
+  software availability statement, in the main column below the abstract). A *different*
+  hook from the sidebar one above: it fires inside `.main_entry` right after the abstract
+  section, which is why neither needs a template override
 - `Schema::get::submission` → adds `codecheckOptIn`, `retrieveReserveCertificateIdentifier`
 - `Schema::get::publication` → `classes/Submission/Schema.php` (wizard fields)
 - `Form::config::before` → opt-in checkbox on the submission start form
@@ -218,6 +222,54 @@ added to the form must be added in three places: `Constants`, `SettingsForm::ini
 + `readInputData()`, and the template. `SettingsForm::validate()` also warns when the
 configured register repo lacks a `register.csv`.
 
+Note the "three places" is really four for anything with a non-trivial default or a
+list of options: `fetch()` assigns the template variables the field renders from.
+`settings-roundtrip.cy.js` derives its field list from the rendered form, so a new
+setting is covered there automatically — but only if it actually renders.
+
+Two settings deliberately treat "unset" and "empty" as *not* the stored value:
+
+- `CODECHECK_SHOW_AVAILABILITY_STATEMENT` and `CODECHECK_SHOW_DASHBOARD_COLUMN` default
+  to **on** when null, so the feature is present until a journal switches it off
+- `CODECHECK_AVAILABILITY_STATEMENT_HEADING` falls back to the localised
+  `plugins.generic.codecheck.dataSoftwareAvailability` when cleared, so the article
+  page never renders an empty heading. `CODECHECK_HIDE_EMPTY_AVAILABILITY_STATEMENT`
+  is the ordinary kind, defaulting to **off**: an article with no statement says
+  "No {$heading} provided for this work." rather than dropping the section, since
+  silence cannot be told apart from a journal that never asked
+- `CODECHECK_BADGE_TEXT` falls back to the localised
+  `plugins.generic.codecheck.badge.textOnly` when cleared, so a journal showing text
+  instead of a badge never shows nothing. `CODECHECK_BADGE_TEXT_COLOR` falls back to
+  `CODECHECK_BADGE_TEXT_COLOR_DEFAULT` for anything that is not a six-digit hex
+  colour — it is written into a `style` attribute on a public page, so it is
+  validated both on save and on read, as OJS's own theme colour option is
+  (pkp/pkp-lib#11974)
+- `CODECHECK_ENABLED_CONFIG_VERSIONS` defaults to `CODECHECK_DEFAULT_CONFIG_VERSIONS`
+  — `1.0` alone, not every known version — so a journal that has not chosen records
+  checks against the current stable specification rather than a moving target. An
+  empty selection falls back to the same default, because an empty list would leave
+  the metadata form with no version to offer at all
+
+`Constants::CODECHECK_DEFAULT_CONFIG_VERSIONS` and `getConfigSpecUrl()` are mirrored by
+`CODECHECK_DEFAULT_CONFIG_VERSIONS` / `CODECHECK_SPEC_URL` in `CodecheckMetadataForm.vue`.
+The JS copies are only the pre-load fallback — the authoritative list arrives with the
+`GET metadata` response as `settings.enabledConfigVersions`. `tests/ConstantsUnitTest.php`
+pins the PHP side. `CodecheckMetadataHandler::buildYaml()` emits the version recorded
+for the check through the same helper, so the generated file declares the specification
+the form was filled in against.
+
+Anything rendered outside `{fbvFormArea}` in `settings.tpl` loses the bordered box:
+`#codecheckSettings #codecheckSettingsArea .section` is what draws it. That is what
+left the badge / logo group looking unlike every other group until it was moved
+inside. Multiple-choice settings use `.codecheck-choice-list`; there is no dropdown
+on the settings form any more. A field belonging to one radio option — the custom
+badge URL, the text shown instead of a badge — is a `.badge-dependent-field`, shown
+and hidden by `toggleCustomBadgeUrl()` in the template.
+
+`classes/FrontEnd/Badge.php` resolves the badge settings (image URL, text, height)
+for both `ArticleDetails` and `IssueTOC`, which used to carry a copy each of the
+`match` on badge type.
+
 `SettingsForm::execute()` reaches out to GitHub through
 `validateRegisterFileExists()` — but only when the register organisation or
 repository actually changed. The request is unauthenticated and counts against
@@ -225,12 +277,9 @@ GitHub's 60/hour per-IP limit, so do not move that call back onto every save.
 
 ### Logging
 
-Use `CodecheckLogger::debug|info|error()` (`classes/Log/CodecheckLogger.php`) — writes
+Use `CodecheckLogger::debug|info|warning|error()` (`classes/Log/CodecheckLogger.php`) — writes
 `[codecheck][level] …` via `error_log()`. Do not add bare `error_log()` calls; a few
 legacy ones remain (e.g. `CodecheckApiHandler` label handler).
-
-⚠️ `CodecheckSubmissionDAO.php:114` calls `CodecheckLogger::warning()`, which **does not
-exist** — that branch fatals. Either add the level or change the call.
 
 ### i18n
 
@@ -238,6 +287,37 @@ exist** — that branch fatals. Either add the level or change the call.
 - `registry/uiLocaleKeysBackend.json` — **generated** by `i18nExtractKeys.vite.js` during
   `npm run build` by regexing `t('…')` / `tk('…')` out of `.vue`/`.js`. Never hand-edit;
   rebuild instead. New UI strings need a `.po` entry *and* a rebuild.
+
+**One sentence is one key.** Never assemble a sentence from several keys, and never
+concatenate a key with markup or a link label in the template. Word order, punctuation
+placement and direction all differ between languages, so a message split into
+"prefix" + link + "." can only ever come out right in English and breaks outright in
+right-to-left languages. Put the whole sentence in one message with a `{$name}`
+placeholder and pass the variable part in:
+
+```po
+msgid "plugins.generic.codecheck.form.intro"
+msgstr "… For background and technical details see {$specLink}."
+```
+
+```js
+// CodecheckMetadataForm.vue
+this.t('plugins.generic.codecheck.form.intro', {specLink: '<a href="…">' + label + '</a>'})
+```
+
+When the parameter carries markup, the result has to be rendered with `v-html`
+(Vue) or an unescaped Smarty variable — so build the markup in code and keep it out
+of the translatable string. `CodecheckPlugin.php` does the same for
+`{$codecheckLink}` on the submission form. This follows PKP's
+[Semantics](https://docs.pkp.sfu.ca/translating-guide/en/coders#semantics) guidance.
+
+Reference documentation:
+
+- [PKP Translating Guide](https://docs.pkp.sfu.ca/translating-guide/en/) — locale file
+  format, and [the coders' chapter](https://docs.pkp.sfu.ca/translating-guide/en/coders)
+  on writing translatable strings
+- [PKP Plugin Guide](https://docs.pkp.sfu.ca/dev/plugin-guide/en/) — plugin structure,
+  hooks, settings forms and the release/packaging expectations
 
 ### Color scheme
 
@@ -249,7 +329,7 @@ README.md; keep `css/codecheck.css` and inline component styles consistent.
 ### Layout
 
 ```
-tests/                       PHPUnit (18 files, 131 tests)
+tests/                       PHPUnit (21 files, 139 tests)
   bootstrap.php              PKP_STRICT_MODE + BASE_SYS_DIR (OJS_ROOT or ../../../..)
   PKPTestCase.php            local stub extending PHPUnit TestCase
   FakeTranslator.php         minimal translator so __() works without booting OJS
@@ -259,7 +339,7 @@ tests/                       PHPUnit (18 files, 131 tests)
   CodecheckPluginUnitTest.php
   CodecheckRegisterUnitTests/  CertificateIdentifier(List), GithubRegisterApiClient, IssueLabels
   DataStructuresUnitTests/     UniqueArray
-  FrontEndUnitTests/           ArticleDetails
+  FrontEndUnitTests/           ArticleAvailability, ArticleDetails, Badge
   LogUnitTests/                CodecheckLogger
   ApiUnitTests/                ApiEndpoint, CodecheckRoleArray
   SettingsUnitTests/           Actions, Manage
@@ -272,10 +352,11 @@ cypress/
                                this first in every component spec
   support/e2e.js               cy.ojsLogin(), cy.getCsrfToken(), swallow uncaught exceptions
   support/component-index.html
-  tests/component/*.cy.js      5 specs, 48 tests
-  tests/e2e/*.cy.js            3 specs, 10 tests
+  tests/component/*.cy.js      5 specs, 61 tests
+  tests/e2e/*.cy.js            5 specs, 19 tests
                                yaml-generation, article-sidebar-setting,
-                               private-repository
+                               issue-toc-setting, private-repository,
+                               settings-roundtrip
   tests/visual/ui-screenshots.cy.js  screenshot pass — `make screenshots`
 
 dev/
@@ -285,13 +366,27 @@ dev/
 ### Component tests (the reliable suite)
 
 `npm run test:component` — **passes locally with no OJS, no database, no build step**
-(48/48, ~60 s; `CodecheckMetadataForm.cy.js` alone is ~56 s). Cypress mounts the `.vue`
-sources directly through Vite and stubs the API with `cy.intercept`.
+(61/61, ~20 s). Cypress mounts the `.vue` sources directly through Vite and stubs the
+API with `cy.intercept`.
 
 Covered: metadata form load/render, manifest files add/remove/comment, repository list
 add/remove + private flag, certificate identifier reservation + labels, required-field
 validation, YAML preview gating, codechecker modal, review display states, data &
-software availability field.
+software availability field, the config version selector and the author's availability
+statement in the read-only panel.
+
+`cypress/support/pkp-mock.js` reads the real `locale/en/locale.po` and its `t()`
+behaves in two ways on purpose:
+
+- a message **without** placeholders resolves to the locale key, so specs assert on a
+  stable identifier instead of English copy that changes whenever wording is edited
+- a message **with** placeholders resolves to the translated text with the parameters
+  substituted, and **throws** when the message and the call site disagree — a missing
+  parameter, an extra one, or a plugin key with no entry in the `.po` at all. That is
+  what stops a renamed placeholder from silently rendering `{$specLink}` to the user
+
+Keys outside `plugins.generic.codecheck.` come from OJS's own locale files
+(`common.loading`), so they are passed through unchecked.
 
 Not covered: `CodecheckStatusForm.vue`, `CodecheckGithubIssueDisplay.vue`, the
 `storeExtend` wiring in `main.js` (menu injection, dashboard column, file-manager
@@ -299,7 +394,7 @@ columns), and the wizard DOM-scraping classes.
 
 ### E2E tests
 
-`make test-e2e` — 13 tests across 4 specs, driving a real OJS instance.
+`make test-e2e` — 19 tests across 5 specs, driving a real OJS instance.
 
 - `yaml-generation.cy.js` — YAML preview vs. download parity, preview-button gating
 - `article-sidebar-setting.cy.js` — the `showArticleSidebar` setting, driven through
@@ -324,7 +419,7 @@ validation, register deposit, and the settings form beyond the sidebar toggle.
 
 ### PHPUnit tests
 
-`make test-php` — 131 tests, green, none skipped.
+`make test-php` — 139 tests, green, none skipped.
 
 PHPUnit needs an OJS installation: the tests load OJS classes and the runner uses the
 PHPUnit shipped in `lib/pkp`. Both `runTests.sh` and `bootstrap.php` honour `OJS_ROOT`,
@@ -366,9 +461,6 @@ Three jobs on push/PR to `main`:
    `testData/stable-3_5_0-codecheck` dump, `loadfiles.sh`, OJS npm build, plugin npm
    build, Apache + mod_php on :8888, then `npm run test:e2e`.
 
-Note the README badge points at `component-tests.yml`, which no longer exists — all three
-jobs live in `tests.yml`.
-
 ### Test data (`testData/stable-3_5_0-codecheck/`)
 
 A PKP-datasets-shaped MySQL dump + article files for a "CODECHECK Demo Journal"
@@ -397,8 +489,8 @@ leaves the seeded articles silently broken while the tests still pass.
 This has already happened once. Commit `efaf1ed` removed the comma-separated
 `repositories` format without migrating the dump, so
 `CodecheckSubmission::getRepositories()` returned `[]` for every seeded article
-— and that was the branch calling the missing `CodecheckLogger::warning()`,
-which made viewing any seeded article page fatal.
+— and that was the branch calling `CodecheckLogger::warning()`, which did not
+exist at the time, so viewing any seeded article page was fatal.
 
 Columns are handled by upgrade migrations under `classes/migration/upgrade/`;
 the dump has no such mechanism, so it must be edited directly. After changing
@@ -502,12 +594,60 @@ Host toolchain: PHP 8.2.31 (+ xdebug, mysqli, intl, gd), Node 18.20.8,
 npm 10.8.2, Composer 2.8.12, MariaDB 10.6 on 3306, Docker 29.6 / Compose v5.2,
 Chrome + Chromium + Firefox, Cypress 14.5.4, Playwright 1.61.
 
+## Working agreements
+
+### Never create GitHub issues without confirmation
+
+**Always ask for confirmation before creating an issue, and show the full
+title and the full body text you intend to post.** Not a summary of it, not a
+description of what it will say — the exact text, so it can be corrected
+before it exists. Wait for an explicit yes. An issue is published under the
+repository owner's name and is visible to the whole project; a wrong or
+half-thought-out one costs someone else's attention to read and to close.
+
+The same applies to anything else published on someone's behalf: comments on
+issues and pull requests, PR titles and descriptions, and review comments.
+Show the text, get a yes, then post.
+
+### Plans in `.claude/`
+
+**When a task is fully completed, check `.claude/` for unimplemented plans and
+propose the next task from one.** `ls .claude/plan-*.md` lists what is there.
+Read the plan before proposing, and say which one the proposal comes from.
+Each states its own status; treat "not started" or "not settled" as available,
+and update the status when work on it begins or lands.
+
+A plan earns its keep by recording what would otherwise be rederived: what was
+already established by experiment, what turned out to be false, and what still
+needs a decision rather than an implementation.
+
+**Plans are deliberately not committed.** `.claude/` is gitignored, because a
+plan is ephemeral — it describes a moment in the work and goes stale as soon as
+the code moves. Keeping them out of the repository avoids a second set of
+documentation to maintain and contradict. The consequence is that they are
+local to one working copy: a fresh clone has none, and nothing in `.claude/` is
+shared by pushing.
+
+So anything that needs to outlive this working copy has to leave it:
+
+- **A plan that is extensive, or that needs discussion or a decision from
+  someone else, belongs as a comment on the related GitHub issue** — not in
+  `.claude/`, where nobody else will see it. Post it there, and leave the local
+  plan as a short pointer to the issue.
+- Conclusions that should shape future work belong in this file.
+- Anything user-visible belongs in `CHANGELOG.md`.
+
+`.claude/ISSUE_CODE_IMPROVEMENTS.md` and `.claude/issue-65-update.md` are
+earlier point-in-time reviews rather than plans. Several of their findings are
+now fixed and at least one is stale — check against the code before acting on
+them.
+
 ## Conventions
 
 - PSR-12; speaking names, verbs in function names; document public methods/classes
 - Vue SFCs use `<script setup>`-style composition where already present — match the file
-- Every user-visible change belongs in `CHANGELOG.md` (note: the changelog is currently
-  far behind the code — it stops at "initial plugin structure")
+- Every user-visible change belongs in `CHANGELOG.md`, under `[Unreleased]` in the
+  section it fits (Frontend, Configuration, Under the hood, …)
 - Release process, packaging (`package-plugin.sh`) and the API-extension recipe are in
   `README.md`
 - `.claude/ISSUE_CODE_IMPROVEMENTS.md` and `.claude/issue-65-update.md` hold earlier

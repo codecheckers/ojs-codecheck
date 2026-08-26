@@ -79,25 +79,26 @@
 		});
 	});
 	
+	// Keep the hex beside the swatch honest while the picker is being used.
+	$(function () {
+		var $picker = $('#codecheckBadgeTextColor');
+		$picker.on('input change', function () {
+			$('.badge-color-value').text($picker.val());
+		});
+	});
+
+	// Each badge type may bring one field with it: a URL for a custom image, the
+	// wording for text only.
 	function toggleCustomBadgeUrl() {
 		var selected = document.querySelector('input[name="codecheckBadgeType"]:checked');
-		var section = document.getElementById('customBadgeUrlSection');
-		section.style.display = (selected && selected.value === 'custom') ? 'block' : 'none';
+		var type = selected ? selected.value : '';
+
+		document.getElementById('customBadgeUrlSection').style.display =
+			(type === 'custom') ? 'block' : 'none';
+		document.getElementById('badgeTextSection').style.display =
+			(type === 'none') ? 'block' : 'none';
 	}
 
-	$('.settings-droptown.dropdown').on('mouseenter', function() {
-		const $dropdown = $(this);
-		const $content = $dropdown.find('.dropdown-content');
-		const rect = this.getBoundingClientRect();
-		const contentHeight = $content.outerHeight() || 200;
-		const spaceBelow = window.innerHeight - rect.bottom;
-
-		if (spaceBelow < contentHeight) {
-			$dropdown.addClass('dropdown-up');
-		} else {
-			$dropdown.removeClass('dropdown-up');
-		}
-	});
 </script>
 {/literal}
 
@@ -144,7 +145,60 @@
 				label="plugins.generic.codecheck.settings.showInTOC.description"
 			}
 		{/fbvFormSection}
-		
+
+		{* Everything about the data and software availability statement on the
+		   article landing page *}
+		{fbvFormSection list=true}
+			<div class="field-header">
+				<label class="pkp_form_title">{translate key="plugins.generic.codecheck.settings.availability.title"}</label>
+			</div>
+			{* Data and software availability statement below the abstract *}
+			{fbvFormSection
+				list=true
+			}
+				<div class="field-header">
+					<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.showAvailabilityStatement"}</label>
+				</div>
+				{fbvElement
+					type="checkbox"
+					id="showAvailabilityStatement"
+					checked=$showAvailabilityStatement
+					label="plugins.generic.codecheck.settings.showAvailabilityStatement.description"
+				}
+			{/fbvFormSection}
+
+			{* What an article with no statement shows *}
+			{fbvFormSection
+				list=true
+			}
+				<div class="field-header">
+					<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.hideEmptyAvailabilityStatement"}</label>
+				</div>
+				{fbvElement
+					type="checkbox"
+					id="hideEmptyAvailabilityStatement"
+					checked=$hideEmptyAvailabilityStatement
+					label="plugins.generic.codecheck.settings.hideEmptyAvailabilityStatement.description"
+				}
+			{/fbvFormSection}
+
+			{* Heading for that section, so a journal can call it something else *}
+			{fbvFormSection
+				list=true
+			}
+				<div class="field-header">
+					<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.availabilityStatementHeading"}</label>
+				</div>
+				<label class="description">{translate key="plugins.generic.codecheck.settings.availabilityStatementHeading.description"}</label>
+				{fbvElement
+					type="text"
+					id="availabilityStatementHeading"
+					value=$availabilityStatementHeading
+					placeholder="plugins.generic.codecheck.dataSoftwareAvailability"
+				}
+			{/fbvFormSection}
+		{/fbvFormSection}
+
 		{fbvFormSection list=true}
 			<div class="field-header">
 				<label class="pkp_form_title">{translate key="plugins.generic.codecheck.settings.submission.title"}</label>
@@ -178,23 +232,30 @@
 					translate=false
 				}
 			{/fbvFormSection}
-		{/fbvFormSection}
 
-		{* Clear / Reset CODECHECK Metadata DB *}
-		{fbvFormSection
-			list=true
-		}
-			<div class="field-header">
-				<label class="pkp_form_label">Clear / Reset CODECHECK Metadata Database</label>
-			</div>
-			<button
-				type="button"
-				id="resetSchema"
-				class="pkpButton btn-remove"
-				data-url="{url router=$smarty.const.ROUTE_COMPONENT component='grid.settings.plugins.SettingsPluginGridHandler' op='manage' category='generic' plugin=$pluginName verb='resetSchema' save=true}"
-			>
-				Clear / Reset DB
-			</button>
+			{* Which codecheck.yml config versions the metadata form offers *}
+			{fbvFormSection
+				list=true
+			}
+				<div class="field-header">
+					<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.configVersions"}</label>
+				</div>
+				<label class="description">{translate key="plugins.generic.codecheck.settings.configVersions.description"}</label>
+				<fieldset class="codecheck-choice-list">
+					{foreach from=$codecheckConfigVersions item=configVersion}
+						<div class="codecheck-choice">
+							<input
+								type="checkbox"
+								name="codecheckEnabledConfigVersions[]"
+								id="configVersion-{$configVersion|escape}"
+								value="{$configVersion|escape}"
+								{if in_array($configVersion, $codecheckEnabledConfigVersions)}checked{/if}
+							/>
+							<label for="configVersion-{$configVersion|escape}">{$configVersion|escape}</label>
+						</div>
+					{/foreach}
+				</fieldset>
+			{/fbvFormSection}
 		{/fbvFormSection}
 
 		{fbvFormSection
@@ -339,26 +400,19 @@
 					<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.status"}</label>
 				</div>
 				<label class="description">{translate key="plugins.generic.codecheck.settings.status.description"}</label>
-				<fieldset>
-					<div class="settings-droptown dropdown">
-						<button type="button" class="dropbtn">{translate key="plugins.generic.codecheck.settings.status.selectStatuses"} ⚙</button>
-						<div class="dropdown-content">
-							{foreach from=$codecheckStatuses item=statusKey}
-								<div class="dropdown-checkbox-input">
-									<input
-										type="checkbox"
-										name="codecheckStatusKeysSelected[]"
-										id="status-{$statusKey}"
-										value="{$statusKey|escape}"
-										{if $codecheckStatusKeysSelected && in_array($statusKey, $codecheckStatusKeysSelected)}checked{/if}
-									/>
-									<label for="status-{$statusKey}">
-										{translate key=$statusKey}
-									</label>
-								</div>
-							{/foreach}
+				<fieldset class="codecheck-choice-list">
+					{foreach from=$codecheckStatuses item=statusKey}
+						<div class="codecheck-choice">
+							<input
+								type="checkbox"
+								name="codecheckStatusKeysSelected[]"
+								id="status-{$statusKey}"
+								value="{$statusKey|escape}"
+								{if $codecheckStatusKeysSelected && in_array($statusKey, $codecheckStatusKeysSelected)}checked{/if}
+							/>
+							<label for="status-{$statusKey}">{translate key=$statusKey}</label>
 						</div>
-					</div>
+					{/foreach}
 				</fieldset>
 			{/fbvFormSection}
 			{* Enable extended validation of the CODECHECK metadata to block the publication of the submission *}
@@ -394,77 +448,130 @@
 			{/fbvFormSection}
 		{/fbvFormSection}
 
+		{* Badge / Logo — inside the form area, so it gets the same box as every
+		   other group rather than rendering bare at the end of the form *}
+		{fbvFormSection list=true}
+			<div class="field-header">
+				<label class="pkp_form_title">{translate key="plugins.generic.codecheck.settings.badge.title"}</label>
+			</div>
+
+			{fbvFormSection list=true}
+				<div class="field-header">
+					<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.badge.image"}</label>
+				</div>
+				<p class="description">{translate key="plugins.generic.codecheck.settings.badge.description"}</p>
+
+				<div class="badge-options">
+					<div class="badge-option">
+						<input type="radio" id="badgeCodeworks" name="codecheckBadgeType" value="codeworks"
+							{if $codecheckBadgeType == 'codeworks' || !$codecheckBadgeType}checked{/if}
+							onchange="toggleCustomBadgeUrl()" />
+						<label for="badgeCodeworks">{translate key="plugins.generic.codecheck.settings.badge.codeworks"}</label>
+					</div>
+
+					<div class="badge-option">
+						<input type="radio" id="badgeCodecheckLogo" name="codecheckBadgeType" value="codecheck_logo"
+							{if $codecheckBadgeType == 'codecheck_logo'}checked{/if}
+							onchange="toggleCustomBadgeUrl()" />
+						<label for="badgeCodecheckLogo">{translate key="plugins.generic.codecheck.settings.badge.codecheck_logo"}</label>
+					</div>
+
+					<div class="badge-option">
+						<input type="radio" id="badgeCustom" name="codecheckBadgeType" value="custom"
+							{if $codecheckBadgeType == 'custom'}checked{/if}
+							onchange="toggleCustomBadgeUrl()" />
+						<div>
+							<label for="badgeCustom">{translate key="plugins.generic.codecheck.settings.badge.custom"}</label>
+							<span class="badge-hint">{translate key="plugins.generic.codecheck.settings.badge.custom.hint"}</span>
+						</div>
+					</div>
+
+					<div class="badge-option">
+						<input type="radio" id="badgeNone" name="codecheckBadgeType" value="none"
+							{if $codecheckBadgeType == 'none'}checked{/if}
+							onchange="toggleCustomBadgeUrl()" />
+						<label for="badgeNone">{translate key="plugins.generic.codecheck.settings.badge.none"}</label>
+					</div>
+
+					<div id="badgeTextSection" class="badge-dependent-field"{if $codecheckBadgeType != 'none'} style="display:none"{/if}>
+						<label class="pkp_form_label" for="codecheckBadgeText">{translate key="plugins.generic.codecheck.settings.badge.text.label"}</label>
+						<label class="description">{translate key="plugins.generic.codecheck.settings.badge.text.description"}</label>
+						<input
+							type="text"
+							id="codecheckBadgeText"
+							name="codecheckBadgeText"
+							class="pkpFormField__input"
+							value="{$codecheckBadgeText|escape}"
+							placeholder="{translate key="plugins.generic.codecheck.badge.textOnly"}"
+						/>
+
+						<label class="pkp_form_label" for="codecheckBadgeTextColor">{translate key="plugins.generic.codecheck.settings.badge.textColor.label"}</label>
+						<label class="description">{translate key="plugins.generic.codecheck.settings.badge.textColor.description"}</label>
+						<div class="badge-color">
+							<input
+								type="color"
+								id="codecheckBadgeTextColor"
+								name="codecheckBadgeTextColor"
+								value="{$codecheckBadgeTextColor|escape}"
+							/>
+							<span class="badge-color-value">{$codecheckBadgeTextColor|escape}</span>
+						</div>
+					</div>
+				</div>
+
+				<div id="customBadgeUrlSection" class="badge-dependent-field"{if $codecheckBadgeType != 'custom'} style="display:none"{/if}>
+					<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.badge.custom.url.label"}</label>
+					<input
+						type="url"
+						name="codecheckBadgeCustomUrl"
+						class="pkpFormField__input"
+						value="{$codecheckBadgeCustomUrl|escape}"
+						placeholder="https://example.com/your-badge.png"
+					/>
+				</div>
+			{/fbvFormSection}
+
+			{fbvFormSection list=true}
+				<div class="field-header">
+					<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.badge.height.label"}</label>
+				</div>
+				<label class="description">{translate key="plugins.generic.codecheck.settings.badge.height.description"}</label>
+				<div class="badge-height">
+					<input
+						type="number"
+						name="codecheckBadgeHeight"
+						class="pkpFormField__input"
+						value="{$codecheckBadgeHeight|escape}"
+						min="10"
+						max="200"
+					/>
+					<span class="badge-height-unit">px</span>
+				</div>
+			{/fbvFormSection}
+		{/fbvFormSection}
+
+		{* Clear / Reset CODECHECK Metadata DB *}
+		{fbvFormSection
+			list=true
+		}
+			<div class="field-header">
+				<label class="pkp_form_label">Clear / Reset CODECHECK Metadata Database</label>
+			</div>
+			<button
+				type="button"
+				id="resetSchema"
+				class="pkpButton btn-remove"
+				data-url="{url router=$smarty.const.ROUTE_COMPONENT component='grid.settings.plugins.SettingsPluginGridHandler' op='manage' category='generic' plugin=$pluginName verb='resetSchema' save=true}"
+			>
+				Clear / Reset DB
+			</button>
+		{/fbvFormSection}
+
 		{* TODO: Add more settings in future development *}
 		{* - ORCID integration settings *}
 		{* - Email template settings *}
 		
 	{/fbvFormArea}
 
-	{* Badge / Logo setting *}
-	{fbvFormSection list=true}
-		<div class="field-header">
-			<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.badge.title"}</label>
-		</div>
-		<p class="description">{translate key="plugins.generic.codecheck.settings.badge.description"}</p>
-
-		<div class="badge-options">
-			<div class="badge-option">
-				<input type="radio" id="badgeCodeworks" name="codecheckBadgeType" value="codeworks"
-					{if $codecheckBadgeType == 'codeworks' || !$codecheckBadgeType}checked{/if}
-					onchange="toggleCustomBadgeUrl()" />
-				<label for="badgeCodeworks">{translate key="plugins.generic.codecheck.settings.badge.codeworks"}</label>
-			</div>
-
-			<div class="badge-option">
-				<input type="radio" id="badgeCodecheckLogo" name="codecheckBadgeType" value="codecheck_logo"
-					{if $codecheckBadgeType == 'codecheck_logo'}checked{/if}
-					onchange="toggleCustomBadgeUrl()" />
-				<label for="badgeCodecheckLogo">{translate key="plugins.generic.codecheck.settings.badge.codecheck_logo"}</label>
-			</div>
-
-			<div class="badge-option">
-				<input type="radio" id="badgeCustom" name="codecheckBadgeType" value="custom"
-					{if $codecheckBadgeType == 'custom'}checked{/if}
-					onchange="toggleCustomBadgeUrl()" />
-				<div>
-					<label for="badgeCustom">{translate key="plugins.generic.codecheck.settings.badge.custom"}</label>
-					<span class="badge-hint">{translate key="plugins.generic.codecheck.settings.badge.custom.hint"}</span>
-				</div>
-			</div>
-
-			<div class="badge-option">
-				<input type="radio" id="badgeNone" name="codecheckBadgeType" value="none"
-					{if $codecheckBadgeType == 'none'}checked{/if}
-					onchange="toggleCustomBadgeUrl()" />
-				<label for="badgeNone">{translate key="plugins.generic.codecheck.settings.badge.none"}</label>
-			</div>
-		</div>
-
-		<div id="customBadgeUrlSection" style="{if $codecheckBadgeType == 'custom'}display:block{else}display:none{/if}; margin-top:0.75rem;">
-			<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.badge.custom.url.label"}</label>
-			<input
-				type="url"
-				name="codecheckBadgeCustomUrl"
-				class="pkpFormField__input"
-				value="{$codecheckBadgeCustomUrl|escape}"
-				placeholder="https://example.com/your-badge.png"
-			/>
-		</div>
-		
-		<div style="margin-top:0.75rem;">
-			<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.badge.height.label"}</label>
-			<p class="description">{translate key="plugins.generic.codecheck.settings.badge.height.description"}</p>
-			<input
-				type="number"
-				name="codecheckBadgeHeight"
-				class="pkpFormField__input"
-				value="{$codecheckBadgeHeight|escape}"
-				min="10"
-				max="200"
-				style="width:100px;"
-			/>
-			<span style="font-size:13px; color:#666; margin-left:6px;">px</span>
-		</div>
-	{/fbvFormSection}
 	{fbvFormButtons submitText="common.save"}
 </form>

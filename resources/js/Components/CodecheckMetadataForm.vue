@@ -17,11 +17,18 @@
       </div>
       <div class="codecheck-header">
         <div class="header-content">
+          <p class="codecheck-intro" v-html="introText"></p>
           <div class="version-selector">
             <label class="version-label">{{ t('plugins.generic.codecheck.configVersion') }}</label>
-            <select v-model="metadata.version" class="version-select">
-              <option value="latest">latest</option>
-              <option value="1.0">1.0</option>
+            <select
+              v-model="metadata.version"
+              class="version-select"
+              :disabled="versionOptions.length < 2"
+              :title="versionOptions.length < 2 ? t('plugins.generic.codecheck.configVersion.onlyOne') : null"
+            >
+              <option v-for="version in versionOptions" :key="version" :value="version">
+                {{ version }}
+              </option>
             </select>
           </div>
         </div>
@@ -68,28 +75,14 @@
             </div>
           </div>
 
-          <div class="info-item" v-if="submissionData.codeRepository">
-            <label class="info-label">{{ t('plugins.generic.codecheck.codeRepository') }}:</label>
+          <!-- The author's own words about where the materials are. Their
+               repositories and expected outputs are not here: those arrive as
+               entries in the editable lists below, marked as author-provided. -->
+          <div class="info-item">
+            <label class="info-label">{{ t('plugins.generic.codecheck.dataSoftwareAvailability') }}:</label>
             <div class="info-value">
-              <a :href="submissionData.codeRepository" target="_blank">
-                {{ submissionData.codeRepository }}
-              </a>
-            </div>
-          </div>
-
-          <div class="info-item" v-if="submissionData.dataRepository">
-            <label class="info-label">{{ t('plugins.generic.codecheck.dataRepository') }}:</label>
-            <div class="info-value">
-              <a :href="submissionData.dataRepository" target="_blank">
-                {{ submissionData.dataRepository }}
-              </a>
-            </div>
-          </div>
-
-          <div class="info-item" v-if="submissionData.manifestFiles">
-            <label class="info-label">{{ t('plugins.generic.codecheck.manifestFiles.label') }}:</label>
-            <div class="info-value">
-              <pre class="manifest-preview">{{ submissionData.manifestFiles }}</pre>
+              <p v-if="submissionData.dataAvailabilityStatement" class="availability-statement">{{ submissionData.dataAvailabilityStatement }}</p>
+              <em v-else>{{ t('plugins.generic.codecheck.paperMetadata.noAvailabilityStatement') }}</em>
             </div>
           </div>
         </div>
@@ -120,6 +113,7 @@
                 <th width="20"></th>
                 <th>{{ t('plugins.generic.codecheck.manifest.outputFile') }}</th>
                 <th>{{ t('plugins.generic.codecheck.manifest.description') }}</th>
+                <th width="90">{{ t('plugins.generic.codecheck.manifest.hidden') }}</th>
                 <th width="80"></th>
               </tr>
             </thead>
@@ -130,7 +124,12 @@
                 </td>
                 <td>
                   <div class="file-info">
-                    <span class="file-name">{{ file.file }}</span>
+                    <input
+                      type="text"
+                      v-model="file.file"
+                      class="pkpFormField__input file-name"
+                      :placeholder="t('plugins.generic.codecheck.manifest.outputFilePlaceholder')"
+                    />
                     <span class="file-size" v-if="file.size">({{ formatFileSize(file.size) }})</span>
                   </div>
                 </td>
@@ -138,14 +137,25 @@
                   <input
                     type="text"
                     v-model="file.comment"
-                    class="pkpFormField__input"
+                    class="pkpFormField__input file-comment"
                     :placeholder="t('plugins.generic.codecheck.manifestFiles.commentPlaceholder')"
                   />
                 </td>
                 <td>
-                  <button 
+                  <label class="manifest-hidden-label" :title="t('plugins.generic.codecheck.repository.markAsHidden.tooltip')">
+                    <input type="checkbox" v-model="file.hidden" class="manifest-hidden-checkbox" />
+                  </label>
+                </td>
+                <td>
+                  <span
+                    v-if="file.providedByAuthor"
+                    class="provided-by-author"
+                    :title="t('plugins.generic.codecheck.providedByAuthor.tooltip')"
+                  >✍️ {{ t('plugins.generic.codecheck.providedByAuthor') }}</span>
+                  <button
+                    v-else
                     type="button"
-                    class="pkpButton pkpButton--close" 
+                    class="pkpButton pkpButton--close"
                     @click="removeManifestFile(index)"
                   >×</button>
                 </td>
@@ -186,10 +196,10 @@
                 class="pkpFormField__input"
                 :placeholder="t('plugins.generic.codecheck.repository.placeholder')"
               />
-              <label class="repo-private-label" :title="t('plugins.generic.codecheck.repository.markAsPrivate.tooltip')">
-                <input type="checkbox" v-model="repo.isPrivate" class="repo-private-checkbox" />
-                {{ t('plugins.generic.codecheck.repository.markAsPrivate') }}
-                <span class="repo-private-info">ℹ️</span>
+              <label class="repo-hidden-label" :title="t('plugins.generic.codecheck.repository.markAsHidden.tooltip')">
+                <input type="checkbox" v-model="repo.hidden" class="repo-hidden-checkbox" />
+                {{ t('plugins.generic.codecheck.repository.markAsHidden') }}
+                <span class="repo-hidden-info">ℹ️</span>
               </label>
               <button
                 v-if="repositoryWithCodecheckYaml === index"
@@ -207,9 +217,15 @@
               >
                 📄 codecheck.yml
               </button>
-              <button 
+              <span
+                v-if="repo.providedByAuthor"
+                class="provided-by-author"
+                :title="t('plugins.generic.codecheck.providedByAuthor.tooltip')"
+              >✍️ {{ t('plugins.generic.codecheck.providedByAuthor') }}</span>
+              <button
+                v-else
                 type="button"
-                class="pkpButton codecheck-btn pkpButton--close" 
+                class="pkpButton codecheck-btn pkpButton--close"
                 @click="removeRepository(index)"
               >×</button>
             </div>
@@ -277,7 +293,14 @@
         </div>
 
         <div class="field-group">
-          <label class="field-label">{{ t('plugins.generic.codecheck.completionTime.label') }}</label>
+          <label class="field-label">
+            {{ t('plugins.generic.codecheck.completionTime.label') }}
+            <button
+              type="button"
+              class="link-button check-time-now"
+              @click="setCheckTimeToNow"
+            >{{ t('plugins.generic.codecheck.completionTime.now') }}</button>
+          </label>
           <input
             type="datetime-local"
             v-model="metadata.check_time"
@@ -399,6 +422,13 @@
 <script>
 const { useLocalize } = pkp.modules.useLocalize;
 
+// Mirrors Constants::CODECHECK_CONFIG_SPEC_URL / getConfigSpecUrl() on the PHP side.
+const CODECHECK_SPEC_URL = 'https://codecheck.org.uk/spec/config/';
+
+// What the form offers until the journal's own list arrives with the metadata
+// response; mirrors Constants::CODECHECK_DEFAULT_CONFIG_VERSIONS.
+const CODECHECK_DEFAULT_CONFIG_VERSIONS = ['1.0'];
+
 export default {
   name: 'CodecheckMetadataForm',
   props: {
@@ -421,15 +451,18 @@ export default {
       saveMessage: '',
       saveMessageType: '',
       repositories: [],
+      // Replaced by the journal's "Available CODECHECK config versions"
+      // setting, which arrives with the metadata response.
+      enabledConfigVersions: CODECHECK_DEFAULT_CONFIG_VERSIONS,
+      // The version this record was loaded with, which stays on offer for the
+      // whole session even if the journal no longer enables it.
+      loadedVersion: '',
       hasUnsavedChanges: false,
       submissionData: {
         id: null,
         title: '',
         authors: [],
         doi: '',
-        codeRepository: '',
-        dataRepository: '',
-        manifestFiles: '',
         dataAvailabilityStatement: ''
       },
       // Further information neccesary for retrieving and reserving the Certificate Identifier
@@ -444,7 +477,7 @@ export default {
         isLinked: false
       },
       metadata: {
-        version: 'latest',
+        version: CODECHECK_DEFAULT_CONFIG_VERSIONS[0],
         publicationType: 'doi',
         manifest: [],
         repository: '',
@@ -464,6 +497,47 @@ export default {
     }
   },
   computed: {
+    /**
+     * The introduction is a single translatable sentence with the link passed
+     * in as a parameter, rather than a prefix key concatenated with a link
+     * label. Splitting a sentence across keys fixes English word order and
+     * breaks in right-to-left languages — see the PKP translating guide,
+     * https://docs.pkp.sfu.ca/translating-guide/en/coders#semantics
+     */
+    introText() {
+      const link = '<a href="' + this.specUrl + '" target="_blank" rel="noopener noreferrer">'
+        + this.t('plugins.generic.codecheck.form.intro.specLinkLabel')
+        + '</a>';
+      return this.t('plugins.generic.codecheck.form.intro', {specLink: link});
+    },
+
+    /**
+     * The specification the form currently describes. It follows the selected
+     * config version, so switching the version points the link at the document
+     * that actually governs the fields below it.
+     */
+    specUrl() {
+      return CODECHECK_SPEC_URL + (this.metadata.version || this.enabledConfigVersions[0]) + '/';
+    },
+
+    /**
+     * The versions the dropdown offers: those the journal enabled, plus the
+     * one this record was loaded with if it is no longer among them. A version
+     * disabled after the fact would otherwise leave the control blank and
+     * rewrite the record on the next save.
+     *
+     * Deliberately the loaded version rather than the selected one: keying off
+     * the selection would drop the extra option the moment it is unselected,
+     * so a codechecker could switch away from it but never back.
+     */
+    versionOptions() {
+      const loaded = this.loadedVersion;
+      if (loaded && !this.enabledConfigVersions.includes(loaded)) {
+        return [loaded, ...this.enabledConfigVersions];
+      }
+      return this.enabledConfigVersions;
+    },
+
     canPreview() {
       return this.metadata.manifest.length > 0 && 
             this.metadata.codecheckers.length > 0 &&
@@ -560,14 +634,15 @@ export default {
         
         console.log(data)
 
+        if (Array.isArray(data.settings?.enabledConfigVersions) && data.settings.enabledConfigVersions.length) {
+          this.enabledConfigVersions = data.settings.enabledConfigVersions;
+        }
+
         this.submissionData = {
           id: data.submission?.id || submissionId,
           title: data.submission?.title || '',
           authors: Array.isArray(data.submission?.authors) ? data.submission.authors : [],
           doi: data.submission?.doi || '',
-          codeRepository: data.submission?.codeRepository || '',
-          dataRepository: data.submission?.dataRepository || '',
-          manifestFiles: data.submission?.manifestFiles || '',
           dataAvailabilityStatement: data.submission?.dataAvailabilityStatement || ''
         };
         
@@ -587,8 +662,10 @@ export default {
             }
           }
 
+          this.loadedVersion = data.codecheck.version || this.enabledConfigVersions[0];
+
           this.metadata = {
-            version: data.codecheck.version || data.codecheck.version || 'latest',
+            version: this.loadedVersion,
             publicationType: data.codecheck.publicationType || data.codecheck.publication_type || 'doi',
             manifest: Array.isArray(data.codecheck.manifest) ? data.codecheck.manifest : 
                       (typeof data.codecheck.manifest === 'string' ? JSON.parse(data.codecheck.manifest) : []),
@@ -618,7 +695,7 @@ export default {
             // the list empty would look like "no repositories" rather than a
             // problem, so say so.
             console.error(
-              'CODECHECK: ignoring repository data in an unexpected format, expected an array of {url, isPrivate}:',
+              'CODECHECK: ignoring repository data in an unexpected format, expected an array of {url, hidden}:',
               repositoryData.repositories
             );
           }
@@ -668,9 +745,6 @@ export default {
                 title: data.metadata?.paper.title ?? this.submissionData.title,
                 authors: data.metadata?.paper.authors ?? this.submissionData.authors,
                 doi: data.metadata?.paper.doi ?? this.submissionData.doi,
-                codeRepository: this.submissionData.codeRepository,
-                dataRepository: this.submissionData.dataRepository,
-                manifestFiles: data.metadata?.manifest ?? this.submissionData.manifestFiles,
                 dataAvailabilityStatement: this.submissionData.dataAvailabilityStatement,
               };
               this.metadata = {
@@ -777,16 +851,24 @@ export default {
     },
 
     removeManifestFile(index) {
+      // Author-provided entries can be hidden but never removed.
+      if (this.metadata.manifest[index]?.providedByAuthor) {
+        return;
+      }
       if (confirm(this.t('plugins.generic.codecheck.manifest.removeConfirm'))) {
         this.metadata.manifest.splice(index, 1);
       }
     },
 
     addRepository() {
-      this.repositories.push({ url: '', isPrivate: false });
+      this.repositories.push({ url: '', hidden: false, providedByAuthor: false });
     },
 
     removeRepository(index) {
+      // Author-provided entries can be hidden but never removed.
+      if (this.repositories[index]?.providedByAuthor) {
+        return;
+      }
       if(this.repositoryWithCodecheckYaml === index) {
         this.repositoryWithCodecheckYaml = null;
       }
@@ -1208,8 +1290,6 @@ export default {
                 issue: this.certificateIdentifier.issue,
                 submission: {
                   authorString: authorString,
-                  codeRepository: this.submissionData.codeRepository,
-                  dataRepository: this.submissionData.dataRepository,
                   title: this.submissionData.title,
                   doi: this.submissionData.doi,
                 },
@@ -1292,8 +1372,6 @@ export default {
               venueName: this.certificateIdentifier.venueName,
               submission: {
                 authorString: authorString,
-                codeRepository: this.submissionData.codeRepository,
-                dataRepository: this.submissionData.dataRepository,
                 title: this.submissionData.title,
                 doi: this.submissionData.doi,
               },
@@ -1439,6 +1517,15 @@ export default {
       }, 5000);
     },
 
+    /**
+     * The field is a native datetime-local input, so its calendar is the
+     * browser's own and cannot be extended without replacing the control with
+     * a picker library. A link beside the label does the same job.
+     */
+    setCheckTimeToNow() {
+      this.metadata.check_time = this.formatDateTimeLocal(new Date());
+    },
+
     formatDateTimeLocal(timestamp) {
       const date = new Date(timestamp);
       const year = date.getFullYear();
@@ -1524,6 +1611,30 @@ export default {
   color: #333;
 }
 
+.codecheck-metadata-form .link-button {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-inline-start: 0.5rem;
+  color: #007ab2;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.codecheck-metadata-form .link-button:hover {
+  color: #00659b;
+}
+
+.codecheck-metadata-form .codecheck-intro {
+  margin: 0 0 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #495057;
+  max-width: 70ch;
+}
+
 .codecheck-metadata-form .version-selector {
   display: flex;
   align-items: center;
@@ -1542,9 +1653,24 @@ export default {
   font-size: 13px;
 }
 
+/* Only one version on offer — the control stays visible so the version in
+   force is still readable, but it cannot be changed. */
+.codecheck-metadata-form .version-select:disabled {
+  background-color: #f1f3f5;
+  color: #495057;
+  cursor: not-allowed;
+}
+
 .codecheck-metadata-form .publication-section {
   padding: 1rem 1.5rem;
 }
+/* The author's statement is free text: keep their line breaks, and drop the
+   paragraph margin so the row lines up with the other read-only values. */
+.codecheck-metadata-form .availability-statement {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
 
 .codecheck-metadata-form .form-section.read-only-section {
   background: #f8f9fa;
@@ -1784,9 +1910,17 @@ export default {
   gap: 0.25rem;
 }
 
+/* The output-file cell is taller than its neighbours because it carries the
+   size below the input. Align cells to the top so every control in a row
+   starts on the same line. */
+.codecheck-metadata-form .manifest-table td {
+  vertical-align: top;
+}
+
 .codecheck-metadata-form .file-name {
   font-weight: 600;
   font-size: 14px;
+  width: 100%;
 }
 
 .codecheck-metadata-form .file-size {
@@ -1855,7 +1989,22 @@ export default {
   flex: 1;
 }
 
-.codecheck-metadata-form .repo-private-label {
+.codecheck-metadata-form .provided-by-author {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  background: #e8f5e8;
+  color: #006629;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: help;
+}
+
+.codecheck-metadata-form .repo-hidden-label {
   display: flex;
   align-items: center;
   gap: 0.4rem;
@@ -1867,7 +2016,7 @@ export default {
   margin-bottom: 0;
 }
 
-.codecheck-metadata-form .repo-private-checkbox {
+.codecheck-metadata-form .repo-hidden-checkbox {
   margin: 0;
   cursor: pointer;
 }

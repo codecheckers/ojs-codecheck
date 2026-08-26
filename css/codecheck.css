@@ -158,6 +158,16 @@ textarea[name="dataAvailabilityStatement"] {
 }
 
 /* Wizard section header (used in template) */
+/* Give each field's title room to breathe, matching the rhythm of the
+   Title, Keywords and Abstract fields above this section. */
+.codecheck-wizard-section .pkpFormField + .pkpFormField {
+    margin-top: 2rem;
+}
+
+.codecheck-wizard-section .pkpFormField__heading {
+    margin-bottom: 0.25rem;
+}
+
 .codecheck-wizard-section .label {
   font-weight: 600;
   font-size: 1.1rem;
@@ -326,103 +336,72 @@ textarea[name="dataAvailabilityStatement"] {
   background: #fff;
 }
 
-/* Dropdown with Checkbox selects */
-.settings-droptown {
-    font-size: 14px;
-    padding: 6px;
-    border: 1px solid #ccc;
-    border-radius: 3px;
-    height: 2.5rem;
-    width: 100%;
-    background: #fff;
-}
-
-.settings-droptown.dropdown {
-  overflow: visible;
-  color: inherit;
-  padding: 0 !important;
-  position: relative;
-}
-
-fieldset:disabled .settings-droptown.dropdown .dropbtn {
-  /* Centeres the Text in the select */
-  text-align: center;
-  text-align-last: center;
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  background-image: none !important; /* removes arrow background */
-  background-color: #868686;
-  color: #ffffff;
-  cursor: not-allowed;
-  pointer-events: none;
-  opacity: 0.6;
-  font-weight: 600;
-}
-
-.settings-droptown.dropdown .dropbtn {
-  font-size: 14px;
-  padding-left: 6px;
-  padding-right: 6px;
-  padding-bottom: 0;
-  padding-top: 0;
-  height: 100%;
-  border: none;
-  outline: none;
-  background-color: inherit;
-  font-family: inherit;
+/* Lists of checkbox choices — config versions, publication statuses. A plain
+   list rather than a dropdown: with a handful of options a dropdown hides more
+   than it saves. OJS's settings form styles a bare checkbox list as
+   label-below-the-box, so the row is laid out here instead. */
+.codecheck-choice-list {
+  border: 0;
   margin: 0;
-  width: inherit;
-  text-align: left;
-}
-
-.settings-droptown.dropdown:hover .dropbtn {
-  background-color: #eee;
-}
-
-.settings-droptown .dropdown-content {
-  display: none;
-  position: absolute;
-  background-color: #fff;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  min-width: 160px;
-  z-index: 1;
-  padding: 10px;
-  top: 100%;
-  bottom: auto;
-}
-
-.settings-droptown.dropdown-up .dropdown-content {
-  top: auto;
-  bottom: 100%;
-}
-
-fieldset:disabled .settings-droptown .dropdown-content {
-  background-color: #868686;
-  border: 3px solid #ccc;
-  font-weight: 600;
-  color: #fff;
-}
-
-.settings-droptown .dropdown-content .dropdown-checkbox-input {
-  float: none;
-  text-decoration: none;
-  display: block;
-  text-align: left;
-  outline: none;
-  border: none;
-  width: 100%;
   padding: 0;
 }
 
-.settings-droptown.dropdown:hover .dropdown-content {
-  display: block;
+.codecheck-choice-list .codecheck-choice {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.15rem 0;
 }
 
-.settings-droptown.dropdown .dropdown-content label {
-  font-style: italic;
-  margin-left: 5px;
-  color: inherit;
-  display: inline-block !important;
+.codecheck-choice-list .codecheck-choice label {
+  font-weight: normal;
+  font-style: normal;
+  margin: 0;
+}
+
+/* Badge height: the number field is narrow and carries its unit beside it. */
+.badge-height {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Outranks the settings form's own `.pkpFormField__input { width: 100% }`,
+   which would otherwise stretch a two-digit number across the box. */
+#codecheckSettings #codecheckSettingsArea .section .badge-height input {
+  width: 100px;
+}
+
+.badge-height-unit {
+  font-size: 13px;
+  color: #666;
+}
+
+/* A field that belongs to one badge option and is shown only while it is
+   selected. Indented under the options so the connection is visible. */
+.badge-dependent-field {
+  margin: 0.25rem 0 0.5rem 1.5rem;
+}
+
+/* The swatch and the hex value it stands for, side by side. */
+.badge-color {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.badge-color input[type="color"] {
+  width: 3rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  background: none;
+  cursor: pointer;
+}
+
+.badge-color-value {
+  font-size: 13px;
+  color: #666;
 }

@@ -12,6 +12,7 @@ const JOURNAL = 'codecheck';
 const SUBMISSION_ID = 7;
 
 const PUBLIC_URL = 'https://doi.org/10.6084/m9.figshare.19794289.v1';
+const AUTHOR_URL = 'https://github.com/IainDaviesMaths/Reproduction-Hancock';
 const PRIVATE_URL = 'https://github.com/codecheckers/private-supplement-2022-009';
 
 describe('Private repositories', () => {
@@ -52,12 +53,12 @@ describe('Private repositories', () => {
 
     cy.get('.repository-item').each(($item) => {
       const url = $item.find('input[type="url"]').val();
-      const isPrivate = $item.find('.repo-private-checkbox').is(':checked');
+      const hidden = $item.find('.repo-hidden-checkbox').is(':checked');
 
       if (url === PRIVATE_URL) {
-        expect(isPrivate, `${url} marked private`).to.be.true;
+        expect(hidden, `${url} marked private`).to.be.true;
       } else if (url === PUBLIC_URL) {
-        expect(isPrivate, `${url} not marked private`).to.be.false;
+        expect(hidden, `${url} not marked private`).to.be.false;
       }
     });
   });
@@ -82,5 +83,55 @@ describe('Private repositories', () => {
     cy.get('.obj_article_summary, .article_summary').should('exist');
 
     cy.document().its('documentElement.outerHTML').should('not.contain', PRIVATE_URL);
+  });
+});
+
+describe('Author-provided entries', () => {
+  // Submission 2 carries the author's own repository alongside the
+  // codecheckers' fork, which is the pair that makes provenance visible.
+  const SUBMISSION_WITH_AUTHOR_ENTRY = 2;
+
+  beforeEach(() => {
+    cy.ojsLogin('admin', 'admin');
+    cy.visit(
+      `/index.php/${JOURNAL}/dashboard/editorial` +
+      `?currentViewId=published&workflowSubmissionId=${SUBMISSION_WITH_AUTHOR_ENTRY}` +
+      `&workflowMenuKey=codecheck`
+    );
+    cy.get('.codecheck-metadata-form', { timeout: 20000 }).should('exist');
+  });
+
+  it('marks the repository the author submitted', () => {
+    cy.get('.repository-item').should('have.length.at.least', 2);
+
+    cy.get('.repository-item').each(($item) => {
+      const url = $item.find('input[type="url"]').val();
+      const marked = $item.find('.provided-by-author').length > 0;
+
+      if (url === AUTHOR_URL) {
+        expect(marked, `${url} marked as the author's`).to.be.true;
+      }
+    });
+  });
+
+  it('withholds the delete control on the author repository but not the others', () => {
+    cy.get('.repository-item').each(($item) => {
+      const url = $item.find('input[type="url"]').val();
+      const deletable = $item.find('.pkpButton--close').length > 0;
+
+      if (url === AUTHOR_URL) {
+        expect(deletable, `${url} cannot be deleted`).to.be.false;
+      } else {
+        expect(deletable, `${url} can be deleted`).to.be.true;
+      }
+    });
+  });
+
+  it('still lets the codechecker hide the author repository', () => {
+    cy.get('.repository-item').each(($item) => {
+      if ($item.find('input[type="url"]').val() === AUTHOR_URL) {
+        cy.wrap($item).find('.repo-hidden-checkbox').should('exist').and('not.be.disabled');
+      }
+    });
   });
 });

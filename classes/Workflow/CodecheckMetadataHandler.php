@@ -13,6 +13,7 @@ use Github\Client;
 use Symfony\Component\Yaml\Yaml;
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CodecheckRegisterGithubIssuesApiParser;
 use APP\plugins\generic\codecheck\api\v1\CurlApiClient;
+use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitException;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
@@ -73,10 +74,9 @@ class CodecheckMetadataHandler
                 'title' => $publication ? $publication->getLocalizedTitle() : '',
                 'authors' => $this->getAuthors($publication),
                 'doi' => $publication ? $publication->getStoredPubId('doi') : null,
-                'codeRepository' => $submission->getData('codeRepository'),
-                'dataRepository' => $submission->getData('dataRepository'),
-                'manifestFiles' => $submission->getData('manifestFiles'),
-                'dataAvailabilityStatement' => $submission->getData('dataAvailabilityStatement'),
+                // The statement lives on the publication (see Submission/Schema.php),
+                // which is also where the wizard writes it and where the article page reads it.
+                'dataAvailabilityStatement' => $publication ? $publication->getData('dataAvailabilityStatement') : null,
             ],
             'codecheck' => $metadata ? [
                 'version' => $metadata->version ?? 'latest',
@@ -180,9 +180,11 @@ class CodecheckMetadataHandler
         $codecheckers = json_decode($metadata->codecheckers ?? '[]', true);
         $repository = json_decode($metadata->repository ?? '{"repositories":null,"repoWithCodecheckYaml":null}', false);
 
-        // Build YAML data structure
+        // Build YAML data structure. The version follows the one recorded for
+        // this check rather than a fixed one, so the file declares the
+        // specification the codechecker actually filled the form in against.
         $data = [
-            'version' => 'https://codecheck.org.uk/spec/config/1.0/'
+            'version' => Constants::getConfigSpecUrl($metadata->version ?: 'latest')
         ];
 
         // Add source if present
@@ -244,7 +246,7 @@ class CodecheckMetadataHandler
         if ($repository && isset($repository->repositories) && is_array($repository->repositories)) {
             $publicUrls = array_values(array_map(
                 fn($r) => isset($r->url) ? $r->url : '',
-                array_filter($repository->repositories, fn($r) => empty($r->isPrivate))
+                array_filter($repository->repositories, fn($r) => empty($r->hidden))
             ));
             $publicUrls = array_filter($publicUrls);
             $filteredCount = count($repository->repositories) - count($publicUrls);

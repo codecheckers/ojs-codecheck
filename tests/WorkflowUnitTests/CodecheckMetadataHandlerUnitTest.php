@@ -494,6 +494,45 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $this->assertEquals($errorMessage, $actualMetadataReturnArray["error"]);
     }
 
+    public function testBuildYamlDeclaresTheRecordedConfigVersion()
+    {
+        // The version is a real choice in the metadata form, so the file has to
+        // declare the specification the codechecker filled it in against rather
+        // than a fixed one.
+        $publication = $this->createMock(\APP\publication\Publication::class);
+        $publication->method('getLocalizedTitle')->willReturn('Test Paper');
+        $publication->method('getData')->with('authors')->willReturn([]);
+        $publication->method('getStoredPubId')->willReturn(null);
+
+        $yaml = $this->handler->buildYaml($publication, $this->buildYamlMetadata('1.0'));
+        $this->assertStringContainsString('https://codecheck.org.uk/spec/config/1.0/', $yaml);
+
+        $yaml = $this->handler->buildYaml($publication, $this->buildYamlMetadata('latest'));
+        $this->assertStringContainsString('https://codecheck.org.uk/spec/config/latest/', $yaml);
+
+        // An empty version falls back rather than emitting a broken URL.
+        $yaml = $this->handler->buildYaml($publication, $this->buildYamlMetadata(''));
+        $this->assertStringContainsString('https://codecheck.org.uk/spec/config/latest/', $yaml);
+    }
+
+    /** A minimal codecheck_metadata row carrying the given config version. */
+    private function buildYamlMetadata(string $version): object
+    {
+        return (object) [
+            'version'            => $version,
+            'publication_type'   => 'doi',
+            'manifest'           => '[]',
+            'repository'         => '{"repositories":null,"repoWithCodecheckYaml":null}',
+            'codecheckers'       => '[]',
+            'source'             => null,
+            'summary'            => null,
+            'check_time'         => null,
+            'certificate'        => null,
+            'report'             => null,
+            'additional_content' => null,
+        ];
+    }
+
     public function testBuildYamlExcludesPrivateRepositories()
     {
         $publication = $this->createMock(\APP\publication\Publication::class);
@@ -507,8 +546,8 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
             'manifest'           => '[]',
             'repository' => json_encode([
                 'repositories' => [
-                    ['url' => 'https://github.com/public/repo', 'isPrivate' => false],
-                    ['url' => 'https://github.com/private/repo', 'isPrivate' => true],
+                    ['url' => 'https://github.com/public/repo', 'hidden' => false],
+                    ['url' => 'https://github.com/private/repo', 'hidden' => true],
                 ],
                 'repoWithCodecheckYaml' => null,
             ]),
@@ -540,8 +579,8 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
             'manifest'           => '[]',
             'repository' => json_encode([
                 'repositories' => [
-                    ['url' => 'https://github.com/private/repo-one', 'isPrivate' => true],
-                    ['url' => 'https://github.com/private/repo-two', 'isPrivate' => true],
+                    ['url' => 'https://github.com/private/repo-one', 'hidden' => true],
+                    ['url' => 'https://github.com/private/repo-two', 'hidden' => true],
                 ],
                 'repoWithCodecheckYaml' => null,
             ]),
@@ -572,8 +611,8 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
             'manifest'           => '[]',
             'repository' => json_encode([
                 'repositories' => [
-                    ['url' => 'https://github.com/public/repo-one', 'isPrivate' => false],
-                    ['url' => 'https://github.com/public/repo-two', 'isPrivate' => false],
+                    ['url' => 'https://github.com/public/repo-one', 'hidden' => false],
+                    ['url' => 'https://github.com/public/repo-two', 'hidden' => false],
                 ],
                 'repoWithCodecheckYaml' => null,
             ]),

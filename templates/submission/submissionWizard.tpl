@@ -10,39 +10,28 @@
         </p>
 
         <div class="pkpFormField">
-            <label for="codeRepository">
-                {translate key="plugins.generic.codecheck.codeRepository"}
-            </label>
+            <div class="pkpFormField__heading">
+                <label for="repositories">
+                    {translate key="plugins.generic.codecheck.repositories.label"}
+                </label>
+            </div>
             <div class="pkpFormField__description">
-                {translate key="plugins.generic.codecheck.codeRepository.description"}
+                {translate key="plugins.generic.codecheck.repositories.label.description"}
             </div>
             <textarea 
-                id="codeRepository" 
-                name="codeRepository" 
+                id="repositories" 
+                name="repositories" 
                 class="pkpFormField__input pkpFormField--textarea"
                 rows="3"
             ></textarea>
         </div>
 
         <div class="pkpFormField">
-            <label for="dataRepository">
-                {translate key="plugins.generic.codecheck.dataRepository"}
-            </label>
-            <div class="pkpFormField__description">
-                {translate key="plugins.generic.codecheck.dataRepository.description"}
+            <div class="pkpFormField__heading">
+                <label for="manifestFiles">
+                    {translate key="plugins.generic.codecheck.manifestFiles.label"}
+                </label>
             </div>
-            <textarea 
-                id="dataRepository" 
-                name="dataRepository" 
-                class="pkpFormField__input pkpFormField--textarea"
-                rows="3"
-            ></textarea>
-        </div>
-
-        <div class="pkpFormField">
-            <label for="manifestFiles">
-                {translate key="plugins.generic.codecheck.manifestFiles.label"}
-            </label>
             <div class="pkpFormField__description">
                 {translate key="plugins.generic.codecheck.manifestFiles.description"}
             </div>
@@ -55,9 +44,11 @@
         </div>
 
         <div class="pkpFormField">
-            <label for="dataAvailabilityStatement">
-                {translate key="plugins.generic.codecheck.dataAvailability"}
-            </label>
+            <div class="pkpFormField__heading">
+                <label for="dataAvailabilityStatement">
+                    {translate key="plugins.generic.codecheck.dataAvailability"}
+                </label>
+            </div>
             <div class="pkpFormField__description">
                 {translate key="plugins.generic.codecheck.dataAvailability.description"}
             </div>

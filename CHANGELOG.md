@@ -27,9 +27,10 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 - CODECHECK opt-in checkbox on the submission start form, and a journal-wide mode
   setting choosing whether codechecking is opt-in, opt-out or mandatory for authors
   (Issue #128)
-- CODECHECK section in the submission wizard for code and data repositories, the
-  manifest of expected outputs, and a data and software availability statement,
-  shown in the wizard's review step
+- CODECHECK section in the submission wizard for repositories, the manifest of
+  expected outputs, and a data and software availability statement, shown in the
+  wizard's review step. What the author enters goes straight into the CODECHECK
+  record the codechecker works on, rather than into a separate copy (Issue #152)
 - Public CODECHECK information page explaining the process to authors, linked from
   the opt-in checkbox
 
@@ -48,9 +49,21 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   `codecheck.yml` file (Issue #146)
 - Import of existing CODECHECK metadata from a repository — GitHub, GitLab, Zenodo and
   OSF, including DOI resolution (Issue #145)
-- Repositories can be marked "Keep private". Private repositories stay visible to
+- Repositories and manifest entries can be hidden. Hidden entries stay visible to
   editors and codecheckers but are excluded from the generated `codecheck.yml` and
   from everything readers see (Issue #134)
+- Repositories and manifest entries the submitting author provided are marked
+  "Submitted by author". A codechecker can edit them or hide them, but cannot
+  remove them, so what the author supplied cannot silently disappear from the
+  record (Issue #152)
+- Output file names in the manifest are editable, so a codechecker can correct a
+  path without removing the entry and adding it again (Issue #152)
+- A "Now" link beside "Time the check was completed" fills in the current date
+  and time
+- The metadata form opens with a short explanation of what the form produces,
+  linking to the CODECHECK config file specification for the details. The link
+  follows the selected config version, so it points at the specification that
+  actually governs the fields below it
 - Validation warnings and errors for repository metadata shown directly in the
   repositories field (Issue #144)
 - `codecheck.yml` generation with preview and download, and file upload/download for
@@ -77,6 +90,10 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   with a configurable height (Issue #27)
 - Setting to show or hide the badge in issue tables of contents, independent of the
   article sidebar, so a journal can use either display on its own
+- The author's data and software availability statement is shown below the abstract
+  on the article landing page. An article whose author provided no statement says so
+  instead of staying silent. Three settings: hide the section entirely, rename its
+  heading, or leave the section out of articles with no statement (Issue #152)
 
 #### Configuration
 
@@ -85,6 +102,27 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   CODECHECK statuses permit publication
 - Setting to enable or disable the register deposit, with a warning when the configured
   register repository has no `register.csv` (Issue #156)
+- The metadata form shows the author's data and software availability statement in the
+  read-only paper metadata, so a codechecker can see what the author said about where
+  the materials are. The three fields that moved into the editable repository and
+  manifest lists are no longer repeated above them
+- The data and software availability settings are grouped into their own section on
+  the plugin settings page, alongside the submission, GitHub and publication groups
+- The badge / logo settings are shown in the same bordered group as every other
+  setting instead of loose at the end of the page
+- The statuses that permit publication are chosen from a plain list of checkboxes
+  rather than a hover menu, matching the other multiple-choice settings
+- The text shown in place of the badge, when a journal chooses "No badge", is
+  configurable, as is the colour it is written in; cleared, the text falls back to
+  "CODECHECK" and the colour to the CODECHECK green
+- The destructive "Clear / Reset DB" action sits at the very bottom of the settings
+  page instead of between the submission and GitHub settings
+- Setting listing which CODECHECK config versions codecheckers can choose from in the
+  metadata form. Only the enabled versions are offered, and the selector is inactive
+  when a journal has settled on a single version. Journals offer version 1.0 until
+  they choose otherwise, so a check records the specification it was done against
+  rather than a moving target. The generated `codecheck.yml` declares the version
+  recorded for the check instead of always claiming 1.0
 
 #### Under the hood
 
@@ -127,6 +165,10 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   could not be set and had no effect.
 
 ### Fixed
+
+- Rows in the manifest table line up again. Entries submitted by the author were
+  taller than the others, and the output file and description inputs sat on
+  different lines in every row because the file cell also carries the file size.
 
 - Saving the plugin settings no longer makes a GitHub request every time. The
   register repository is only checked for its `register.csv` when the configured

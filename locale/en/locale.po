@@ -74,6 +74,36 @@ msgstr "CODECHECK badge in issue tables of contents"
 msgid "plugins.generic.codecheck.settings.showInTOC.description"
 msgstr "Show the CODECHECK badge next to completed articles when an issue's table of contents is listed"
 
+msgid "plugins.generic.codecheck.settings.availability.title"
+msgstr "Data and Software Availability Settings"
+
+msgid "plugins.generic.codecheck.settings.showAvailabilityStatement"
+msgstr "Data and software availability on published articles"
+
+msgid "plugins.generic.codecheck.settings.showAvailabilityStatement.description"
+msgstr "Show the author's data and software availability statement below the abstract of published articles"
+
+msgid "plugins.generic.codecheck.settings.hideEmptyAvailabilityStatement"
+msgstr "Articles without a statement"
+
+msgid "plugins.generic.codecheck.settings.hideEmptyAvailabilityStatement.description"
+msgstr "Leave the section out of articles whose authors provided no statement, instead of noting that none was provided"
+
+msgid "plugins.generic.codecheck.availabilityStatement.none"
+msgstr "No {$heading} provided for this work."
+
+msgid "plugins.generic.codecheck.settings.availabilityStatementHeading"
+msgstr "Heading for the availability statement"
+
+msgid "plugins.generic.codecheck.settings.availabilityStatementHeading.description"
+msgstr "The heading shown above the statement on published articles. Leave empty to use the default, \"Data and Software Availability\"."
+
+msgid "plugins.generic.codecheck.settings.configVersions"
+msgstr "Available CODECHECK config versions"
+
+msgid "plugins.generic.codecheck.settings.configVersions.description"
+msgstr "Which versions of the CODECHECK config file specification codecheckers can choose from in the metadata form. Selecting a single version fixes it for every submission. If nothing is selected, all versions remain available."
+
 msgid "plugins.generic.codecheck.settings.authorAnonymity"
 msgstr "Author anonymity in the GitHub register repository"
 
@@ -168,6 +198,12 @@ msgstr "CODECHECK Information"
 msgid "plugins.generic.codecheck.submission.description"
 msgstr "Please provide information about your code and data repositories."
 
+msgid "plugins.generic.codecheck.repositories.label"
+msgstr "Repository or repositories"
+
+msgid "plugins.generic.codecheck.repositories.label.description"
+msgstr "Link(s) to code or data repositories that your workflow relies on, e.g., GitHub, Gitlab, Zenodo, institutional repository."
+
 msgid "plugins.generic.codecheck.codeRepository"
 msgstr "Code Repository URLs"
 
@@ -190,13 +226,13 @@ msgid "plugins.generic.codecheck.manifestFiles.label"
 msgstr "Expected Output Files"
 
 msgid "plugins.generic.codecheck.manifestFiles.description"
-msgstr "List the main figures, tables, and results your code should produce."
+msgstr "List the files your workflow is expected to produce, one per line. Use paths relative to your main working directory, if that applies, and use the comment to ensure outputs are matched to Figures, Tables, or key statistics in the manuscript."
 
 msgid "plugins.generic.codecheck.dataAvailability"
 msgstr "Data and Software Availability"
 
 msgid "plugins.generic.codecheck.dataAvailability.description"
-msgstr "Copy from your manuscript's data availability section"
+msgstr "Optional. Copy from your manuscript's data and software descriptions sections if these are available, or from a project README, if it exists."
 
 msgid "plugins.generic.codecheck.manifestFiles.filenamePlaceholder"
 msgstr "Filename (e.g., figures/figure1.png)"
@@ -221,6 +257,15 @@ msgstr "This submission will be codechecked"
 
 msgid "plugins.generic.codecheck.workflow.title"
 msgstr "WORKFLOW: CODECHECK"
+
+msgid "plugins.generic.codecheck.form.intro"
+msgstr "What you record here becomes the codecheck.yml file that accompanies the certificate: the materials that were checked, who checked them, and what the check produced. The config version fixes which version of the specification that file follows. For background and technical details see {$specLink}."
+
+msgid "plugins.generic.codecheck.form.intro.specLinkLabel"
+msgstr "the CODECHECK config file specification"
+
+msgid "plugins.generic.codecheck.configVersion.onlyOne"
+msgstr "This journal offers a single CODECHECK config version."
 
 msgid "plugins.generic.codecheck.configVersion"
 msgstr "CODECHECK config version"
@@ -314,6 +359,9 @@ msgstr "No repositories added yet"
 
 msgid "plugins.generic.codecheck.completionTime.title"
 msgstr "Time the CODECHECK was completed"
+
+msgid "plugins.generic.codecheck.completionTime.now"
+msgstr "Now"
 
 msgid "plugins.generic.codecheck.completionTime.label"
 msgstr "Time the CODECHECK was completed"
@@ -540,6 +588,9 @@ msgstr "This information comes from the original submission and cannot be edited
 
 msgid "plugins.generic.codecheck.paperMetadata.noAuthors"
 msgstr "No authors found"
+
+msgid "plugins.generic.codecheck.paperMetadata.noAvailabilityStatement"
+msgstr "The author provided no data and software availability statement"
 
 msgid "plugins.generic.codecheck.workflow.description"
 msgstr "Complete the following fields to document the CODECHECK process."
@@ -772,6 +823,9 @@ msgstr "Additional information"
 msgid "plugins.generic.codecheck.settings.badge.title"
 msgstr "Badge / Logo"
 
+msgid "plugins.generic.codecheck.settings.badge.image"
+msgstr "Badge image"
+
 msgid "plugins.generic.codecheck.settings.badge.description"
 msgstr "Choose the image displayed as the CODECHECK badge on the article landing page sidebar and in the issue table of contents."
 
@@ -795,6 +849,18 @@ msgstr "No badge (text only)"
 
 msgid "plugins.generic.codecheck.badge.textOnly"
 msgstr "CODECHECK"
+
+msgid "plugins.generic.codecheck.settings.badge.text.label"
+msgstr "Text shown instead of a badge"
+
+msgid "plugins.generic.codecheck.settings.badge.text.description"
+msgstr "The wording shown where the badge image would be. Leave empty to use the default, \"CODECHECK\"."
+
+msgid "plugins.generic.codecheck.settings.badge.textColor.label"
+msgstr "Colour of the text"
+
+msgid "plugins.generic.codecheck.settings.badge.textColor.description"
+msgstr "The colour the text is written in, on the article landing page and in the issue table of contents."
 
 msgid "plugins.generic.codecheck.settings.badge.height.label"
 msgstr "Badge display height"
@@ -847,10 +913,22 @@ msgstr "not set"
 msgid "plugins.generic.codecheck.github.issue.display.registerRepository"
 msgstr "Register Repository: {$repository}"
 
-msgid "plugins.generic.codecheck.repository.markAsPrivate"
-msgstr "Keep private"
+msgid "plugins.generic.codecheck.providedByAuthor"
+msgstr "Submitted by author"
 
-msgid "plugins.generic.codecheck.repository.markAsPrivate.tooltip"
+msgid "plugins.generic.codecheck.providedByAuthor.tooltip"
+msgstr "The submitting author provided this entry. You can edit it or hide it from the public record, but it cannot be removed."
+
+msgid "plugins.generic.codecheck.manifest.outputFilePlaceholder"
+msgstr "e.g. figures/figure2.png"
+
+msgid "plugins.generic.codecheck.manifest.hidden"
+msgstr "Hidden"
+
+msgid "plugins.generic.codecheck.repository.markAsHidden"
+msgstr "Hide from public record"
+
+msgid "plugins.generic.codecheck.repository.markAsHidden.tooltip"
 msgstr "This repository will not be shown on the article landing page, not included in the codecheck.yml file, and not posted to the GitHub register issue."
 
 msgid "plugins.generic.codecheck.settings.github.registerRepository.missingCsvWarning"

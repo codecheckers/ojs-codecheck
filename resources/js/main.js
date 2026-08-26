@@ -207,9 +207,6 @@ class CodecheckWizardManager {
       const publication = submission.publications.find(p => p.id === submission.currentPublicationId);
       
       if (publication) {
-        this.setTextareaValue('codeRepository', publication.codeRepository);
-        this.setTextareaValue('dataRepository', publication.dataRepository);
-        this.setTextareaValue('manifestFiles', publication.manifestFiles);
         this.setTextareaValue('dataAvailabilityStatement', publication.dataAvailabilityStatement);
       }
     } catch (error) {
@@ -232,7 +229,10 @@ class CodecheckWizardManager {
     if (!submissionId) return;
 
     const data = {};
-    ['codeRepository', 'dataRepository', 'manifestFiles', 'dataAvailabilityStatement'].forEach(field => {
+    // Repositories and the manifest are persisted server-side from the request
+    // by CodecheckPlugin::saveWizardFieldsFromRequest(), which writes them into
+    // codecheck_metadata. Only the publication field is saved from here.
+    ['dataAvailabilityStatement'].forEach(field => {
       const textarea = document.querySelector(`textarea[name="${field}"]`);
       if (textarea && textarea.value) {
         data[field] = textarea.value;
@@ -364,68 +364,63 @@ class CodecheckReviewRefresher {
     if (!submissionId) return;
 
     try {
-      const response = await fetch(`${pkp.context.apiBaseUrl}/submissions/${submissionId}`);
-      const submission = await response.json();
-      
+      // Repositories and the manifest live in codecheck_metadata now; the
+      // availability statement is still publication data.
+      const [metadataResponse, submissionResponse] = await Promise.all([
+        fetch(`${pkp.context.apiBaseUrl}codecheck/metadata?submissionId=${submissionId}`, {
+          headers: { 'X-Csrf-Token': pkp.currentUser.csrfToken }
+        }),
+        fetch(`${pkp.context.apiBaseUrl}/submissions/${submissionId}`)
+      ]);
+
+      const metadata = await metadataResponse.json();
+      const submission = await submissionResponse.json();
       const publication = submission.publications?.find(p => p.id === submission.currentPublicationId);
-      if (!publication) return;
 
       const body = panel.querySelector('.submissionWizard__reviewPanel__body');
       if (!body) return;
 
+      const repositories = (metadata?.codecheck?.repository?.repositories ?? [])
+        .filter(r => r && r.url);
+      const manifest = (metadata?.codecheck?.manifest ?? []).filter(m => m && m.file);
+      const availability = publication?.dataAvailabilityStatement;
+
       body.innerHTML = '';
-      
-      let hasData = false;
-      
-      if (publication.codeRepository) {
-        hasData = true;
+
+      if (repositories.length) {
         body.innerHTML += `
           <div class="submissionWizard__reviewPanel__item">
-            <h4>${this.escapeHtml(t('plugins.generic.codecheck.codeRepository'))}</h4>
+            <h4>${this.escapeHtml(t('plugins.generic.codecheck.repositories.label'))}</h4>
             <div class="review-value">
-              <p>${this.escapeHtml(publication.codeRepository).replace(/\n/g, '<br>')}</p>
+              <p>${repositories.map(r => this.escapeHtml(r.url)).join('<br>')}</p>
             </div>
           </div>
         `;
       }
-      
-      if (publication.dataRepository) {
-        hasData = true;
-        body.innerHTML += `
-          <div class="submissionWizard__reviewPanel__item">
-            <h4>${this.escapeHtml(t('plugins.generic.codecheck.dataRepository'))}</h4>
-            <div class="review-value">
-              <p>${this.escapeHtml(publication.dataRepository).replace(/\n/g, '<br>')}</p>
-            </div>
-          </div>
-        `;
-      }
-      
-      if (publication.manifestFiles) {
-        hasData = true;
+
+      if (manifest.length) {
         body.innerHTML += `
           <div class="submissionWizard__reviewPanel__item">
             <h4>${this.escapeHtml(t('plugins.generic.codecheck.manifestFiles.label'))}</h4>
             <div class="review-value">
-              <pre>${this.escapeHtml(publication.manifestFiles)}</pre>
+              <pre>${manifest.map(m => this.escapeHtml(m.file)).join('\n')}</pre>
             </div>
           </div>
         `;
       }
-      
-      if (publication.dataAvailabilityStatement) {
-        hasData = true;
+
+      if (availability) {
         body.innerHTML += `
           <div class="submissionWizard__reviewPanel__item">
             <h4>${this.escapeHtml(t('plugins.generic.codecheck.dataAvailability'))}</h4>
             <div class="review-value">
-              <div>${publication.dataAvailabilityStatement}</div>
+              <div>${availability}</div>
             </div>
           </div>
         `;
       }
-      
-      if (!hasData) {
+
+      if (!repositories.length && !manifest.length && !availability) {
         body.innerHTML = `
           <div class="submissionWizard__reviewPanel__item">
             <p class="description" style="color: #d00a0a;">
@@ -488,40 +483,20 @@ function mountCodecheckVueComponents() {
     });
   }
 
-  const codeRepoContainer = document.querySelector('textarea[name="codeRepository"]')?.parentElement;
-  if (codeRepoContainer) {
-    const textarea = codeRepoContainer.querySelector('textarea');
+  const repositoriesContainer = document.querySelector('textarea[name="repositories"]')?.parentElement;
+  if (repositoriesContainer) {
+    const textarea = repositoriesContainer.querySelector('textarea');
     const vueDiv = document.createElement('div');
-    codeRepoContainer.insertBefore(vueDiv, textarea);
+    repositoriesContainer.insertBefore(vueDiv, textarea);
     textarea.style.display = 'none';
-    
+
     createApp(CodecheckRepositoryList, {
-      name: 'codeRepository',
-      label: t('plugins.generic.codecheck.codeRepository'),
-      description: t('plugins.generic.codecheck.codeRepository.description'),
+      name: 'repositories',
+      label: t('plugins.generic.codecheck.repositories.label'),
+      description: t('plugins.generic.codecheck.repositories.label.description'),
       value: textarea.value,
     }).mount(vueDiv);
-    
-    vueDiv.addEventListener('update', (e) => {
-      textarea.value = e.detail;
-      textarea.dispatchEvent(new Event('input', { bubbles: true }));
-    });
-  }
-  
-  const dataRepoContainer = document.querySelector('textarea[name="dataRepository"]')?.parentElement;
-  if (dataRepoContainer) {
-    const textarea = dataRepoContainer.querySelector('textarea');
-    const vueDiv = document.createElement('div');
-    dataRepoContainer.insertBefore(vueDiv, textarea);
-    textarea.style.display = 'none';
-    
-    createApp(CodecheckRepositoryList, {
-      name: 'dataRepository',
-      label: t('plugins.generic.codecheck.dataRepository'),
-      description: t('plugins.generic.codecheck.dataRepository.description'),
-      value: textarea.value,
-    }).mount(vueDiv);
-    
+
     vueDiv.addEventListener('update', (e) => {
       textarea.value = e.detail;
       textarea.dispatchEvent(new Event('input', { bubbles: true }));
