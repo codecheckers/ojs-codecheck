@@ -100,6 +100,12 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   CODECHECK statuses permit publication
 - Setting to enable or disable the register deposit, with a warning when the configured
   register repository has no `register.csv` (Issue #156)
+- The metadata form shows the author's data and software availability statement in the
+  read-only paper metadata, so a codechecker can see what the author said about where
+  the materials are. The three fields that moved into the editable repository and
+  manifest lists are no longer repeated above them
+- The data and software availability settings are grouped into their own section on
+  the plugin settings page, alongside the submission, GitHub and publication groups
 - Setting listing which CODECHECK config versions codecheckers can choose from in the
   metadata form. Only the enabled versions are offered, and the selector is inactive
   when a journal has settled on a single version. Journals offer version 1.0 until

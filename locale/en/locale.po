@@ -68,6 +68,9 @@ msgstr "CODECHECK is mandatory"
 msgid "plugins.generic.codecheck.settings.showArticleSidebar.description"
 msgstr "Show the CODECHECK certificate, codecheckers and materials in the sidebar of published articles"
 
+msgid "plugins.generic.codecheck.settings.availability.title"
+msgstr "Data and Software Availability Settings"
+
 msgid "plugins.generic.codecheck.settings.showAvailabilityStatement"
 msgstr "Data and software availability on published articles"
 
@@ -579,6 +582,9 @@ msgstr "This information comes from the original submission and cannot be edited
 
 msgid "plugins.generic.codecheck.paperMetadata.noAuthors"
 msgstr "No authors found"
+
+msgid "plugins.generic.codecheck.paperMetadata.noAvailabilityStatement"
+msgstr "The author provided no data and software availability statement"
 
 msgid "plugins.generic.codecheck.workflow.description"
 msgstr "Complete the following fields to document the CODECHECK process."

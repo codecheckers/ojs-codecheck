@@ -336,7 +336,7 @@ cypress/
                                this first in every component spec
   support/e2e.js               cy.ojsLogin(), cy.getCsrfToken(), swallow uncaught exceptions
   support/component-index.html
-  tests/component/*.cy.js      5 specs, 59 tests
+  tests/component/*.cy.js      5 specs, 61 tests
   tests/e2e/*.cy.js            4 specs, 16 tests
                                yaml-generation, article-sidebar-setting,
                                private-repository, settings-roundtrip
@@ -349,13 +349,14 @@ dev/
 ### Component tests (the reliable suite)
 
 `npm run test:component` — **passes locally with no OJS, no database, no build step**
-(59/59, ~20 s). Cypress mounts the `.vue` sources directly through Vite and stubs the
+(61/61, ~20 s). Cypress mounts the `.vue` sources directly through Vite and stubs the
 API with `cy.intercept`.
 
 Covered: metadata form load/render, manifest files add/remove/comment, repository list
 add/remove + private flag, certificate identifier reservation + labels, required-field
 validation, YAML preview gating, codechecker modal, review display states, data &
-software availability field, and the config version selector.
+software availability field, the config version selector and the author's availability
+statement in the read-only panel.
 
 `cypress/support/pkp-mock.js` reads the real `locale/en/locale.po` and its `t()`
 behaves in two ways on purpose:

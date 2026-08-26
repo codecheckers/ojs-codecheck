@@ -130,50 +130,57 @@
 			}
 		{/fbvFormSection}
 
-		{* Data and software availability statement below the abstract *}
-		{fbvFormSection
-			list=true
-		}
+		{* Everything about the data and software availability statement on the
+		   article landing page *}
+		{fbvFormSection list=true}
 			<div class="field-header">
-				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.showAvailabilityStatement"}</label>
+				<label class="pkp_form_title">{translate key="plugins.generic.codecheck.settings.availability.title"}</label>
 			</div>
-			{fbvElement
-				type="checkbox"
-				id="showAvailabilityStatement"
-				checked=$showAvailabilityStatement
-				label="plugins.generic.codecheck.settings.showAvailabilityStatement.description"
+			{* Data and software availability statement below the abstract *}
+			{fbvFormSection
+				list=true
 			}
-		{/fbvFormSection}
+				<div class="field-header">
+					<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.showAvailabilityStatement"}</label>
+				</div>
+				{fbvElement
+					type="checkbox"
+					id="showAvailabilityStatement"
+					checked=$showAvailabilityStatement
+					label="plugins.generic.codecheck.settings.showAvailabilityStatement.description"
+				}
+			{/fbvFormSection}
 
-		{* What an article with no statement shows *}
-		{fbvFormSection
-			list=true
-		}
-			<div class="field-header">
-				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.hideEmptyAvailabilityStatement"}</label>
-			</div>
-			{fbvElement
-				type="checkbox"
-				id="hideEmptyAvailabilityStatement"
-				checked=$hideEmptyAvailabilityStatement
-				label="plugins.generic.codecheck.settings.hideEmptyAvailabilityStatement.description"
+			{* What an article with no statement shows *}
+			{fbvFormSection
+				list=true
 			}
-		{/fbvFormSection}
+				<div class="field-header">
+					<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.hideEmptyAvailabilityStatement"}</label>
+				</div>
+				{fbvElement
+					type="checkbox"
+					id="hideEmptyAvailabilityStatement"
+					checked=$hideEmptyAvailabilityStatement
+					label="plugins.generic.codecheck.settings.hideEmptyAvailabilityStatement.description"
+				}
+			{/fbvFormSection}
 
-		{* Heading for that section, so a journal can call it something else *}
-		{fbvFormSection
-			list=true
-		}
-			<div class="field-header">
-				<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.availabilityStatementHeading"}</label>
-			</div>
-			<label class="description">{translate key="plugins.generic.codecheck.settings.availabilityStatementHeading.description"}</label>
-			{fbvElement
-				type="text"
-				id="availabilityStatementHeading"
-				value=$availabilityStatementHeading
-				placeholder="plugins.generic.codecheck.dataSoftwareAvailability"
+			{* Heading for that section, so a journal can call it something else *}
+			{fbvFormSection
+				list=true
 			}
+				<div class="field-header">
+					<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.availabilityStatementHeading"}</label>
+				</div>
+				<label class="description">{translate key="plugins.generic.codecheck.settings.availabilityStatementHeading.description"}</label>
+				{fbvElement
+					type="text"
+					id="availabilityStatementHeading"
+					value=$availabilityStatementHeading
+					placeholder="plugins.generic.codecheck.dataSoftwareAvailability"
+				}
+			{/fbvFormSection}
 		{/fbvFormSection}
 
 		{fbvFormSection list=true}

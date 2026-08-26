@@ -75,28 +75,14 @@
             </div>
           </div>
 
-          <div class="info-item" v-if="submissionData.codeRepository">
-            <label class="info-label">{{ t('plugins.generic.codecheck.codeRepository') }}:</label>
+          <!-- The author's own words about where the materials are. Their
+               repositories and expected outputs are not here: those arrive as
+               entries in the editable lists below, marked as author-provided. -->
+          <div class="info-item">
+            <label class="info-label">{{ t('plugins.generic.codecheck.dataSoftwareAvailability') }}:</label>
             <div class="info-value">
-              <a :href="submissionData.codeRepository" target="_blank">
-                {{ submissionData.codeRepository }}
-              </a>
-            </div>
-          </div>
-
-          <div class="info-item" v-if="submissionData.dataRepository">
-            <label class="info-label">{{ t('plugins.generic.codecheck.dataRepository') }}:</label>
-            <div class="info-value">
-              <a :href="submissionData.dataRepository" target="_blank">
-                {{ submissionData.dataRepository }}
-              </a>
-            </div>
-          </div>
-
-          <div class="info-item" v-if="submissionData.manifestFiles">
-            <label class="info-label">{{ t('plugins.generic.codecheck.manifestFiles.label') }}:</label>
-            <div class="info-value">
-              <pre class="manifest-preview">{{ submissionData.manifestFiles }}</pre>
+              <p v-if="submissionData.dataAvailabilityStatement" class="availability-statement">{{ submissionData.dataAvailabilityStatement }}</p>
+              <em v-else>{{ t('plugins.generic.codecheck.paperMetadata.noAvailabilityStatement') }}</em>
             </div>
           </div>
         </div>
@@ -477,9 +463,6 @@ export default {
         title: '',
         authors: [],
         doi: '',
-        codeRepository: '',
-        dataRepository: '',
-        manifestFiles: '',
         dataAvailabilityStatement: ''
       },
       // Further information neccesary for retrieving and reserving the Certificate Identifier
@@ -660,9 +643,6 @@ export default {
           title: data.submission?.title || '',
           authors: Array.isArray(data.submission?.authors) ? data.submission.authors : [],
           doi: data.submission?.doi || '',
-          codeRepository: data.submission?.codeRepository || '',
-          dataRepository: data.submission?.dataRepository || '',
-          manifestFiles: data.submission?.manifestFiles || '',
           dataAvailabilityStatement: data.submission?.dataAvailabilityStatement || ''
         };
         
@@ -765,9 +745,6 @@ export default {
                 title: data.metadata?.paper.title ?? this.submissionData.title,
                 authors: data.metadata?.paper.authors ?? this.submissionData.authors,
                 doi: data.metadata?.paper.doi ?? this.submissionData.doi,
-                codeRepository: this.submissionData.codeRepository,
-                dataRepository: this.submissionData.dataRepository,
-                manifestFiles: data.metadata?.manifest ?? this.submissionData.manifestFiles,
                 dataAvailabilityStatement: this.submissionData.dataAvailabilityStatement,
               };
               this.metadata = {
@@ -1313,8 +1290,6 @@ export default {
                 issue: this.certificateIdentifier.issue,
                 submission: {
                   authorString: authorString,
-                  codeRepository: this.submissionData.codeRepository,
-                  dataRepository: this.submissionData.dataRepository,
                   title: this.submissionData.title,
                   doi: this.submissionData.doi,
                 },
@@ -1397,8 +1372,6 @@ export default {
               venueName: this.certificateIdentifier.venueName,
               submission: {
                 authorString: authorString,
-                codeRepository: this.submissionData.codeRepository,
-                dataRepository: this.submissionData.dataRepository,
                 title: this.submissionData.title,
                 doi: this.submissionData.doi,
               },
@@ -1691,6 +1664,13 @@ export default {
 .codecheck-metadata-form .publication-section {
   padding: 1rem 1.5rem;
 }
+/* The author's statement is free text: keep their line breaks, and drop the
+   paragraph margin so the row lines up with the other read-only values. */
+.codecheck-metadata-form .availability-statement {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
 
 .codecheck-metadata-form .form-section.read-only-section {
   background: #f8f9fa;

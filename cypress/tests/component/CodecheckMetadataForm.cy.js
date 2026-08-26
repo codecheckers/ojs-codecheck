@@ -17,9 +17,6 @@ const metadataResponseBody = () => ({
       { name: 'Jane Smith', orcid: '0000-0002-3456-7890' }
     ],
     doi: '10.1234/test.2024',
-    codeRepository: 'https://github.com/example/code',
-    dataRepository: 'https://zenodo.org/record/123',
-    manifestFiles: 'output.png\nresults.csv',
     dataAvailabilityStatement: 'Data is available at Zenodo'
   },
   codecheck: {
@@ -91,6 +88,48 @@ describe('CodecheckMetadataForm Component', () => {
     cy.contains('0000-0001-2345-6789').should('exist');
     cy.contains('Jane Smith').should('exist');
     cy.contains('10.1234/test.2024').should('exist');
+  });
+
+  it("shows the author's availability statement in the paper metadata panel", () => {
+    // The codechecker has to be able to read what the author wrote about where
+    // the materials are; the statement lives on the publication and arrives in
+    // the metadata response's submission block.
+    cy.mount(CodecheckMetadataForm, {
+      props: {
+        submission: { id: 1 },
+        canEdit: true
+      }
+    });
+
+    cy.wait('@loadMetadata');
+
+    cy.get('.read-only-section .availability-statement')
+      .should('contain', 'Data is available at Zenodo');
+  });
+
+  it('says so when the author provided no availability statement', () => {
+    interceptMetadata({
+      submission: {
+        id: 1,
+        title: 'Test Article Title',
+        authors: [],
+        doi: '10.1234/test.2024',
+        dataAvailabilityStatement: ''
+      }
+    }, 'loadWithoutStatement');
+
+    cy.mount(CodecheckMetadataForm, {
+      props: {
+        submission: { id: 1 },
+        canEdit: true
+      }
+    });
+
+    cy.wait('@loadWithoutStatement');
+
+    cy.get('.read-only-section .availability-statement').should('not.exist');
+    cy.get('.read-only-section')
+      .should('contain', 'plugins.generic.codecheck.paperMetadata.noAvailabilityStatement');
   });
 
   it('renders the specification link into the introduction', () => {
