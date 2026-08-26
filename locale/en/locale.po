@@ -234,6 +234,9 @@ msgstr "Data and Software Availability"
 msgid "plugins.generic.codecheck.dataAvailability.description"
 msgstr "Optional. Copy from your manuscript's data and software descriptions sections if these are available, or from a project README, if it exists."
 
+msgid "plugins.generic.codecheck.dataAvailability.editorDescription"
+msgstr "Shown on the article landing page. The author is asked for this during submission; edit it here to complete or correct it."
+
 msgid "plugins.generic.codecheck.manifestFiles.filenamePlaceholder"
 msgstr "Filename (e.g., figures/figure1.png)"
 
