@@ -83,19 +83,12 @@
             </div>
         {/if}
 
-        {if $repository}
-            <div class="sub_item">
-                <h2 class="label">{translate key='plugins.generic.codecheck.repositories.title'}</h2>
-                <div class="value">
-                    <a href="{$repository|escape}" target="_blank">{$repository|truncate:40|escape}</a>
-                </div>
-            </div>
-        {/if}
+        {include file=$repositoriesTemplate}
 
         {if $manifest}
             <div class="sub_item">
                 <h2 class="label">{translate key='plugins.generic.codecheck.manifest.title'}</h2>
-                <ul class="value" style="margin:4px 0 0 0; padding-left:16px;">
+                <ul class="value codecheck-sidebar-list">
                     {foreach from=$manifest item=file}
                         <li>
                             {$file.file|escape}
@@ -135,23 +128,7 @@
         <div class="value">{translate key='plugins.generic.codecheck.status.verificationInProgress'}</div>
     </div>
 
-    {if $codeRepo}
-        <div class="sub_item">
-            <h2 class="label">{translate key='plugins.generic.codecheck.codeRepository'}</h2>
-            <div class="value">
-                <a href="{$codeRepo|escape}" target="_blank">{$codeRepo|truncate:30|escape}</a>
-            </div>
-        </div>
-    {/if}
-
-    {if $dataRepo}
-        <div class="sub_item">
-            <h2 class="label">{translate key='plugins.generic.codecheck.dataRepository'}</h2>
-            <div class="value">
-                <a href="{$dataRepo|escape}" target="_blank">{$dataRepo|truncate:30|escape}</a>
-            </div>
-        </div>
-    {/if}
+    {include file=$repositoriesTemplate}
 
 </div>
 {/if}

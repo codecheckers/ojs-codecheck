@@ -202,7 +202,7 @@
                 <span class="repo-hidden-info">ℹ️</span>
               </label>
               <button
-                v-if="repositoryWithCodecheckYaml === index"
+                v-if="repo.containsCodecheckYaml"
                 type="button"
                 class="pkpButton btn-add"
                 @click="loadMetadataFromRepository(index)"
@@ -211,8 +211,8 @@
               </button>
               <button
                 type="button"
-                :class="['pkpButton', 'btn-radio', { 'btn-radio__active': repositoryWithCodecheckYaml === index }]"
-                @click="repositoryWithCodecheckMetadata(index)"
+                :class="['pkpButton', 'btn-radio', { 'btn-radio__active': repo.containsCodecheckYaml }]"
+                @click="selectRepositoryWithCodecheckYaml(index)"
                 :title="t('plugins.generic.codecheck.repositories.containsCodecheckYaml')"
               >
                 📄 codecheck.yml
@@ -489,7 +489,6 @@ export default {
         report: '',
         additionalContent: ''
       },
-      repositoryWithCodecheckYaml: null,
       repositoryWarning: {
         message: null,
         isWarning: true,
@@ -650,7 +649,7 @@ export default {
           // api/v1/codecheck/metadata returns this already decoded; the string
           // form is only seen when the raw column value is passed through.
           const rawRepository = data.codecheck.repository;
-          let repositoryData = { repositories: null, repoWithCodecheckYaml: null };
+          let repositoryData = { repositories: null };
 
           if (rawRepository && typeof rawRepository === 'object') {
             repositoryData = rawRepository;
@@ -686,7 +685,6 @@ export default {
           this.certificateIdentifier.issue.labelsSelected = data.codecheck.issue.labelsSelected;
           this.certificateIdentifier.isLinked = !!(data.codecheck.issue?.url && data.codecheck.issue?.number);
           
-          this.repositoryWithCodecheckYaml = repositoryData.repoWithCodecheckYaml;
           if (Array.isArray(repositoryData.repositories)) {
             this.repositories = repositoryData.repositories;
           } else if (repositoryData.repositories) {
@@ -717,7 +715,7 @@ export default {
     },
 
     async loadMetadataFromRepository(repo_index) {
-      if(this.repositoryWithCodecheckYaml !== repo_index) {
+      if (!this.repositories[repo_index]?.containsCodecheckYaml) {
         throw new Error(t('plugins.generic.codecheck.repositories.doesntContainCodecheckYamlError'));
       }
 
@@ -760,9 +758,6 @@ export default {
                 report: data.metadata?.report ?? this.metadata.report,
                 additionalContent: data.metadata?.additionalContent ?? this.metadata.additionalContent,
               };
-              if(this.repositoryWithCodecheckYaml !== repo_index) {
-                this.repositoryWithCodecheckYaml = repo_index;
-              }
               this.repositoryWarning = {
                 message: null,
                 isWarning: true,
@@ -783,9 +778,18 @@ export default {
       }
     },
 
-    async repositoryWithCodecheckMetadata(repo_index) {
-      this.repositoryWithCodecheckYaml = repo_index;
-      let repository = this.repositories[repo_index];
+    /** Exactly one repository carries the codecheck.yml, so the flag is exclusive. */
+    markRepositoryWithCodecheckYaml(repo_index) {
+      this.repositories.forEach((repo, index) => {
+        repo.containsCodecheckYaml = index === repo_index;
+      });
+    },
+
+    async selectRepositoryWithCodecheckYaml(repo_index) {
+      this.markRepositoryWithCodecheckYaml(repo_index);
+      // The endpoint validates an address; sending the whole entry made it
+      // answer "must be of the type string" on every click (Issue #154).
+      let repository = this.repositories[repo_index].url;
       console.log(repository);
       let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
       const submissionId = this.submission.id;
@@ -861,7 +865,7 @@ export default {
     },
 
     addRepository() {
-      this.repositories.push({ url: '', hidden: false, providedByAuthor: false });
+      this.repositories.push({ url: '', hidden: false, providedByAuthor: false, containsCodecheckYaml: false });
     },
 
     removeRepository(index) {
@@ -869,10 +873,9 @@ export default {
       if (this.repositories[index]?.providedByAuthor) {
         return;
       }
-      if(this.repositoryWithCodecheckYaml === index) {
-        this.repositoryWithCodecheckYaml = null;
-      }
       if (confirm(this.t('plugins.generic.codecheck.repositories.removeConfirm'))) {
+        // The codecheck.yml flag travels with the entry, so removing one cannot
+        // leave it pointing at a different repository (Issue #154).
         this.repositories.splice(index, 1);
       }
     },
@@ -1031,15 +1034,6 @@ export default {
       this.saving = true;
       this.saveMessage = '';
 
-      // Update GitHub Issue
-      try {
-        this.updateGithubIssueContents();
-      } catch {
-        // TODO: show some error message
-      }
-
-      console.log(this.certificateIdentifier.issue.labelsSelected);
-
       try {
         const dataToSave = {
           version: this.metadata.version,
@@ -1047,7 +1041,6 @@ export default {
           manifest: this.metadata.manifest,
           repository: {
             repositories: this.repositories,
-            repoWithCodecheckYaml: this.repositoryWithCodecheckYaml,
           },
           source: this.metadata.source,
           codecheckers: this.metadata.codecheckers,
@@ -1082,6 +1075,15 @@ export default {
         }
 
         this.hasUnsavedChanges = false;
+
+        // Only once the save succeeded: the register issue is public, and
+        // updating it first published repository addresses the save then
+        // refused (Issue #154).
+        try {
+          await this.updateGithubIssueContents();
+        } catch (error) {
+          console.error('CODECHECK: could not update the register issue:', error);
+        }
 
         this.triggerCodecheckStatusUpdateEvent();
         this.triggerRegisterIssueDisplayUpdateEvent();

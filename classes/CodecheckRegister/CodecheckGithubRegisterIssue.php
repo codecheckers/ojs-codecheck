@@ -9,6 +9,7 @@ use APP\plugins\generic\codecheck\classes\Constants;
 use PKP\plugins\PluginRegistry;
 use APP\core\Application;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
+use APP\plugins\generic\codecheck\classes\Submission\CodecheckRepositories;
 
 class CodecheckGithubRegisterIssue {
     private string $repositoryOwner;
@@ -46,6 +47,11 @@ class CodecheckGithubRegisterIssue {
         $updateCodecheckStatus = $this->updateStatus ? 'true' : 'false';
         CodecheckLogger::debug("Record / Update Status: " . $updateCodecheckStatus);
         $authorString = empty($authorString) ? 'New CODECHECK' : $authorString;
+        // The issue is public. A repository marked hidden is part of the record
+        // but must never reach a reader, and the editorial form posts whole
+        // entries — which would otherwise be published verbatim, hidden ones and
+        // all, along with their internal flags (Issue #154).
+        $repositories = CodecheckRepositories::publicUrls($repositories);
         $this->title = $this->createTitleMarkdown($authorString, $certificateIdentifier);
         $this->jsonEncodedCodecheckMetadata = $this->createJsonEncodedCodecheckMetadataMarkdown($authorString, $certificateIdentifier, $journalName, $submissionID, $codecheckers, $repositories);
         $this->body = $this->createBodyMarkdown($paperTitle, $journalName, $repositories) . "\n" . $this->jsonEncodedCodecheckMetadata;

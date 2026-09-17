@@ -23,7 +23,7 @@ const metadataResponseBody = () => ({
     version: 'latest',
     publicationType: 'doi',
     manifest: [],
-    repository: { repositories: null, repoWithCodecheckYaml: null },
+    repository: { repositories: null },
     source: '',
     codecheckers: [],
     certificate: '',
@@ -773,9 +773,8 @@ describe('CodecheckMetadataForm Component', () => {
             repository: {
               repositories: [
                 { url: 'https://github.com/author/repo', hidden: false, providedByAuthor: true },
-                { url: 'https://github.com/codechecker/repo', hidden: false, providedByAuthor: false },
+                { url: 'https://github.com/codechecker/repo', hidden: false, providedByAuthor: false, containsCodecheckYaml: true },
               ],
-              repoWithCodecheckYaml: null,
             },
             source: '',
             codecheckers: [],
@@ -799,6 +798,21 @@ describe('CodecheckMetadataForm Component', () => {
 
       cy.get('.manifest-row').eq(0).find('.provided-by-author').should('exist');
       cy.get('.manifest-row').eq(1).find('.provided-by-author').should('not.exist');
+    });
+
+    // Issue #154: which repository holds the codecheck.yml is recorded on the
+    // entry, so the mark is on the one that carries it rather than on whatever
+    // is currently in a given position.
+    it('marks the repository that carries the codecheck.yml', () => {
+      cy.get('.repository-item').eq(0).find('.btn-radio').should('not.have.class', 'btn-radio__active');
+      cy.get('.repository-item').eq(1).find('.btn-radio').should('have.class', 'btn-radio__active');
+    });
+
+    it('moves the mark when another repository is chosen', () => {
+      cy.get('.repository-item').eq(0).find('.btn-radio').click();
+
+      cy.get('.repository-item').eq(0).find('.btn-radio').should('have.class', 'btn-radio__active');
+      cy.get('.repository-item').eq(1).find('.btn-radio').should('not.have.class', 'btn-radio__active');
     });
 
     it('offers no delete control on an author repository', () => {

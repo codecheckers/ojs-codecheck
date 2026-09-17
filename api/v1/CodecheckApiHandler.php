@@ -726,8 +726,12 @@ class CodecheckApiHandler
         $result = $this->codecheckMetadataHandler->getMetadata($this->request, $submissionId);
 
         if(isset($result['error'])) {
+            // A refused payload is a bad request; 404 is for a submission that
+            // is not there.
+            $status = $result['status'] ?? 404;
+            unset($result['status']);
             $result = array_merge($result, ['success' => false, 'submissionID' => $submissionId]);
-            $this->respond($result, 404);
+            $this->respond($result, $status);
         }
 
         $result['settings'] = [
@@ -777,8 +781,12 @@ class CodecheckApiHandler
         $result = $this->codecheckMetadataHandler->saveMetadata($this->request, $submissionId);
 
         if(isset($result['error'])) {
+            // A refused payload is a bad request; 404 is for a submission that
+            // is not there.
+            $status = $result['status'] ?? 404;
+            unset($result['status']);
             $result = array_merge($result, ['success' => false, 'submissionID' => $submissionId]);
-            $this->respond($result, 404);
+            $this->respond($result, $status);
         }
 
         $this->respond(array_merge($result, ['success' => true]), 200);
@@ -930,8 +938,12 @@ class CodecheckApiHandler
         $result = $this->codecheckMetadataHandler->generateYaml($this->request, $submissionId);
 
         if(isset($result['error'])) {
+            // A refused payload is a bad request; 404 is for a submission that
+            // is not there.
+            $status = $result['status'] ?? 404;
+            unset($result['status']);
             $result = array_merge($result, ['success' => false, 'submissionID' => $submissionId]);
-            $this->respond($result, 404);
+            $this->respond($result, $status);
         }
 
         $this->respond(array_merge($result, ['success' => true]), 200);

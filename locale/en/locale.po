@@ -182,7 +182,6 @@ msgstr "Extend the validation of the CODECHECK metadata and block the publicatio
 msgid "plugins.generic.codecheck.settings.publication.extendedValidation.checkboxText"
 msgstr "Extend the CODECHECK publication validation"
 
-
 msgid "plugins.generic.codecheck.title"
 msgstr "CODECHECK"
 
@@ -203,18 +202,6 @@ msgstr "Repository or repositories"
 
 msgid "plugins.generic.codecheck.repositories.label.description"
 msgstr "Link(s) to code or data repositories that your workflow relies on, e.g., GitHub, Gitlab, Zenodo, institutional repository."
-
-msgid "plugins.generic.codecheck.codeRepository"
-msgstr "Code Repository URLs"
-
-msgid "plugins.generic.codecheck.codeRepository.description"
-msgstr "Link(s) to your code repository (GitHub, GitLab, etc.)"
-
-msgid "plugins.generic.codecheck.dataRepository"
-msgstr "Data Repository URLs"
-
-msgid "plugins.generic.codecheck.dataRepository.description"
-msgstr "Link(s) to your data repository (Zenodo, OSF, etc.) - optional"
 
 msgid "plugins.generic.codecheck.dataSoftwareAvailability"
 msgstr "Data and Software Availability"
@@ -344,6 +331,9 @@ msgstr "+ Repository"
 
 msgid "plugins.generic.codecheck.repositories.warning"
 msgstr "The repository's CODECHECK metadata is not equal to the metadata in this form. {$error}"
+
+msgid "plugins.generic.codecheck.repositories.invalidUrl"
+msgstr "A repository address must start with http:// or https://, but {$repository} does not."
 
 msgid "plugins.generic.codecheck.repositories.error"
 msgstr "Error while importing the CODECHECK metadata from the repository. {$error}"
@@ -512,9 +502,6 @@ msgstr "The paper title from this submission is not matching the paper title in 
 
 msgid "plugins.generic.codecheck.publication.validation.noRepositoryWithCodecheckYmlSelected"
 msgstr "Couldn't validate metadata from repository, as for no repository it was selected, that it contains the 'codecheck.yml' file with the CODECHECK metadata."
-
-msgid "plugins.generic.codecheck.publication.validation.repositoryWithCodecheckYmlSelectedDoesntExist"
-msgstr "Couldn't validate metadata from repository, as the repository that should contain the 'codecheck.yml' file doesn't exist in the OJS CODECHECK metadata."
 
 
 msgid "plugins.generic.codecheck.publication.validation.invalidCodecheckers"

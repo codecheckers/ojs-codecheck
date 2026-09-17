@@ -169,7 +169,10 @@ Tables are created by `classes/migration/install/CodecheckSchemaMigration.php`:
 
 - `codecheck_metadata` — one row per submission: `version, publication_type, manifest,
   repository, source, codecheckers, certificate, issue, check_time, summary, report,
-  additional_content`
+  additional_content`. `repository` is a JSON blob,
+  `{"repositories": [{url, hidden, providedByAuthor, containsCodecheckYaml}, …]}`,
+  and is a `TEXT` column — it held `varchar(500)` until four GitHub addresses
+  overflowed it (#154)
 - `codecheck_status` — status history (FK → `codecheck_metadata`, cascade delete)
 - `codecheck_issue_labels` — cached GitHub labels (refreshed if >6h old)
 - `codecheck_orcid_tokens` — created but currently unused
@@ -182,6 +185,10 @@ Migration structure (added for issue #94):
   per context, then **calls each upgrade migration in order** so fresh and existing
   installs converge. Register new upgrades at the end of `runUp()`.
 - `upgrade/I94_AddMissingColumns` — idempotent column adds
+- `upgrade/I154_MoveCodecheckYamlFlagOntoRepository` — widens `repository` to `TEXT`
+  and converts the old `repoWithCodecheckYaml` index into a `containsCodecheckYaml`
+  flag on each entry. Its `convert()` is `public static` so the conversion is
+  testable without a database
 - `CodecheckPlugin::setEnabled()` runs the install migration on enable;
   `resetSchema()` (settings UI "Clear / Reset DB") drops and recreates — the only
   destructive path.
@@ -189,6 +196,27 @@ Migration structure (added for issue #94):
 The migration is the single source of truth for this schema. A stale `schema.xml`
 and a dead `CodecheckMetadataDAO` used to describe two further, contradictory
 shapes; both were removed. `CodecheckSubmissionDAO` is the only DAO.
+
+**Which repository holds the `codecheck.yml` is recorded on the repository entry,
+never as a position in the list.** It was an index (`repoWithCodecheckYaml`), and
+nothing kept it in step with the list it indexed — the editorial form splices
+entries out and `CodecheckAuthorMetadata::merge()` reorders them, so it came to
+name a repository nobody chose, in three places at once: what the article page
+claims, what publication validation fetches, and what is deposited in the public
+register (#154).
+
+`classes/Submission/CodecheckRepositories.php` owns the rules for reading that
+blob — `publicEntries()`, `publicUrls()`, `selectedUrl()`, `unusableUrls()`,
+`withOneMarked()` — and the article page, `buildYaml()`, the publication
+validator, the register deposit and the register issue all go through it.
+Note the deliberate asymmetry: `publicEntries()` withholds hidden repositories
+because it feeds readers, while `selectedUrl()` does not, because a repository
+may be private and still hold the `codecheck.yml` that has to be fetched. That
+asymmetry is itself a known problem for the register deposit — see issue #169.
+
+The pre-#154 index is **not** read back at runtime: the migration converts it, and
+accepting both shapes at once means a half-converted record resolves differently
+depending on which reader asks, which is the original defect again.
 
 Submission-level fields (`codecheckOptIn`, `retrieveReserveCertificateIdentifier`,
 `codeRepository`, `dataRepository`, `manifestFiles`, `dataAvailabilityStatement`) live in
@@ -357,7 +385,7 @@ README.md; keep `css/codecheck.css` and inline component styles consistent.
 ### Layout
 
 ```
-tests/                       PHPUnit (29 files, 201 tests)
+tests/                       PHPUnit (31 files, 239 tests)
   bootstrap.php              PKP_STRICT_MODE + BASE_SYS_DIR (OJS_ROOT or ../../../..)
   PKPTestCase.php            local stub extending PHPUnit TestCase
   FakeTranslator.php         minimal translator so __() works without booting OJS
@@ -372,8 +400,10 @@ tests/                       PHPUnit (29 files, 201 tests)
   LogUnitTests/                CodecheckLogger
   ApiUnitTests/                ApiEndpoint, CodecheckApiHandler, CodecheckRoleArray,
                                IdentifierParameterValidator, JsonResponse
+  MigrationUnitTests/          I154_MoveCodecheckYamlFlagOntoRepository (the
+                               index-to-flag conversion, tested without a database)
   SettingsUnitTests/           Actions, Manage
-  SubmissionUnitTests/         AvailabilityStatementField, CodecheckMetadataDAO,
+  SubmissionUnitTests/         AvailabilityStatementField, CodecheckRepositories,
                                CodecheckSubmissionDAO, CodecheckSubmission, Schema
   WorkflowUnitTests/           CodecheckMetadataHandler, CodecheckPublicationValidator,
                                CodecheckYamlValidator
@@ -486,7 +516,7 @@ Still uncovered: opt-in, the submission wizard, and register deposit.
 
 ### PHPUnit tests
 
-`make test-php` — 201 tests, green, none skipped.
+`make test-php` — 239 tests, green, none skipped.
 
 PHPUnit needs an OJS installation: the tests load OJS classes and the runner uses the
 PHPUnit shipped in `lib/pkp`. Both `runTests.sh` and `bootstrap.php` honour `OJS_ROOT`,
@@ -729,6 +759,55 @@ earlier point-in-time reviews rather than plans. Several of their findings are
 now fixed and at least one is stale — check against the code before acting on
 them.
 
+### Run `/simplify` and `/code-review` on non-trivial changes
+
+**Before committing a non-trivial change, run `/simplify` first, then
+`/code-review` on the result.** In that order: `/simplify` changes the shape of
+the code, so reviewing before it means reviewing code that is about to be
+rewritten. Both run against the working tree, before the commit and before the
+PR — not after a merge, where a finding costs a second round trip.
+
+A change is **non-trivial** when either is true:
+
+- it adds or changes **40 or more lines** of `.php`, `.vue` or `.js`, counting
+  `git diff --stat` insertions plus deletions and ignoring `locale/*.po`,
+  `registry/uiLocaleKeysBackend.json`, `package-lock.json`, `composer.lock`,
+  `CHANGELOG.md`, `testData/` dumps and anything under `public/build/`
+- **or** it adds a class, a hook registration, an API endpoint, a migration, a
+  plugin setting, or a column or JSON key in `codecheck_metadata` — at any size.
+  These are the changes where the damage is structural rather than proportional
+  to the diff
+
+Below that, and for documentation, wording, a locale entry or a dependency bump
+on its own: skip both.
+
+Effort level, for `/code-review`:
+
+| Change | Level |
+|---|---|
+| 40–300 lines, ordinary domain or UI code | `high` |
+| over 300 lines | `max` |
+| `api/v1/`, `classes/migration/`, the `Publication::publish` / `validatePublish` hooks, or `classes/CodecheckRegister/` — at any size | `max` |
+
+`high` is the floor rather than the default `medium` because of what this
+codebase is. There is no compiler and no static analysis in CI (issue #43 is
+still open), so a wrong array shape, a null context or a renamed key is found at
+runtime or not at all. PHPUnit cannot reach the endpoint bodies, the migrations
+or anything that touches the database, so a large share of the PHP has no test
+that would catch a regression. And the failure modes here are quiet: hook
+argument arrays carry references, the API handler `exit`s, and PKP swallows a
+TypeError thrown inside a hook — which is exactly how `validatePublicationHook()`
+went months without ever running, and how `setupAPIHandler()` left OJS answering
+every plugin API call with a 404. Neither showed up as a failing test.
+
+Also run **`/security-review`** — separately from the above, whatever the size —
+when a change touches the CSRF or role checks in `CodecheckApiHandler`, the file
+download path resolution, the GitHub token handling, or any setting rendered
+into an attribute or into HTML on a public page.
+
+If a review's findings are declined rather than fixed, say why in the PR
+description, so the next reader does not re-derive the same objection.
+
 ## Conventions
 
 - PSR-12; speaking names, verbs in function names; document public methods/classes
@@ -755,6 +834,14 @@ them.
   on, `showArticleSidebar` gates the article sidebar, `showInTOC` gates the issue
   TOC badge. The latter two default differently — see the dev-environment notes
 - Data-structure changes must be mirrored into `testData/` in the same commit —
-  see "Keep the test dataset in sync with data-structure changes"
+  see "Keep the test dataset in sync with data-structure changes". The dump carries
+  its own `CREATE TABLE`, so a column type change has to be edited there too
+- Which repository holds the `codecheck.yml` is a `containsCodecheckYaml` flag on
+  the entry, never a position in the list. Read the blob through
+  `CodecheckRepositories`, not by hand — five readers used to decide it separately
+  and drifted apart (#154)
+- Repository URLs are not validated by the submission wizard (#170), so anything
+  rendering one must check the scheme itself; `filter_var(…, FILTER_VALIDATE_URL)`
+  is not enough, it accepts `javascript://…`
 - The API handler `exit`s after serving; it bypasses PKP authorization policies and
   does its own CSRF + role check

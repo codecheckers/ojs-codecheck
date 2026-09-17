@@ -26,6 +26,7 @@ namespace APP\plugins\generic\codecheck\classes\migration\install;
 
 use APP\plugins\generic\codecheck\classes\migration\CodecheckMigration;
 use APP\plugins\generic\codecheck\classes\migration\upgrade\I94_AddMissingColumns;
+use APP\plugins\generic\codecheck\classes\migration\upgrade\I154_MoveCodecheckYamlFlagOntoRepository;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
@@ -40,7 +41,9 @@ class CodecheckSchemaMigration extends CodecheckMigration
                 $table->string('version', 50)->default('latest');
                 $table->string('publication_type', 50)->default('doi');
                 $table->text('manifest')->nullable();
-                $table->string('repository', 500)->nullable();
+                // A JSON list of repository entries, not one address — see
+                // CodecheckRepositories. Four GitHub URLs already exceed varchar(500).
+                $table->text('repository')->nullable();
                 $table->text('source')->nullable();
                 $table->text('codecheckers')->nullable();
                 $table->string('certificate', 100)->nullable();
@@ -103,6 +106,7 @@ class CodecheckSchemaMigration extends CodecheckMigration
         // Run upgrade migrations in order — each is idempotent so safe to run
         // on both fresh installs and existing ones. Add new migrations here.
         (new I94_AddMissingColumns())->up();
+        (new I154_MoveCodecheckYamlFlagOntoRepository())->up();
     }
 
     /**

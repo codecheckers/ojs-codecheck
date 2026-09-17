@@ -405,3 +405,23 @@ textarea[name="dataAvailabilityStatement"] {
   font-size: 13px;
   color: #666;
 }
+
+/* The bulleted lists in the article sidebar: the manifest, and the repositories
+   added for issue #154. Not named codecheck-repository-list — that is already
+   the root class of the backend CodecheckRepositoryList.vue, and this
+   stylesheet is loaded in the backend context too. */
+.codecheck-sidebar-list {
+  margin: 4px 0 0 0;
+  padding-left: 16px;
+}
+
+.codecheck-article-repositories li {
+  margin-bottom: 4px;
+  word-break: break-word;
+}
+
+.codecheck-article-repositories__yaml {
+  display: block;
+  font-size: 0.85em;
+  color: #006629;
+}
