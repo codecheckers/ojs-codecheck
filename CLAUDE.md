@@ -729,6 +729,55 @@ earlier point-in-time reviews rather than plans. Several of their findings are
 now fixed and at least one is stale — check against the code before acting on
 them.
 
+### Run `/simplify` and `/code-review` on non-trivial changes
+
+**Before committing a non-trivial change, run `/simplify` first, then
+`/code-review` on the result.** In that order: `/simplify` changes the shape of
+the code, so reviewing before it means reviewing code that is about to be
+rewritten. Both run against the working tree, before the commit and before the
+PR — not after a merge, where a finding costs a second round trip.
+
+A change is **non-trivial** when either is true:
+
+- it adds or changes **40 or more lines** of `.php`, `.vue` or `.js`, counting
+  `git diff --stat` insertions plus deletions and ignoring `locale/*.po`,
+  `registry/uiLocaleKeysBackend.json`, `package-lock.json`, `composer.lock`,
+  `CHANGELOG.md`, `testData/` dumps and anything under `public/build/`
+- **or** it adds a class, a hook registration, an API endpoint, a migration, a
+  plugin setting, or a column or JSON key in `codecheck_metadata` — at any size.
+  These are the changes where the damage is structural rather than proportional
+  to the diff
+
+Below that, and for documentation, wording, a locale entry or a dependency bump
+on its own: skip both.
+
+Effort level, for `/code-review`:
+
+| Change | Level |
+|---|---|
+| 40–300 lines, ordinary domain or UI code | `high` |
+| over 300 lines | `max` |
+| `api/v1/`, `classes/migration/`, the `Publication::publish` / `validatePublish` hooks, or `classes/CodecheckRegister/` — at any size | `max` |
+
+`high` is the floor rather than the default `medium` because of what this
+codebase is. There is no compiler and no static analysis in CI (issue #43 is
+still open), so a wrong array shape, a null context or a renamed key is found at
+runtime or not at all. PHPUnit cannot reach the endpoint bodies, the migrations
+or anything that touches the database, so a large share of the PHP has no test
+that would catch a regression. And the failure modes here are quiet: hook
+argument arrays carry references, the API handler `exit`s, and PKP swallows a
+TypeError thrown inside a hook — which is exactly how `validatePublicationHook()`
+went months without ever running, and how `setupAPIHandler()` left OJS answering
+every plugin API call with a 404. Neither showed up as a failing test.
+
+Also run **`/security-review`** — separately from the above, whatever the size —
+when a change touches the CSRF or role checks in `CodecheckApiHandler`, the file
+download path resolution, the GitHub token handling, or any setting rendered
+into an attribute or into HTML on a public page.
+
+If a review's findings are declined rather than fixed, say why in the PR
+description, so the next reader does not re-derive the same objection.
+
 ## Conventions
 
 - PSR-12; speaking names, verbs in function names; document public methods/classes
