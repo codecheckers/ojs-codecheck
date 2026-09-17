@@ -9,6 +9,7 @@ use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
+use APP\plugins\generic\codecheck\classes\Submission\CodecheckRepositories;
 
 class CodecheckPublicationValidator {
     private array $validationChecks;
@@ -129,25 +130,10 @@ class CodecheckPublicationValidator {
                 return false;
             }
 
-            $repositoryData = $codecheckMetadata['codecheck']['repository'];
-            $repositories = is_array($repositoryData['repositories']) ? $repositoryData['repositories'] : [];
-            $repositoryWithCodecheckYml = $repositoryData['repoWithCodecheckYaml'];
-            if(!is_int($repositoryWithCodecheckYml)) {
+            $repository = CodecheckRepositories::selectedUrl($codecheckMetadata['codecheck']['repository']);
+            if ($repository === null) {
                 $this->errors[] = __('plugins.generic.codecheck.publication.validation.invalidRepository', [
                     'repositoryError' => __('plugins.generic.codecheck.publication.validation.noRepositoryWithCodecheckYmlSelected')
-                ]);
-                return false;
-            }
-            if (!array_key_exists($repositoryWithCodecheckYml, $repositories)) {
-                $this->errors[] = __('plugins.generic.codecheck.publication.validation.invalidRepository', [
-                    'repositoryError' => __('plugins.generic.codecheck.publication.validation.repositoryWithCodecheckYmlSelectedDoesntExist')
-                ]);
-                return false;
-            }
-            $repository = $repositories[$repositoryWithCodecheckYml]['url'] ?? null;
-            if (!is_string($repository) || $repository === '') {
-                $this->errors[] = __('plugins.generic.codecheck.publication.validation.invalidRepository', [
-                    'repositoryError' => __('plugins.generic.codecheck.publication.validation.repositoryWithCodecheckYmlSelectedDoesntExist')
                 ]);
                 return false;
             }

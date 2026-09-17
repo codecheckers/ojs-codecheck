@@ -1,7 +1,7 @@
 /**
  * A repository can be flagged "Keep private". Private repositories are part of
  * the CODECHECK record and must stay visible to editors and codecheckers in the
- * workflow, but must never reach readers: CodecheckSubmission::getRepositories()
+ * workflow, but must never reach readers: CodecheckSubmission::getPublicRepositories()
  * filters them out of everything the frontend renders.
  *
  * Submission 7 in the test dataset carries one public and one private
@@ -68,13 +68,45 @@ describe('Private repositories', () => {
 
     cy.get('[data-testid="codecheck-article-sidebar"]', { timeout: 15000 }).should('exist');
 
-    // The public repository is shown. The visible link text is truncated, so
-    // assert on the href.
+    // The public repository is shown. Assert on the href: the visible label
+    // has the scheme stripped for readability.
     cy.get('[data-testid="codecheck-article-sidebar"] a[href="' + PUBLIC_URL + '"]')
       .should('exist');
 
     // ... the private one appears nowhere on the page, not merely hidden.
     cy.document().its('documentElement.outerHTML').should('not.contain', PRIVATE_URL);
+  });
+
+  it('renders one link per repository, each a single usable URL', () => {
+    // Regression test for issue #154. The repositories used to be joined into
+    // one string and rendered as a single anchor, so an article with more than
+    // one repository got an href of "urlA, urlB" — a link to nowhere — and a
+    // label truncated at 40 characters that hid the second repository entirely.
+    // Submission 2 carries two public repositories, which is what makes the
+    // joined-together form observable at all.
+    cy.visit(`/index.php/${JOURNAL}/article/view/2`);
+
+    cy.get('[data-testid="codecheck-article-sidebar"]', { timeout: 15000 }).should('exist');
+
+    cy.get('[data-testid="codecheck-article-sidebar"] .codecheck-article-repositories li')
+      .should('have.length', 2);
+
+    cy.get('[data-testid="codecheck-article-sidebar"] .codecheck-article-repositories a')
+      .should('have.length', 2)
+      .each(($a) => {
+        const href = $a.attr('href');
+        // The assertion that would have caught the original defect.
+        expect(href).to.not.contain(',');
+        expect(href).to.match(/^https?:\/\/[^\s,]+$/);
+      });
+
+    // The repository holding the codecheck.yml is the one marked, and only it.
+    cy.get('[data-testid="codecheck-article-sidebar"] .codecheck-article-repositories__yaml')
+      .should('have.length', 1);
+    cy.get('[data-testid="codecheck-article-sidebar"] .codecheck-article-repositories li')
+      .eq(1)
+      .find('.codecheck-article-repositories__yaml')
+      .should('exist');
   });
 
   it('does not expose the private repository in the issue table of contents', () => {

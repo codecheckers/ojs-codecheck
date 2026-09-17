@@ -181,21 +181,78 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 
 ### Security
 
+- Repositories marked hidden are no longer published in the CODECHECK register
+  issue on GitHub. The issue is public, and the editorial form sends whole
+  repository entries, so every hidden repository — and the internal flags of the
+  ones meant to be shown — was written into it verbatim (Issue #154)
+- The CODECHECK register issue on GitHub is only updated once the metadata has been
+  saved. It was updated first, so a repository address the save then refused had
+  already been published (Issue #154)
+- Repository links on the article page carry `rel="noopener noreferrer"`, so a
+  repository cannot get a handle on the article's browser tab (Issue #154)
+- A repository address that is not an `http`/`https` URL is refused when the
+  CODECHECK metadata is saved, instead of being stored and then published. Such
+  an address reaches the article page, the `register.csv` deposit and the public
+  register issue, so a `javascript:` URL entered in the editorial form became a
+  working link for readers (Issue #154)
 - Updated dependencies to clear 16 advisories reported by `composer audit`, affecting
   `guzzlehttp/guzzle` (9, high and medium), `guzzlehttp/psr7` (4, medium) and
   `symfony/yaml` (3, low). All were resolved within the existing version constraints,
   so no dependency requirement changed.
+- A repository address is only turned into a link on the article page when it is an
+  `http`/`https` URL; anything else is shown as plain text, in case one was stored
+  before the check above existed (Issue #154)
+
 ### Removed
 
 - `CodecheckMetadataDAO` and `schema.xml`. Neither was reachable: the DAO queried
   columns that do not exist and was referenced only by its own unit test, and OJS 3.5
   installs plugin schemas through the migration rather than an ADODB schema file. Both
   described table shapes that disagreed with the one the plugin actually creates.
+- The "Data repository" section of the article sidebar, which could never appear:
+  the value behind it was hardcoded to be empty when the repository list replaced
+  the single code/data repository pair. The repositories are listed in full above
+  it (Issue #154)
 - The `codecheckApiEndpoint` and `codecheckApiKey` settings. Both were written on
   every save but no field ever rendered them and nothing ever read them, so they
   could not be set and had no effect.
 
 ### Fixed
+
+- Which repository holds the `codecheck.yml` is recorded on the repository itself
+  rather than as a position in the list. Nothing kept that position in step with
+  the list it pointed into: removing an earlier repository in the editorial form,
+  or an author re-saving their repositories in the submission wizard, silently
+  moved the mark to a repository nobody chose — and that one mark decides what the
+  article page claims, whether publication validation finds the file, and which
+  address is deposited in the CODECHECK register (Issue #154)
+
+- A CODECHECK with several repositories writes them into the generated
+  `codecheck.yml` as a list, which is what the specification asks for ("a URL or
+  a list of URLs"). They were joined into `repository: urlA, urlB`, a single
+  value that no reader of the file could resolve back into addresses — in a file
+  that is downloaded, validated and deposited in the register (Issue #154)
+
+- The `repository` column holds a JSON list of repositories but was created as
+  `varchar(500)`, which four GitHub addresses already exceeded. Saving then failed
+  outright on a strict database, or was truncated mid-JSON on a lenient one — which
+  reads back as no repositories at all, on the article page, in the generated
+  `codecheck.yml` and in the register deposit (Issue #154)
+
+- Choosing which repository holds the `codecheck.yml` checks it again. The button
+  sent the whole repository entry to an endpoint that takes an address, so every
+  click answered with an internal type error and nothing was ever checked (Issue #154)
+
+- Selecting a repository row before typing its address no longer records a choice
+  that every other part of the plugin ignores — the form showed it as selected while
+  publication validation reported that no repository had been chosen (Issue #154)
+
+- The repositories of a CODECHECK are listed one link each on the article landing
+  page. They were joined into a single string and rendered as one link, so an
+  article with more than one repository got a link pointing at all of them at once
+  — which led nowhere — and a label cut off after 40 characters that hid every
+  repository but the first. The repository holding the `codecheck.yml` is now
+  marked as such, and the full address is shown on hover (Issue #154)
 
 - Rows in the manifest table line up again. Entries submitted by the author were
   taller than the others, and the output file and description inputs sat on

@@ -10,6 +10,7 @@ use APP\plugins\generic\codecheck\api\v1\CurlApiClient;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitException;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
 use CurlHandle;
+use Symfony\Component\Yaml\Yaml;
 
 /**
  * @file APP/plugins/generic/codecheck/tests/WorkflowUnitTests/CodecheckMetadataHandlerUnitTest.php
@@ -48,9 +49,9 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $mockRequest->method('getUserVar')
             ->with('submissionId')
             ->willReturn(123);
-        
+
         $handler = new CodecheckMetadataHandler($mockRequest);
-        
+
         $this->assertInstanceOf(CodecheckMetadataHandler::class, $handler);
         $this->assertSame(123, $handler->getSubmissionId());
     }
@@ -63,7 +64,7 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
     public function testGetAuthorsReturnsEmptyArrayForNullPublication()
     {
         $result = $this->handler->getAuthors(null);
-        
+
         $this->assertIsArray($result);
         $this->assertEmpty($result);
     }
@@ -522,7 +523,7 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
             'version'            => $version,
             'publication_type'   => 'doi',
             'manifest'           => '[]',
-            'repository'         => '{"repositories":null,"repoWithCodecheckYaml":null}',
+            'repository'         => '{"repositories":null}',
             'codecheckers'       => '[]',
             'source'             => null,
             'summary'            => null,
@@ -549,7 +550,6 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
                     ['url' => 'https://github.com/public/repo', 'hidden' => false],
                     ['url' => 'https://github.com/private/repo', 'hidden' => true],
                 ],
-                'repoWithCodecheckYaml' => null,
             ]),
             'codecheckers'       => '[]',
             'source'             => null,
@@ -582,7 +582,6 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
                     ['url' => 'https://github.com/private/repo-one', 'hidden' => true],
                     ['url' => 'https://github.com/private/repo-two', 'hidden' => true],
                 ],
-                'repoWithCodecheckYaml' => null,
             ]),
             'codecheckers'       => '[]',
             'source'             => null,
@@ -598,23 +597,85 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $this->assertStringNotContainsString('repository', $yaml);
     }
 
-    public function testBuildYamlIncludesAllPublicRepositories()
+    /**
+     * Issue #154: several repositories are a YAML sequence, which the
+     * specification allows ("A URL or a list of URLs"). They used to be joined
+     * with ", " into a single scalar that no consumer could resolve — the same
+     * defect the article page had.
+     */
+    public function testBuildYamlWritesSeveralRepositoriesAsAList()
+    {
+        $yaml = $this->handler->buildYaml(
+            $this->buildYamlPublication(),
+            $this->buildYamlMetadataWithRepositories([
+                ['url' => 'https://github.com/public/repo-one', 'hidden' => false],
+                ['url' => 'https://github.com/public/repo-two', 'hidden' => false],
+            ])
+        );
+
+        $parsed = Yaml::parse($yaml);
+        $this->assertSame(
+            ['https://github.com/public/repo-one', 'https://github.com/public/repo-two'],
+            $parsed['repository']
+        );
+    }
+
+    /** A single repository stays a plain scalar, as it always was. */
+    public function testBuildYamlWritesASingleRepositoryAsAString()
+    {
+        $yaml = $this->handler->buildYaml(
+            $this->buildYamlPublication(),
+            $this->buildYamlMetadataWithRepositories([
+                ['url' => 'https://github.com/public/repo-one', 'hidden' => false],
+            ])
+        );
+
+        $parsed = Yaml::parse($yaml);
+        $this->assertSame('https://github.com/public/repo-one', $parsed['repository']);
+    }
+
+    /**
+     * A private repository between two public ones: the remaining two are still
+     * written as a sequence, and the private one appears nowhere in the file.
+     */
+    public function testBuildYamlWritesASequenceWhenAPrivateRepositorySitsBetweenPublicOnes()
+    {
+        $yaml = $this->handler->buildYaml(
+            $this->buildYamlPublication(),
+            $this->buildYamlMetadataWithRepositories([
+                ['url' => 'https://github.com/public/repo-one', 'hidden' => false],
+                ['url' => 'https://github.com/private/repo', 'hidden' => true],
+                ['url' => 'https://github.com/public/repo-two', 'hidden' => false],
+            ])
+        );
+
+        $parsed = Yaml::parse($yaml);
+        $this->assertSame(
+            ['https://github.com/public/repo-one', 'https://github.com/public/repo-two'],
+            $parsed['repository']
+        );
+        $this->assertStringNotContainsString('private/repo', $yaml);
+    }
+
+    private function buildYamlPublication(): \APP\publication\Publication
     {
         $publication = $this->createMock(\APP\publication\Publication::class);
         $publication->method('getLocalizedTitle')->willReturn('Test Paper');
         $publication->method('getData')->with('authors')->willReturn([]);
         $publication->method('getStoredPubId')->willReturn(null);
 
-        $metadata = (object) [
+        return $publication;
+    }
+
+    /** @param array<int, array<string, mixed>> $repositories */
+    private function buildYamlMetadataWithRepositories(array $repositories): object
+    {
+        return (object) [
             'version'            => 'latest',
             'publication_type'   => 'doi',
             'manifest'           => '[]',
-            'repository' => json_encode([
-                'repositories' => [
-                    ['url' => 'https://github.com/public/repo-one', 'hidden' => false],
-                    ['url' => 'https://github.com/public/repo-two', 'hidden' => false],
-                ],
-                'repoWithCodecheckYaml' => null,
+            'repository'         => json_encode([
+                'repositories' => $repositories,
             ]),
             'codecheckers'       => '[]',
             'source'             => null,
@@ -624,10 +685,5 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
             'report'             => null,
             'additional_content' => null,
         ];
-
-        $yaml = $this->handler->buildYaml($publication, $metadata);
-
-        $this->assertStringContainsString('github.com/public/repo-one', $yaml);
-        $this->assertStringContainsString('github.com/public/repo-two', $yaml);
     }
 }

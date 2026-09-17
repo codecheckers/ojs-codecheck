@@ -39,6 +39,35 @@ class CodecheckGithubRegisterIssueUnitTest extends PKPTestCase
         );
     }
 
+    /**
+     * Issue #154: the register issue is public, and the editorial form posts
+     * whole repository entries rather than plain URLs. A repository the
+     * codechecker marked hidden must not appear in it — nor must the internal
+     * flags of the ones that do.
+     */
+    public function testHiddenRepositoriesAreNotPublishedInTheIssue()
+    {
+        $body = $this->buildIssue(repositories: [
+            ['url' => 'https://github.com/public/repo', 'hidden' => false],
+            ['url' => 'https://github.com/private/repo', 'hidden' => true],
+        ])->getBody();
+
+        $this->assertStringContainsString('https://github.com/public/repo', $body);
+        $this->assertStringNotContainsString('private/repo', $body);
+        $this->assertStringNotContainsString('hidden', $body);
+    }
+
+    /** Entries are published as plain addresses, not as objects. */
+    public function testRepositoryEntriesArePublishedAsAddresses()
+    {
+        $body = $this->buildIssue(repositories: [
+            ['url' => 'https://github.com/public/repo', 'hidden' => false, 'providedByAuthor' => true],
+        ])->getBody();
+
+        $this->assertStringContainsString('"repositories": ["https:\/\/github.com\/public\/repo"]', $body);
+        $this->assertStringNotContainsString('providedByAuthor', $body);
+    }
+
     public function testTheTitleIsTheAuthorsAndTheIdentifier()
     {
         $this->assertSame('Doe et al. | 2026-007', $this->buildIssue()->getTitle());

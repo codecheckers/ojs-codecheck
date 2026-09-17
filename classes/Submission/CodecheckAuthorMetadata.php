@@ -74,10 +74,8 @@ class CodecheckAuthorMetadata
                 $current,
                 $this->repositories,
                 'url',
-                fn ($url) => ['url' => $url, 'hidden' => false, 'providedByAuthor' => true]
+                fn ($url) => ['url' => $url, 'hidden' => false, 'providedByAuthor' => true, 'containsCodecheckYaml' => false]
             );
-            $repositoryData['repoWithCodecheckYaml'] = $repositoryData['repoWithCodecheckYaml'] ?? null;
-
             $update['repository'] = json_encode($repositoryData);
         }
 

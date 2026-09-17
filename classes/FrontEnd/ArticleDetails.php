@@ -94,6 +94,10 @@ class ArticleDetails
             'badgeStyle'   => $badge->getStyle(),
             'orcidIconUrl' => $request->getBaseUrl() . '/' . $this->plugin->getPluginPath() . '/assets/img/orcid.svg',
             'articleId'    => $article->getId(),
+            // Both the completed and the pending branch render the same list
+            'repositoriesTemplate' => $this->plugin->getTemplateResource(
+                'frontend/objects/article_codecheck_repositories.tpl'
+            ),
         ]);
 
         if ($codecheckData->hasCompletedCheck()) {
@@ -105,15 +109,14 @@ class ArticleDetails
                 'codecheckers'      => $codecheckData->getCodecheckers(),
                 'certificateDate'   => $codecheckData->getCertificateDate(),
                 'summary'           => $codecheckData->getSummary(),
-                'repository' => implode(', ', $codecheckData->getRepositories()),
+                'repositories'      => $codecheckData->getPublicRepositories(),
                 'manifest'          => $codecheckData->getManifest(),
                 'additionalContent' => $codecheckData->getAdditionalContent(),
             ]);
         } elseif ($codecheckData->hasAssignedChecker()) {
             $templateMgr->assign([
                 'codecheckStatus' => 'pending',
-                'codeRepo' => implode(', ', $codecheckData->getRepositories()),
-                'dataRepo'        => $codecheckData->getDataRepository(),
+                'repositories'    => $codecheckData->getPublicRepositories(),
             ]);
         } else {
             return '';

@@ -44,7 +44,7 @@ class CodecheckLoggerUnitTest extends PKPTestCase
 
     /**
      * Every level the plugin calls must exist. `warning()` was missing while
-     * CodecheckSubmission::getRepositories() already called it, which made that
+     * CodecheckSubmission::getPublicRepositories() already called it, which made that
      * branch fatal with "Call to undefined method".
      */
     public function testProvidesEveryLogLevelUsedInThePlugin(): void
