@@ -55,11 +55,62 @@ class SettingsForm extends Form
             ->getContext();
 
         $this->setData(
-            Constants::CODECHECK_ENABLED,
+            Constants::CODECHECK_SHOW_ARTICLE_SIDEBAR,
             $this->plugin->getSetting(
                 $context->getId(),
-                Constants::CODECHECK_ENABLED
+                Constants::CODECHECK_SHOW_ARTICLE_SIDEBAR
             )
+        );
+
+        // Default to true — the availability statement shows unless switched off
+        $showAvailabilityStatement = $this->plugin->getSetting(
+            $context->getId(),
+            Constants::CODECHECK_SHOW_AVAILABILITY_STATEMENT
+        );
+        $this->setData(
+            Constants::CODECHECK_SHOW_AVAILABILITY_STATEMENT,
+            $showAvailabilityStatement === null ? true : (bool) $showAvailabilityStatement
+        );
+
+        // Default to false — an article without a statement says so rather
+        // than dropping the section.
+        $this->setData(
+            Constants::CODECHECK_HIDE_EMPTY_AVAILABILITY_STATEMENT,
+            (bool) $this->plugin->getSetting(
+                $context->getId(),
+                Constants::CODECHECK_HIDE_EMPTY_AVAILABILITY_STATEMENT
+            )
+        );
+
+        // Empty means "use the localised default", which the article page
+        // substitutes rather than rendering an empty heading.
+        $this->setData(
+            Constants::CODECHECK_AVAILABILITY_STATEMENT_HEADING,
+            $this->plugin->getSetting(
+                $context->getId(),
+                Constants::CODECHECK_AVAILABILITY_STATEMENT_HEADING
+            ) ?? ''
+        );
+
+        // Default to the current stable specification only; a journal that
+        // wants more adds them.
+        $enabledConfigVersions = $this->plugin->getSetting(
+            $context->getId(),
+            Constants::CODECHECK_ENABLED_CONFIG_VERSIONS
+        );
+        $this->setData(
+            Constants::CODECHECK_ENABLED_CONFIG_VERSIONS,
+            empty($enabledConfigVersions)
+                ? Constants::CODECHECK_DEFAULT_CONFIG_VERSIONS
+                : (array) $enabledConfigVersions
+        );
+
+        $this->setData(
+            Constants::CODECHECK_SHOW_IN_TOC,
+            $this->plugin->getSetting(
+                $context->getId(),
+                Constants::CODECHECK_SHOW_IN_TOC
+            ) ?? true
         );
 
         $this->setData(
@@ -83,22 +134,6 @@ class SettingsForm extends Form
             $this->plugin->getSetting(
                 $context->getId(),
                 Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN
-            )
-        );
-
-        $this->setData(
-            Constants::CODECHECK_API_ENDPOINT,
-            $this->plugin->getSetting(
-                $context->getId(),
-                Constants::CODECHECK_API_ENDPOINT
-            )
-        );
-
-        $this->setData(
-            Constants::CODECHECK_API_KEY,
-            $this->plugin->getSetting(
-                $context->getId(),
-                Constants::CODECHECK_API_KEY
             )
         );
 
@@ -129,6 +164,27 @@ class SettingsForm extends Form
         $this->setData(
             Constants::CODECHECK_BADGE_TYPE,
             $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_TYPE) ?? 'codeworks'
+        );
+
+        // Empty means "use the localised default", which the badge substitutes
+        // rather than rendering nothing where the image would be.
+        $this->setData(
+            Constants::CODECHECK_BADGE_TEXT,
+            $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_TEXT) ?? ''
+        );
+
+        $this->setData(
+            Constants::CODECHECK_BADGE_LINK_TARGET,
+            $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_LINK_TARGET)
+                ?: Constants::CODECHECK_BADGE_LINK_TARGET_REGISTER
+        );
+
+        // A colour input needs a value to open on, so unset means the default
+        // rather than an empty string.
+        $this->setData(
+            Constants::CODECHECK_BADGE_TEXT_COLOR,
+            $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_TEXT_COLOR)
+                ?: Constants::CODECHECK_BADGE_TEXT_COLOR_DEFAULT
         );
 
         $this->setData(
@@ -237,16 +293,22 @@ class SettingsForm extends Form
     public function readInputData(): void
     {
         $this->readUserVars([
-            Constants::CODECHECK_ENABLED,
+            Constants::CODECHECK_SHOW_ARTICLE_SIDEBAR,
+            Constants::CODECHECK_SHOW_IN_TOC,
+            Constants::CODECHECK_SHOW_AVAILABILITY_STATEMENT,
+            Constants::CODECHECK_AVAILABILITY_STATEMENT_HEADING,
+            Constants::CODECHECK_HIDE_EMPTY_AVAILABILITY_STATEMENT,
+            Constants::CODECHECK_ENABLED_CONFIG_VERSIONS,
             Constants::CODECHECK_MODE,
             Constants::CODECHECK_AUTHOR_ANONYMITY,
             Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN,
-            Constants::CODECHECK_API_ENDPOINT,
-            Constants::CODECHECK_API_KEY,
             Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION,
             Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY,
             Constants::CODECHECK_GITHUB_CUSTOM_LABELS,
             Constants::CODECHECK_BADGE_TYPE,
+            Constants::CODECHECK_BADGE_TEXT,
+            Constants::CODECHECK_BADGE_TEXT_COLOR,
+            Constants::CODECHECK_BADGE_LINK_TARGET,
             Constants::CODECHECK_BADGE_CUSTOM_URL,
             Constants::CODECHECK_BADGE_HEIGHT,
             Constants::CODECHECK_SHOW_DASHBOARD_COLUMN,
@@ -291,12 +353,46 @@ class SettingsForm extends Form
         ]);
 
         $templateMgr->assign('codecheckBadgeType', $this->getData(Constants::CODECHECK_BADGE_TYPE) ?? 'codeworks');
+        $templateMgr->assign('codecheckBadgeText', $this->getData(Constants::CODECHECK_BADGE_TEXT) ?? '');
+
+        // The select renders label => value pairs, like the CODECHECK mode above.
+        $templateMgr->assign('codecheckBadgeLinkTargets', array_combine(
+            Constants::CODECHECK_BADGE_LINK_TARGETS,
+            array_map(
+                fn ($target) => __('plugins.generic.codecheck.settings.badge.linkTarget.' . $target),
+                Constants::CODECHECK_BADGE_LINK_TARGETS
+            )
+        ));
+        $templateMgr->assign(
+            'codecheckBadgeLinkTarget',
+            $this->getData(Constants::CODECHECK_BADGE_LINK_TARGET) ?: Constants::CODECHECK_BADGE_LINK_TARGET_REGISTER
+        );
+        $templateMgr->assign(
+            'codecheckBadgeTextColor',
+            $this->getData(Constants::CODECHECK_BADGE_TEXT_COLOR) ?: Constants::CODECHECK_BADGE_TEXT_COLOR_DEFAULT
+        );
         $templateMgr->assign('codecheckBadgeCustomUrl', $this->getData(Constants::CODECHECK_BADGE_CUSTOM_URL) ?? '');
         $templateMgr->assign('codecheckBadgeHeight', $this->getData(Constants::CODECHECK_BADGE_HEIGHT) ?? '24');
 
         $templateMgr->assign(
             'showDashboardColumn',
             $this->getData(Constants::CODECHECK_SHOW_DASHBOARD_COLUMN)
+        );
+
+        $templateMgr->assign(
+            Constants::CODECHECK_SHOW_AVAILABILITY_STATEMENT,
+            $this->getData(Constants::CODECHECK_SHOW_AVAILABILITY_STATEMENT)
+        );
+
+        $templateMgr->assign(
+            Constants::CODECHECK_HIDE_EMPTY_AVAILABILITY_STATEMENT,
+            $this->getData(Constants::CODECHECK_HIDE_EMPTY_AVAILABILITY_STATEMENT)
+        );
+
+        $templateMgr->assign('codecheckConfigVersions', Constants::CODECHECK_CONFIG_VERSIONS);
+        $templateMgr->assign(
+            Constants::CODECHECK_ENABLED_CONFIG_VERSIONS,
+            (array) $this->getData(Constants::CODECHECK_ENABLED_CONFIG_VERSIONS)
         );
 
         $templateMgr->assign(
@@ -325,8 +421,47 @@ class SettingsForm extends Form
 
         $this->plugin->updateSetting(
             $context->getId(),
-            Constants::CODECHECK_ENABLED,
-            $this->getData(Constants::CODECHECK_ENABLED)
+            Constants::CODECHECK_SHOW_ARTICLE_SIDEBAR,
+            (bool) $this->getData(Constants::CODECHECK_SHOW_ARTICLE_SIDEBAR)
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_SHOW_IN_TOC,
+            (bool) $this->getData(Constants::CODECHECK_SHOW_IN_TOC)
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_SHOW_AVAILABILITY_STATEMENT,
+            (bool) $this->getData(Constants::CODECHECK_SHOW_AVAILABILITY_STATEMENT)
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_AVAILABILITY_STATEMENT_HEADING,
+            trim((string) $this->getData(Constants::CODECHECK_AVAILABILITY_STATEMENT_HEADING))
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_HIDE_EMPTY_AVAILABILITY_STATEMENT,
+            (bool) $this->getData(Constants::CODECHECK_HIDE_EMPTY_AVAILABILITY_STATEMENT)
+        );
+
+        // An empty selection would leave the metadata form with no version to
+        // offer at all, so it falls back to the default rather than being
+        // stored as an empty list.
+        $enabledConfigVersions = array_values(array_intersect(
+            Constants::CODECHECK_CONFIG_VERSIONS,
+            (array) $this->getData(Constants::CODECHECK_ENABLED_CONFIG_VERSIONS)
+        ));
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_ENABLED_CONFIG_VERSIONS,
+            empty($enabledConfigVersions)
+                ? Constants::CODECHECK_DEFAULT_CONFIG_VERSIONS
+                : $enabledConfigVersions
         );
 
         $this->plugin->updateSetting(
@@ -347,28 +482,30 @@ class SettingsForm extends Form
             $this->getData(Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN)
         );
 
-        $this->plugin->updateSetting(
+        // Remember what the register pointed at before this save, so the
+        // repository is only looked up when it actually changed.
+        $previousOrganization = $this->plugin->getSetting(
             $context->getId(),
-            Constants::CODECHECK_API_ENDPOINT,
-            $this->getData(Constants::CODECHECK_API_ENDPOINT)
+            Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION
+        );
+        $previousRepository = $this->plugin->getSetting(
+            $context->getId(),
+            Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY
         );
 
-        $this->plugin->updateSetting(
-            $context->getId(),
-            Constants::CODECHECK_API_KEY,
-            $this->getData(Constants::CODECHECK_API_KEY)
-        );
+        $organization = $this->getData(Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION);
+        $repository = $this->getData(Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY);
 
         $this->plugin->updateSetting(
             $context->getId(),
             Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION,
-            $this->getData(Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION)
+            $organization
         );
 
         $this->plugin->updateSetting(
             $context->getId(),
             Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY,
-            $this->getData(Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY)
+            $repository
         );
 
         $this->plugin->updateSetting(
@@ -377,10 +514,15 @@ class SettingsForm extends Form
             (bool) $this->getData(Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED)
         );
 
-        $registerWarning = $this->validateRegisterFileExists(
-            $this->getData(Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION),
-            $this->getData(Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY)
-        );
+        // Only reach out to GitHub when the register actually changed. This is
+        // an unauthenticated request against a 60/hour per-IP limit, and every
+        // unrelated settings save used to spend one.
+        $registerChanged = $organization !== $previousOrganization
+            || $repository !== $previousRepository;
+
+        $registerWarning = $registerChanged
+            ? $this->validateRegisterFileExists($organization, $repository)
+            : null;
 
         if ($registerWarning !== null) {
             $notificationMgr = new NotificationManager();
@@ -410,6 +552,33 @@ class SettingsForm extends Form
             $context->getId(),
             Constants::CODECHECK_STATUS_KEYS_SELECTED,
             (array) $this->getData(Constants::CODECHECK_STATUS_KEYS_SELECTED)
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_BADGE_TEXT,
+            trim((string) $this->getData(Constants::CODECHECK_BADGE_TEXT))
+        );
+
+        // Only one of the two known targets is ever stored.
+        $linkTarget = (string) $this->getData(Constants::CODECHECK_BADGE_LINK_TARGET);
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_BADGE_LINK_TARGET,
+            in_array($linkTarget, Constants::CODECHECK_BADGE_LINK_TARGETS, true)
+                ? $linkTarget
+                : Constants::CODECHECK_BADGE_LINK_TARGET_REGISTER
+        );
+
+        // Store only a real hex colour, so nothing else can end up in a style
+        // attribute on the article page.
+        $badgeTextColor = trim((string) $this->getData(Constants::CODECHECK_BADGE_TEXT_COLOR));
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_BADGE_TEXT_COLOR,
+            preg_match('/^#[0-9a-fA-F]{6}$/', $badgeTextColor)
+                ? $badgeTextColor
+                : Constants::CODECHECK_BADGE_TEXT_COLOR_DEFAULT
         );
 
         $this->plugin->updateSetting(

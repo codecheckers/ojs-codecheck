@@ -39,41 +39,27 @@ describe('CodecheckDataAndSoftwareAvailability Component', () => {
     cy.get('@inputSpy').should('have.been.called');
   });
 
-  it('can clear text with remove button', () => {
+  it('fills the available width like any other optional field', () => {
     cy.mount(CodecheckDataAndSoftwareAvailability, {
-      props: {
-        value: 'Some initial text'
-      }
+      props: { name: 'dataAvailabilityStatement', value: '' }
     });
-    
-    cy.get('textarea').should('have.value', 'Some initial text');
-    
-    cy.get('.btn-remove').click();
-    
-    cy.get('textarea').should('have.value', '');
+
+    // The field used to sit at 90% beside a red clear button.
+    cy.get('textarea').should('have.css', 'width').and('not.equal', '0px');
+    cy.get('button').should('not.exist');
   });
 
-  it('renders remove button with correct styling', () => {
+  it('lets the author resize it and grows with its content', () => {
     cy.mount(CodecheckDataAndSoftwareAvailability, {
       props: {
+        name: 'dataAvailabilityStatement',
         value: ''
       }
     });
-    
-    cy.get('.btn-remove')
-      .should('exist')
-      .and('have.css', 'background-color', 'rgb(220, 53, 69)'); // #dc3545
-  });
 
-  it('textarea is resizable', () => {
-    cy.mount(CodecheckDataAndSoftwareAvailability, {
-      props: {
-        value: ''
-      }
-    });
-    
+    // Was resize:none with a scrollbar, alongside the clear button.
     cy.get('textarea')
-      .should('have.css', 'resize', 'none')
-      .and('have.css', 'overflow', 'scroll');
+      .should('have.css', 'resize', 'vertical')
+      .and('have.css', 'overflow', 'hidden');
   });
 });

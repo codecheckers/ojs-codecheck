@@ -11,32 +11,9 @@
             <h3>{translate key="plugins.generic.codecheck.review.title"}</h3>
         </div>
         <div class="submissionWizard__reviewPanel__body">
-            {if $publication->getData('codeRepository')}
-                <div class="submissionWizard__reviewPanel__item">
-                    <h4>{translate key="plugins.generic.codecheck.codeRepository"}</h4>
-                    <div class="review-value">
-                        <p>{$publication->getData('codeRepository')|escape|nl2br}</p>
-                    </div>
-                </div>
-            {/if}
-
-            {if $publication->getData('dataRepository')}
-                <div class="submissionWizard__reviewPanel__item">
-                    <h4>{translate key="plugins.generic.codecheck.dataRepository"}</h4>
-                    <div class="review-value">
-                        <p>{$publication->getData('dataRepository')|escape|nl2br}</p>
-                    </div>
-                </div>
-            {/if}
-
-            {if $publication->getData('manifestFiles')}
-                <div class="submissionWizard__reviewPanel__item">
-                    <h4>{translate key="plugins.generic.codecheck.manifestFiles.label"}</h4>
-                    <div class="review-value">
-                        <pre>{$publication->getData('manifestFiles')|escape}</pre>
-                    </div>
-                </div>
-            {/if}
+            {* Repositories and the manifest are held in codecheck_metadata and
+               rendered client-side by CodecheckReviewRefresher, which reads the
+               CODECHECK API. Only publication data can be shown from here. *}
 
             {if $publication->getData('dataAvailabilityStatement')}
                 <div class="submissionWizard__reviewPanel__item">

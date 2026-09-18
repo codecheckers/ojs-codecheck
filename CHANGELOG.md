@@ -14,11 +14,274 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 
 ### Added
 
+#### Project
+
 - Initial plugin structure (Issue #2)
 - OJS 3.5.x compatibility
 - Documentation: [README.md](README.md) (Issue #4), [CONTRIBUTING.md](CONTRIBUTING.md) (Issue #3), [CHANGELOG.md](CHANGELOG.md) (Issue #5)
 - Color scheme documentation in [README.md](README.md)
 - Mock-Ups in Issue descriptions (Issue #26)
+
+#### Submission
+
+- CODECHECK opt-in checkbox on the submission start form, and a journal-wide mode
+  setting choosing whether codechecking is opt-in, opt-out or mandatory for authors
+  (Issue #128)
+- CODECHECK section in the submission wizard for repositories, the manifest of
+  expected outputs, and a data and software availability statement, shown in the
+  wizard's review step. What the author enters goes straight into the CODECHECK
+  record the codechecker works on, rather than into a separate copy (Issue #152)
+- Public CODECHECK information page explaining the process to authors, linked from
+  the opt-in checkbox
+
+#### Editorial workflow
+
+- Editors can edit the data and software availability statement on the publication
+  **Metadata** form. It could previously only be written by the author in the
+  submission wizard or through the REST API, so a statement left empty or entered in
+  the wrong place could not be corrected by anyone — while being shown on every
+  article landing page (Issue #167)
+- CODECHECK tab in the editorial workflow with a metadata form covering the paper
+  reference, codecheckers, manifest, repositories, summary, report and certificate
+  (Issue #64)
+- Certificate identifier reservation: the next free `YYYY-NNN` identifier is taken
+  from the CODECHECK register and a register issue is opened for it (Issues #11, #48)
+- The register issue is kept up to date as the CODECHECK progresses; which of title,
+  body and status are updated is configurable (Issue #132)
+- CODECHECK status with a full history per submission, editable from the workflow and
+  restricted by user role (Issues #61, #141, #142)
+- Multiple repositories per submission, with one marked as containing the
+  `codecheck.yml` file (Issue #146)
+- Import of existing CODECHECK metadata from a repository — GitHub, GitLab, Zenodo and
+  OSF, including DOI resolution (Issue #145)
+- Repositories and manifest entries can be hidden. Hidden entries stay visible to
+  editors and codecheckers but are excluded from the generated `codecheck.yml` and
+  from everything readers see (Issue #134)
+- Repositories and manifest entries the submitting author provided are marked
+  "Submitted by author". A codechecker can edit them or hide them, but cannot
+  remove them, so what the author supplied cannot silently disappear from the
+  record (Issue #152)
+- Output file names in the manifest are editable, so a codechecker can correct a
+  path without removing the entry and adding it again (Issue #152)
+- A "Now" link beside "Time the check was completed" fills in the current date
+  and time
+- The metadata form opens with a short explanation of what the form produces,
+  linking to the CODECHECK config file specification for the details. The link
+  follows the selected config version, so it points at the specification that
+  actually governs the fields below it
+- Validation warnings and errors for repository metadata shown directly in the
+  repositories field (Issue #144)
+- `codecheck.yml` generation with preview and download, and file upload/download for
+  manifest entries
+- CODECHECK column in the editorial dashboard showing the certificate identifier, or a
+  link to start a CODECHECK (Issue #30)
+- ORCID deposition for codecheckers: each codechecker authorises the journal from the
+  CODECHECK tab, and the check is then deposited to their ORCID record as a peer-review
+  activity, automatically on publication or on demand. Status per codechecker, and a
+  button to test the ORCID credentials without writing anything (Issue #16)
+- CODECHECK documentation section in the reviewer's Download & Review tab, so a
+  codechecker can record the check without editorial access (Issue #16)
+
+#### Publication
+
+- Publication is blocked while the CODECHECK is incomplete: the status must be one the
+  journal has approved for publication, and the generated `codecheck.yml` must parse
+  (Issues #12, #32, #122, #139)
+- Optional extended validation that additionally fetches the `codecheck.yml` from the
+  selected repository and checks the paper title against the submission (Issue #143)
+- A `register.csv` row is deposited to the CODECHECK Register as a pull request when a
+  CODECHECK-opted-in article is published. Failures never block publication (Issue #10)
+
+#### Published articles
+
+- CODECHECK certificate displayed in the article sidebar with the badge, codecheckers
+  and their ORCIDs, certificate link, check date, summary, repositories and manifest
+- CODECHECK badge in the issue table of contents (Issue #27)
+- Configurable badge: CODE WORKS badge, CODECHECK logo, a custom image or text only,
+  with a configurable height (Issue #27)
+- Setting to show or hide the badge in issue tables of contents, independent of the
+  article sidebar, so a journal can use either display on its own
+- The author's data and software availability statement is shown below the abstract
+  on the article landing page. An article whose author provided no statement says so
+  instead of staying silent. Three settings: hide the section entirely, rename its
+  heading, or leave the section out of articles with no statement (Issue #152)
+
+#### Configuration
+
+- Setting for where the CODECHECK badge links to: the certificate's page in the
+  CODECHECK register, or its DOI. The badge on the article landing page is now a
+  link as well, and both badges follow the same setting. Until now the link was
+  built only for a `CODECHECK-YYYY-NNN` certificate while identifiers are stored as
+  `YYYY-NNN`, so every badge and the article page's certificate link pointed nowhere
+
+- Plugin settings for the GitHub personal access token, the register organisation and
+  repository, custom issue labels, author anonymity in register issues, and which
+  CODECHECK statuses permit publication
+- Setting to enable or disable the register deposit, with a warning when the configured
+  register repository has no `register.csv` (Issue #156)
+- The metadata form shows the author's data and software availability statement in the
+  read-only paper metadata, so a codechecker can see what the author said about where
+  the materials are. The three fields that moved into the editable repository and
+  manifest lists are no longer repeated above them
+- The data and software availability settings are grouped into their own section on
+  the plugin settings page, alongside the submission, GitHub and publication groups
+- The badge / logo settings are shown in the same bordered group as every other
+  setting instead of loose at the end of the page
+- The statuses that permit publication are chosen from a plain list of checkboxes
+  rather than a hover menu, matching the other multiple-choice settings
+- The text shown in place of the badge, when a journal chooses "No badge", is
+  configurable, as is the colour it is written in; cleared, the text falls back to
+  "CODECHECK" and the colour to the CODECHECK green
+- The destructive "Clear / Reset DB" action sits at the very bottom of the settings
+  page instead of between the submission and GitHub settings
+- Setting listing which CODECHECK config versions codecheckers can choose from in the
+  metadata form. Only the enabled versions are offered, and the selector is inactive
+  when a journal has settled on a single version. Journals offer version 1.0 until
+  they choose otherwise, so a check records the specification it was done against
+  rather than a moving target. The generated `codecheck.yml` declares the version
+  recorded for the check instead of always claiming 1.0
+- ORCID settings: whether deposition is enabled, the Member API to use (sandbox or
+  production), the client ID and secret, and the publisher city recorded on the
+  deposited activity. The client secret is never rendered back into the form and is
+  only overwritten when a new one is entered (Issue #16)
+
+#### Under the hood
+
+- CODECHECK publication validation works again. It asked the router for the page
+  handler to find the submission, but publishing goes through the REST API where
+  there is none, so every publish attempt threw inside the hook; OJS logged
+  "failed to handle the hook" and published anyway. The submission now comes from
+  the hook itself, so a status the journal does not accept blocks publication as
+  it was meant to
+
+- The plugin API answers requests from `CodecheckApiHandler::execute()` rather than
+  from its constructor, and sends responses through a `JsonResponseEmitter` instead
+  of a static call that echoes and exits. The handler can now be built and driven in
+  a test, and its CSRF check, role check and route parsing are covered — they are the
+  only thing standing in front of nineteen endpoints, several of which write to the
+  public CODECHECK register. While registering the API, the plugin no longer calls
+  `$router->setHandler()`: it takes a PKP handler and this is not one
+
+- A POST to reserve a certificate identifier or update the register issue that
+  leaves out a required field is answered with a 400 naming the field, rather than
+  raising "Undefined array key" on its way to a 500. The guards moved into
+  `IdentifierParameterValidator`
+
+- Custom API under `api/v1/codecheck` with CSRF and role-based access control
+- Database schema managed by an install migration with versioned upgrade steps, run
+  when the plugin is enabled (Issue #94)
+- `WARNING` log level in `CodecheckLogger`, alongside the existing `DEBUG`, `INFO` and
+  `ERROR` levels. Use it for conditions that are unexpected but recoverable, such as
+  stored data in an unexpected format that is skipped rather than treated as fatal.
+  Log lines are prefixed `[codecheck][warning]`.
+- Test suites: PHPUnit unit tests, Cypress component tests for the Vue components,
+  Cypress end-to-end tests, and a screenshot pass over every UI surface
+- Local development environment driven by a `Makefile`, and a Playwright page inspector
+  for debugging rendered pages
+
+### Changed
+
+- The `codecheckEnabled` setting is now `showArticleSidebar`. It never enabled or
+  disabled the plugin — it only controls whether the CODECHECK block appears in the
+  sidebar of published articles, which is what its label now says.
+- Repositories are stored as a list of objects carrying the URL and the private flag,
+  replacing the earlier comma-separated string.
+- The bundled test dataset carries the complete CODECHECK schema, so loading it
+  produces a working instance without a separate repair step.
+
+### Security
+
+- Repositories marked hidden are no longer published in the CODECHECK register
+  issue on GitHub. The issue is public, and the editorial form sends whole
+  repository entries, so every hidden repository — and the internal flags of the
+  ones meant to be shown — was written into it verbatim (Issue #154)
+- The CODECHECK register issue on GitHub is only updated once the metadata has been
+  saved. It was updated first, so a repository address the save then refused had
+  already been published (Issue #154)
+- Repository links on the article page carry `rel="noopener noreferrer"`, so a
+  repository cannot get a handle on the article's browser tab (Issue #154)
+- A repository address that is not an `http`/`https` URL is refused when the
+  CODECHECK metadata is saved, instead of being stored and then published. Such
+  an address reaches the article page, the `register.csv` deposit and the public
+  register issue, so a `javascript:` URL entered in the editorial form became a
+  working link for readers (Issue #154)
+- Updated dependencies to clear 16 advisories reported by `composer audit`, affecting
+  `guzzlehttp/guzzle` (9, high and medium), `guzzlehttp/psr7` (4, medium) and
+  `symfony/yaml` (3, low). All were resolved within the existing version constraints,
+  so no dependency requirement changed.
+- A repository address is only turned into a link on the article page when it is an
+  `http`/`https` URL; anything else is shown as plain text, in case one was stored
+  before the check above existed (Issue #154)
+
+### Removed
+
+- `CodecheckMetadataDAO` and `schema.xml`. Neither was reachable: the DAO queried
+  columns that do not exist and was referenced only by its own unit test, and OJS 3.5
+  installs plugin schemas through the migration rather than an ADODB schema file. Both
+  described table shapes that disagreed with the one the plugin actually creates.
+- The "Data repository" section of the article sidebar, which could never appear:
+  the value behind it was hardcoded to be empty when the repository list replaced
+  the single code/data repository pair. The repositories are listed in full above
+  it (Issue #154)
+- The `codecheckApiEndpoint` and `codecheckApiKey` settings. Both were written on
+  every save but no field ever rendered them and nothing ever read them, so they
+  could not be set and had no effect.
+
+### Fixed
+
+- Which repository holds the `codecheck.yml` is recorded on the repository itself
+  rather than as a position in the list. Nothing kept that position in step with
+  the list it pointed into: removing an earlier repository in the editorial form,
+  or an author re-saving their repositories in the submission wizard, silently
+  moved the mark to a repository nobody chose — and that one mark decides what the
+  article page claims, whether publication validation finds the file, and which
+  address is deposited in the CODECHECK register (Issue #154)
+
+- A CODECHECK with several repositories writes them into the generated
+  `codecheck.yml` as a list, which is what the specification asks for ("a URL or
+  a list of URLs"). They were joined into `repository: urlA, urlB`, a single
+  value that no reader of the file could resolve back into addresses — in a file
+  that is downloaded, validated and deposited in the register (Issue #154)
+
+- The `repository` column holds a JSON list of repositories but was created as
+  `varchar(500)`, which four GitHub addresses already exceeded. Saving then failed
+  outright on a strict database, or was truncated mid-JSON on a lenient one — which
+  reads back as no repositories at all, on the article page, in the generated
+  `codecheck.yml` and in the register deposit (Issue #154)
+
+- Choosing which repository holds the `codecheck.yml` checks it again. The button
+  sent the whole repository entry to an endpoint that takes an address, so every
+  click answered with an internal type error and nothing was ever checked (Issue #154)
+
+- Selecting a repository row before typing its address no longer records a choice
+  that every other part of the plugin ignores — the form showed it as selected while
+  publication validation reported that no repository had been chosen (Issue #154)
+
+- The repositories of a CODECHECK are listed one link each on the article landing
+  page. They were joined into a single string and rendered as one link, so an
+  article with more than one repository got a link pointing at all of them at once
+  — which led nowhere — and a label cut off after 40 characters that hid every
+  repository but the first. The repository holding the `codecheck.yml` is now
+  marked as such, and the full address is shown on hover (Issue #154)
+
+- Rows in the manifest table line up again. Entries submitted by the author were
+  taller than the others, and the output file and description inputs sat on
+  different lines in every row because the file cell also carries the file size.
+
+- Saving the plugin settings no longer makes a GitHub request every time. The
+  register repository is only checked for its `register.csv` when the configured
+  organisation or repository actually changes, instead of on every save.
+
+- Viewing a published article could fail with a fatal error when the stored repository
+  data was not in the expected format, because the logger had no `warning()` method.
+- The `LoadHandler` hook claimed any page whose operation was `info`, not just the
+  CODECHECK information page, and overwrote the requested page name on every request
+  that did not match.
+- `codecheck.yml` genre creation failed outside a web request, and could create a
+  duplicate genre on journals whose primary locale is not English.
+- Loading the GitHub register client no longer requires a `.env` file to be present.
+- The editorial metadata form silently showed an empty repository list, because it only
+  handled repository data in string form while the API returns it already decoded.
 
 ## [1.0.0] - 2025-??-??
 

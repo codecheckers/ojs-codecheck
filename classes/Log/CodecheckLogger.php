@@ -9,7 +9,7 @@
  * @class CodecheckLogger
  *
  * @brief A simple logger wrapper for the CODECHECK plugin.
- * Provides three log levels: debug, info, and error.
+ * Provides four log levels: debug, info, warning, and error.
  * All messages are prefixed with [codecheck] and written via error_log().
  */
 
@@ -33,6 +33,16 @@ class CodecheckLogger
     public static function info(string $message): void
     {
         error_log('[codecheck][info] ' . $message);
+    }
+
+    /**
+     * Log a warning message.
+     * Use when something is unexpected but recoverable, e.g. malformed stored
+     * data that is skipped rather than fatal.
+     */
+    public static function warning(string $message): void
+    {
+        error_log('[codecheck][warning] ' . $message);
     }
 
     /**

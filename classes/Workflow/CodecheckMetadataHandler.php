@@ -13,10 +13,12 @@ use Github\Client;
 use Symfony\Component\Yaml\Yaml;
 use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CodecheckRegisterGithubIssuesApiParser;
 use APP\plugins\generic\codecheck\api\v1\CurlApiClient;
+use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitException;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
+use APP\plugins\generic\codecheck\classes\Submission\CodecheckRepositories;
 
 class CodecheckMetadataHandler
 {
@@ -73,16 +75,15 @@ class CodecheckMetadataHandler
                 'title' => $publication ? $publication->getLocalizedTitle() : '',
                 'authors' => $this->getAuthors($publication),
                 'doi' => $publication ? $publication->getStoredPubId('doi') : null,
-                'codeRepository' => $submission->getData('codeRepository'),
-                'dataRepository' => $submission->getData('dataRepository'),
-                'manifestFiles' => $submission->getData('manifestFiles'),
-                'dataAvailabilityStatement' => $submission->getData('dataAvailabilityStatement'),
+                // The statement lives on the publication (see Submission/Schema.php),
+                // which is also where the wizard writes it and where the article page reads it.
+                'dataAvailabilityStatement' => $publication ? $publication->getData('dataAvailabilityStatement') : null,
             ],
             'codecheck' => $metadata ? [
                 'version' => $metadata->version ?? 'latest',
                 'publicationType' => $metadata->publication_type ?? 'doi',
                 'manifest' => json_decode($metadata->manifest ?? '[]', true),
-                'repository' => json_decode($metadata->repository ?? '{"repositories":null,"repoWithCodecheckYaml":null}', true),
+                'repository' => json_decode($metadata->repository ?? '{"repositories":null}', true),
                 'codecheckers' => json_decode($metadata->codecheckers ?? '[]', true),
                 'source' => $metadata->source,
                 'certificate' => $metadata->certificate,
@@ -102,7 +103,7 @@ class CodecheckMetadataHandler
         $submission = Repo::submission()->get($submissionId);
         
         if (!$submission) {
-            return ['success' => false, 'error' => 'Submission not found'];
+            return ['success' => false, 'error' => 'Submission not found', 'status' => 404];
         }
 
         $jsonData = file_get_contents('php://input');
@@ -111,13 +112,28 @@ class CodecheckMetadataHandler
         $nullIfEmpty = function($value) {
             return (is_string($value) && trim($value) === '') ? null : $value;
         };
+
+        // Refuse addresses that cannot be a repository link rather than storing
+        // them and guarding every place they are published (Issue #154).
+        $unusable = CodecheckRepositories::unusableUrls($data['repository'] ?? null);
+        if ($unusable !== []) {
+            return [
+                'success' => false,
+                'error' => __('plugins.generic.codecheck.repositories.invalidUrl', [
+                    'repository' => implode(', ', $unusable),
+                ]),
+                'status' => 400,
+            ];
+        }
         
         $metadataData = [
             'submission_id' => $submissionId,
             'version' => $data['version'] ?? 'latest',
             'publication_type' => $data['publication_type'] ?? 'doi',
             'manifest' => json_encode($data['manifest'] ?? []),
-            'repository' => json_encode($data['repository'] ?? ['repositories' => null, 'repoWithCodecheckYaml' => null]),
+            'repository' => json_encode(
+                CodecheckRepositories::withOneMarked($data['repository'] ?? ['repositories' => null])
+            ),
             'source' => $nullIfEmpty($data['source'] ?? null),
             'codecheckers' => json_encode($data['codecheckers'] ?? []),
             'certificate' => $nullIfEmpty($data['certificate'] ?? null),
@@ -178,11 +194,13 @@ class CodecheckMetadataHandler
     {
         $manifest = json_decode($metadata->manifest ?? '[]', true);
         $codecheckers = json_decode($metadata->codecheckers ?? '[]', true);
-        $repository = json_decode($metadata->repository ?? '{"repositories":null,"repoWithCodecheckYaml":null}', false);
+        $repository = json_decode($metadata->repository ?? '{"repositories":null}', true);
 
-        // Build YAML data structure
+        // Build YAML data structure. The version follows the one recorded for
+        // this check rather than a fixed one, so the file declares the
+        // specification the codechecker actually filled the form in against.
         $data = [
-            'version' => 'https://codecheck.org.uk/spec/config/1.0/'
+            'version' => Constants::getConfigSpecUrl($metadata->version ?: 'latest')
         ];
 
         // Add source if present
@@ -239,23 +257,21 @@ class CodecheckMetadataHandler
             $data['summary'] = $metadata->summary;
         }
 
-        CodecheckLogger::debug("Repo" . print_r($repository, true));
-        // Repository — filter out entries marked as private
-        if ($repository && isset($repository->repositories) && is_array($repository->repositories)) {
-            $publicUrls = array_values(array_map(
-                fn($r) => isset($r->url) ? $r->url : '',
-                array_filter($repository->repositories, fn($r) => empty($r->isPrivate))
-            ));
-            $publicUrls = array_filter($publicUrls);
-            $filteredCount = count($repository->repositories) - count($publicUrls);
-            if ($filteredCount > 0) {
-                CodecheckLogger::debug("Filtered out {$filteredCount} of " . count($repository->repositories) . " repositories because they are marked as private.");
-            }
-            if (!empty($publicUrls)) {
-                $data['repository'] = count($publicUrls) === 1
-                    ? array_values($publicUrls)[0]
-                    : implode(', ', $publicUrls);
-            }
+        // Repository — hidden entries are left out, by the same rule the article
+        // page applies, so the two cannot come to disagree about what is public.
+        $publicUrls = array_column(CodecheckRepositories::publicEntries($repository), 'url');
+
+        $stored = is_array($repository['repositories'] ?? null) ? $repository['repositories'] : [];
+        $withheld = count($stored) - count($publicUrls);
+        if ($withheld > 0) {
+            CodecheckLogger::debug("Left {$withheld} of " . count($stored) . " repositories out of the codecheck.yml: hidden, or with no address.");
+        }
+
+        // The specification takes "a URL or a list of URLs", so several
+        // repositories are a YAML sequence. They used to be joined with commas
+        // into one scalar, which no consumer of the file could resolve (#154).
+        if ($publicUrls !== []) {
+            $data['repository'] = count($publicUrls) === 1 ? $publicUrls[0] : $publicUrls;
         }
 
         // Check time
@@ -399,6 +415,16 @@ class CodecheckMetadataHandler
                 'success' => false,
                 'error' => "There is no '$filename' file in this repository.",
                 'repository' => $repository,
+            ], 404);
+        }
+
+        // A path that is not a directory listing comes back as null or a single
+        // file rather than a list, which is not something to iterate over.
+        if (!is_iterable($contents)) {
+            return new JsonResponse([
+                'success' => false,
+                'repository' => $repository,
+                'error' => "$filename not found",
             ], 404);
         }
 

@@ -1,6 +1,7 @@
 <?php
 namespace APP\plugins\generic\codecheck\classes\Submission;
 
+use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use Illuminate\Support\Facades\DB;
 
@@ -94,8 +95,24 @@ class CodecheckSubmission
         return is_array($decoded) ? $decoded : [];
     }
 
-    public function getRepositories(): array 
-    { 
+    /**
+     * The repositories a reader may see, each with the flag saying whether it is
+     * the one holding the `codecheck.yml` file.
+     *
+     * Hidden repositories are removed. Which entry holds the `codecheck.yml` is
+     * recorded on the entry itself, so it survives the list being reordered,
+     * filtered or edited; a hidden entry holding it simply leaves nothing
+     * marked here.
+     *
+     * `isWebLink` says whether the address may be rendered as a link. Nothing
+     * validates a repository URL on the way in — `saveMetadata()` stores what it
+     * is given — so a `javascript:` or `data:` URL would otherwise reach the
+     * `href` of a public article page.
+     *
+     * @return array<int, array{url: string, containsCodecheckYaml: bool, isWebLink: bool}>
+     */
+    public function getPublicRepositories(): array
+    {
         $raw = $this->data['repository'] ?? '';
         if (empty($raw)) {
             return [];
@@ -103,17 +120,30 @@ class CodecheckSubmission
 
         $decoded = json_decode($raw, true);
 
-        if (is_array($decoded) && isset($decoded['repositories']) && is_array($decoded['repositories'])) {
-            $publicUrls = array_filter(
-                $decoded['repositories'],
-                fn($r) => empty($r['isPrivate'])
-            );
-            $urls = array_map(fn($r) => $r['url'] ?? '', $publicUrls);
-            return array_values(array_filter($urls));
-        } else {
+        if (!is_array($decoded) || !is_array($decoded['repositories'] ?? null)) {
             CodecheckLogger::warning("Repository data is not in expected format. Raw value: " . $raw);
             return [];
         }
+
+        $marked = false;
+
+        $public = [];
+        foreach (CodecheckRepositories::publicEntries($decoded) as $entry) {
+            $url = $entry['url'];
+            // Read the entry's own flag. Re-deriving it by comparing addresses
+            // loses the mark to a stray space and puts it on the wrong row when
+            // two entries share a URL.
+            $isSelected = !$marked && !empty($entry['containsCodecheckYaml']);
+            $marked = $marked || $isSelected;
+
+            $public[] = [
+                'url' => $url,
+                'containsCodecheckYaml' => $isSelected,
+                'isWebLink' => (bool) preg_match('#^https?://#i', $url),
+            ];
+        }
+
+        return $public;
     }
 
     public function getSource(): string 
@@ -165,17 +195,6 @@ class CodecheckSubmission
         return $this->data['additional_content'] ?? ''; 
     }
 
-    // Legacy getters for backward compatibility
-    public function getCodeRepository(): string 
-    { 
-        return implode(', ', $this->getRepositories());
-    }
-
-    public function getDataRepository(): string 
-    { 
-        return ''; // Not in new schema
-    }
-
     public function getCodecheckerNames(): string 
     { 
         $codecheckers = $this->getCodecheckers();
@@ -218,12 +237,10 @@ class CodecheckSubmission
             return $certificate;
         }
         
-        // If it's a CODECHECK ID, build the URL
-        if (preg_match('/^CODECHECK-\d{4}-\d+$/', $certificate)) {
-            return 'https://codecheck.org.uk/certificate/' . $certificate;
-        }
-        
-        return '';
+        // Otherwise it is a register identifier — stored as YYYY-NNN, though
+        // older records carry a CODECHECK- prefix — and the link is its landing
+        // page in the register.
+        return Constants::getRegisterCertificateUrl($certificate);
     }
 
     /**

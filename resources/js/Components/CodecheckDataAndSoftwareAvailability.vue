@@ -8,8 +8,6 @@
       class="form-control"
     >
     </textarea>
-    <div class="vertical-spacer"></div>
-    <button type="button" @click="clearText" class="btn-remove">×</button>
   </div>
 </template>
 
@@ -51,16 +49,6 @@ export default {
       this.resizeTextarea();
     },
 
-    clearText() {
-      this.dataSoftwareAvail = '';
-      this.$emit("update", "");
-      
-      const vueRoot = document.querySelector(`textarea[name="dataAvailabilityStatement"]`)?.previousElementSibling;
-      if (vueRoot) {
-        vueRoot.dispatchEvent(new CustomEvent('update', { detail: "", bubbles: true }));
-      }
-    },
-
     adjustHeight() {
       const textarea = this.$refs.textarea;
       if (!textarea) return;
@@ -87,11 +75,6 @@ export default {
 </script>
 
 <style>
-.vertical-spacer {
-  height: 100%;
-  width: 0.75rem;
-}
-  
 .form-control {
   flex: 1;
   padding: .4375rem .75rem;
@@ -107,33 +90,11 @@ export default {
   box-shadow: 0 0 0 2px rgba(0, 122, 178, 0.2);
 }
 
-.codecheck-data-and-software-availability {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
-  justify-content: space-between;
-}
-
+/* Full width like any other optional field; the textarea grows with its
+   content rather than scrolling. */
 .codecheck-data-and-software-availability textarea {
-  width: 90%;
-  resize: none;
-  overflow: scroll;
-}
-
-.btn-remove {
-  background: #dc3545;
-  color: white;
-  border: none;
-  font-size: 1.2rem;
-  font-weight: 600;
-  padding: .3rem .75rem;
-  border-radius: 4px;
-  line-height: 1.60rem;
-  cursor: pointer;
-  min-width: 40px;
-}
-
-.btn-remove:hover {
-  background: #c82333;
+  width: 100%;
+  resize: vertical;
+  overflow: hidden;
 }
 </style>

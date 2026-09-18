@@ -71,6 +71,35 @@ describe('YAML Generation Consistency', () => {
     });
   });
   
+  it('writes several repositories as a YAML list, not one joined string', () => {
+    // Issue #154. Submission 2 carries two public repositories, so it is the one
+    // that shows whether the generated file is usable: they used to be joined
+    // into `repository: urlA, urlB`, a single scalar no consumer can resolve.
+    // The specification takes "A URL or a list of URLs".
+    const SUBMISSION_WITH_TWO_REPOSITORIES = 2;
+
+    // cy.ojsLogin() restores a session without loading a page, and
+    // cy.getCsrfToken() reads the token off the current one, so a visit first.
+    cy.visit('/index.php/codecheck/submissions');
+
+    cy.getCsrfToken().then((csrfToken) => {
+      cy.request({
+        method: 'GET',
+        url: `/index.php/codecheck/api/v1/codecheck/yaml?submissionId=${SUBMISSION_WITH_TWO_REPOSITORIES}`,
+        headers: { 'X-Csrf-Token': csrfToken },
+      }).then((response) => {
+        expect(response.status).to.eq(200);
+
+        const yaml = response.body.yaml;
+        const repositorySection = yaml.match(/^repository:.*(?:\n(?:[ \t]+|-).*)*/m)[0];
+
+        expect(repositorySection).to.match(
+          /^repository:\s*\n\s*- https:\/\/github\.com\/IainDaviesMaths\/Reproduction-Hancock\s*\n\s*- https:\/\/github\.com\/codecheckers\/Reproduction-Hancock/
+        );
+      });
+    });
+  });
+
   it('Preview button should be disabled when required fields are missing', () => {
     cy.visit(`/index.php/codecheck/dashboard/editorial?currentViewId=published&workflowSubmissionId=${submissionId}&workflowMenuKey=codecheck`);
     

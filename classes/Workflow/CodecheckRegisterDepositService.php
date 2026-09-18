@@ -13,6 +13,7 @@ use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
 use APP\plugins\generic\codecheck\classes\Exceptions\GithubUrlParseException;
 use \Github\Client;
+use APP\plugins\generic\codecheck\classes\Submission\CodecheckRepositories;
 
 /**
  * Assembles the register.csv row for a published CODECHECK and deposits it
@@ -129,25 +130,11 @@ class CodecheckRegisterDepositService
     }
 
     /**
-     * Resolve `repoWithCodecheckYaml` (an index into the comma-separated
-     * `repositories` string) into the actual URL string.
+     * The URL of the repository flagged as holding the `codecheck.yml`.
      */
     private function resolveSelectedRepositoryUrl(array $codecheckMetadata): ?string
     {
-        $repositoryData = $codecheckMetadata['repository'] ?? null;
-
-        if (!is_array($repositoryData) || empty($repositoryData['repositories'])) {
-            return null;
-        }
-
-        $index = $repositoryData['repoWithCodecheckYaml'] ?? null;
-        if (!is_int($index)) {
-            return null;
-        }
-
-        $repositories = array_map('trim', explode(',', $repositoryData['repositories']));
-
-        return $repositories[$index] ?? null;
+        return CodecheckRepositories::selectedUrl($codecheckMetadata['repository'] ?? null);
     }
 
     /**

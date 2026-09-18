@@ -19,11 +19,6 @@ class Constants
     public const SETTINGS_TEMPLATE = 'settings.tpl';
 
     /**
-     * Basic plugin setting
-     */
-    public const SETTING_ENABLE_CODECHECK = 'enableCodecheck';
-
-    /**
      * The possible Codecheck Statuses
      */
     public const CODECHECK_STATUS_PENDING = 'plugins.generic.codecheck.status.pending';
@@ -48,14 +43,16 @@ class Constants
         Constants::CODECHECK_STATUS_PUBLISHED_PARTIAL_REPRODUCTION,
         Constants::CODECHECK_STATUS_PUBLISHED_FULL_REPRODUCTION,
     ];
+    
+    public const CODECHECK_SHOW_ARTICLE_SIDEBAR = 'showArticleSidebar';
+    public const CODECHECK_SHOW_IN_TOC = 'showInTOC';
 
-    /**
-     * Plugin settings keys
-     */
-    public const CODECHECK_ENABLED = 'codecheckEnabled';
+    # Data and software availability statement on the article landing page
+    public const CODECHECK_SHOW_AVAILABILITY_STATEMENT = 'showAvailabilityStatement';
+    public const CODECHECK_AVAILABILITY_STATEMENT_HEADING = 'availabilityStatementHeading';
+    public const CODECHECK_HIDE_EMPTY_AVAILABILITY_STATEMENT = 'hideEmptyAvailabilityStatement';
+
     public const CODECHECK_AUTHOR_ANONYMITY = 'authorAnonymity';
-    public const CODECHECK_API_ENDPOINT = 'codecheckApiEndpoint';
-    public const CODECHECK_API_KEY = 'codecheckApiKey';
     public const CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN = 'githubPersonalAccessToken';
     public const CODECHECK_GITHUB_REGISTER_ORGANIZATION = 'githubRegisterOrganization';
     public const CODECHECK_GITHUB_REGISTER_REPOSITORY = 'githubRegisterRepository';
@@ -65,6 +62,40 @@ class Constants
     public const CODECHECK_BADGE_TYPE = 'codecheckBadgeType';
     public const CODECHECK_BADGE_CUSTOM_URL = 'codecheckBadgeCustomUrl';
     public const CODECHECK_BADGE_HEIGHT = 'codecheckBadgeHeight';
+    # Shown where the image would be when the badge type is 'none'
+    public const CODECHECK_BADGE_TEXT = 'codecheckBadgeText';
+    public const CODECHECK_BADGE_TEXT_COLOR = 'codecheckBadgeTextColor';
+
+    # Where the badge takes a reader: the certificate's DOI, or its landing
+    # page in the CODECHECK register
+    public const CODECHECK_BADGE_LINK_TARGET = 'codecheckBadgeLinkTarget';
+    public const CODECHECK_BADGE_LINK_TARGET_REGISTER = 'register';
+    public const CODECHECK_BADGE_LINK_TARGET_DOI = 'doi';
+    public const CODECHECK_BADGE_LINK_TARGETS = [
+        self::CODECHECK_BADGE_LINK_TARGET_REGISTER,
+        self::CODECHECK_BADGE_LINK_TARGET_DOI,
+    ];
+
+    /** Where a certificate's landing page lives in the register. */
+    public const CODECHECK_REGISTER_CERTIFICATE_URL = 'https://codecheck.org.uk/register/certs/';
+
+    /**
+     * The register landing page for a certificate identifier, or an empty
+     * string when the value is not an identifier this can build a URL from.
+     *
+     * Identifiers are stored as they appear in the register, `YYYY-NNN`; a
+     * `CODECHECK-` prefix is tolerated because older records carry one.
+     */
+    public static function getRegisterCertificateUrl(string $certificate): string
+    {
+        $identifier = preg_replace('/^CODECHECK-/', '', trim($certificate));
+
+        return preg_match('/^\d{4}-\d+$/', $identifier)
+            ? self::CODECHECK_REGISTER_CERTIFICATE_URL . $identifier . '/'
+            : '';
+    }
+    /** The green the badge text has always been rendered in. */
+    public const CODECHECK_BADGE_TEXT_COLOR_DEFAULT = '#2d7f3e';
 
     public const CODECHECK_SHOW_DASHBOARD_COLUMN = 'showDashboardColumn';
 
@@ -109,4 +140,37 @@ class Constants
     public const ORCID_DEPOSIT_STATUS_PENDING = 'pending';
     public const ORCID_DEPOSIT_STATUS_SUCCESS = 'success';
     public const ORCID_DEPOSIT_STATUS_FAILED = 'failed';
+
+    # CODECHECK config file specification versions offered in the metadata form
+    public const CODECHECK_ENABLED_CONFIG_VERSIONS = 'codecheckEnabledConfigVersions';
+
+    /**
+     * Every config version the plugin knows about, newest first. A journal may
+     * narrow this to a subset; see CODECHECK_ENABLED_CONFIG_VERSIONS.
+     */
+    public const CODECHECK_CONFIG_VERSIONS = [
+        'latest',
+        '1.0',
+    ];
+
+    /**
+     * What a journal offers before it has chosen: the current stable
+     * specification only. A journal that wants the moving target adds
+     * 'latest' in the settings form.
+     */
+    public const CODECHECK_DEFAULT_CONFIG_VERSIONS = [
+        '1.0',
+    ];
+
+    /** Where the specification for a given config version is published. */
+    public const CODECHECK_CONFIG_SPEC_URL = 'https://codecheck.org.uk/spec/config/';
+
+    /**
+     * Builds the specification URL for a config version. Kept here so the PHP
+     * side and CodecheckMetadataForm.vue cannot drift apart.
+     */
+    public static function getConfigSpecUrl(string $version): string
+    {
+        return self::CODECHECK_CONFIG_SPEC_URL . $version . '/';
+    }
 }

@@ -66,7 +66,10 @@ class JsonResponse
      */
     public function constructResponse(): void
     {
-        define('INDEX_FILE_STARTED', true);
+        // header for AJAX calls
+        if (!defined('INDEX_FILE_STARTED')) {
+            define('INDEX_FILE_STARTED', true);
+        }
         header('Content-Type: application/json');
         http_response_code($this->httpResponseCode);
         echo $this->payload;

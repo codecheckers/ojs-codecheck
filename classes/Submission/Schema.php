@@ -11,10 +11,11 @@ class Schema
     {
         $schema = &$args[0];
 
+        // Repositories and the manifest live in codecheck_metadata, written by
+        // the wizard and edited by the codechecker in one place. Only the
+        // availability statement is publication metadata: it has no counterpart
+        // in codecheck.yml and no codechecker view.
         $fields = [
-            'codeRepository' => 'string',
-            'dataRepository' => 'string',
-            'manifestFiles' => 'string',
             'dataAvailabilityStatement' => 'string',
         ];
 

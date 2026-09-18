@@ -38,10 +38,10 @@ class ArticleDetails
 
         // Get the CODECHECK settings for this journal or press
         $context = Application::get()->getRequest()->getContext();
-        $codecheckEnabled = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_ENABLED);
+        $showArticleSidebar = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_SHOW_ARTICLE_SIDEBAR);
 
-        // Do not modify the output if CODECHECK is not enabled
-        if (!$codecheckEnabled) {
+        // Do not modify the output if the sidebar display is switched off
+        if (!$showArticleSidebar) {
             return false;
         }
 
@@ -81,15 +81,23 @@ class ArticleDetails
     {
         $request = Application::get()->getRequest();
         $context = $request->getContext();
-        $badgeType = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_TYPE) ?? 'codeworks';
-        $badgeHeight = (int) ($this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_HEIGHT) ?? 24);
-        $badgeStyle = 'height:' . $badgeHeight . 'px; width:auto;';
+        $badge = new Badge($this->plugin, $context->getId());
 
         $templateMgr->assign([
-            'logoUrl'      => $this->getBadgeUrl(),
-            'badgeStyle'   => $badgeStyle,
+            'badgeLink'    => $badge->getCertificateUrl(
+                $codecheckData->getCertificate(),
+                $codecheckData->getDoiLink()
+            ),
+            'logoUrl'      => $badge->getUrl(),
+            'badgeText'    => $badge->getText(),
+            'badgeTextColor' => $badge->getTextColor(),
+            'badgeStyle'   => $badge->getStyle(),
             'orcidIconUrl' => $request->getBaseUrl() . '/' . $this->plugin->getPluginPath() . '/assets/img/orcid.svg',
             'articleId'    => $article->getId(),
+            // Both the completed and the pending branch render the same list
+            'repositoriesTemplate' => $this->plugin->getTemplateResource(
+                'frontend/objects/article_codecheck_repositories.tpl'
+            ),
         ]);
 
         if ($codecheckData->hasCompletedCheck()) {
@@ -101,39 +109,19 @@ class ArticleDetails
                 'codecheckers'      => $codecheckData->getCodecheckers(),
                 'certificateDate'   => $codecheckData->getCertificateDate(),
                 'summary'           => $codecheckData->getSummary(),
-                'repository' => implode(', ', $codecheckData->getRepositories()),
+                'repositories'      => $codecheckData->getPublicRepositories(),
                 'manifest'          => $codecheckData->getManifest(),
                 'additionalContent' => $codecheckData->getAdditionalContent(),
             ]);
         } elseif ($codecheckData->hasAssignedChecker()) {
             $templateMgr->assign([
                 'codecheckStatus' => 'pending',
-                'codeRepo' => implode(', ', $codecheckData->getRepositories()),
-                'dataRepo'        => $codecheckData->getDataRepository(),
+                'repositories'    => $codecheckData->getPublicRepositories(),
             ]);
         } else {
             return '';
         }
 
         return $templateMgr->fetch($this->plugin->getTemplateResource('frontend/objects/article_codecheck.tpl'));
-    }
-
-    /**
-     * Get the badge image URL based on the journal's badge type setting.
-     *
-     * @return string|null The URL to the badge image, or null if badge type is 'none' (text only).
-     */
-    private function getBadgeUrl(): ?string
-    {
-        $context = Application::get()->getRequest()->getContext();
-        $badgeType = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_TYPE) ?? 'codeworks';
-        $base = Application::get()->getRequest()->getBaseUrl() . '/' . $this->plugin->getPluginPath();
-
-        return match ($badgeType) {
-            'codecheck_logo' => $base . '/assets/img/codecheck_logo.svg',
-            'custom'         => $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_CUSTOM_URL) ?: null,
-            'none'           => null,
-            default          => $base . '/assets/img/codeworks-badge.png',
-        };
     }
 }

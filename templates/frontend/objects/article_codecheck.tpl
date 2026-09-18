@@ -8,15 +8,17 @@
  *}
 
 {if $codecheckStatus == 'completed'}
-<div class="item certificate" style="padding: 15px; margin: 5px 0;">
+<div class="item certificate" data-testid="codecheck-article-sidebar" style="padding: 15px; margin: 5px 0;">
 
-    {* Badge *}
+    {* Badge — linked to whichever certificate target the journal configured *}
     <div class="sub_item" style="display:flex; align-items:center; margin-bottom:8px;">
+        {if $badgeLink}<a href="{$badgeLink|escape}" target="_blank" class="codecheck-badge" title="{translate key='plugins.generic.codecheck.viewCertificate'}">{/if}
         {if $logoUrl}
-            <img src="{$logoUrl|escape}" alt="{translate key='plugins.generic.codecheck.badge.altText'}" style="{$badgeStyle} margin-right:6px;">
+            <img src="{$logoUrl|escape}" alt="{translate key='plugins.generic.codecheck.badge.altText'}" class="codecheck-badge-img" style="{$badgeStyle} margin-right:6px;">
         {else}
-            <span style="color:#2d7f3e; font-weight:600; margin-right:6px;">{translate key='plugins.generic.codecheck.badge.textOnly'}</span>
+            <span class="codecheck-badge--text" style="color:{$badgeTextColor|escape}; font-weight:600; margin-right:6px;">{$badgeText|escape}</span>
         {/if}
+        {if $badgeLink}</a>{/if}
     </div>
 
     {* Codecheckers with ORCIDs *}
@@ -81,19 +83,12 @@
             </div>
         {/if}
 
-        {if $repository}
-            <div class="sub_item">
-                <h2 class="label">{translate key='plugins.generic.codecheck.repositories.title'}</h2>
-                <div class="value">
-                    <a href="{$repository|escape}" target="_blank">{$repository|truncate:40|escape}</a>
-                </div>
-            </div>
-        {/if}
+        {include file=$repositoriesTemplate}
 
         {if $manifest}
             <div class="sub_item">
                 <h2 class="label">{translate key='plugins.generic.codecheck.manifest.title'}</h2>
-                <ul class="value" style="margin:4px 0 0 0; padding-left:16px;">
+                <ul class="value codecheck-sidebar-list">
                     {foreach from=$manifest item=file}
                         <li>
                             {$file.file|escape}
@@ -118,13 +113,13 @@
 </div>
 
 {elseif $codecheckStatus == 'pending'}
-<div class="item codecheck-pending" style="padding: 15px; margin: 5px 0;">
+<div class="item codecheck-pending" data-testid="codecheck-article-sidebar" style="padding: 15px; margin: 5px 0;">
 
     <div class="sub_item" style="display:flex; align-items:center; margin-bottom:8px;">
         {if $logoUrl}
-            <img src="{$logoUrl|escape}" alt="{translate key='plugins.generic.codecheck.badge.altText'}" style="{$badgeStyle} margin-right:6px;">
+            <img src="{$logoUrl|escape}" alt="{translate key='plugins.generic.codecheck.badge.altText'}" class="codecheck-badge-img" style="{$badgeStyle} margin-right:6px;">
         {else}
-            <span style="font-size:0.8em; font-weight:600; color:#333; margin-right:6px;">{translate key='plugins.generic.codecheck.badge.textOnly'}</span>
+            <span class="codecheck-badge--text" style="font-size:0.8em; font-weight:600; color:{$badgeTextColor|escape}; margin-right:6px;">{$badgeText|escape}</span>
         {/if}
     </div>
 
@@ -133,23 +128,7 @@
         <div class="value">{translate key='plugins.generic.codecheck.status.verificationInProgress'}</div>
     </div>
 
-    {if $codeRepo}
-        <div class="sub_item">
-            <h2 class="label">{translate key='plugins.generic.codecheck.codeRepository'}</h2>
-            <div class="value">
-                <a href="{$codeRepo|escape}" target="_blank">{$codeRepo|truncate:30|escape}</a>
-            </div>
-        </div>
-    {/if}
-
-    {if $dataRepo}
-        <div class="sub_item">
-            <h2 class="label">{translate key='plugins.generic.codecheck.dataRepository'}</h2>
-            <div class="value">
-                <a href="{$dataRepo|escape}" target="_blank">{$dataRepo|truncate:30|escape}</a>
-            </div>
-        </div>
-    {/if}
+    {include file=$repositoriesTemplate}
 
 </div>
 {/if}
