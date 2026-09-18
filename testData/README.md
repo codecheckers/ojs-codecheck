@@ -69,7 +69,7 @@ The manual procedure below remains valid for other setups.
 
 **Journal:** CODECHECK Demo Journal (path: `codecheck`)
 
-**Users:** All passwords follow the pattern `username` repeated twice (except `admin`)
+**Users:** The password is the username, see table below.
 
 | Username | Password | Role |
 |---|---|---|

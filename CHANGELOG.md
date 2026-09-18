@@ -191,6 +191,10 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 
 ### Security
 
+- Opening and updating issues in the public CODECHECK register is restricted to a
+  journal editor or an administrator. A section editor or assistant could do it
+  by inheritance, and an entry in the register is published under the journal's
+  name (Issue #173)
 - Writing CODECHECK data is no longer open to every reviewer in the journal. A
   reviewer had been given the same rights as an editor, and the API's role check
   asks only whether a user holds a role *somewhere in the journal* — so any

@@ -415,7 +415,7 @@ cypress/
   support/e2e.js               cy.ojsLogin(), cy.getCsrfToken(), swallow uncaught exceptions
   support/component-index.html
   tests/component/*.cy.js      5 specs, 61 tests
-  tests/e2e/*.cy.js            9 specs, 40 tests
+  tests/e2e/*.cy.js            12 specs, 55 tests
                                yaml-generation, article-sidebar-setting,
                                issue-toc-setting, issue-toc-badge,
                                private-repository, publication-validation,
@@ -583,7 +583,8 @@ Three jobs on push/PR to `main`:
 A PKP-datasets-shaped MySQL dump + article files for a "CODECHECK Demo Journal"
 (path `codecheck`): 8 submissions (5 published across 2 issues, 2 in review, 1 submitted),
 users `admin/admin`, `jmanager`, `seglen`, `dnuest`, `fostermann`, `rreviewer`
-(password = username twice, except admin). `testData/README.md` documents manual loading
+(the password is the username). `rreviewer` is assigned as a reviewer to
+submission 9 and to nothing else, which is what `reviewer-rights.cy.js` needs. `testData/README.md` documents manual loading
 via `pkp/datasets`' `tools/load.sh`.
 
 The dump used to lack `codecheck_status`, `codecheck_issue_labels`,

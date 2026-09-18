@@ -123,12 +123,18 @@ class CodecheckApiHandler
                 [
                     'route'   => 'identifier',
                     'handler' => [$this, 'reserveIdentifier'],
-                    'roles'   => $roles->editMetadata(),
+                    // The register is public and published under the journal's name, so
+                    // this is for a journal editor or an administrator alone — not a
+                    // section editor or assistant, and not the codechecker (#173).
+                    'roles'   => $roles->admin(),
                 ],
                 [
                     'route' => 'issue',
                     'handler' => [$this, 'updateGithubIssue'],
-                    'roles' => $roles->editMetadata(),
+                    // The register is public and published under the journal's name, so
+                    // this is for a journal editor or an administrator alone — not a
+                    // section editor or assistant, and not the codechecker (#173).
+                    'roles' => $roles->admin(),
                 ],
                 [
                     'route'   => 'metadata',
