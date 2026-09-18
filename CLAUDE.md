@@ -656,6 +656,20 @@ Notes that matter when touching this:
   symlink, so `tests/bootstrap.php`'s default "four levels up" lands outside the
   OJS tree. `bootstrap.php` and `runTests.sh` honour `OJS_ROOT`; `make test-php`
   sets it. CI uses a real checkout, where the default still applies.
+- **`Hook::run()` and `Hook::call()` hand arguments to callbacks differently.**
+  `Hook::call($name, $args)` delegates to `run($name, [$args])`, and `run()`
+  spreads: `call_user_func_array($callback, [$hookName, ...$args])`. So a
+  `Hook::call` callback takes `(string $hookName, array $args)` — which is every
+  hook this plugin registers except one. `APIHandler::endpoints::plugin` is raised
+  with `Hook::run('...', [$this])`, so its callback takes the router as its own
+  parameter: `(string $hookName, APIRouter $router)`. Getting it wrong is
+  invisible — the TypeError is thrown inside the hook, PKP swallows it, and the
+  request falls through to OJS's `api.404.endpointNotFound`, which reads like a
+  routing problem. The server log is the only place it appears.
+- **Repointing the plugin symlink does not take effect for up to two minutes.**
+  `realpath_cache_ttl` is 120s, so a long-running `php -S` keeps resolving
+  `plugins/generic/codecheck` to the previous target. Tests run just after a swap
+  silently mix old and new code. Restart the server after swapping.
 - **A git worktree cannot be tested without repointing the symlink.** OJS resolves
   `APP\plugins\generic\codecheck\…` through `plugins/generic/codecheck`, which
   points at the main checkout — so PHPUnit run *from* a worktree still loads the

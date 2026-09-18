@@ -20,6 +20,7 @@ use PKP\plugins\GenericPlugin;
 use PKP\plugins\Hook;
 use PKP\components\forms\FieldOptions;
 use APP\facades\Repo;
+use APP\plugins\generic\codecheck\api\v1\CodecheckApiController;
 use APP\plugins\generic\codecheck\api\v1\CodecheckApiHandler;
 use APP\plugins\generic\codecheck\api\v1\CurlApiClient;
 use PKP\core\JSONMessage;
@@ -64,6 +65,8 @@ class CodecheckPlugin extends GenericPlugin
             Hook::add('Form::config::before', $availabilityStatementField->addToMetadataForm(...));
             // Add hook for Ajax API calls
             Hook::add('Dispatcher::dispatch', [$this, 'setupAPIHandler']);
+            // Issue #50 stage 0: one route is served by a PKP controller instead.
+            Hook::add('APIHandler::endpoints::plugin', [$this, 'registerApiControllers']);
             // Add hook for the custom CODECHECK Pages
             Hook::add('LoadHandler', $this->setCodecheckPageHandler(...));
             // Add hook for the Template Manager
@@ -236,6 +239,47 @@ class CodecheckPlugin extends GenericPlugin
      * The constructor handles the request and exits — no need to set a router handler.
      */
     /**
+     * Routes the PKP controller serves instead of the hand-rolled handler.
+     *
+     * Stage 0 of the migration in `plan-50-p2-api-controller.md`: one endpoint,
+     * to check the migration's assumptions against a running instance.
+     */
+    private const CONTROLLER_ROUTES = ['status'];
+
+    /**
+     * Is this request one the controller now answers?
+     */
+    private static function servedByController(string $requestPath): bool
+    {
+        if (!preg_match('~/api/v\d+/codecheck/([^?#]+)~', $requestPath, $matches)) {
+            return false;
+        }
+
+        return in_array(trim($matches[1], '/'), self::CONTROLLER_ROUTES, true);
+    }
+
+    /**
+     * Hand the CODECHECK controller to OJS's API router.
+     *
+     * Note the signature. `APIHandler::endpoints::plugin` is raised with
+     * `Hook::run('...', [$this])`, and `Hook::run()` **spreads** its arguments
+     * (`call_user_func_array($callback, [$hookName, ...$args])`), so the router
+     * arrives as its own parameter. Every other hook this plugin uses is raised
+     * through `Hook::call()`, which wraps the arguments once more before handing
+     * them to `run()` — which is why those callbacks take `array $args`.
+     *
+     * Getting this wrong is invisible: the TypeError is thrown inside the hook
+     * and PKP swallows it, so the callback simply appears never to have run and
+     * the request falls through to OJS's own 404.
+     */
+    public function registerApiControllers(string $hookName, \PKP\core\APIRouter $router): bool
+    {
+        $router->registerPluginApiControllers([new CodecheckApiController()]);
+
+        return Hook::CONTINUE;
+    }
+
+    /**
      * Which journal roles may read, write and administer CODECHECK data.
      *
      * Built here rather than inline in `setupAPIHandler()` so that a test can
@@ -270,6 +314,14 @@ class CodecheckPlugin extends GenericPlugin
         if (!($router instanceof \PKP\core\APIRouter)) return;
 
         if (str_contains($request->getRequestPath(), 'api/v1/codecheck')) {
+            // Scaffolding for the stage 0 spike (Issue #50). The routes listed
+            // here are served by CodecheckApiController; this hook fires before
+            // routing and the handler below exits, so without the skip the
+            // controller would never be reached. Goes away with the handler.
+            if (self::servedByController($request->getRequestPath())) {
+                return;
+            }
+
             CodecheckLogger::debug('Instantiating the CODECHECK APIHandler');
 
             $apiHandler = new CodecheckApiHandler($this, $request, self::buildRoleManager());
