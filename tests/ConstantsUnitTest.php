@@ -4,6 +4,7 @@ namespace APP\plugins\generic\codecheck\tests;
 
 use APP\plugins\generic\codecheck\classes\Constants;
 use PKP\tests\PKPTestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * The config version list and the specification URL built from it are mirrored
@@ -11,6 +12,46 @@ use PKP\tests\PKPTestCase;
  */
 class ConstantsUnitTest extends PKPTestCase
 {
+    #[DataProvider('webUrlProvider')]
+    public function testOnlyWebAddressesMayBeLinked(string $url, bool $expected, string $why)
+    {
+        $this->assertSame($expected, Constants::isWebUrl($url), $why);
+    }
+
+    public static function webUrlProvider(): array
+    {
+        return [
+            ['https://github.com/codecheckers/repo', true,  'an ordinary https address'],
+            ['http://doi.org/10.5281/zenodo.3750741', true, 'http is still a web address; real records use it'],
+            ['HTTPS://EXAMPLE.ORG', true,  'the scheme is case-insensitive'],
+            ['  https://example.org  ', true, 'surrounding whitespace is not meaningful'],
+
+            // The whole reason this helper exists: filter_var() accepts the next
+            // two, which is how a javascript: URL reached an href on the public
+            // article page and the issue table of contents.
+            ['javascript://x%0Aalert(1)', false, 'the filter_var bypass must be refused'],
+            ['JaVaScRiPt://x%0Aalert(1)', false, 'and in any casing'],
+            ['javascript:alert(1)', false, 'the plain form too'],
+            ['data:text/html;base64,PHNjcmlwdD4=', false, 'data: is not a web address'],
+            ['ftp://example.org/x', false, 'nor ftp'],
+            ['//example.org', false, 'a scheme-relative address has no scheme to check'],
+            ['/relative/path', false, 'nor a path'],
+            ['2025-001', false, 'a register identifier is not a URL'],
+            ['', false, 'empty is not a URL'],
+        ];
+    }
+
+    public function testFilterVarWouldNotBeEnough()
+    {
+        // Pinned deliberately: if a future PHP tightens FILTER_VALIDATE_URL this
+        // test fails and the comments explaining why we do not use it can go.
+        $this->assertNotFalse(
+            filter_var('javascript://x%0Aalert(1)', FILTER_VALIDATE_URL),
+            'FILTER_VALIDATE_URL still accepts a javascript: URL, so isWebUrl() is still needed'
+        );
+        $this->assertFalse(Constants::isWebUrl('javascript://x%0Aalert(1)'));
+    }
+
     public function testConfigSpecUrlIsBuiltFromTheVersion()
     {
         $this->assertSame(

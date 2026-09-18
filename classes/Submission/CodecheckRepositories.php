@@ -24,6 +24,8 @@
 
 namespace APP\plugins\generic\codecheck\classes\Submission;
 
+use APP\plugins\generic\codecheck\classes\Constants;
+
 class CodecheckRepositories
 {
     /**
@@ -80,7 +82,7 @@ class CodecheckRepositories
 
         foreach (self::entries($repositoryData) as $entry) {
             $url = trim((string) ($entry['url'] ?? ''));
-            if ($url !== '' && !preg_match('#^https?://#i', $url)) {
+            if ($url !== '' && !Constants::isWebUrl($url)) {
                 $unusable[] = $url;
             }
         }

@@ -191,6 +191,16 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 
 ### Security
 
+- A CODECHECK certificate or report that is not an `http(s)` address is no longer
+  turned into a link on the article page or the issue table of contents. Both were
+  admitted by `filter_var(…, FILTER_VALIDATE_URL)`, which validates the syntax
+  `scheme:…` and not the scheme, so it accepts `javascript://x%0Aalert(1)`; the
+  report field had no check at all and was returned verbatim when it did not parse
+  as a DOI. Either is editor-supplied free text rendered into an `href` on a page
+  every reader sees. The rule now lives in one place, `Constants::isWebUrl()`,
+  which the repository list and the save-time repository check already applied
+  (Issue #50)
+
 - The CODECHECK API no longer has a file download endpoint. `GET download` took a
   path from the request, resolved it against the OJS installation directory and
   passed it to `readfile()` if the string contained `codecheck` anywhere — no

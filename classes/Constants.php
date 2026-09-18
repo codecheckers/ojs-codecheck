@@ -86,6 +86,23 @@ class Constants
      * Identifiers are stored as they appear in the register, `YYYY-NNN`; a
      * `CODECHECK-` prefix is tolerated because older records carry one.
      */
+    /**
+     * May this address be put in an `href` on a page we render?
+     *
+     * Only `http://` and `https://`. `filter_var(…, FILTER_VALIDATE_URL)` is not
+     * a substitute: it validates the *syntax* `scheme:…` and says nothing about
+     * the scheme, so `javascript://x%0Aalert(1)` passes it. Verified on PHP 8.2.
+     *
+     * The same rule decides whether a repository is rendered as a link
+     * (`CodecheckSubmissionDAO::getPublicRepositories()`) and whether one is
+     * refused on save (`CodecheckRepositories::unusableUrls()`); it lives here so
+     * there is one definition to audit rather than four.
+     */
+    public static function isWebUrl(?string $url): bool
+    {
+        return (bool) preg_match('#^https?://#i', trim((string) $url));
+    }
+
     public static function getRegisterCertificateUrl(string $certificate): string
     {
         $identifier = preg_replace('/^CODECHECK-/', '', trim($certificate));

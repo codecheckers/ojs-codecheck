@@ -139,7 +139,7 @@ class CodecheckSubmission
             $public[] = [
                 'url' => $url,
                 'containsCodecheckYaml' => $isSelected,
-                'isWebLink' => (bool) preg_match('#^https?://#i', $url),
+                'isWebLink' => Constants::isWebUrl($url),
             ];
         }
 
@@ -232,8 +232,9 @@ class CodecheckSubmission
     {
         $certificate = $this->getCertificate();
         
-        // If it's already a URL, return it
-        if (filter_var($certificate, FILTER_VALIDATE_URL)) {
+        // If it's already a URL, return it. Not filter_var(): that accepts
+        // `javascript://…` — see Constants::isWebUrl().
+        if (Constants::isWebUrl($certificate)) {
             return $certificate;
         }
         
@@ -265,7 +266,10 @@ class CodecheckSubmission
             }
         }
         
-        // Return raw value as fallback
-        return $report;
+        // Anything that is not an http(s) address is not a link. The value is
+        // still stored; it is simply never turned into one, because this is
+        // rendered straight into an href on the public article page and
+        // `javascript:` there executes for every reader.
+        return Constants::isWebUrl($report) ? $report : '';
     }
 }

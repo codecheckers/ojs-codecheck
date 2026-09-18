@@ -127,6 +127,31 @@ class BadgeUnitTest extends PKPTestCase
         );
     }
 
+    public function testACertificateThatIsNotAWebAddressIsNotUsedAsOne()
+    {
+        // The certificate is editor-supplied free text and lands in an href on
+        // the article page and in the issue table of contents. It used to be
+        // admitted by filter_var(), which accepts `javascript://…`; anything
+        // that is not http(s) now falls through to the register URL builder,
+        // which returns '' for a value that is not a YYYY-NNN identifier.
+        $badge = $this->badgeWithSettings([]);
+
+        $this->assertSame('', $badge->getCertificateUrl('javascript://x%0Aalert(1)', ''));
+        $this->assertSame('', $badge->getCertificateUrl('JaVaScRiPt://x%0Aalert(1)', ''));
+        $this->assertSame('', $badge->getCertificateUrl('data:text/html,<script>', ''));
+
+        // A real URL is still honoured, and a register identifier still becomes
+        // its landing page.
+        $this->assertSame(
+            'https://codecheck.org.uk/register/certs/2020-001/',
+            $badge->getCertificateUrl('https://codecheck.org.uk/register/certs/2020-001/', '')
+        );
+        $this->assertSame(
+            'https://codecheck.org.uk/register/certs/2020-001/',
+            $badge->getCertificateUrl('2020-001', '')
+        );
+    }
+
     public function testWithNeitherATargetThereIsNoLink()
     {
         // The caller renders the badge unlinked rather than with href="".

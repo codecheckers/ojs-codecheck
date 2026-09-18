@@ -95,8 +95,11 @@ class Badge
     {
         $certificate = trim($certificate);
 
-        // A journal that recorded the certificate as a URL means that URL.
-        $register = filter_var($certificate, FILTER_VALIDATE_URL)
+        // A journal that recorded the certificate as a URL means that URL — but
+        // only a web one. Not filter_var(): it accepts `javascript://…`, and
+        // this lands in an href on the article page and in the issue table of
+        // contents. See Constants::isWebUrl().
+        $register = Constants::isWebUrl($certificate)
             ? $certificate
             : Constants::getRegisterCertificateUrl($certificate);
 
