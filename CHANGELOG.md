@@ -191,6 +191,17 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 
 ### Security
 
+- A CODECHECK status change is recorded against the user who made the request.
+  The actor came from the request body, so any caller could attribute a decision
+  to any user id — in an append-only log that the publication gate reads. The
+  status itself is now checked against the known statuses instead of being stored
+  as whatever string arrived (Issue #50)
+- Whether a user may set the CODECHECK status is answered from the session. The
+  endpoint read the caller's own `user.roles` out of the request body and looked
+  for the manager role in it, so the question was answered by whoever asked. It
+  only shows and hides a control — the enforcement is on the endpoints — but the
+  server's answer should not have been the client's to give (Issue #50)
+
 - The submission wizard's review panel escapes the data and software availability
   statement. Every other value in that panel was escaped; this one was not, so an
   author's statement went into the page as markup (Issue #50)

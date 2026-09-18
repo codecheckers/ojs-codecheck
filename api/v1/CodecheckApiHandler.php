@@ -28,6 +28,7 @@ use Illuminate\Support\Facades\Schema;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckStatusHandler;
 use Illuminate\Support\Facades\DB;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionAccess;
+use PKP\security\Role;
 
 class CodecheckApiHandler
 {
@@ -1120,23 +1121,27 @@ class CodecheckApiHandler
 
         $submissionId = (int) $this->codecheckMetadataHandler->getSubmissionId();
 
-        $postParams = json_decode(file_get_contents('php://input'), true);
-        $status = $postParams["status"];
-        $userId = $postParams["userId"];
+        $postParams = json_decode(file_get_contents('php://input'), true) ?? [];
+        $status = $postParams["status"] ?? null;
 
-        if(!is_string($status) || !is_int($userId)) {
+        // Read as a mode, not as an actor: -1 asks for the automatic update,
+        // which the handler records as the system. Whatever else it holds is
+        // ignored — see below.
+        $requestedMode = $postParams["userId"] ?? null;
+
+        if(!is_string($status) || !is_int($requestedMode)) {
             $this->respond([
                 'success' => false,
                 'statusRecord' => [
                     'status' => $status,
-                    'userId' => $userId
+                    'userId' => $requestedMode
                 ],
                 'allStatuses' => Constants::CODECHECK_STATUSES,
                 'error' => 'Bad Request: Please provide a Status form of string and a User ID in the form of int.'
             ], 400);
         }
 
-        if($userId == -1) {
+        if($requestedMode === -1) {
             $submissionMetadata = $this->codecheckMetadataHandler->getMetadata($this->request, $submissionId);
             if(array_key_exists("error",$submissionMetadata)) {
                 $this->respond([
@@ -1163,6 +1168,20 @@ class CodecheckApiHandler
             }
         }
 
+        // The status log is append-only and the publication gate reads it, so
+        // who made a decision has to be who actually made the request. It used
+        // to be whatever the body claimed, which let any caller attribute a
+        // decision to any user id.
+        $userId = (int) $this->request->getUser()->getId();
+
+        if (!in_array($status, Constants::CODECHECK_STATUSES, true)) {
+            $this->respond([
+                'success' => false,
+                'allStatuses' => Constants::CODECHECK_STATUSES,
+                'error' => 'Bad Request: Unknown CODECHECK status.'
+            ], 400);
+        }
+
         $statusUpdate = CodecheckStatusHandler::updateStatus($submissionId, $status, $userId);
 
         if($statusUpdate == false) {
@@ -1184,27 +1203,26 @@ class CodecheckApiHandler
         ], 200);
     }
 
+    /**
+     * Whether the caller may set the CODECHECK status.
+     *
+     * The answer comes from the session. It used to be read out of the request
+     * body — the caller sent its own `user.roles` and the server looked for 16
+     * in the list — so the question "may I?" was answered by whoever asked. The
+     * client still posts `pkp.currentUser`; that body is now ignored rather than
+     * trusted, and an honest client gets the same answer as before.
+     *
+     * This only shows and hides a control. The enforcement is
+     * assertMayWriteMetadata() on the endpoints themselves.
+     */
     public function validateUserAccessRightsToStatus(): void
     {
-        $postParams = json_decode(file_get_contents('php://input'), true);
-        $user = $postParams["user"];
+        $context = $this->request->getContext();
+        $user = $this->request->getUser();
 
-        if(!is_array($user["roles"])) {
-            $this->respond([
-                'success' => false,
-                'error' => 'Bad Request: Please provide the current User in your request.'
-            ], 400);
-        }
-
-        $userRoles = $user["roles"];
-        $allowedToAccess = false;
-
-        foreach ($userRoles as $userRole) {
-            if($userRole == 16) {
-                $allowedToAccess = true;
-                break;
-            }
-        }
+        $allowedToAccess = $user
+            && $context
+            && $user->hasRole([Role::ROLE_ID_MANAGER], $context->getId());
 
         $this->respond([
             'success' => true,

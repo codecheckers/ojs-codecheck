@@ -18,6 +18,15 @@ const JOURNAL = 'codecheck';
 const ASSIGNED = 9;
 const NOT_ASSIGNED = 8;
 
+const ASSIGNED_CODECHECKER = 'plugins.generic.codecheck.status.assignedCodechecker';
+
+/** Who the fixture says these accounts are, so the recorded actor can be checked. */
+const RREVIEWER_ID = 6;
+const ADMIN_ID = 1;
+
+/** A user id the caller is not, posted to prove the body cannot set the actor. */
+const SOMEONE_ELSE = 4;
+
 const api = (path) => `/index.php/${JOURNAL}/api/v1/codecheck/${path}`;
 
 /** A POST that expects to be refused or allowed, without throwing on 4xx. */
@@ -40,12 +49,18 @@ describe('A reviewer assigned to a submission', () => {
     cy.getCsrfToken().then((csrfToken) => {
       post(`status/update?submissionId=${ASSIGNED}`, {
         submissionId: ASSIGNED,
-        status: 'plugins.generic.codecheck.status.codecheckerAssigned',
+        status: ASSIGNED_CODECHECKER,
+        // Deliberately not this caller: the actor is taken from the session,
+        // so what the body claims must make no difference.
+        userId: SOMEONE_ELSE,
       }, csrfToken).then((response) => {
-        // Whatever the endpoint makes of the payload, it must not be refused
-        // for who is asking.
-        expect(response.status).to.not.eq(403);
-        expect(JSON.stringify(response.body)).to.not.contain('assigned to this submission');
+        expect(response.status, 'the write is allowed').to.eq(200);
+        expect(response.body.success).to.eq(true);
+        expect(response.body.statusRecord.status).to.eq(ASSIGNED_CODECHECKER);
+        expect(
+          response.body.statusRecord.user_id,
+          'the reviewer who asked is recorded, not the id they sent'
+        ).to.eq(RREVIEWER_ID);
       });
     });
   });
@@ -106,9 +121,16 @@ describe('An editor', () => {
     cy.getCsrfToken().then((csrfToken) => {
       post(`status/update?submissionId=${NOT_ASSIGNED}`, {
         submissionId: NOT_ASSIGNED,
-        status: 'plugins.generic.codecheck.status.codecheckerAssigned',
+        status: ASSIGNED_CODECHECKER,
+        userId: SOMEONE_ELSE,
       }, csrfToken).then((response) => {
-        expect(response.status).to.not.eq(403);
+        expect(response.status, 'an editor is not limited to their assignments').to.eq(200);
+        expect(response.body.success).to.eq(true);
+        expect(response.body.statusRecord.status).to.eq(ASSIGNED_CODECHECKER);
+        expect(
+          response.body.statusRecord.user_id,
+          'the editor who asked is recorded, not the id they sent'
+        ).to.eq(ADMIN_ID);
       });
     });
   });
