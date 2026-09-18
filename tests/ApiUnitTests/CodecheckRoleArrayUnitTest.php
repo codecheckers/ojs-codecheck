@@ -6,6 +6,7 @@ use APP\plugins\generic\codecheck\classes\CodecheckRoles\CodecheckRoleArray;
 use APP\plugins\generic\codecheck\classes\CodecheckRoles\CodecheckRoleManager;
 use PKP\security\Role;
 use PKP\tests\PKPTestCase;
+use APP\plugins\generic\codecheck\CodecheckPlugin;
 
 /**
  * @file APP/plugins/generic/codecheck/tests/ApiUnitTests/CodecheckRoleArrayUnitTest.php
@@ -93,15 +94,15 @@ class CodecheckRoleArrayUnitTest extends PKPTestCase
      */
     public function testTheHandlersOwnNestingWidensFromAdminToRead()
     {
-        $admin = new CodecheckRoleArray([Role::ROLE_ID_MANAGER, Role::ROLE_ID_SITE_ADMIN]);
-        $edit = new CodecheckRoleArray([$admin, Role::ROLE_ID_SUB_EDITOR, Role::ROLE_ID_ASSISTANT, Role::ROLE_ID_MANAGER]);
-        $read = new CodecheckRoleArray([$edit, Role::ROLE_ID_READER, Role::ROLE_ID_AUTHOR]);
-
-        $manager = new CodecheckRoleManager(readMetadata: $read, editMetadata: $edit, admin: $admin);
+        // The sets the plugin actually installs — not a copy of them. This test
+        // used to build its own, so when ROLE_ID_REVIEWER moved into the edit set
+        // in production the assertion below went on passing against the old
+        // arrangement (Issue #173).
+        $manager = CodecheckPlugin::buildRoleManager();
 
         $this->assertCount(2, $manager->admin()->getRoles());
         $this->assertCount(4, $manager->editMetadata()->getRoles());
-        $this->assertCount(6, $manager->readMetadata()->getRoles());
+        $this->assertCount(7, $manager->readMetadata()->getRoles());
 
         // Every editor can read, and every admin can edit.
         foreach ($manager->editMetadata()->getRoles() as $role) {
@@ -111,7 +112,12 @@ class CodecheckRoleArrayUnitTest extends PKPTestCase
             $this->assertContains($role, $manager->editMetadata()->getRoles());
         }
 
-        // A reviewer is not granted access by any of them.
-        $this->assertNotContains(Role::ROLE_ID_REVIEWER, $manager->readMetadata()->getRoles());
+        // A reviewer may read CODECHECK data — the reviewer tab shows it — but
+        // may not write it. Writing reaches the public CODECHECK register, and
+        // the role check is journal-wide, so a write role here would let any
+        // reviewer act on any submission (Issue #173).
+        $this->assertContains(Role::ROLE_ID_REVIEWER, $manager->readMetadata()->getRoles());
+        $this->assertNotContains(Role::ROLE_ID_REVIEWER, $manager->editMetadata()->getRoles());
+        $this->assertNotContains(Role::ROLE_ID_REVIEWER, $manager->admin()->getRoles());
     }
 }

@@ -27,6 +27,7 @@ use Exception;
 use Illuminate\Support\Facades\Schema;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckStatusHandler;
 use Illuminate\Support\Facades\DB;
+use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionAccess;
 
 class CodecheckApiHandler
 {
@@ -132,17 +133,17 @@ class CodecheckApiHandler
                 [
                     'route'   => 'metadata',
                     'handler' => [$this, 'saveMetadata'],
-                    'roles'   => $roles->editMetadata(),
+                    'roles'   => $roles->readMetadata(),
                 ],
                 [
                     'route'   => 'upload',
                     'handler' => [$this, 'uploadFile'],
-                    'roles'   => $roles->editMetadata(),
+                    'roles'   => $roles->readMetadata(),
                 ],
                 [
                     'route'   => 'repository',
                     'handler' => [$this, 'loadMetadataFromRepository'],
-                    'roles'   => $roles->editMetadata(),
+                    'roles'   => $roles->readMetadata(),
                 ],
                 [
                     'route' => 'repository/validate',
@@ -157,7 +158,7 @@ class CodecheckApiHandler
                 [
                     'route' => 'status/update',
                     'handler' => [$this, 'updateStatus'],
-                    'roles' => $roles->editMetadata(),
+                    'roles' => $roles->readMetadata(),
                 ],
                 [
                     'route' => 'users/roles/validation',
@@ -165,9 +166,12 @@ class CodecheckApiHandler
                     'roles' => $roles->readMetadata(),
                 ],
                 [
+                    // Editors, or the reviewer assigned to this submission. The
+                    // role set is only the coarse filter; depositToOrcid() does
+                    // the per-submission check the roles cannot express (#173).
                     'route'   => 'orcid-deposit',
                     'handler' => [$this, 'depositToOrcid'],
-                    'roles'   => $roles->editMetadata(),
+                    'roles'   => $roles->readMetadata(),
                 ],
             ],
         ];
@@ -679,6 +683,8 @@ class CodecheckApiHandler
      */
     public function loadMetadataFromRepository(): void
     {
+        $this->assertMayWriteMetadata($this->codecheckMetadataHandler->getSubmissionId());
+
         $postParams = json_decode(file_get_contents('php://input'), true);
         $repository = $postParams["repository"];
 
@@ -786,8 +792,36 @@ class CodecheckApiHandler
      * 
      * @return void
      */
+    /**
+     * Refuse anyone who may not write CODECHECK data for this submission.
+     *
+     * The role check that already ran asks only whether the user holds a role
+     * somewhere in the journal. Reviewers are invited per submission, so for
+     * them that is not enough: a reviewer may record the check they were
+     * assigned to and no other (Issue #173).
+     *
+     * Note what is deliberately absent: this does not admit anyone to the
+     * register endpoints. Reserving an identifier and writing a register issue
+     * publish under the journal's name and stay with the editors.
+     */
+    private function assertMayWriteMetadata(int $submissionId): void
+    {
+        $context = $this->request->getContext();
+
+        if (CodecheckSubmissionAccess::canWriteMetadata($this->request->getUser(), $submissionId, $context->getId())) {
+            return;
+        }
+
+        $this->respond([
+            'success' => false,
+            'error'   => 'Only an editor, or a reviewer assigned to this submission, may change its CODECHECK data.',
+        ], 403);
+    }
+
     public function saveMetadata(): void
     {
+        $this->assertMayWriteMetadata($this->codecheckMetadataHandler->getSubmissionId());
+
         $submissionId = $this->codecheckMetadataHandler->getSubmissionId();
 
         $result = $this->codecheckMetadataHandler->saveMetadata($this->request, $submissionId);
@@ -811,6 +845,8 @@ class CodecheckApiHandler
      */
     public function uploadFile(): void
     {
+        $this->assertMayWriteMetadata($this->codecheckMetadataHandler->getSubmissionId());
+
         // get submissionId
         $submissionId = $this->codecheckMetadataHandler->getSubmissionId();
 
@@ -1085,9 +1121,34 @@ class CodecheckApiHandler
             $this->respond(['success' => false, 'error' => 'ORCID deposition is not enabled for this journal.'], 400);
         }
 
+        // An editor may deposit for every codechecker of the submission. A
+        // reviewer may deposit only their own record, and only for the
+        // submission they are assigned to (#173).
+        $user = $this->request->getUser();
+        $isEditor = CodecheckSubmissionAccess::isEditor($user, $context->getId());
+        $onlyOrcidId = null;
+
+        if (!$isEditor) {
+            if (!CodecheckSubmissionAccess::isAssignedReviewer($user, $submissionId)) {
+                $this->respond([
+                    'success' => false,
+                    'error'   => 'Only an editor, or a reviewer assigned to this submission, may deposit to ORCID.',
+                ], 403);
+            }
+
+            $onlyOrcidId = $user?->getOrcid();
+
+            if (empty($onlyOrcidId)) {
+                $this->respond([
+                    'success' => false,
+                    'error'   => 'No ORCID iD is recorded for your account, so there is nothing to deposit to.',
+                ], 400);
+            }
+        }
+
         try {
             $depositService = new OrcidDepositService($this->plugin);
-            $results        = $depositService->depositForSubmission($submissionId);
+            $results        = $depositService->depositForSubmission($submissionId, $onlyOrcidId);
         } catch (\Throwable $e) {
             CodecheckLogger::error('ORCID depositToOrcid API error: ' . $e->getMessage());
             $this->respond(['success' => false, 'error' => $e->getMessage()], 500);
@@ -1187,6 +1248,8 @@ class CodecheckApiHandler
 
     public function updateStatus(): void
     {
+        $this->assertMayWriteMetadata($this->codecheckMetadataHandler->getSubmissionId());
+
         $submissionId = (int) $this->codecheckMetadataHandler->getSubmissionId();
 
         $postParams = json_decode(file_get_contents('php://input'), true);

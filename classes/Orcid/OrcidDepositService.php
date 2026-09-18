@@ -36,7 +36,11 @@ class OrcidDepositService
      *
      * @throws \InvalidArgumentException if required journal metadata is missing
      */
-    public function depositForSubmission(int $submissionId): array
+    /**
+     * @param string|null $onlyOrcidId Deposit only this ORCID record. A reviewer
+     *   may deposit their own codechecking activity and nobody else's (#173).
+     */
+    public function depositForSubmission(int $submissionId, ?string $onlyOrcidId = null): array
     {
         $context   = Application::get()->getRequest()->getContext();
         $contextId = $context->getId();
@@ -87,6 +91,10 @@ class OrcidDepositService
         $results   = [];
 
         foreach ($tokenRows as $row) {
+            if ($onlyOrcidId !== null && ($row->orcid_id ?? null) !== $onlyOrcidId) {
+                continue;
+            }
+
             $results[] = $this->depositOneCodechecker($client, $submission, $row, $meta, $journal);
         }
 

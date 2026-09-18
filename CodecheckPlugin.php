@@ -235,6 +235,33 @@ class CodecheckPlugin extends GenericPlugin
      * Setup the CodecheckApiHandler.
      * The constructor handles the request and exits — no need to set a router handler.
      */
+    /**
+     * Which journal roles may read, write and administer CODECHECK data.
+     *
+     * Built here rather than inline in `setupAPIHandler()` so that a test can
+     * assert against the sets the plugin actually installs. They were duplicated
+     * in the test instead, and when `ROLE_ID_REVIEWER` moved from reading to
+     * writing the test went on describing the old arrangement (Issue #173).
+     *
+     * **A reviewer may read, not write.** Writing CODECHECK data is for editors,
+     * and — once the handler can tell — for the reviewer assigned to that one
+     * submission and flagged as its codechecker. The role sets cannot express
+     * that, because they answer "does this user hold this role anywhere in the
+     * journal"; see #174.
+     */
+    public static function buildRoleManager(): CodecheckRoleManager
+    {
+        $adminRoles = new CodecheckRoleArray([Role::ROLE_ID_MANAGER, Role::ROLE_ID_SITE_ADMIN]);
+        $editRoles = new CodecheckRoleArray([$adminRoles, Role::ROLE_ID_SUB_EDITOR, Role::ROLE_ID_ASSISTANT]);
+        $readRoles = new CodecheckRoleArray([$editRoles, Role::ROLE_ID_READER, Role::ROLE_ID_AUTHOR, Role::ROLE_ID_REVIEWER]);
+
+        return new CodecheckRoleManager(
+            readMetadata: $readRoles,
+            editMetadata: $editRoles,
+            admin: $adminRoles,
+        );
+    }
+
     public function setupAPIHandler(string $hookName, array $args): void
     {
         $request = $args[0];
@@ -245,17 +272,7 @@ class CodecheckPlugin extends GenericPlugin
         if (str_contains($request->getRequestPath(), 'api/v1/codecheck')) {
             CodecheckLogger::debug('Instantiating the CODECHECK APIHandler');
 
-            $adminRoles = new CodecheckRoleArray([Role::ROLE_ID_MANAGER, Role::ROLE_ID_SITE_ADMIN]);
-            $editRoles = new CodecheckRoleArray([$adminRoles, Role::ROLE_ID_SUB_EDITOR, Role::ROLE_ID_ASSISTANT, Role::ROLE_ID_MANAGER, Role::ROLE_ID_REVIEWER]);
-            $readRoles = new CodecheckRoleArray([$editRoles, Role::ROLE_ID_READER, Role::ROLE_ID_AUTHOR]);
-
-            $roles = new CodecheckRoleManager(
-                readMetadata: $readRoles,
-                editMetadata: $editRoles,
-                admin: $adminRoles,
-            );
-
-            $apiHandler = new CodecheckApiHandler($this, $request, $roles);
+            $apiHandler = new CodecheckApiHandler($this, $request, self::buildRoleManager());
             CodecheckLogger::debug('API request: ' . $request->getRequestPath());
         }
 

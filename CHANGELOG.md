@@ -191,6 +191,17 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 
 ### Security
 
+- Writing CODECHECK data is no longer open to every reviewer in the journal. A
+  reviewer had been given the same rights as an editor, and the API's role check
+  asks only whether a user holds a role *somewhere in the journal* — so any
+  reviewer could rewrite any submission's CODECHECK record, change its status,
+  reserve a certificate identifier and open or edit issues in the **public**
+  CODECHECK register, for submissions they had nothing to do with. Now:
+  interactions with the register are for editors only, and the record, its status,
+  uploads and an ORCID deposit are for editors or the reviewer assigned to that
+  submission — with a reviewer's ORCID deposit limited to their own record
+  (Issue #173)
+
 - ORCID API requests verify the server's TLS certificate. Both HTTP helpers in
   `OrcidApiClient` disabled certificate and hostname verification, on the same
   requests that carry the journal's ORCID client secret and every codechecker's
