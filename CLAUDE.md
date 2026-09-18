@@ -714,6 +714,36 @@ Chrome + Chromium + Firefox, Cypress 14.5.4, Playwright 1.61.
 
 ## Working agreements
 
+### Never commit — stage a changeset and propose the message
+
+**Do not run `git commit`.** Committing is the author's act: it puts a name and a
+message on a change, and it is the last point at which the change can still be
+shaped. Prepare the commit instead, and hand it over:
+
+1. **Look at the working copy first.** `git status --short` and `git diff --stat`,
+   before staging anything. The working copy is shared: it may hold someone else's
+   edits, an in-progress merge with conflict markers, a rebase, or a branch that is
+   not the one the work belongs on. This has already happened in practice — a
+   session found `feature/orcid-deposit` mid-merge with eight unresolved files
+   while it was working on something else entirely.
+2. **Stage only the files the change is made of**, by name:
+   `git add path/one path/two`. **Never `git add -A` or `git add .`** — they sweep
+   up whatever else is lying around, and the result is a commit that nobody can
+   review because it contains two unrelated things.
+3. **Say what was left unstaged and why**, if anything was: a modified file that is
+   not part of the change is information the author needs, not noise to hide.
+4. **Propose the commit message** as text, in the report — subject line and body,
+   in the form described under Conventions, with the attribution trailer. Do not
+   write it into `.git/COMMIT_EDITMSG` or a file unless asked.
+
+The author then commits, amends the message, or splits the change. If a change
+really is two changes, stage and propose them one at a time rather than asking for
+one commit that does both.
+
+This applies to `git commit` in every form, including `--amend` and `commit -a`.
+Pushing, branching, merging and rebasing are likewise the author's to run unless
+they ask.
+
 ### Never create GitHub issues without confirmation
 
 **Always ask for confirmation before creating an issue, and show the full
@@ -762,11 +792,12 @@ them.
 
 ### Run `/simplify` and `/code-review` on non-trivial changes
 
-**Before committing a non-trivial change, run `/simplify` first, then
+**Before handing over a non-trivial change, run `/simplify` first, then
 `/code-review` on the result.** In that order: `/simplify` changes the shape of
 the code, so reviewing before it means reviewing code that is about to be
-rewritten. Both run against the working tree, before the commit and before the
-PR — not after a merge, where a finding costs a second round trip.
+rewritten. Both run against the working tree, before the change is staged for the
+author and before the PR — not after a merge, where a finding costs a second
+round trip.
 
 A change is **non-trivial** when either is true:
 
