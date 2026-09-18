@@ -332,6 +332,9 @@ msgstr "The repository's CODECHECK metadata is not equal to the metadata in this
 msgid "plugins.generic.codecheck.repositories.invalidUrl"
 msgstr "A repository address must start with http:// or https://, but {$repository} does not."
 
+msgid "plugins.generic.codecheck.register.issue.statusComment"
+msgstr "The CODECHECK status changed to: {$status}"
+
 msgid "plugins.generic.codecheck.repositories.error"
 msgstr "Error while importing the CODECHECK metadata from the repository. {$error}"
 

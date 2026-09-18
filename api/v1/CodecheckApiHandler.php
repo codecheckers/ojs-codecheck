@@ -360,18 +360,21 @@ class CodecheckApiHandler
         ], 200);
     }
 
-    private function getAuthorStringBasedOnAuthorAnonymity(): string|null
+    private function getAuthorStringBasedOnAuthorAnonymity(): string
     {
         $postParams = json_decode(file_get_contents('php://input'), true);
-        $submissionData = $postParams["submission"];
-        $authorString = $submissionData["authorString"];
+        $authorString = $postParams['submission']['authorString'] ?? null;
 
         $context = $this->request->getContext();
         $isAuthorStringEnabled = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_AUTHOR_ANONYMITY);
 
-        // if Authors should be Anonymous/ if no Author string was given, set it to null
-        if(!$isAuthorStringEnabled || !is_string($authorString)) {
-            $authorString = null;
+        // Anonymous authors, or no author string given, means no names in the
+        // register issue. That is an empty string, not null: the issue builder
+        // turns an empty one into "New CODECHECK", while null was a TypeError in
+        // reserveIdentifierWithApi() — so reserving an identifier failed outright
+        // whenever a journal kept its authors anonymous, which is the default.
+        if (!$isAuthorStringEnabled || !is_string($authorString)) {
+            return '';
         }
 
         return $authorString;

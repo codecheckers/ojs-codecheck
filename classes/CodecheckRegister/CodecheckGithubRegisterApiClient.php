@@ -256,6 +256,34 @@ class CodecheckGithubRegisterApiClient
      * @param string $paperTitle The Title of the submitted paper / preprint / article
      * @return array Returns the GitHub URL & Issue Number of the newly created issue
      */
+    /**
+     * Write a comment under a register issue.
+     *
+     * The register issue's title, body and labels are rewritten in place as a
+     * CODECHECK progresses, which leaves no trace of when anything changed. A
+     * comment is the part GitHub shows as a timeline, so a status change can be
+     * followed by anyone reading the register (#150).
+     *
+     * @throws ApiUpdateException when GitHub refuses the comment.
+     */
+    public function commentOnIssue(int $issueNumber, string $body): void
+    {
+        $this->client->authenticate($this->githubPAT, null, Client::AUTH_ACCESS_TOKEN);
+
+        try {
+            $this->client->api('issue')->comments()->create(
+                $this->githubRegisterOrganization,
+                $this->githubRegisterRepository,
+                $issueNumber,
+                ['body' => $body]
+            );
+        } catch (\Throwable $e) {
+            throw new ApiUpdateException(
+                'Could not comment on register issue #' . $issueNumber . ': ' . $e->getMessage()
+            );
+        }
+    }
+
     public function updateIssue(
         array $updateInformation,
         int $issueNumber,
@@ -266,9 +294,10 @@ class CodecheckGithubRegisterApiClient
         array $codecheckers,
         array $repositories
     ): array {
-        $token = $_ENV['CODECHECK_REGISTER_GITHUB_TOKEN'];
-
-        $this->client->authenticate($token, null, Client::AUTH_ACCESS_TOKEN);
+        // The configured PAT, like every other call here. This read $_ENV, which
+        // is only populated when a .env happens to exist — so updating a
+        // register issue failed on an ordinary install (#150).
+        $this->client->authenticate($this->githubPAT, null, Client::AUTH_ACCESS_TOKEN);
 
         $codecheckIssue = new CodecheckGithubRegisterIssue(
             $this->githubRegisterOrganization,
