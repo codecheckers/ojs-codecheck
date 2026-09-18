@@ -40,7 +40,7 @@ describe('A reviewer assigned to a submission', () => {
     cy.getCsrfToken().then((csrfToken) => {
       post(`status/update?submissionId=${ASSIGNED}`, {
         submissionId: ASSIGNED,
-        status: 'plugins.generic.codecheck.status.codecheckerAssigned',
+        status: 'plugins.generic.codecheck.status.assignedCodechecker',
       }, csrfToken).then((response) => {
         // Whatever the endpoint makes of the payload, it must not be refused
         // for who is asking.
@@ -106,7 +106,7 @@ describe('An editor', () => {
     cy.getCsrfToken().then((csrfToken) => {
       post(`status/update?submissionId=${NOT_ASSIGNED}`, {
         submissionId: NOT_ASSIGNED,
-        status: 'plugins.generic.codecheck.status.codecheckerAssigned',
+        status: 'plugins.generic.codecheck.status.assignedCodechecker',
       }, csrfToken).then((response) => {
         expect(response.status).to.not.eq(403);
       });

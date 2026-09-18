@@ -578,6 +578,46 @@ Three jobs on push/PR to `main`:
    `testData/stable-3_5_0-codecheck` dump, `loadfiles.sh`, OJS npm build, plugin npm
    build, Apache + mod_php on :8888, then `npm run test:e2e`.
 
+### Live tests against the CODECHECK register
+
+Two things cannot be tested against a stub, because the point of them is that
+GitHub receives something: reserving a certificate identifier (which opens an
+issue in the register) and recording a status (which comments on that issue,
+#150). `cypress/tests/live/register-issue.cy.js` covers both against
+`codecheckers/testing-dev-register`, and **`dev/live-register-tests.md` is the
+procedure** — read it before running one.
+
+- `make test-live GITHUB_TOKEN=…`, with `make serve` on the side.
+- The spec is outside `specPattern` (`cypress/tests/e2e/**`) so it is never in a
+  suite, and refuses to run without `CYPRESS_live=1`.
+- **Every run creates an issue in the testing register and nothing deletes it.**
+  Runs accumulate on purpose; that is why the testing register is a separate
+  repository.
+- The token lives in `plugin_settings` and is not in the dataset, so
+  `make db-reset` wipes it. `codecheckGithubUpdateFields` must contain
+  `updateStatus` or the status comment is skipped and the test proves nothing.
+
+**The PAT these tests use** is a *fine-grained* token, not a classic one:
+
+| | |
+|---|---|
+| Resource owner | `codecheckers` (the organisation, not a personal account) |
+| Repository access | only `codecheckers/testing-dev-register` |
+| Issues | read and write |
+| Contents | read |
+| Pull requests | read and write |
+| Workflows | read and write |
+
+Issues read/write is what opens the register issue and comments on it; contents
+read is what lets the plugin see `register.csv`; pull requests read/write is for
+the `register.csv` deposit, which opens a PR. A classic token with `public_repo`
+also works but grants far more — every public repository the holder can push to.
+
+**The value is never written into this repository.** It goes into
+`plugin_settings` on the local instance and nowhere else; anyone running a live
+test supplies their own. A token that has been pasted into a chat, a terminal
+transcript or a log should be treated as spent and rotated.
+
 ### Test data (`testData/stable-3_5_0-codecheck/`)
 
 A PKP-datasets-shaped MySQL dump + article files for a "CODECHECK Demo Journal"

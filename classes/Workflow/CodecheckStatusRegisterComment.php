@@ -76,7 +76,12 @@ class CodecheckStatusRegisterComment
                 $context
             );
 
-            $client->commentOnIssue($issueNumber, self::body($status));
+            $body = self::body($status);
+            if ($body === null) {
+                return;
+            }
+
+            $client->commentOnIssue($issueNumber, $body);
 
             CodecheckLogger::info(
                 "Commented the CODECHECK status on register issue #{$issueNumber} for submission {$submissionId}."
@@ -107,10 +112,19 @@ class CodecheckStatusRegisterComment
     /**
      * The comment, as one translated sentence.
      */
-    private static function body(string $status): string
+    private static function body(string $status): ?string
     {
+        $translated = __($status);
+
+        // __() renders a key it cannot resolve as ##the.key##. Publishing that
+        // into the register would be worse than saying nothing, so say nothing.
+        if ($translated === '' || str_starts_with($translated, '##')) {
+            CodecheckLogger::warning("Not commenting an unresolvable CODECHECK status on the register: {$status}");
+            return null;
+        }
+
         return __('plugins.generic.codecheck.register.issue.statusComment', [
-            'status' => __($status),
+            'status' => $translated,
         ]);
     }
 }

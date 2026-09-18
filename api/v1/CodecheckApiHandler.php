@@ -1262,22 +1262,45 @@ class CodecheckApiHandler
         $submissionId = (int) $this->codecheckMetadataHandler->getSubmissionId();
 
         $postParams = json_decode(file_get_contents('php://input'), true);
-        $status = $postParams["status"];
-        $userId = $postParams["userId"];
+        $status = $postParams["status"] ?? null;
 
-        if(!is_string($status) || !is_int($userId)) {
+        if(!is_string($status)) {
             $this->respond([
                 'success' => false,
-                'statusRecord' => [
-                    'status' => $status,
-                    'userId' => $userId
-                ],
                 'allStatuses' => Constants::CODECHECK_STATUSES,
-                'error' => 'Bad Request: Please provide a Status form of string and a User ID in the form of int.'
+                'error' => 'Bad Request: Please provide a Status in the form of a string.'
             ], 400);
         }
 
-        if($userId == -1) {
+        // A status is stored and then published as a comment on the public
+        // register issue, so an unknown one is refused rather than repeated:
+        // __() renders a key it does not know as ##the.key##, and that is what
+        // ends up in someone else's repository.
+        if(!in_array($status, Constants::CODECHECK_STATUSES, true)) {
+            $this->respond([
+                'success' => false,
+                'statusRecord' => ['status' => $status],
+                'allStatuses' => Constants::CODECHECK_STATUSES,
+                'error' => 'Bad Request: Unknown CODECHECK status.'
+            ], 400);
+        }
+
+        // Who made the change comes from the session, not from the caller: the
+        // status history names a person, and a client could otherwise record a
+        // change as somebody else's. -1 is the one value a client may send, and
+        // it means "work the status out automatically" rather than a user.
+        $automatic = ($postParams["userId"] ?? null) === -1;
+        $userId = $automatic ? -1 : (int) $this->request->getUser()?->getId();
+
+        if(!$automatic && $userId <= 0) {
+            $this->respond([
+                'success' => false,
+                'allStatuses' => Constants::CODECHECK_STATUSES,
+                'error' => 'Bad Request: No user is signed in to record this status against.'
+            ], 400);
+        }
+
+        if($automatic) {
             $submissionMetadata = $this->codecheckMetadataHandler->getMetadata($this->request, $submissionId);
             if(array_key_exists("error",$submissionMetadata)) {
                 $this->respond([

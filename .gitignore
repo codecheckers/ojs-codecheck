@@ -51,3 +51,4 @@ cypress/downloads/
 dev/out/
 
 .claude/
+cypress/tests/live/.last-run.json

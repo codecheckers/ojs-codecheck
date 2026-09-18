@@ -209,6 +209,29 @@ test-php: check-ojs
 test-e2e:
 	CYPRESS_BASE_URL=$(BASE_URL) npm run test:e2e
 
+# Live tests write to the real CODECHECK register on GitHub and leave issues
+# behind, so they are not in any suite: specPattern excludes cypress/tests/live/
+# and this target opts in explicitly. Point it at a TESTING register, never the
+# real one, and see dev/live-register-tests.md before running it.
+#
+#   make test-live GITHUB_TOKEN=ghp_xxx
+#
+# LIVE_SUBMISSION picks which submission the register issue will name.
+LIVE_SUBMISSION ?= 8
+REGISTER_ORG    ?= codecheckers
+REGISTER_REPO   ?= testing-dev-register
+
+test-live:
+	@test -n "$(GITHUB_TOKEN)" || (echo "[Error] GITHUB_TOKEN=... is required: the test reads the register back through the GitHub API." && exit 1)
+	@echo "Live test against $(REGISTER_ORG)/$(REGISTER_REPO), submission $(LIVE_SUBMISSION) — this creates a real issue."
+	CYPRESS_BASE_URL=$(BASE_URL) \
+	CYPRESS_live=1 \
+	CYPRESS_githubToken=$(GITHUB_TOKEN) \
+	CYPRESS_liveSubmissionId=$(LIVE_SUBMISSION) \
+	CYPRESS_registerOrganization=$(REGISTER_ORG) \
+	CYPRESS_registerRepository=$(REGISTER_REPO) \
+	npx cypress run --e2e --config specPattern='cypress/tests/live/**/*.cy.js'
+
 SHOT_WIDTH  ?= 1920
 SHOT_HEIGHT ?= 1200
 # Its own directory: cypress empties screenshotsFolder before every run, so
