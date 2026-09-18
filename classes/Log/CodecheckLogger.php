@@ -18,12 +18,24 @@ namespace APP\plugins\generic\codecheck\classes\Log;
 class CodecheckLogger
 {
     /**
+     * Keep a message on one line.
+     *
+     * Values that reach the log come from requests — uploaded filenames, paths,
+     * stored JSON — and a newline in one of them forges a log line that looks
+     * like a real entry from this plugin.
+     */
+    private static function oneLine(string $message): string
+    {
+        return str_replace(["\r", "\n"], ' ', $message);
+    }
+
+    /**
      * Log a debug message.
      * Use for detailed tracing, object dumps, and frequent calls.
      */
     public static function debug(string $message): void
     {
-        error_log('[codecheck][debug] ' . $message);
+        error_log('[codecheck][debug] ' . self::oneLine($message));
     }
 
     /**
@@ -32,7 +44,7 @@ class CodecheckLogger
      */
     public static function info(string $message): void
     {
-        error_log('[codecheck][info] ' . $message);
+        error_log('[codecheck][info] ' . self::oneLine($message));
     }
 
     /**
@@ -42,7 +54,7 @@ class CodecheckLogger
      */
     public static function warning(string $message): void
     {
-        error_log('[codecheck][warning] ' . $message);
+        error_log('[codecheck][warning] ' . self::oneLine($message));
     }
 
     /**
@@ -51,6 +63,6 @@ class CodecheckLogger
      */
     public static function error(string $message): void
     {
-        error_log('[codecheck][error] ' . $message);
+        error_log('[codecheck][error] ' . self::oneLine($message));
     }
 }

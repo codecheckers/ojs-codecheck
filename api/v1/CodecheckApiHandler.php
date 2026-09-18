@@ -329,7 +329,7 @@ class CodecheckApiHandler
         $codecheckIssueLabels->addLabelArray($githubCustomLabels);
 
         $codecheckStatuses = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_STATUS_KEYS_SELECTED);
-        error_log(print_r($codecheckStatuses, true));
+        CodecheckLogger::debug('Selected status keys: ' . json_encode($codecheckStatuses));
 
         // Serve the getCodecheckIssueLabels API route
         $this->respond([

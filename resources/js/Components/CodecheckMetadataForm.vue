@@ -516,7 +516,11 @@ export default {
      * that actually governs the fields below it.
      */
     specUrl() {
-      return CODECHECK_SPEC_URL + (this.metadata.version || this.enabledConfigVersions[0]) + '/';
+      // The version is whatever the record carries; nothing validates it on
+      // save. It goes into an href that introText renders with v-html, so it
+      // is encoded rather than trusted.
+      const version = this.metadata.version || this.enabledConfigVersions[0];
+      return CODECHECK_SPEC_URL + encodeURIComponent(version) + '/';
     },
 
     /**
@@ -1194,7 +1198,10 @@ export default {
     showYamlFallback(yamlContent) {
       const win = window.open('', '_blank');
       const escapedYaml = this.escapeHtml(yamlContent);
-      const yamlJson = JSON.stringify(yamlContent);
+      // JSON.stringify does not escape `<`, so YAML containing a closing
+      // script tag would close the block below and run whatever followed. The popup is
+      // same-origin with the OJS backend, so that is an XSS between editors.
+      const yamlJson = JSON.stringify(yamlContent).replace(/</g, '\\u003c');
       
       const html = '<!DOCTYPE html>' +
         '<html>' +

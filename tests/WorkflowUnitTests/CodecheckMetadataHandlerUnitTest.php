@@ -11,6 +11,7 @@ use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitExce
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
 use CurlHandle;
 use Symfony\Component\Yaml\Yaml;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * @file APP/plugins/generic/codecheck/tests/WorkflowUnitTests/CodecheckMetadataHandlerUnitTest.php
@@ -42,6 +43,49 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
 
         $this->handler = new CodecheckMetadataHandler($this->mockRequest, $client, $this->curlApiClient);
 	}
+
+    /**
+     * The generated codecheck.yml is validated at publication and deposited in
+     * the public register, so a value must come back out of it as the string it
+     * went in as.
+     */
+    #[DataProvider('scalarsThatUsedToChangeTypeProvider')]
+    public function testNormalisingTheYamlKeepsScalarsAsStrings(string $value, string $why)
+    {
+        $dumped = Yaml::dump(['title' => $value], 10, 2, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
+
+        $normalise = new \ReflectionMethod(CodecheckMetadataHandler::class, 'normalizeYamlOutput');
+        $normalise->setAccessible(true);
+        $yaml = $normalise->invoke($this->handler, $dumped);
+
+        $this->assertSame($value, Yaml::parse($yaml)['title'], $why);
+    }
+
+    public static function scalarsThatUsedToChangeTypeProvider(): array
+    {
+        return [
+            ['[a, b]', 'an unquoted [a, b] parses as a sequence, not a title'],
+            ['*x', 'an unquoted *x is a YAML alias and does not parse at all'],
+            ['1.0', 'an unquoted 1.0 is a float, and config versions look exactly like this'],
+            ["it's fine", 'a doubled quote must survive'],
+            ['yes', 'an unquoted yes is a boolean in YAML 1.1'],
+            ['Ordinary title', 'the common case must be unaffected'],
+        ];
+    }
+
+    public function testAddressesAreStillUnquotedForReadability()
+    {
+        $dumped = Yaml::dump(['repository' => 'https://github.com/codecheckers/repo'], 10, 2);
+
+        $normalise = new \ReflectionMethod(CodecheckMetadataHandler::class, 'normalizeYamlOutput');
+        $normalise->setAccessible(true);
+        $yaml = $normalise->invoke($this->handler, $dumped);
+
+        // Cosmetic, and safe: an http(s) address round-trips either way.
+        $this->assertStringContainsString('https://github.com/codecheckers/repo', $yaml);
+        $this->assertStringNotContainsString("'https://", $yaml);
+        $this->assertSame('https://github.com/codecheckers/repo', Yaml::parse($yaml)['repository']);
+    }
 
     public function testConstructorSetsSubmissionId()
     {

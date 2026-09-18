@@ -414,7 +414,7 @@ class CodecheckReviewRefresher {
           <div class="submissionWizard__reviewPanel__item">
             <h4>${this.escapeHtml(t('plugins.generic.codecheck.dataAvailability'))}</h4>
             <div class="review-value">
-              <div>${availability}</div>
+              <div>${this.escapeHtml(availability)}</div>
             </div>
           </div>
         `;

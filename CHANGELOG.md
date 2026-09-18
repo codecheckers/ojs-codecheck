@@ -191,6 +191,26 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 
 ### Security
 
+- The submission wizard's review panel escapes the data and software availability
+  statement. Every other value in that panel was escaped; this one was not, so an
+  author's statement went into the page as markup (Issue #50)
+- The YAML preview window escapes the document it shows. It is written with
+  `document.write` into a `window.open('')`, which is same-origin with the OJS
+  backend, and the copy embedded for the download button went through
+  `JSON.stringify`, which does not escape `<` — so YAML containing a closing
+  script tag ended the block and ran what followed (Issue #50)
+- The CODECHECK config version is URL-encoded before it is put in the
+  specification link. The version is stored as it arrives and the link is rendered
+  with `v-html`, so a crafted value escaped the attribute (Issue #50)
+- The "Clear / Reset CODECHECK Metadata Database" action checks the CSRF token.
+  It drops every CODECHECK table; the settings template posted a token but nothing
+  validated it, and PKP's grid handler only checks CSRF when reordering rows, so a
+  manager who loaded an attacker's page lost the journal's whole CODECHECK record
+  (Issue #50)
+- Newlines are stripped from log messages. Values that reach the log come from
+  requests, and a newline in one forged a line that looked like a genuine entry
+  from this plugin (Issue #50)
+
 - A CODECHECK certificate or report that is not an `http(s)` address is no longer
   turned into a link on the article page or the issue table of contents. Both were
   admitted by `filter_var(…, FILTER_VALIDATE_URL)`, which validates the syntax
@@ -278,6 +298,14 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   could not be set and had no effect.
 
 ### Fixed
+
+- The generated `codecheck.yml` keeps values as the strings they were entered as.
+  After dumping the file, the plugin stripped the quotes from every simple scalar,
+  which changes a value's YAML type: a paper title of `[a, b]` came back as a
+  two-item list, `1.0` as a number, `*x` as an alias that stopped the file parsing
+  at all. Since the file is validated when publishing and deposited in the public
+  register, an author could make their own submission unpublishable by choosing a
+  title. Addresses are still shown unquoted, which is only cosmetic (Issue #50)
 
 - `locale/en/locale.po` parses again. An unescaped pair of quotes inside the GitHub
   token description ended the message early, and four messages were defined twice —

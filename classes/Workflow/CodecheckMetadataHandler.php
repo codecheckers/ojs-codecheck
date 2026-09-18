@@ -330,17 +330,27 @@ class CodecheckMetadataHandler
     }
 
     /**
-     * Normalize YAML output to match original format
+     * Cosmetic tidying of the dumped YAML.
+     *
+     * Symfony quotes a value when quoting changes nothing about how it parses,
+     * and unquoting an address it round-trips is safe. Unquoting *any* simple
+     * scalar is not: the rule that used to sit here,
+     * `preg_replace("/'([^':\n]+)'/", '$1', $yaml)`, stripped the quotes from
+     * every scalar without a colon, which changes the value's YAML type. A paper
+     * title of `[a, b]` became a sequence, a summary of `yes` became a boolean,
+     * `*x` became an alias and stopped parsing at all, and `it''s fine` lost the
+     * doubled quote and came out as `its fine`. Since the file is validated at
+     * publication and deposited in the public register, an author could make
+     * their own submission unpublishable by choosing a title.
      */
     private function normalizeYamlOutput(string $yaml): string
     {
-        // Remove quotes around URLs and simple strings
+        // An http(s) address parses the same quoted or not.
         $yaml = preg_replace("/'(https?:\/\/[^']+)'/", '$1', $yaml);
-        $yaml = preg_replace("/'([^':\n]+)'/", '$1', $yaml);
-        
-        // Normalize list item formatting
+
+        // Whitespace only: put a list item's first key on the dash line.
         $yaml = preg_replace('/^(\s+)-\n\s+(\w+):/m', '$1- $2:', $yaml);
-        
+
         return $yaml;
     }
 

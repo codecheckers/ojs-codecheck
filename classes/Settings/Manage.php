@@ -57,6 +57,14 @@ class Manage
                 break;
             
             case 'resetSchema':
+                // This drops every CODECHECK table. The template posts a
+                // csrfToken but nothing validated it, and GridHandler only
+                // checks CSRF in saveSequence — so a manager who loaded an
+                // attacker's page lost the journal's whole CODECHECK record.
+                if (!$request->checkCSRF()) {
+                    return new JSONMessage(false);
+                }
+
                 $user = $request->getUser();
                 if (!$user || !$request->getContext()) {
                     return new JSONMessage(false);
