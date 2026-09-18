@@ -263,6 +263,17 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 
 ### Fixed
 
+- Publishing an article no longer risks failing for journals with ORCID enabled.
+  The ORCID deposit read the journal from the request without checking there was
+  one — publishing goes through the REST API, where there may not be, and OJS
+  reports what a plugin throws there only as "failed to handle the hook". The
+  register deposit had the same gap (Issue #175)
+- Depositing one codechecker's activity to ORCID no longer deposits everyone's.
+  The per-codechecker button and "Deposit to all" sent different requests but did
+  the same thing, so a repeat deposit rewrote colleagues' records too (Issue #175)
+- A failed ORCID deposit no longer logs a PHP warning on every publish: two of the
+  failure cases carry no ORCID iD, which the log read unconditionally (Issue #175)
+
 - `locale/en/locale.po` parses again. An unescaped pair of quotes inside the GitHub
   token description ended the message early, and four messages were defined twice —
   one of them, the repository field's placeholder, with different text on each side,

@@ -1135,7 +1135,13 @@ class CodecheckApiHandler
         // submission they are assigned to (#173).
         $user = $this->request->getUser();
         $isEditor = CodecheckSubmissionAccess::isEditor($user, $context->getId());
-        $onlyOrcidId = null;
+
+        // The per-row button names an ORCID iD; "Deposit to all" sends none. The
+        // endpoint used to ignore it either way and deposit for every authorised
+        // codechecker, so the two buttons did the same thing and a re-deposit
+        // re-PUT someone else's item (#175).
+        $requested = $postParams['orcidId'] ?? null;
+        $onlyOrcidId = is_string($requested) && $requested !== '' ? $requested : null;
 
         if (!$isEditor) {
             if (!CodecheckSubmissionAccess::isAssignedReviewer($user, $submissionId)) {
@@ -1145,6 +1151,8 @@ class CodecheckApiHandler
                 ], 403);
             }
 
+            // A reviewer deposits their own record whatever the payload asked
+            // for, so a crafted request cannot deposit on a colleague's behalf.
             $onlyOrcidId = $user?->getOrcid();
 
             if (empty($onlyOrcidId)) {
