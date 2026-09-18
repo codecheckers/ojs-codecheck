@@ -117,7 +117,7 @@ msgid "plugins.generic.codecheck.settings.github.personalAccessToken"
 msgstr "GitHub Personal Access Token (classic)"
 
 msgid "plugins.generic.codecheck.settings.github.personalAccessToken.description"
-msgstr "Provide your GitHub Personal Access Token (classic), so the CODECHECK plugin can create new GitHub issues.<br><a href='{$patGuideUrl}'>Here</a> is how you can create a PAT (NOTE: please select "public_repo")"
+msgstr "Provide your GitHub Personal Access Token (classic), so the CODECHECK plugin can create new GitHub issues.<br><a href='{$patGuideUrl}'>Here</a> is how you can create a PAT (NOTE: please select \"public_repo\")"
 
 msgid "plugins.generic.codecheck.settings.github.registerRepository"
 msgstr "GitHub Repository used as the CODECHECK register"
@@ -232,9 +232,6 @@ msgstr "Comment (e.g., Main result visualization)"
 
 msgid "plugins.generic.codecheck.manifestFiles.addFile"
 msgstr "+ Add File"
-
-msgid "plugins.generic.codecheck.repository.placeholder"
-msgstr "Repository URL (e.g., https://github.com/username/repo)"
 
 msgid "plugins.generic.codecheck.repository.add"
 msgstr "+ Add Repository"
@@ -657,9 +654,6 @@ msgstr "Please link the OJS form to the corresponding GitHub Issue with the same
 msgid "plugins.generic.codecheck.validation.summaryRequired"
 msgstr "Please provide a summary"
 
-msgid "plugins.generic.codecheck.repositories.emptyState"
-msgstr "No repositories added yet"
-
 msgid "plugins.generic.codecheck.repositories.infoTitle"
 msgstr "Repositories Info"
 
@@ -776,12 +770,6 @@ msgstr "URL must start with http:// or https://"
 
 msgid "plugins.generic.codecheck.repository.validation.invalid"
 msgstr "Please enter a valid URL"
-
-msgid "plugins.generic.codecheck.manifestFiles.filenamePlaceholder"
-msgstr "Filename (e.g., figures/figure1.png)"
-
-msgid "plugins.generic.codecheck.manifestFiles.commentPlaceholder"
-msgstr "Comment (e.g., Main result visualization)"
 
 msgid "plugins.generic.codecheck.manifestFiles.addButton"
 msgstr "+ Add File"

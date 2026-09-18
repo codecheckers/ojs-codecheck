@@ -8,6 +8,25 @@ on:
   workflow_dispatch:
 
 jobs:
+  # The locale file is the one input a translation tool has to parse, and a file
+  # that does not compile cannot be handed to one. Cheap enough to gate every
+  # push on: it catches duplicate messages and unescaped quotes, both of which
+  # reached main unnoticed (#172).
+  locale-file:
+    name: Locale File
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout plugin
+        uses: actions/checkout@v4
+
+      - name: Check locale files compile
+        run: |
+          for po in locale/*/locale.po; do
+            echo "Checking $po"
+            msgfmt --check-domain -o /dev/null "$po"
+          done
+
   phpunit-tests:
     name: PHPUnit Tests
     runs-on: ubuntu-latest

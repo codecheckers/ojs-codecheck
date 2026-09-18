@@ -235,6 +235,13 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 
 ### Fixed
 
+- `locale/en/locale.po` parses again. An unescaped pair of quotes inside the GitHub
+  token description ended the message early, and four messages were defined twice —
+  one of them, the repository field's placeholder, with different text on each side,
+  so what an editor saw was decided by the parser rather than by anyone. A file that
+  does not compile cannot be handed to a translation tool, which blocked every
+  language other than English (Issue #172)
+
 - Which repository holds the `codecheck.yml` is recorded on the repository itself
   rather than as a position in the list. Nothing kept that position in step with
   the list it pointed into: removing an earlier repository in the editorial form,
