@@ -249,11 +249,8 @@ class OrcidApiClient
             CURLOPT_HTTPHEADER     => $headers,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HEADER         => true,
-            CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_TIMEOUT        => 60,
             CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => false,
         ]);
         return $this->executeAndParse($ch);
     }
@@ -269,8 +266,6 @@ class OrcidApiClient
             CURLOPT_HEADER         => true,
             CURLOPT_TIMEOUT        => 60,
             CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => false,
         ]);
         return $this->executeAndParse($ch);
     }

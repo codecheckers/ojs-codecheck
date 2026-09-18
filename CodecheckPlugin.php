@@ -278,15 +278,14 @@ class CodecheckPlugin extends GenericPlugin
      */
     public function setCodecheckPageHandler($hookName, $args)
     {
-        $request = Application::get()->getRequest();
-
         $page    = &$args[0];
         $op      = &$args[1];
         $handler = &$args[3];
 
-        // ORCID OAuth routes
+        // ORCID OAuth routes. The request is only needed to read the sub-operation
+        // off this one route, so it is fetched here rather than for every page.
         if ($page === 'codecheck' && $op === 'orcid') {
-            $subOp = $request->getRequestedArgs()[0] ?? '';
+            $subOp = Application::get()->getRequest()->getRequestedArgs()[0] ?? '';
             if (in_array($subOp, ['startAuth', 'callback'], true)) {
                 $handler = new OrcidAuthHandler($this);
                 $args[1] = $subOp;

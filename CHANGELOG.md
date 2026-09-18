@@ -191,6 +191,12 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 
 ### Security
 
+- ORCID API requests verify the server's TLS certificate. Both HTTP helpers in
+  `OrcidApiClient` disabled certificate and hostname verification, on the same
+  requests that carry the journal's ORCID client secret and every codechecker's
+  access token, and followed redirects while doing so — so anyone able to
+  intercept the connection could present any certificate, collect those
+  credentials and write activities to the affected ORCID records (Issue #16)
 - Repositories marked hidden are no longer published in the CODECHECK register
   issue on GitHub. The issue is public, and the editorial form sends whole
   repository entries, so every hidden repository — and the internal flags of the
