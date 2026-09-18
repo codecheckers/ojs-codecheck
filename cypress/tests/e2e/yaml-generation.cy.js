@@ -1,29 +1,10 @@
 describe('YAML Generation Consistency', () => {
   
-  let submissionId;
-  
-  before(() => {
-    cy.ojsLogin('admin', 'admin');
-    
-    // Get any published submission dynamically
-    cy.visit('/index.php/codecheck/submissions');
-    cy.window().then((win) => {
-      const csrfToken = win.pkp?.currentUser?.csrfToken;
-      
-      cy.request({
-        method: 'GET',
-        url: '/index.php/codecheck/api/v1/submissions?status[]=3&count=1',
-        headers: { 'X-Csrf-Token': csrfToken }
-      }).then((response) => {
-        if (response.body.items && response.body.items.length > 0) {
-          submissionId = response.body.items[0].id;
-          cy.log(`Using submission ID: ${submissionId}`);
-        } else {
-          throw new Error('No published submissions found. Please publish at least one submission with CODECHECK metadata.');
-        }
-      });
-    });
-  });
+  // A submission with a *complete* CODECHECK: the preview and download are gated
+  // on a certificate being present. This used to ask the API for "any published
+  // submission", which stopped being well defined once the dataset gained one
+  // whose check is still under way (see pending-check.cy.js).
+  const submissionId = 2;
 
   beforeEach(() => {
     cy.ojsLogin('admin', 'admin');
