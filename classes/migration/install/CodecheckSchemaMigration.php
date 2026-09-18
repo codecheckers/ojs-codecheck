@@ -4,7 +4,7 @@
  * @file classes/migration/install/CodecheckSchemaMigration.php
  *
  * Copyright (c) 2026 CODECHECK Initiative
- * Distributed under the GNU GPL v3. For full terms see the file docs/COPYING.
+ * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * @class CodecheckSchemaMigration
  * @brief Create all CODECHECK database tables on fresh install.

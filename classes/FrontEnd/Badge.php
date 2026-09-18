@@ -3,7 +3,7 @@
  * @file classes/FrontEnd/Badge.php
  *
  * Copyright (c) 2026 CODECHECK Initiative
- * Distributed under the GNU GPL v3. For full terms see the file docs/COPYING.
+ * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * @class Badge
  * @brief What the journal's badge settings resolve to on the reader-facing pages.

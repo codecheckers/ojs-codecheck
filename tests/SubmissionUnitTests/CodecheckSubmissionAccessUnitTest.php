@@ -4,7 +4,7 @@
  * @file tests/SubmissionUnitTests/CodecheckSubmissionAccessUnitTest.php
  *
  * Copyright (c) 2026 CODECHECK Initiative
- * Distributed under the GNU GPL v3. For full terms see the file docs/COPYING.
+ * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * @brief Issue #173 — who may write CODECHECK data for one submission.
  *

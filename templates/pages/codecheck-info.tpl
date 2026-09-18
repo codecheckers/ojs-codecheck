@@ -2,7 +2,7 @@
  * templates/codecheck-page.tpl
  *
  * Copyright (c) 2025 CODECHECK Initiative
- * Distributed under the GNU GPL v3. For full terms see the file docs/COPYING.
+ * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * Display CODECHECK Info content
  *}

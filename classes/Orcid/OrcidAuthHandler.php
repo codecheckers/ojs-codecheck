@@ -3,7 +3,7 @@
  * @file classes/Orcid/OrcidAuthHandler.php
  *
  * Copyright (c) 2026 CODECHECK Initiative
- * Distributed under the GNU GPL v3. For full terms see the file docs/COPYING.
+ * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * @class OrcidAuthHandler
  * @brief Handles the OAuth 2.0 flow for codechecker ORCID authorisation.

@@ -3,7 +3,7 @@
  * @file classes/Settings/Actions.php
  *
  * Copyright (c) 2025 CODECHECK Initiative
- * Distributed under the GNU GPL v3. For full terms see the file docs/COPYING.
+ * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * @class Actions
  * @brief Settings actions class for the CODECHECK plugin.

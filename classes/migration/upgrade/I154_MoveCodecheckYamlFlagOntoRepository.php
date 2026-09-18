@@ -4,7 +4,7 @@
  * @file classes/migration/upgrade/I154_MoveCodecheckYamlFlagOntoRepository.php
  *
  * Copyright (c) 2026 CODECHECK Initiative
- * Distributed under the GNU GPL v3. For full terms see the file docs/COPYING.
+ * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * @class I154_MoveCodecheckYamlFlagOntoRepository
  * @brief Issue #154 — Record which repository holds the `codecheck.yml` on the

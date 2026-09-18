@@ -4,7 +4,7 @@
  * @file tests/MigrationUnitTests/I154MoveCodecheckYamlFlagOntoRepositoryUnitTest.php
  *
  * Copyright (c) 2026 CODECHECK Initiative
- * Distributed under the GNU GPL v3. For full terms see the file docs/COPYING.
+ * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * @brief Issue #154 — the index-to-flag conversion, which decides which
  *        repository an existing install keeps its codecheck.yml mark on.

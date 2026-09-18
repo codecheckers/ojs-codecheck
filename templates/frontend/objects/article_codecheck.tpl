@@ -2,7 +2,7 @@
  * templates/frontend/objects/article_codecheck.tpl
  *
  * Copyright (c) 2025 CODECHECK Initiative
- * Distributed under the GNU GPL v3. For full terms see the file docs/COPYING.
+ * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * @brief Display CODECHECK information on the article details page sidebar.
  *}
