@@ -84,11 +84,6 @@ class CodecheckApiHandler
                     'roles'   => $roles->readMetadata(),
                 ],
                 [
-                    'route'   => 'download',
-                    'handler' => [$this, 'downloadFile'],
-                    'roles'   => $roles->readMetadata(),
-                ],
-                [
                     'route'   => 'yaml',
                     'handler' => [$this, 'generateYaml'],
                     'roles'   => $roles->readMetadata(),
@@ -139,11 +134,6 @@ class CodecheckApiHandler
                 [
                     'route'   => 'metadata',
                     'handler' => [$this, 'saveMetadata'],
-                    'roles'   => $roles->readMetadata(),
-                ],
-                [
-                    'route'   => 'upload',
-                    'handler' => [$this, 'uploadFile'],
                     'roles'   => $roles->readMetadata(),
                 ],
                 [
@@ -844,135 +834,7 @@ class CodecheckApiHandler
         $this->respond(array_merge($result, ['success' => true]), 200);
     }
 
-    /**
-     * Upload a file for the CODECHECK manifest
-     * 
-     * @return void
-     */
-    public function uploadFile(): void
-    {
-        $this->assertMayWriteMetadata($this->codecheckMetadataHandler->getSubmissionId());
 
-        // get submissionId
-        $submissionId = $this->codecheckMetadataHandler->getSubmissionId();
-
-        CodecheckLogger::info('Upload file for submission: ' . $submissionId);
-        
-        $submission = Repo::submission()->get($submissionId);
-        
-        if (!$submission) {
-            $this->respond([
-                'success' => false,
-                'error' => 'Submission not found',
-                'submissionID' => $submissionId,
-            ], 400);
-        }
-
-        if (!isset($_FILES['file'])) {
-            $this->respond([
-                'success' => false,
-                'error' => 'No file uploaded'
-            ], 400);
-        }
-
-        $file = $_FILES['file'];
-
-        CodecheckLogger::debug('File: ' . $file['name']);
-        
-        // Validate file
-        if ($file['error'] !== UPLOAD_ERR_OK) {
-            $this->respond([
-                'success' => false,
-                'error' => 'Upload error: ' . $file['error']
-            ], 400);
-        }
-
-        // Create directory for codecheck files
-        $context = $this->request->getContext();
-        CodecheckLogger::debug('Request Context ID: ' . $context->getId());
-        $basePath = \PKP\core\Core::getBaseDir();
-        $uploadDir = $basePath . '/files/journals/' . $context->getId() . '/codecheck/' . $submissionId;
-        
-        if (!file_exists($uploadDir)) {
-            if (!mkdir($uploadDir, 0755, true)) {
-                $this->respond([
-                    'success' => false,
-                    'error' => 'Failed to create directory'
-                ], 500);
-            }
-        }
-
-        // Generate safe filename
-        $originalName = basename($file['name']);
-        $filename = preg_replace('/[^a-zA-Z0-9._-]/', '_', $originalName);
-        $filename = time() . '_' . $filename; // Add timestamp to avoid conflicts
-        $filepath = $uploadDir . '/' . $filename;
-        
-        // Move uploaded file
-        if (!move_uploaded_file($file['tmp_name'], $filepath)) {
-            $this->respond([
-                'success' => false,
-                'error' => 'Failed to save file'
-            ], 500);
-        }
-
-        CodecheckLogger::info('File saved: ' . $filepath);
-
-        // Return relative path for storage
-        $relativePath = 'files/journals/' . $context->getId() . '/codecheck/' . $submissionId . '/' . $filename;
-
-        $this->respond([
-            'success' => true,
-            'filePath' => $relativePath,
-            'filename' => $originalName,
-            'size' => $file['size']
-        ], 200);
-    }
-
-    /**
-     * Download a file from the CODECHECK manifest
-     * 
-     * @return void
-     */
-    public function downloadFile(): void
-    {
-        $filePath = $this->request->getUserVar('file');
-        
-        if (!$filePath) {
-            $this->respond([
-                'success' => false,
-                'error' => 'No file specified'
-            ], 400);
-        }
-
-        $basePath = \PKP\core\Core::getBaseDir();
-        $fullPath = $basePath . '/' . $filePath;
-        
-        CodecheckLogger::info('Download request: ' . $fullPath);
-        
-        // Security: ensure file is in codecheck directory
-        if (strpos($filePath, 'codecheck') === false || !file_exists($fullPath)) {
-            $this->respond([
-                'success' => false,
-                'error' => 'File not found'
-            ], 404);
-        }
-
-        // Get original filename (remove timestamp prefix)
-        $filename = basename($fullPath);
-        $filename = preg_replace('/^\d+_/', '', $filename); // Remove timestamp
-        
-        // Set headers for download
-        header('Content-Type: application/octet-stream');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
-        header('Content-Length: ' . filesize($fullPath));
-        header('Cache-Control: must-revalidate');
-        header('Pragma: public');
-        
-        // Output file
-        readfile($fullPath);
-        exit;
-    }
 
     /**
      * Generate the CODECHECK YAML file for a submission

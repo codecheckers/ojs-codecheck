@@ -191,6 +191,19 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 
 ### Security
 
+- The CODECHECK API no longer has a file download endpoint. `GET download` took a
+  path from the request, resolved it against the OJS installation directory and
+  passed it to `readfile()` if the string contained `codecheck` anywhere — no
+  `realpath()`, no containment, no binding to a submission. Any account holding a
+  read role, which includes a self-registered reader, could read
+  `config.inc.php` (database credentials and the password-reset salt) or any
+  other journal's files. Nothing called the endpoint (Issue #50)
+- The CODECHECK API no longer has a file upload endpoint. `POST upload` wrote into
+  `<installation>/files/journals/…` — the document root, ignoring the configured
+  `files_dir` — under a filename that kept the extension the caller chose, with no
+  allow-list. On a typical Apache install that is a route to executing an uploaded
+  file. It was bound to the *read* role set, and nothing called it (Issue #50)
+
 - Opening and updating issues in the public CODECHECK register is restricted to a
   journal editor or an administrator. A section editor or assistant could do it
   by inheritance, and an entry in the register is published under the journal's
@@ -235,6 +248,12 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   before the check above existed (Issue #154)
 
 ### Removed
+
+- `GET download` and `POST upload` API endpoints, with their handler methods. The
+  manifest records filenames chosen in the browser — `handleFileUpload()` reads a
+  file's name and size and uploads nothing — so neither endpoint had a caller, and
+  the path `upload` returned was consumed by nothing. A regression test asserts
+  they stay absent (Issue #50)
 
 - `CodecheckMetadataDAO` and `schema.xml`. Neither was reachable: the DAO queried
   columns that do not exist and was referenced only by its own unit test, and OJS 3.5

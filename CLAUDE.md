@@ -158,8 +158,19 @@ participate in PKP's authorization policies.
   raises a TypeError that PKP swallows, leaving OJS to answer every plugin API
   call with its own 404
 
-Endpoints: `GET labels|metadata|download|yaml|register|status|status/history`,
-`POST identifier|issue|metadata|upload|repository|repository/validate|yaml/validate|status/update|users/roles/validation`.
+Endpoints: `GET labels|metadata|yaml|register|status|status/history|orcid-status|orcid-test`,
+`POST identifier|issue|metadata|repository|repository/validate|yaml/validate|status/update|users/roles/validation|orcid-deposit`.
+
+**There is deliberately no file upload or download endpoint.** `GET download` and
+`POST upload` were removed for #50 and are asserted absent by
+`CodecheckApiHandlerUnitTest::testTheFileEndpointsAreNotServed()`. Nothing ever
+called them — the manifest records bare filenames that `handleFileUpload()` reads
+from the browser's file picker without uploading anything — and what they did was
+dangerous: `download` resolved a user-supplied path against the OJS web root and
+`readfile()`d it whenever the string contained `codecheck` anywhere, and `upload`
+wrote an attacker-named file, extension included, under the document root. If
+manifest files ever need to be stored, use OJS's own file services and
+`SubmissionFileAccessPolicy`, not a path built from `Core::getBaseDir()`.
 Adding one: register it in the `$this->endpoints` array in the constructor, add the
 handler method, emit a `JsonResponse`. (README documents this too.)
 
@@ -645,6 +656,13 @@ Notes that matter when touching this:
   symlink, so `tests/bootstrap.php`'s default "four levels up" lands outside the
   OJS tree. `bootstrap.php` and `runTests.sh` honour `OJS_ROOT`; `make test-php`
   sets it. CI uses a real checkout, where the default still applies.
+- **A git worktree cannot be tested without repointing the symlink.** OJS resolves
+  `APP\plugins\generic\codecheck\…` through `plugins/generic/codecheck`, which
+  points at the main checkout — so PHPUnit run *from* a worktree still loads the
+  main checkout's classes while using the worktree's test files. The result is
+  quietly wrong rather than an error: a test written against worktree code fails
+  against main's. Point the symlink at the worktree for the run and put it back
+  afterwards. The same applies to `make serve` and everything e2e.
 - **The DB host must be `127.0.0.1`, not `localhost`** — mysqli reads
   `localhost` as a socket path.
 - **OJS release tarballs ship without PHPUnit** (`--no-dev`). `make ojs-install`

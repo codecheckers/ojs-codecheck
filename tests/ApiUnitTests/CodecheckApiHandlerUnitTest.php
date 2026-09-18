@@ -270,6 +270,42 @@ class CodecheckApiHandlerUnitTest extends PKPTestCase
         $this->handler($request)->execute();
     }
 
+    public function testTheFileEndpointsAreNotServed()
+    {
+        // `GET download` and `POST upload` were removed (Issue #50). Nothing
+        // ever called them: the manifest records bare filenames chosen in the
+        // browser by handleFileUpload(), which reads name and size and uploads
+        // nothing, and the path `upload` returned was consumed by no caller.
+        //
+        // They are asserted absent rather than merely deleted because of what
+        // they did. `download` resolved a user-supplied path against the OJS
+        // web root and passed it to readfile() if the string contained
+        // "codecheck" anywhere, which served config.inc.php to any registered
+        // reader. `upload` wrote an attacker-named file, extension included,
+        // under the document root. Reinstating either without the containment
+        // that was never there should fail here first.
+        $handler = $this->handler($this->request('metadata'));
+
+        $endpoints = (new \ReflectionClass($handler))->getProperty('endpoints');
+        $endpoints->setAccessible(true);
+
+        foreach ($endpoints->getValue($handler) as $method => $routes) {
+            foreach ($routes as $endpoint) {
+                $this->assertNotSame('download', $endpoint['route'], "{$method} download is served again");
+                $this->assertNotSame('upload', $endpoint['route'], "{$method} upload is served again");
+            }
+        }
+
+        $this->assertFalse(
+            method_exists($handler, 'downloadFile'),
+            'downloadFile() is back without a route'
+        );
+        $this->assertFalse(
+            method_exists($handler, 'uploadFile'),
+            'uploadFile() is back without a route'
+        );
+    }
+
     public function testEveryRegisteredEndpointCanActuallyBeServed()
     {
         // The endpoint table names handler methods as [$this, 'name'] strings,
