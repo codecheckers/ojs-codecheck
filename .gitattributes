@@ -1,0 +1,28 @@
+# Files that belong in the repository but not in a release package.
+#
+# `git archive` honours these, so package-plugin.sh gets the exclusions for free
+# rather than deleting paths out of the archive afterwards. The plugin guide asks
+# that "any non-essential files provided by your dependency manager ... should not
+# be included with the package", and the same reasoning applies to our own
+# development files: they are dead weight in an installed plugin, and CLAUDE.md in
+# particular carries local paths and development database credentials.
+#
+# Note: git archive reads this file from the tree being archived, so a tag made
+# before this file existed will not honour it.
+
+/.github/                export-ignore
+/.gitattributes          export-ignore
+/.gitignore              export-ignore
+/CLAUDE.md               export-ignore
+/Makefile                export-ignore
+/cypress/                export-ignore
+/cypress.config.js       export-ignore
+/dev/                    export-ignore
+/i18nExtractKeys.vite.js export-ignore
+/package-lock.json       export-ignore
+/package-plugin.sh       export-ignore
+/package.json            export-ignore
+/resources/              export-ignore
+/testData/               export-ignore
+/tests/                  export-ignore
+/vite.config.js          export-ignore

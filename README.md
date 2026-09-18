@@ -308,27 +308,35 @@ Both need `make serve` running in another terminal.
 9. Push the tag
     - `git push origin vx.y.z.0`
 10. Package the Plugin: *(ensure that `vx.y.z.0` matches the tag you pushed)*
-    - **manually**
-        - as **`.zip`**:
-          ```bash
-          git archive --format=zip --output=codecheck-x.y.z.0.zip vx.y.z.0
-          zip -r codecheck-x.y.z.0.zip public/
-          zip -d codecheck-x.y.z.0.zip 'resources/*'
-          ```
-        - as **`.tar.gz`**:
-          ```bash
-          git archive --format=tar vx.y.z.0 > codecheck-x.y.z.0.tar
-          tar -rf codecheck-x.y.z.0.tar public/
-          tar --delete -f codecheck-x.y.z.0.tar resources
-          gzip codecheck-x.y.z.0.tar
-          ```
-    - **via the `package-plugin.sh` script** *(recommended)*
       ```bash
-      sh package-plugin.sh --format zip|tar.gz --version x.y.z.0
+      sh package-plugin.sh --format tar.gz --version x.y.z.0
       ```
+    The script stages the package rather than editing an archive in place. It
+    exports the tag (honouring the `export-ignore` rules in `.gitattributes`),
+    copies `public/build/` in from the working tree, runs
+    `composer install --no-dev --prefer-dist`, strips each dependency's own
+    tests, docs and examples, and writes everything under a single `codecheck/`
+    directory. It prints the md5 of the result, which the Plugin Gallery entry
+    has to record.
+
+    Do not assemble the archive by hand. Three things are easy to get wrong and
+    all three have been:
+    - **the single top-level directory.** OJS extracts the archive and looks for
+      one directory containing `version.xml`; a flat archive is refused with
+      `manager.plugins.invalidPluginArchive`. The directory name must match
+      `<application>` in `version.xml`.
+    - **`vendor/`.** It is gitignored, so `git archive` never includes it, and
+      three classes `require` `vendor/autoload.php` at file scope — a package
+      without it fatals on the first request that reaches the plugin's API.
+    - **installing from source.** Without `--prefer-dist`, composer leaves a
+      `.git` directory in every package: 27 of them, and 39 MB of `vendor/` for
+      about 4 MB of code.
 11. Double check that the package:
-    - **Includes**: `public/build/`, all PHP files, templates, locale
-    - **Doesn't include**: `node_modules/`, `vendor/`, `resources/` (source files), `.env`
+    - **Includes**: a single top-level `codecheck/` directory holding
+      `version.xml`, `vendor/`, `public/build/`, all PHP files, templates, locale
+    - **Doesn't include**: `node_modules/`, `resources/` (Vue sources), `.env`,
+      `tests/`, `cypress/`, `dev/`, `testData/`, `Makefile`, `CLAUDE.md` —
+      `.gitattributes` keeps these out
 12. Create the Release in the [GitHub UI](https://github.com/codecheckers/ojs-codecheck/releases/new)
     - **Tag [ <img src="assets/img/github-tag.png" width="10" height="10"> ]:** make sure to select the tag, which you just created (`vx.y.z.0`)
     - **Target [ <img src="assets/img/github-branch.png" width="10" height="10"> ]:** select your Release branch as a target (`"release-x_y_z-0"`)

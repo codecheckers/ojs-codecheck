@@ -147,6 +147,34 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 
 #### Under the hood
 
+- `version.xml` declares the release it actually is. It read `0.0.0.0` with a
+  placeholder date, including in the tagged v1.0.0.0 release, so OJS recorded any
+  install as version zero and would have shown the plugin as permanently
+  upgradable against any Plugin Gallery entry (Issue #50)
+- The licence is stated consistently. `LICENSE` and `composer.json` said
+  Apache-2.0 while 31 source files said "GNU GPL v3 ... see the file
+  docs/COPYING", and `docs/COPYING` did not exist. The file headers now match the
+  licence the repository actually carries (Issue #50)
+
+- Dropped the `vlucas/phpdotenv` dependency and the `.env` load that came with it.
+  GitHub credentials come from the plugin settings, and nothing in the plugin ever
+  read an environment variable — no `getenv()`, no `$_ENV` — so the load had no
+  consumer. It ran on every include of the register API client, and a malformed
+  `.env` would still have thrown from file scope. Removing it also drops
+  `phpoption`, `graham-campbell/result-type` and a polyfill from the shipped
+  `vendor/`, and the CI step that wrote a `.env` nothing read (Issue #50)
+
+- The release package is built as a staged directory rather than by editing an
+  archive in place, so it now has the single top-level `codecheck/` directory OJS
+  requires — a flat archive was refused outright with
+  `manager.plugins.invalidPluginArchive`, which meant the packaged plugin could
+  not be installed at all. It also ships `vendor/`, without which the three
+  classes that `require` the autoloader at file scope fatal on the first request
+  that reaches the plugin's API, and installs with `--prefer-dist` so composer
+  does not leave a `.git` directory in every dependency. A new `.gitattributes`
+  keeps `tests/`, `cypress/`, `dev/`, `testData/`, `Makefile` and `CLAUDE.md` out
+  of the package. 28 MB to 912 KB (Issue #50)
+
 - CODECHECK publication validation works again. It asked the router for the page
   handler to find the submission, but publishing goes through the REST API where
   there is none, so every publish attempt threw inside the hook; OJS logged

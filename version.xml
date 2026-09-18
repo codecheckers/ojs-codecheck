@@ -4,14 +4,14 @@
   * version.xml
   *
   * Copyright (c) 2026 CODECHECK Initiative
-  * Distributed under the GNU GPL v3. For full terms see the file docs/COPYING.
+  * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
   *
   * CODECHECK plugin version information.
   -->
 <version>
 	<application>codecheck</application>
 	<type>plugins.generic</type>
-	<release>0.0.0.0</release>
-	<date>2025-01-01</date>
+	<release>1.0.0.0</release>
+	<date>2026-09-18</date>
 	<class>CodecheckPlugin</class>
 </version>

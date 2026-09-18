@@ -5,7 +5,6 @@ namespace APP\plugins\generic\codecheck\classes\CodecheckRegister;
 require __DIR__ . '/../../vendor/autoload.php';
 
 use Github\Client;
-use Dotenv\Dotenv;
 use APP\plugins\generic\codecheck\classes\DataStructures\UniqueArray;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifier;
 use APP\plugins\generic\codecheck\classes\Exceptions\NoMatchingIssuesFoundException;
@@ -16,16 +15,6 @@ use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegis
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Exceptions\ApiUpdateException;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
-
-// Load .env variables if a .env file is present.
-//
-// GitHub credentials come from the plugin settings
-// (Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN and friends), not from
-// .env — this remains only for local experimentation. safeLoad() is used
-// deliberately: load() throws InvalidPathException when no .env exists, which
-// made merely including this file fatal on any install without one.
-$dotenv = Dotenv::createImmutable(__DIR__ . '/../../');
-$dotenv->safeLoad();
 
 // api client
 class CodecheckGithubRegisterApiClient

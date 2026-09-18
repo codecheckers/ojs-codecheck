@@ -70,15 +70,6 @@ jobs:
         working-directory: ojs/plugins/generic/codecheck
         run: composer install --no-interaction || true
       
-      - name: Create .env file
-        working-directory: ojs/plugins/generic/codecheck
-        run: |
-          cat > .env << EOF
-          GITHUB_TOKEN=${{ secrets.CODECHECK_GITHUB_TOKEN }}
-          GITHUB_OWNER=${{ secrets.CODECHECK_GITHUB_OWNER }}
-          GITHUB_REPO=${{ secrets.CODECHECK_GITHUB_REPO }}
-          EOF
-      
       - name: Setup OJS database
         working-directory: ojs
         run: |
