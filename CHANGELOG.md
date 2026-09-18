@@ -75,6 +75,12 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   manifest entries
 - CODECHECK column in the editorial dashboard showing the certificate identifier, or a
   link to start a CODECHECK (Issue #30)
+- ORCID deposition for codecheckers: each codechecker authorises the journal from the
+  CODECHECK tab, and the check is then deposited to their ORCID record as a peer-review
+  activity, automatically on publication or on demand. Status per codechecker, and a
+  button to test the ORCID credentials without writing anything (Issue #16)
+- CODECHECK documentation section in the reviewer's Download & Review tab, so a
+  codechecker can record the check without editorial access (Issue #16)
 
 #### Publication
 
@@ -134,6 +140,10 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   they choose otherwise, so a check records the specification it was done against
   rather than a moving target. The generated `codecheck.yml` declares the version
   recorded for the check instead of always claiming 1.0
+- ORCID settings: whether deposition is enabled, the Member API to use (sandbox or
+  production), the client ID and secret, and the publisher city recorded on the
+  deposited activity. The client secret is never rendered back into the form and is
+  only overwritten when a new one is entered (Issue #16)
 
 #### Under the hood
 
@@ -181,6 +191,12 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 
 ### Security
 
+- ORCID API requests verify the server's TLS certificate. Both HTTP helpers in
+  `OrcidApiClient` disabled certificate and hostname verification, on the same
+  requests that carry the journal's ORCID client secret and every codechecker's
+  access token, and followed redirects while doing so — so anyone able to
+  intercept the connection could present any certificate, collect those
+  credentials and write activities to the affected ORCID records (Issue #16)
 - Repositories marked hidden are no longer published in the CODECHECK register
   issue on GitHub. The issue is public, and the editorial form sends whole
   repository entries, so every hidden repository — and the internal flags of the

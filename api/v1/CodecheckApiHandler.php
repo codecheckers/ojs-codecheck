@@ -19,6 +19,9 @@ use APP\plugins\generic\codecheck\classes\CodecheckRoles\CodecheckRoleManager;
 use APP\plugins\generic\codecheck\classes\Exceptions\RoleExceptions\RoleNotFoundException;
 use APP\plugins\generic\codecheck\classes\Exceptions\EndpointNotFoundException;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckIssueLabels;
+use APP\plugins\generic\codecheck\classes\Orcid\OrcidApiClient;
+use APP\plugins\generic\codecheck\classes\Orcid\OrcidTokenDAO;
+use APP\plugins\generic\codecheck\classes\Orcid\OrcidDepositService;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckPublicationValidator;
 use Exception;
 use Illuminate\Support\Facades\Schema;
@@ -75,19 +78,19 @@ class CodecheckApiHandler
                     'roles' => $roles->editMetadata(),
                 ],
                 [
-                    'route' => 'metadata',
+                    'route'   => 'metadata',
                     'handler' => [$this, 'getMetadata'],
-                    'roles' => $roles->readMetadata(),
+                    'roles'   => $roles->readMetadata(),
                 ],
                 [
-                    'route' => 'download',
+                    'route'   => 'download',
                     'handler' => [$this, 'downloadFile'],
-                    'roles' => $roles->readMetadata(),
+                    'roles'   => $roles->readMetadata(),
                 ],
                 [
-                    'route' => 'yaml',
+                    'route'   => 'yaml',
                     'handler' => [$this, 'generateYaml'],
-                    'roles' => $roles->readMetadata(),
+                    'roles'   => $roles->readMetadata(),
                 ],
                 [
                     'route' => 'register',
@@ -104,12 +107,22 @@ class CodecheckApiHandler
                     'handler' => [$this, 'getStatusHistory'],
                     'roles' => $roles->readMetadata(),
                 ],
+                [
+                    'route'   => 'orcid-status',
+                    'handler' => [$this, 'getOrcidStatus'],
+                    'roles'   => $roles->readMetadata(),
+                ],
+                [
+                    'route'   => 'orcid-test',
+                    'handler' => [$this, 'testOrcidSetup'],
+                    'roles'   => $roles->admin(),
+                ],
             ],
             'POST' => [
                 [
-                    'route' => 'identifier',
+                    'route'   => 'identifier',
                     'handler' => [$this, 'reserveIdentifier'],
-                    'roles' => $roles->editMetadata(),
+                    'roles'   => $roles->editMetadata(),
                 ],
                 [
                     'route' => 'issue',
@@ -117,19 +130,19 @@ class CodecheckApiHandler
                     'roles' => $roles->editMetadata(),
                 ],
                 [
-                    'route' => 'metadata',
+                    'route'   => 'metadata',
                     'handler' => [$this, 'saveMetadata'],
-                    'roles' => $roles->editMetadata(),
+                    'roles'   => $roles->editMetadata(),
                 ],
                 [
-                    'route' => 'upload',
+                    'route'   => 'upload',
                     'handler' => [$this, 'uploadFile'],
-                    'roles' => $roles->editMetadata(),
+                    'roles'   => $roles->editMetadata(),
                 ],
                 [
-                    'route' => 'repository',
+                    'route'   => 'repository',
                     'handler' => [$this, 'loadMetadataFromRepository'],
-                    'roles' => $roles->editMetadata(),
+                    'roles'   => $roles->editMetadata(),
                 ],
                 [
                     'route' => 'repository/validate',
@@ -137,9 +150,9 @@ class CodecheckApiHandler
                     'roles' => $roles->readMetadata(),
                 ],
                 [
-                    'route' => 'yaml/validate',
+                    'route'   => 'yaml/validate',
                     'handler' => [$this, 'validateYamlStructure'],
-                    'roles' => $roles->readMetadata(),
+                    'roles'   => $roles->readMetadata(),
                 ],
                 [
                     'route' => 'status/update',
@@ -150,6 +163,11 @@ class CodecheckApiHandler
                     'route' => 'users/roles/validation',
                     'handler' => [$this, 'validateUserAccessRightsToStatus'],
                     'roles' => $roles->readMetadata(),
+                ],
+                [
+                    'route'   => 'orcid-deposit',
+                    'handler' => [$this, 'depositToOrcid'],
+                    'roles'   => $roles->editMetadata(),
                 ],
             ],
         ];
@@ -199,7 +217,6 @@ class CodecheckApiHandler
 
     private function getEndpoint(): ApiEndpoint
     {
-        // get the request Method like POST or GET
         $requestMethod = $this->request->getRequestMethod();
 
         CodecheckLogger::debug("API Request: " . $requestMethod . " - " . $this->request->getRequestPath());
@@ -393,7 +410,6 @@ class CodecheckApiHandler
                 'success'   => false,
                 'error'     => $parameterValidationError,
             ], 400);
-            return;
         }
 
         $issueLabelArray = $postParams["issue"]["labelsSelected"];
@@ -415,7 +431,6 @@ class CodecheckApiHandler
                 'success' => false,
                 'error'   => "An unexpected mode for the reservation of the Certificate Identifier was given: " . $reserveIdentifierMode,
             ], 400);
-            return;
         }
 
         // CODECHECK GitHub Issue Register API parser
@@ -489,7 +504,6 @@ class CodecheckApiHandler
             'issueUrl' => $issueGithubUrl,
             'issueNumber' => $issueNumber,
         ], 200);
-        return;
     }
 
     public function updateGithubIssue(): void
@@ -503,7 +517,6 @@ class CodecheckApiHandler
                 'success'   => false,
                 'error'     => $parameterValidationError,
             ], 400);
-            return;
         }
 
         $issue = $postParams['issue'];
@@ -638,7 +651,6 @@ class CodecheckApiHandler
                 'identifier' => $identifierStr,
                 'error'     => "The identifier: " . $identifierStr . " isn't matching the required format (YYYY-NNN or YYYY-NNN/YYYY-NNN).",
             ], 400);
-            return;
         }
         $identifier = CertificateIdentifier::fromStr($rawIdentifier);
         $issue = $certificateIdentifierList->getIssueInformationByIdentifier($identifier);
@@ -648,7 +660,6 @@ class CodecheckApiHandler
                 'identifier' => $identifierStr,
                 'error'     => "The certificate with the Identifier: ". $identifierStr . " doesn't exist in the GitHub Register.",
             ], 404);
-            return;
         }
 
         $this->respond([
@@ -708,7 +719,6 @@ class CodecheckApiHandler
                 'success' => false,
                 'error' => implode(' ,', $errors),
             ], 500);
-            return;
         }
         $this->respond([
             'success' => true,
@@ -723,6 +733,7 @@ class CodecheckApiHandler
     public function getMetadata(): void
     {
         $submissionId = $this->codecheckMetadataHandler->getSubmissionId();
+
         $result = $this->codecheckMetadataHandler->getMetadata($this->request, $submissionId);
 
         if(isset($result['error'])) {
@@ -778,6 +789,7 @@ class CodecheckApiHandler
     public function saveMetadata(): void
     {
         $submissionId = $this->codecheckMetadataHandler->getSubmissionId();
+
         $result = $this->codecheckMetadataHandler->saveMetadata($this->request, $submissionId);
 
         if(isset($result['error'])) {
@@ -812,7 +824,6 @@ class CodecheckApiHandler
                 'error' => 'Submission not found',
                 'submissionID' => $submissionId,
             ], 400);
-            return;
         }
 
         if (!isset($_FILES['file'])) {
@@ -820,7 +831,6 @@ class CodecheckApiHandler
                 'success' => false,
                 'error' => 'No file uploaded'
             ], 400);
-            return;
         }
 
         $file = $_FILES['file'];
@@ -833,7 +843,6 @@ class CodecheckApiHandler
                 'success' => false,
                 'error' => 'Upload error: ' . $file['error']
             ], 400);
-            return;
         }
 
         // Create directory for codecheck files
@@ -848,7 +857,6 @@ class CodecheckApiHandler
                     'success' => false,
                     'error' => 'Failed to create directory'
                 ], 500);
-                return;
             }
         }
 
@@ -864,7 +872,6 @@ class CodecheckApiHandler
                 'success' => false,
                 'error' => 'Failed to save file'
             ], 500);
-            return;
         }
 
         CodecheckLogger::info('File saved: ' . $filepath);
@@ -894,7 +901,6 @@ class CodecheckApiHandler
                 'success' => false,
                 'error' => 'No file specified'
             ], 400);
-            return;
         }
 
         $basePath = \PKP\core\Core::getBaseDir();
@@ -908,7 +914,6 @@ class CodecheckApiHandler
                 'success' => false,
                 'error' => 'File not found'
             ], 404);
-            return;
         }
 
         // Get original filename (remove timestamp prefix)
@@ -935,6 +940,7 @@ class CodecheckApiHandler
     public function generateYaml(): void
     {
         $submissionId = $this->codecheckMetadataHandler->getSubmissionId();
+
         $result = $this->codecheckMetadataHandler->generateYaml($this->request, $submissionId);
 
         if(isset($result['error'])) {
@@ -976,6 +982,170 @@ class CodecheckApiHandler
 
         $this->respond([
             'success' => true,
+        ], 200);
+    }
+
+    /**
+     * GET api/v1/codecheck/orcid-status?submissionId=XX
+     */
+    public function getOrcidStatus(): void
+    {
+        $submissionId = (int) $this->request->getUserVar('submissionId');
+
+        if (!$submissionId) {
+            $this->respond(['success' => false, 'error' => 'Missing submissionId'], 400);
+        }
+
+        $submission = Repo::submission()->get($submissionId);
+        if (!$submission) {
+            $this->respond(['success' => false, 'error' => 'Submission not found'], 404);
+        }
+
+        $metadata = DB::table('codecheck_metadata')->where('submission_id', $submissionId)->first();
+
+        $codecheckerNames = [];
+        if ($metadata && $metadata->codecheckers) {
+            $decoded = json_decode($metadata->codecheckers, true);
+            if (is_array($decoded)) {
+                $codecheckerNames = $decoded;
+            }
+        }
+
+        $tokenDAO  = new OrcidTokenDAO();
+        $tokenRows = $tokenDAO->getAllBySubmission($submissionId);
+
+        $tokensByOrcid = [];
+        foreach ($tokenRows as $row) {
+            if ($row->orcid_id) {
+                $tokensByOrcid[$row->orcid_id] = $row;
+            }
+        }
+
+        $codecheckers = [];
+
+        if (!empty($codecheckerNames)) {
+            foreach ($codecheckerNames as $cc) {
+                $name     = is_array($cc) ? ($cc['name'] ?? '') : (string) $cc;
+                $orcidId  = is_array($cc) ? ($cc['orcid'] ?? $cc['ORCID'] ?? null) : null;
+                $tokenRow = $orcidId ? ($tokensByOrcid[$orcidId] ?? null) : null;
+
+                $codecheckers[] = [
+                    'name'          => $name,
+                    'orcidId'       => $tokenRow->orcid_id ?? null,
+                    'depositStatus' => $tokenRow->deposit_status ?? null,
+                    'putCode'       => $tokenRow->put_code ?? null,
+                    'depositedAt'   => $tokenRow->deposited_at ?? null,
+                    'errorMessage'  => $tokenRow->error_message ?? null,
+                ];
+            }
+        } else {
+            foreach ($tokenRows as $row) {
+                $codecheckers[] = [
+                    'name'          => $row->orcid_id ?? 'Unknown',
+                    'orcidId'       => $row->orcid_id,
+                    'depositStatus' => $row->deposit_status,
+                    'putCode'       => $row->put_code,
+                    'depositedAt'   => $row->deposited_at,
+                    'errorMessage'  => $row->error_message,
+                ];
+            }
+        }
+
+        $journalConfigError = null;
+        try {
+            $depositService = new OrcidDepositService($this->plugin);
+            $depositService->getValidatedJournalInfo($this->request->getContext()->getId());
+        } catch (\InvalidArgumentException $e) {
+            $journalConfigError = $e->getMessage();
+        }
+
+        $this->respond([
+            'success'            => true,
+            'submissionId'       => $submissionId,
+            'codecheckers'       => $codecheckers,
+            'journalConfigError' => $journalConfigError,
+        ], 200);
+    }
+
+    /**
+     * POST api/v1/codecheck/orcid-deposit
+     */
+    public function depositToOrcid(): void
+    {
+        $postParams   = json_decode(file_get_contents('php://input'), true);
+        $submissionId = (int) ($postParams['submissionId'] ?? 0);
+
+        if (!$submissionId) {
+            $this->respond(['success' => false, 'error' => 'Missing submissionId'], 400);
+        }
+
+        $context = $this->request->getContext();
+
+        if (!$this->plugin->getSetting($context->getId(), Constants::ORCID_ENABLED)) {
+            $this->respond(['success' => false, 'error' => 'ORCID deposition is not enabled for this journal.'], 400);
+        }
+
+        try {
+            $depositService = new OrcidDepositService($this->plugin);
+            $results        = $depositService->depositForSubmission($submissionId);
+        } catch (\Throwable $e) {
+            CodecheckLogger::error('ORCID depositToOrcid API error: ' . $e->getMessage());
+            $this->respond(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+
+        $this->respond(['success' => true, 'results' => $results], 200);
+    }
+
+    /**
+     * GET api/v1/codecheck/orcid-test
+     *
+     * Tests the ORCID setup without writing any data:
+     * 1. Validates required journal metadata
+     * 2. Makes an authenticated token request to verify credentials
+     */
+    public function testOrcidSetup(): void
+    {
+        $context   = $this->request->getContext();
+        $contextId = $context->getId();
+
+        try {
+            $depositService = new OrcidDepositService($this->plugin);
+            $depositService->getValidatedJournalInfo($contextId);
+        } catch (\InvalidArgumentException $e) {
+            $this->respond([
+                'success' => false,
+                'step'    => 'metadata',
+                'error'   => $e->getMessage(),
+            ], 400);
+        }
+
+        $clientId     = $this->plugin->getSetting($contextId, Constants::ORCID_CLIENT_ID);
+        $clientSecret = $this->plugin->getSetting($contextId, Constants::ORCID_CLIENT_SECRET);
+        $apiType      = $this->plugin->getSetting($contextId, Constants::ORCID_API_TYPE)
+                        ?? Constants::ORCID_API_TYPE_SANDBOX;
+
+        if (!$clientId || !$clientSecret) {
+            $this->respond([
+                'success' => false,
+                'step'    => 'credentials',
+                'error'   => __('plugins.generic.codecheck.orcid.test.error.noCredentials'),
+            ], 400);
+        }
+
+        try {
+            $client = new OrcidApiClient($clientId, $clientSecret, $apiType);
+            $client->getClientCredentialsToken();
+        } catch (\Throwable $e) {
+            $this->respond([
+                'success' => false,
+                'step'    => 'credentials',
+                'error'   => __('plugins.generic.codecheck.orcid.test.error.credentialsFailed') . ' ' . $e->getMessage(),
+            ], 400);
+        }
+
+        $this->respond([
+            'success' => true,
+            'message' => __('plugins.generic.codecheck.orcid.test.success'),
         ], 200);
     }
 

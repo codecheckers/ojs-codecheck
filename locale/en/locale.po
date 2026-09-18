@@ -944,3 +944,164 @@ msgstr "When enabled, publishing a CODECHECK-opted-in submission will automatica
 
 msgid "plugins.generic.codecheck.settings.registerDeposit.checkboxText"
 msgstr "Automatically deposit to the CODECHECK Register on publication"
+
+# --- ORCID deposition (PR #126) ---
+
+msgid "plugins.generic.codecheck.review.reportUrl"
+msgstr "Report URL"
+
+msgid "plugins.generic.codecheck.orcid.settingsTitle"
+msgstr "ORCID Deposition"
+
+msgid "plugins.generic.codecheck.orcid.settingsDescription"
+msgstr "Deposit CODECHECK activity to codecheckers' ORCID profiles using the ORCID Member API. The journal must register a Member API Client at orcid.org. Start with the sandbox API during development."
+
+msgid "plugins.generic.codecheck.orcid.enable"
+msgstr "Enable ORCID deposition for CODECHECKs"
+
+msgid "plugins.generic.codecheck.orcid.apiType"
+msgstr "ORCID API"
+
+msgid "plugins.generic.codecheck.orcid.apiType.sandbox"
+msgstr "Member Sandbox (development/testing)"
+
+msgid "plugins.generic.codecheck.orcid.apiType.production"
+msgstr "Member API (production)"
+
+msgid "plugins.generic.codecheck.orcid.clientId"
+msgstr "Client ID"
+
+msgid "plugins.generic.codecheck.orcid.clientIdDescription"
+msgstr "Your ORCID Member API Client ID, e.g. APP-XXXXXXXXXXXX"
+
+msgid "plugins.generic.codecheck.orcid.clientSecret"
+msgstr "Client Secret"
+
+msgid "plugins.generic.codecheck.orcid.clientSecretDescription"
+msgstr "Your ORCID Member API Client Secret. Leave blank to keep the current value."
+
+msgid "plugins.generic.codecheck.orcid.sectionTitle"
+msgstr "ORCID Deposition"
+
+msgid "plugins.generic.codecheck.orcid.sectionDescription"
+msgstr "Codecheckers must authorise this journal to deposit their CODECHECK activity to their ORCID profile. Once authorised, deposition happens automatically on publication or can be triggered manually below."
+
+msgid "plugins.generic.codecheck.orcid.noCodecheckers"
+msgstr "No codecheckers have been assigned yet."
+
+msgid "plugins.generic.codecheck.orcid.authorise"
+msgstr "Authorise ORCID"
+
+msgid "plugins.generic.codecheck.orcid.reAuthorise"
+msgstr "Re-authorise ORCID"
+
+msgid "plugins.generic.codecheck.orcid.deposit"
+msgstr "Deposit to ORCID"
+
+msgid "plugins.generic.codecheck.orcid.reDeposit"
+msgstr "Re-deposit to ORCID"
+
+msgid "plugins.generic.codecheck.orcid.depositAll"
+msgstr "Deposit to all authorised ORCID profiles"
+
+msgid "plugins.generic.codecheck.orcid.viewOnOrcid"
+msgstr "View on ORCID"
+
+msgid "plugins.generic.codecheck.orcid.status.notAuthorised"
+msgstr "Not authorised"
+
+msgid "plugins.generic.codecheck.orcid.status.pending"
+msgstr "Pending deposit"
+
+msgid "plugins.generic.codecheck.orcid.status.deposited"
+msgstr "Deposited"
+
+msgid "plugins.generic.codecheck.orcid.status.failed"
+msgstr "Deposit failed"
+
+msgid "plugins.generic.codecheck.orcid.authoriseByCodechecker"
+msgstr "Must be authorised by the codechecker."
+
+msgid "plugins.generic.codecheck.orcid.test.title"
+msgstr "Test ORCID Setup"
+
+msgid "plugins.generic.codecheck.orcid.test.description"
+msgstr "Verify that journal metadata and ORCID credentials are correctly configured. This makes an authenticated request to ORCID without writing any data."
+
+msgid "plugins.generic.codecheck.orcid.test.button"
+msgstr "Test ORCID Setup"
+
+msgid "plugins.generic.codecheck.orcid.test.success"
+msgstr "ORCID setup is correctly configured. Journal metadata and credentials are valid."
+
+msgid "plugins.generic.codecheck.orcid.test.error.noCredentials"
+msgstr "Client ID and Client Secret are not configured in plugin settings."
+
+msgid "plugins.generic.codecheck.orcid.test.error.credentialsFailed"
+msgstr "ORCID credentials test failed:"
+
+msgid "plugins.generic.codecheck.orcid.auth.error.notEnabled"
+msgstr "ORCID integration is not enabled for this journal."
+
+msgid "plugins.generic.codecheck.orcid.auth.error.noCredentials"
+msgstr "ORCID credentials are not configured. Please ask the journal manager to set the Client ID and Client Secret in the CODECHECK plugin settings."
+
+msgid "plugins.generic.codecheck.orcid.auth.error.missingSubmissionId"
+msgstr "Missing submission ID parameter."
+
+msgid "plugins.generic.codecheck.orcid.auth.error.accessDenied"
+msgstr "Access denied."
+
+msgid "plugins.generic.codecheck.orcid.auth.error.denied"
+msgstr "ORCID authorisation denied: {$error}"
+
+msgid "plugins.generic.codecheck.orcid.auth.error.invalidCallback"
+msgstr "Invalid ORCID callback: missing code or state."
+
+msgid "plugins.generic.codecheck.orcid.auth.error.invalidState"
+msgstr "Invalid state parameter."
+
+msgid "plugins.generic.codecheck.orcid.auth.error.securityCheck"
+msgstr "Security check failed. Please try again."
+
+msgid "plugins.generic.codecheck.orcid.auth.error.submissionNotFound"
+msgstr "Submission not found."
+
+msgid "plugins.generic.codecheck.orcid.auth.error.orcidMismatch"
+msgstr "The ORCID iD you authenticated with ({$orcidId}) does not match any codechecker ORCID on record for this submission. Please sign in with the correct ORCID account."
+
+msgid "plugins.generic.codecheck.orcid.auth.error.tokenExchange"
+msgstr "ORCID token exchange failed: {$error}"
+
+msgid "plugins.generic.codecheck.orcid.auth.error.prefix"
+msgstr "Error"
+
+msgid "plugins.generic.codecheck.orcid.auth.success"
+msgstr "Authorisation successful. You may close this window."
+
+msgid "plugins.generic.codecheck.orcid.auth.closeWindow"
+msgstr "Close this window"
+
+msgid "plugins.generic.codecheck.orcid.test.button.testing"
+msgstr "Testing..."
+
+msgid "plugins.generic.codecheck.orcid.test.error.requestFailed"
+msgstr "Request failed. Please check your network connection."
+
+msgid "plugins.generic.codecheck.orcid.city"
+msgstr "Publisher City"
+
+msgid "plugins.generic.codecheck.orcid.cityDescription"
+msgstr "City of the publishing organisation, required for ORCID peer-review deposition via the Member API."
+
+msgid "plugins.generic.codecheck.orcid.payload.untitledSubmission"
+msgstr "Untitled submission"
+
+msgid "plugins.generic.codecheck.orcid.payload.missingMetadata"
+msgstr "ORCID deposition requires the following journal metadata to be configured: {$fields}"
+
+msgid "plugins.generic.codecheck.orcid.payload.missingPublisherName"
+msgstr "Publisher Name (Journal Settings → Masthead → Publisher)"
+
+msgid "plugins.generic.codecheck.orcid.payload.missingCountry"
+msgstr "Country (Journal Settings → Masthead → Country)"
