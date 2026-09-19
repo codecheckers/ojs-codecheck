@@ -239,23 +239,59 @@ class CodecheckPlugin extends GenericPlugin
      * The constructor handles the request and exits — no need to set a router handler.
      */
     /**
+     * The config file specification versions this journal offers in the metadata
+     * form. Unset or empty means the default: the current stable specification.
+     *
+     * Lives on the plugin so the hand-rolled handler and the PKP controller can
+     * both reach it while the migration in `plan-50-p2-api-controller.md` is
+     * half done, rather than carrying a copy each.
+     */
+    public function getEnabledConfigVersions(?int $contextId): array
+    {
+        if ($contextId === null) {
+            return Constants::CODECHECK_DEFAULT_CONFIG_VERSIONS;
+        }
+
+        // Intersect rather than trust the stored value, so a version dropped
+        // from the plugin cannot reappear in the form.
+        $enabled = array_values(array_intersect(
+            Constants::CODECHECK_CONFIG_VERSIONS,
+            (array) $this->getSetting($contextId, Constants::CODECHECK_ENABLED_CONFIG_VERSIONS)
+        ));
+
+        return empty($enabled) ? Constants::CODECHECK_DEFAULT_CONFIG_VERSIONS : $enabled;
+    }
+
+    /**
      * Routes the PKP controller serves instead of the hand-rolled handler.
      *
      * Stage 0 of the migration in `plan-50-p2-api-controller.md`: one endpoint,
      * to check the migration's assumptions against a running instance.
      */
-    private const CONTROLLER_ROUTES = ['status'];
+    /**
+     * Routes the PKP controller serves instead of the hand-rolled handler.
+     *
+     * Keyed by method, because the two overlap: `metadata` is a GET the
+     * controller now answers and a POST the old handler still does. A
+     * path-only list would hand the POST to the controller, which has no route
+     * for it, and the save would 404.
+     *
+     * Stage 1 of the migration in `plan-50-p2-api-controller.md`.
+     */
+    private const CONTROLLER_ROUTES = [
+        'GET' => ['status', 'status/history', 'metadata', 'yaml', 'orcid-status'],
+    ];
 
     /**
      * Is this request one the controller now answers?
      */
-    private static function servedByController(string $requestPath): bool
+    private static function servedByController(string $requestPath, string $method): bool
     {
         if (!preg_match('~/api/v\d+/codecheck/([^?#]+)~', $requestPath, $matches)) {
             return false;
         }
 
-        return in_array(trim($matches[1], '/'), self::CONTROLLER_ROUTES, true);
+        return in_array(trim($matches[1], '/'), self::CONTROLLER_ROUTES[strtoupper($method)] ?? [], true);
     }
 
     /**
@@ -274,7 +310,7 @@ class CodecheckPlugin extends GenericPlugin
      */
     public function registerApiControllers(string $hookName, \PKP\core\APIRouter $router): bool
     {
-        $router->registerPluginApiControllers([new CodecheckApiController()]);
+        $router->registerPluginApiControllers([new CodecheckApiController($this)]);
 
         return Hook::CONTINUE;
     }
@@ -318,7 +354,7 @@ class CodecheckPlugin extends GenericPlugin
             // here are served by CodecheckApiController; this hook fires before
             // routing and the handler below exits, so without the skip the
             // controller would never be reached. Goes away with the handler.
-            if (self::servedByController($request->getRequestPath())) {
+            if (self::servedByController($request->getRequestPath(), $request->getRequestMethod())) {
                 return;
             }
 

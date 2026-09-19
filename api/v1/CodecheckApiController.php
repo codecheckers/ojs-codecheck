@@ -32,8 +32,13 @@
 namespace APP\plugins\generic\codecheck\api\v1;
 
 use APP\core\Application;
+use APP\plugins\generic\codecheck\CodecheckPlugin;
 use APP\plugins\generic\codecheck\classes\Constants;
+use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckStatusHandler;
+use APP\plugins\generic\codecheck\classes\Orcid\OrcidDepositService;
+use APP\plugins\generic\codecheck\classes\Orcid\OrcidTokenDAO;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use PKP\core\PKPBaseController;
 use PKP\core\PKPRequest;
@@ -44,6 +49,27 @@ use PKP\security\Role;
 
 class CodecheckApiController extends PKPBaseController
 {
+    /**
+     * Handler methods that act on one submission.
+     *
+     * `authorize()` is per controller, not per route, so a blanket
+     * SubmissionAccessPolicy would reject the journal-scoped routes — they have
+     * no submission to resolve and the policy answers `invalidSubmission`.
+     * `getRouteActionName()` returns the PHP method name bound to the route, so
+     * this is a list of method names.
+     */
+    private const SUBMISSION_SCOPED = [
+        'getCurrentStatus',
+        'getStatusHistory',
+        'getMetadata',
+        'generateYaml',
+        'getOrcidStatus',
+    ];
+
+    public function __construct(private CodecheckPlugin $plugin)
+    {
+    }
+
     /**
      * Serves the same paths the hand-rolled handler does, so nothing the Vue
      * layer calls has to change.
@@ -81,7 +107,10 @@ class CodecheckApiController extends PKPBaseController
     {
         $this->addPolicy(new UserRolesRequiredPolicy($request), true);
         $this->addPolicy(new ContextAccessPolicy($request, $roleAssignments));
-        $this->addPolicy(new SubmissionAccessPolicy($request, $args, $roleAssignments));
+
+        if (in_array(static::getRouteActionName($args[0]), self::SUBMISSION_SCOPED, true)) {
+            $this->addPolicy(new SubmissionAccessPolicy($request, $args, $roleAssignments));
+        }
 
         return parent::authorize($request, $args, $roleAssignments);
     }
@@ -90,6 +119,18 @@ class CodecheckApiController extends PKPBaseController
     {
         Route::get('status', $this->getCurrentStatus(...))
             ->name('codecheck.status.get');
+
+        Route::get('status/history', $this->getStatusHistory(...))
+            ->name('codecheck.status.history');
+
+        Route::get('metadata', $this->getMetadata(...))
+            ->name('codecheck.metadata.get');
+
+        Route::get('yaml', $this->generateYaml(...))
+            ->name('codecheck.yaml.get');
+
+        Route::get('orcid-status', $this->getOrcidStatus(...))
+            ->name('codecheck.orcid.status');
     }
 
     /**
@@ -107,6 +148,171 @@ class CodecheckApiController extends PKPBaseController
             'success' => true,
             'statusRecord' => CodecheckStatusHandler::getCurrentStatusData($submission->getId()),
             'allStatuses' => Constants::CODECHECK_STATUSES,
+        ], 200);
+    }
+
+    /**
+     * GET api/v1/codecheck/status/history?submissionId=N
+     *
+     * An empty history is reported as a failure with a null history rather than
+     * as an empty list, and with 400 rather than 404. That is the contract the
+     * client and `status-handler.cy.js` already rely on, so it is kept verbatim
+     * across the move.
+     */
+    public function getStatusHistory(): \Illuminate\Http\JsonResponse
+    {
+        $submission = $this->getAuthorizedContextObject(Application::ASSOC_TYPE_SUBMISSION);
+        $statusHistory = CodecheckStatusHandler::getStatusDataHistory($submission->getId());
+
+        if (empty($statusHistory)) {
+            return response()->json([
+                'success' => false,
+                'error' => "Currently there is no recorded CODECHECK status history for this submission ID in the OJS database.",
+                'statusHistory' => null,
+            ], 400);
+        }
+
+        return response()->json([
+            'success' => true,
+            'statusHistory' => $statusHistory,
+        ], 200);
+    }
+
+    /**
+     * GET api/v1/codecheck/metadata?submissionId=N
+     */
+    public function getMetadata(): \Illuminate\Http\JsonResponse
+    {
+        $request = Application::get()->getRequest();
+        $submission = $this->getAuthorizedContextObject(Application::ASSOC_TYPE_SUBMISSION);
+
+        $result = $this->metadataHandler()->getMetadata($request, $submission->getId());
+
+        if (isset($result['error'])) {
+            // A refused payload is a bad request; 404 is for a submission that
+            // is not there — though the policy has already ruled that out.
+            $status = $result['status'] ?? 404;
+            unset($result['status']);
+
+            return response()->json(
+                array_merge($result, ['success' => false, 'submissionID' => $submission->getId()]),
+                $status
+            );
+        }
+
+        $result['settings'] = [
+            'enabledConfigVersions' => $this->plugin->getEnabledConfigVersions($request->getContext()?->getId()),
+        ];
+
+        return response()->json(array_merge($result, ['success' => true]), 200);
+    }
+
+    /**
+     * GET api/v1/codecheck/yaml?submissionId=N
+     */
+    public function generateYaml(): \Illuminate\Http\JsonResponse
+    {
+        $request = Application::get()->getRequest();
+        $submission = $this->getAuthorizedContextObject(Application::ASSOC_TYPE_SUBMISSION);
+
+        $result = $this->metadataHandler()->generateYaml($request, $submission->getId());
+
+        if (isset($result['error'])) {
+            $status = $result['status'] ?? 404;
+            unset($result['status']);
+
+            return response()->json(
+                array_merge($result, ['success' => false, 'submissionID' => $submission->getId()]),
+                $status
+            );
+        }
+
+        return response()->json(array_merge($result, ['success' => true]), 200);
+    }
+
+    /**
+     * The metadata handler, built per request because it reads the request.
+     */
+    private function metadataHandler(): CodecheckMetadataHandler
+    {
+        return new CodecheckMetadataHandler(
+            Application::get()->getRequest(),
+            new \Github\Client(),
+            new CurlApiClient()
+        );
+    }
+
+    /**
+     * GET api/v1/codecheck/orcid-status?submissionId=N
+     */
+    public function getOrcidStatus(): \Illuminate\Http\JsonResponse
+    {
+        $submission = $this->getAuthorizedContextObject(Application::ASSOC_TYPE_SUBMISSION);
+        $submissionId = $submission->getId();
+
+        $metadata = DB::table('codecheck_metadata')->where('submission_id', $submissionId)->first();
+
+        $codecheckerNames = [];
+        if ($metadata && $metadata->codecheckers) {
+            $decoded = json_decode($metadata->codecheckers, true);
+            if (is_array($decoded)) {
+                $codecheckerNames = $decoded;
+            }
+        }
+
+        $tokenDAO  = new OrcidTokenDAO();
+        $tokenRows = $tokenDAO->getAllBySubmission($submissionId);
+
+        $tokensByOrcid = [];
+        foreach ($tokenRows as $row) {
+            if ($row->orcid_id) {
+                $tokensByOrcid[$row->orcid_id] = $row;
+            }
+        }
+
+        $codecheckers = [];
+
+        if (!empty($codecheckerNames)) {
+            foreach ($codecheckerNames as $cc) {
+                $name     = is_array($cc) ? ($cc['name'] ?? '') : (string) $cc;
+                $orcidId  = is_array($cc) ? ($cc['orcid'] ?? $cc['ORCID'] ?? null) : null;
+                $tokenRow = $orcidId ? ($tokensByOrcid[$orcidId] ?? null) : null;
+
+                $codecheckers[] = [
+                    'name'          => $name,
+                    'orcidId'       => $tokenRow->orcid_id ?? null,
+                    'depositStatus' => $tokenRow->deposit_status ?? null,
+                    'putCode'       => $tokenRow->put_code ?? null,
+                    'depositedAt'   => $tokenRow->deposited_at ?? null,
+                    'errorMessage'  => $tokenRow->error_message ?? null,
+                ];
+            }
+        } else {
+            foreach ($tokenRows as $row) {
+                $codecheckers[] = [
+                    'name'          => $row->orcid_id ?? 'Unknown',
+                    'orcidId'       => $row->orcid_id,
+                    'depositStatus' => $row->deposit_status,
+                    'putCode'       => $row->put_code,
+                    'depositedAt'   => $row->deposited_at,
+                    'errorMessage'  => $row->error_message,
+                ];
+            }
+        }
+
+        $journalConfigError = null;
+        try {
+            $depositService = new OrcidDepositService($this->plugin);
+            $depositService->getValidatedJournalInfo(Application::get()->getRequest()->getContext()->getId());
+        } catch (\InvalidArgumentException $e) {
+            $journalConfigError = $e->getMessage();
+        }
+
+        return response()->json([
+            'success'            => true,
+            'submissionId'       => $submissionId,
+            'codecheckers'       => $codecheckers,
+            'journalConfigError' => $journalConfigError,
         ], 200);
     }
 }
