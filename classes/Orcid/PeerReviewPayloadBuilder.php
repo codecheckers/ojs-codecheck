@@ -32,7 +32,10 @@ class PeerReviewPayloadBuilder
         }
 
         $certificateDoi = !empty($meta['certificate']) ? $meta['certificate'] : null;
-        $articleDoi     = $publication ? ($publication->getData('pub-id::doi') ?? null) : null;
+        // getDoi(), not pub-id::doi: the 3.4 upgrade removed those settings rows,
+        // so on OJS 3.5 the old key is always null and no deposited item ever
+        // linked back to the article (#175).
+        $articleDoi     = $publication?->getDoi();
 
         $issn = !empty($journal['issn']) ? trim($journal['issn']) : '';
         if (!empty($issn)) {

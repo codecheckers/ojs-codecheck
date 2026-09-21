@@ -36,6 +36,19 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 
 #### Editorial workflow
 
+- Reserving a certificate identifier works when the journal keeps its authors
+  anonymous. The author string was `null` in that case, which the reservation
+  refused with a type error — and anonymous is the default, so the register issue
+  could not be opened at all. The issue is titled "New CODECHECK" instead, as it
+  already was for a check with no authors recorded yet (Issue #150)
+
+- A CODECHECK status change is written as a comment under the register issue on
+  GitHub, so the register shows when the check moved on and not only where it
+  stands now. The issue's title, body and labels are rewritten in place as a check
+  progresses, which leaves no trace of the change; a comment is what GitHub shows
+  as a timeline. Journals that chose not to reflect the status in the register
+  issue get no comments either (Issue #150)
+
 - Editors can edit the data and software availability statement on the publication
   **Metadata** form. It could previously only be written by the author in the
   submission wizard or through the REST API, so a statement left empty or entered in
@@ -357,6 +370,16 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 
 ### Fixed
 
+- Publishing an article no longer risks failing for journals with ORCID enabled.
+  The ORCID deposit read the journal from the request without checking there was
+  one — publishing goes through the REST API, where there may not be, and OJS
+  reports what a plugin throws there only as "failed to handle the hook". The
+  register deposit had the same gap (Issue #175)
+- Depositing one codechecker's activity to ORCID no longer deposits everyone's.
+  The per-codechecker button and "Deposit to all" sent different requests but did
+  the same thing, so a repeat deposit rewrote colleagues' records too (Issue #175)
+- A failed ORCID deposit no longer logs a PHP warning on every publish: two of the
+  failure cases carry no ORCID iD, which the log read unconditionally (Issue #175)
 - The ORCID authorisation round trip completes on an ordinarily configured
   journal. ORCID was told to send the codechecker back to a site-level address,
   which only resolves while the plugin is *also* enabled site-wide — enabling it

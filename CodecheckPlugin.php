@@ -158,6 +158,11 @@ class CodecheckPlugin extends GenericPlugin
         }
 
         $context = Application::get()->getRequest()->getContext();
+        if (!$context) {
+            CodecheckLogger::warning('No context while publishing submission #' . $submission->getId() . '; skipping the register deposit.');
+            return false;
+        }
+
         if (!$this->getSetting($context->getId(), Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED)) {
             CodecheckLogger::debug('Register deposit is disabled for this journal; skipping for submission #' . $submission->getId());
             return false;
@@ -203,23 +208,38 @@ class CodecheckPlugin extends GenericPlugin
      */
     public function onPublicationPublish(string $hookName, array $args): bool
     {
-        $publication = $args[0];
-        $submission = Repo::submission()->get($publication->getData('submissionId'));
+        // The submission comes from the hook, not from a lookup: publishing goes
+        // through the REST API, where reaching for it another way is the trap
+        // documented in CLAUDE.md. Same shape as depositToRegister() above.
+        [$newPublication, $publication, $submission] = $args;
 
         if (!$submission) return false;
         if (!$submission->getData('codecheckOptIn')) return false;
 
+        // The context can be null on that same REST path, and PKP swallows what
+        // a hook throws as "failed to handle the hook" — so publishing would
+        // break with nothing to read (#175).
         $context = Application::get()->getRequest()->getContext();
+        if (!$context) {
+            CodecheckLogger::warning('No context while publishing submission #' . $submission->getId() . '; skipping the ORCID deposit.');
+            return false;
+        }
+
         if (!$this->getSetting($context->getId(), Constants::ORCID_ENABLED)) return false;
 
         try {
             $depositService = new OrcidDepositService($this);
             $results = $depositService->depositForSubmission($submission->getId());
             foreach ($results as $result) {
-                if ($result['status'] === 'success') {
-                    CodecheckLogger::info('ORCID deposited for ' . $result['orcidId'] . ' put-code=' . $result['putCode']);
+                // A deposit that failed before it reached anyone's record carries
+                // no ORCID iD — reading one unconditionally warned on every
+                // publish for a journal that enabled ORCID without credentials.
+                $who = $result['orcidId'] ?? 'an unidentified codechecker';
+
+                if (($result['status'] ?? null) === 'success') {
+                    CodecheckLogger::info('ORCID deposited for ' . $who . ' put-code=' . ($result['putCode'] ?? '?'));
                 } else {
-                    CodecheckLogger::error('ORCID deposit failed for ' . $result['orcidId'] . ': ' . ($result['error'] ?? 'unknown'));
+                    CodecheckLogger::error('ORCID deposit failed for ' . $who . ': ' . ($result['error'] ?? 'unknown'));
                 }
             }
         } catch (\Throwable $e) {

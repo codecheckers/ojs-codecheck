@@ -103,6 +103,7 @@
   "plugins.generic.codecheck.orcid.sectionTitle",
   "plugins.generic.codecheck.orcid.status.deposited",
   "plugins.generic.codecheck.orcid.status.failed",
+  "plugins.generic.codecheck.orcid.status.loadFailed",
   "plugins.generic.codecheck.orcid.status.notAuthorised",
   "plugins.generic.codecheck.orcid.status.pending",
   "plugins.generic.codecheck.orcid.viewOnOrcid",

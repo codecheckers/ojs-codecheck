@@ -481,9 +481,30 @@ class CodecheckApiController extends PKPBaseController
 
         $user = $request->getUser();
         $isEditor = CodecheckSubmissionAccess::isEditor($user, $context->getId());
-        $onlyOrcidId = null;
+
+        // The per-row button names an ORCID iD; "Deposit to all" sends none. The
+        // endpoint used to ignore it either way and deposit for every authorised
+        // codechecker, so the two buttons did the same thing and a re-deposit
+        // re-PUT someone else's item (#175).
+        $postParams  = json_decode(file_get_contents('php://input'), true) ?? [];
+        $requested   = $postParams['orcidId'] ?? null;
+        $onlyOrcidId = is_string($requested) && $requested !== '' ? $requested : null;
 
         if (!$isEditor) {
+            // SubmissionAccessPolicy has already refused a reviewer who is not
+            // assigned here — depositToOrcid is in SUBMISSION_SCOPED — so this is
+            // the second lock rather than the one holding the door. It stays
+            // because dropping this route from that list would otherwise open
+            // the deposit silently (#175).
+            if (!CodecheckSubmissionAccess::isAssignedReviewer($user, $submissionId)) {
+                return response()->json([
+                    'success' => false,
+                    'error'   => 'Only an editor, or a reviewer assigned to this submission, may deposit to ORCID.',
+                ], 403);
+            }
+
+            // A reviewer deposits their own record whatever the payload asked
+            // for, so a crafted request cannot deposit on a colleague's behalf.
             $onlyOrcidId = $user?->getOrcid();
 
             if (empty($onlyOrcidId)) {
@@ -982,18 +1003,21 @@ class CodecheckApiController extends PKPBaseController
         ], 200);
     }
 
-    private function getAuthorStringBasedOnAuthorAnonymity(): string|null
+    private function getAuthorStringBasedOnAuthorAnonymity(): string
     {
         $postParams = json_decode(file_get_contents('php://input'), true);
-        $submissionData = $postParams["submission"];
-        $authorString = $submissionData["authorString"];
+        $authorString = $postParams['submission']['authorString'] ?? null;
 
-        $context = $request->getContext();
+        $context = Application::get()->getRequest()->getContext();
         $isAuthorStringEnabled = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_AUTHOR_ANONYMITY);
 
-        // if Authors should be Anonymous/ if no Author string was given, set it to null
-        if(!$isAuthorStringEnabled || !is_string($authorString)) {
-            $authorString = null;
+        // Anonymous authors, or no author string given, means no names in the
+        // register issue. That is an empty string, not null: the issue builder
+        // turns an empty one into "New CODECHECK", while null was a TypeError in
+        // reserveIdentifierWithApi() — so reserving an identifier failed outright
+        // whenever a journal kept its authors anonymous, which is the default.
+        if (!$isAuthorStringEnabled || !is_string($authorString)) {
+            return '';
         }
 
         return $authorString;

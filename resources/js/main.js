@@ -471,14 +471,23 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   }, 1000);
 
-  const observer = new MutationObserver(() => {
-    const step3 = document.querySelector('#reviewStep3');
-    if (step3 && step3.children.length > 0 && !document.querySelector('#codecheck-reviewer-form')) {
-      window.mountCodecheckReviewerForm();
-    }
-  });
+  // Only the reviewer page has a form to mount, and the observer watched every
+  // mutation of document.body on every backend page for the lifetime of the tab
+  // (#175). It now runs where it is needed and stops once it has done its work.
+  if (window.codecheckReviewerData) {
+    const observer = new MutationObserver(() => {
+      const step3 = document.querySelector('#reviewStep3');
+      if (step3 && step3.children.length > 0 && !document.querySelector('#codecheck-reviewer-form')) {
+        window.mountCodecheckReviewerForm();
 
-  observer.observe(document.body, { childList: true, subtree: true });
+        if (document.querySelector('#codecheck-reviewer-form')) {
+          observer.disconnect();
+        }
+      }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
 });
 
 // -----------------------------------------------------------------------
