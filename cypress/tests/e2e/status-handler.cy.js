@@ -13,6 +13,17 @@
  * log with no delete endpoint. They restore the *current* status of the
  * submissions they touch, which is what the rest of the plugin reads; the extra
  * history rows stay. CI loads the dump fresh, and `make db-reset` does locally.
+ *
+ * **Submissions 8 and 9 are shared.** `publication-validation.cy.js` writes to
+ * 8, and `reviewer-rights.cy.js` writes to both. Each of the three restores the
+ * current status in its own `after()`, which is what keeps them independent of
+ * the order they run in — verified by running the suite in reverse.
+ *
+ * So: a spec that writes a status here must restore it, and a spec that asserts
+ * on one must assert relatively — "at least two entries", "the newest is X" —
+ * never on an exact history length. Submission 10 is the exception and is
+ * deliberately untouched by the whole suite, which is what lets
+ * `has no history before anything is recorded` mean anything.
  */
 
 const JOURNAL = 'codecheck';

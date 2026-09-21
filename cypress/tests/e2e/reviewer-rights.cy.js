@@ -39,11 +39,41 @@ const post = (path, body, csrfToken) =>
     failOnStatusCode: false,
   });
 
+/**
+ * Put the two submissions back where the suite expects them.
+ *
+ * Both tests that are *allowed* to write record a status, and submissions 8 and
+ * 9 are shared: `publication-validation` writes to 8 before this spec and
+ * `status-handler` asserts on both 8 and 9 after it. The status log is
+ * append-only with no delete endpoint, so the only cleanup possible is to
+ * record the status the dataset ships with — which is what `status-handler`
+ * does in its own `after()`.
+ *
+ * This is easy to miss: before the status key in this spec was corrected, those
+ * writes were refused as an unknown status and wrote nothing, so the spec looked
+ * self-contained while it was not.
+ */
+function restoreStatuses() {
+  cy.ojsLogin('admin', 'admin');
+  cy.visit(`/index.php/${JOURNAL}/dashboard/editorial`);
+  cy.getCsrfToken().then((csrfToken) => {
+    [ASSIGNED, NOT_ASSIGNED].forEach((submissionId) => {
+      post(`status/update?submissionId=${submissionId}`, {
+        submissionId,
+        status: ASSIGNED_CODECHECKER,
+        userId: ADMIN_ID,
+      }, csrfToken);
+    });
+  });
+}
+
 describe('A reviewer assigned to a submission', () => {
   beforeEach(() => {
     cy.ojsLogin('rreviewer', 'rreviewer');
     cy.visit(`/index.php/${JOURNAL}/submissions`);
   });
+
+  after(restoreStatuses);
 
   it('may record the check on the submission they are assigned to', () => {
     cy.getCsrfToken().then((csrfToken) => {
@@ -71,8 +101,13 @@ describe('A reviewer assigned to a submission', () => {
         version: '1.0',
         repository: { repositories: [] },
       }, csrfToken).then((response) => {
-        expect(response.status).to.eq(403);
-        expect(response.body.success).to.eq(false);
+        // 401, not 403: the refusal now comes from PKP's SubmissionAccessPolicy
+        // (`user.authorization.roleBasedAccessDenied`) rather than the plugin's
+        // own check, which answered 403. The request is refused either way, and
+        // nothing in the UI branches on the code — but it is a visible change
+        // to what the API returns, so it is asserted rather than loosened.
+        expect(response.status).to.eq(401);
+        expect(response.body.error).to.eq('user.authorization.roleBasedAccessDenied');
       });
     });
   });
@@ -81,8 +116,12 @@ describe('A reviewer assigned to a submission', () => {
     cy.getCsrfToken().then((csrfToken) => {
       post(`identifier?submissionId=${ASSIGNED}`, { submissionId: ASSIGNED }, csrfToken)
         .then((response) => {
-          expect(response.status).to.be.oneOf([400, 403]);
-          expect(response.body.success).to.eq(false);
+          // 401 since the register routes moved to the PKP controller: the
+          // refusal is PKP's roleAuthorizer rather than the plugin's own role
+          // check, which answered 400 or 403. Still refused, and nothing in the
+          // UI branches on the code.
+          expect(response.status).to.eq(401);
+          expect(response.body.error).to.eq('user.authorization.roleBasedAccessDenied');
         });
     });
   });
@@ -91,8 +130,12 @@ describe('A reviewer assigned to a submission', () => {
     cy.getCsrfToken().then((csrfToken) => {
       post(`issue?submissionId=${ASSIGNED}`, { submissionId: ASSIGNED }, csrfToken)
         .then((response) => {
-          expect(response.status).to.be.oneOf([400, 403]);
-          expect(response.body.success).to.eq(false);
+          // 401 since the register routes moved to the PKP controller: the
+          // refusal is PKP's roleAuthorizer rather than the plugin's own role
+          // check, which answered 400 or 403. Still refused, and nothing in the
+          // UI branches on the code.
+          expect(response.status).to.eq(401);
+          expect(response.body.error).to.eq('user.authorization.roleBasedAccessDenied');
         });
     });
   });
@@ -116,6 +159,8 @@ describe('An editor', () => {
     cy.ojsLogin('admin', 'admin');
     cy.visit(`/index.php/${JOURNAL}/submissions`);
   });
+
+  after(restoreStatuses);
 
   it('may write a submission they were never assigned to', () => {
     cy.getCsrfToken().then((csrfToken) => {
