@@ -56,6 +56,7 @@ make test              # component tests + PHPUnit (no server needed)
 make test-component    # Cypress component tests — runs anywhere, no OJS needed
 make test-php          # PHPUnit — needs the linked OJS install
 make test-e2e          # Cypress e2e — needs `make serve` running
+make test-e2e-reverse  # the same specs backwards, to catch order dependence
 make screenshots       # capture every UI surface to cypress/ui-screenshots/
 ```
 
@@ -95,7 +96,7 @@ See [Testing](#testing) below for what actually runs where.
   publication schema, so it round-trips on its own
 - `Submission::edit` → persists `codecheckOptIn`
 - `Submission::validate` → `saveWizardFieldsFromRequest()` writes wizard fields onto the publication
-- `Dispatcher::dispatch` → installs `CodecheckApiHandler` for `api/v1/codecheck/*`
+- `APIHandler::endpoints::plugin` → registers `CodecheckApiController` for `api/v1/codecheck/*`
 - `LoadHandler` → `CodecheckPageHandler` for the public `codecheck/info` page
 - `TemplateManager::display` (three separate callbacks) → dashboard config JSON,
   workflow submission state, status locale keys, wizard steps
@@ -131,48 +132,56 @@ Components (`resources/js/Components/`):
 `CodecheckRepositoryList.vue`, `CodecheckManifestFiles.vue`,
 `CodecheckDataAndSoftwareAvailability.vue`.
 
-### Custom API (`api/v1/`)
+### API (`api/v1/`)
 
-`CodecheckApiHandler` is a hand-rolled router, installed from the `Dispatcher::dispatch`
-hook and `exit`ing after serving. It is **not** a PKP API handler and does not
-participate in PKP's authorization policies.
+`CodecheckApiController extends PKPBaseController`, registered from the
+`APIHandler::endpoints::plugin` hook. It replaced a hand-rolled router that did
+its own CSRF and role checks and `exit`ed after responding (#50).
 
-- Constructing a handler does nothing but wire it up. The request cycle is
-  `execute()`: route → CSRF → roles → endpoint. It used to be the constructor,
-  which meant nothing could build one without it answering a request and exiting
-- Route matching: `CodecheckApiHandler::routeFromPath()` (static and pure) →
-  `ApiEndpoint` lookup in `$this->endpoints[$method]`
-- Auth: `X-Csrf-Token` header compared against `$request->getSession()->token()`, then
-  `$user->hasRole($pkpRoles, $contextId)` using `CodecheckRoleManager`
-  (`readMetadata` / `editMetadata` / `admin` role sets built in `CodecheckPlugin::setupAPIHandler()`).
-  The token is checked before the route is resolved, so an unauthorized caller
-  learns nothing about which routes exist
-- Responses via `$this->respond([...], $httpCode)`, which hands a `JsonResponse`
-  to a `JsonResponseEmitter`. `HttpResponseEmitter` echoes and `exit`s;
-  `emit()` is declared `never` because every endpoint body is written on the
-  assumption that responding ends the request. A test emitter throws instead,
-  which is what makes the handler testable at all
-- `setupAPIHandler()` does **not** call `$router->setHandler()`. It takes a
-  `PKPHandler` and this is not one; the call stood there for a long time purely
-  because the constructor exited before reaching it, and calling it for real
-  raises a TypeError that PKP swallows, leaving OJS to answer every plugin API
-  call with its own 404
+- **`getHandlerPath()` returns `codecheck`**, so the routes are the same URLs as
+  before: `api/v1/codecheck/…`. The Vue layer did not change.
+- **Authorization is PKP's.** `authorize()` adds `UserRolesRequiredPolicy`,
+  `ContextAccessPolicy`, and — for the submission-scoped actions listed in
+  `SUBMISSION_SCOPED` — `SubmissionAccessPolicy`, which resolves the submission,
+  checks it belongs to this journal and scopes each role: a reviewer to the
+  submission they were assigned to, an author to their own. **It has no
+  `ROLE_ID_READER` branch**, which is what closes the disclosure the old handler
+  had. Endpoints take the submission from
+  `getAuthorizedContextObject(Application::ASSOC_TYPE_SUBMISSION)`, never from a
+  request variable.
+- **Roles are per route**, not per group — `READ_ROLES`, `WRITE_ROLES`,
+  `EDITOR_ROLES`, `ADMIN_ROLES` — because they differ: reading admits an author,
+  writing does not, and anything reaching the public register is for a journal
+  editor or an administrator alone (#173). This is the shape
+  `PKPBackendSubmissionsController` uses. `CodecheckApiControllerRolesUnitTest`
+  pins the sets.
+- **CSRF is global middleware.** `PKP\middleware\ValidateCsrfToken` reads the
+  same `X-Csrf-Token` header the client already sent, and requires it only for
+  `PUT|PATCH|POST|DELETE`. The old handler demanded one on GET too, so GET is
+  now laxer — deliberately, and in line with the rest of OJS.
+- **Refusals answer 401** `user.authorization.roleBasedAccessDenied`, where the
+  hand-rolled checks answered 400 or 403. Nothing in the UI branches on the code;
+  the e2e specs assert it.
 
 Endpoints: `GET labels|metadata|yaml|register|status|status/history|orcid-status|orcid-test`,
 `POST identifier|issue|metadata|repository|repository/validate|yaml/validate|status/update|users/roles/validation|orcid-deposit`.
 
+Adding one: register it in `getGroupRoutes()` with the right
+`->middleware([self::roleAuthorizer(...)])`, add the handler method returning a
+`response()->json(...)`, and — if it acts on a submission — add the method name to
+`SUBMISSION_SCOPED` so the policy applies. Forgetting that last step is the easy
+mistake: the endpoint then answers for any submission in the journal.
+
 **There is deliberately no file upload or download endpoint.** `GET download` and
 `POST upload` were removed for #50 and are asserted absent by
-`CodecheckApiHandlerUnitTest::testTheFileEndpointsAreNotServed()`. Nothing ever
-called them — the manifest records bare filenames that `handleFileUpload()` reads
-from the browser's file picker without uploading anything — and what they did was
-dangerous: `download` resolved a user-supplied path against the OJS web root and
-`readfile()`d it whenever the string contained `codecheck` anywhere, and `upload`
-wrote an attacker-named file, extension included, under the document root. If
-manifest files ever need to be stored, use OJS's own file services and
+`CodecheckApiControllerRoutesUnitTest`. Nothing ever called them — the manifest
+records bare filenames that `handleFileUpload()` reads from the browser's file
+picker without uploading anything — and what they did was dangerous: `download`
+resolved a user-supplied path against the OJS web root and `readfile()`d it
+whenever the string contained `codecheck` anywhere, and `upload` wrote an
+attacker-named file, extension included, under the document root. If manifest
+files ever need storing, use OJS's own file services and
 `SubmissionFileAccessPolicy`, not a path built from `Core::getBaseDir()`.
-Adding one: register it in the `$this->endpoints` array in the constructor, add the
-handler method, emit a `JsonResponse`. (README documents this too.)
 
 ### Persistence
 
@@ -346,7 +355,7 @@ GitHub's 60/hour per-IP limit, so do not move that call back onto every save.
 
 Use `CodecheckLogger::debug|info|warning|error()` (`classes/Log/CodecheckLogger.php`) — writes
 `[codecheck][level] …` via `error_log()`. Do not add bare `error_log()` calls; a few
-legacy ones remain (e.g. `CodecheckApiHandler` label handler).
+legacy one remains, inside a commented-out block in `CodecheckPublicationValidator`.
 
 ### i18n
 
@@ -409,7 +418,7 @@ tests/                       PHPUnit (31 files, 239 tests)
   DataStructuresUnitTests/     UniqueArray, UniqueIdentifierArray
   FrontEndUnitTests/           ArticleAvailability, ArticleDetails, Badge, IssueTOC
   LogUnitTests/                CodecheckLogger
-  ApiUnitTests/                ApiEndpoint, CodecheckApiHandler, CodecheckRoleArray,
+  ApiUnitTests/                CodecheckApiControllerRoles, CodecheckApiControllerRoutes,
                                IdentifierParameterValidator, JsonResponse
   MigrationUnitTests/          I154_MoveCodecheckYamlFlagOntoRepository (the
                                index-to-flag conversion, tested without a database)
@@ -468,7 +477,29 @@ columns), and the wizard DOM-scraping classes.
 
 ### E2E tests
 
-`make test-e2e` — 40 tests across 9 specs, driving a real OJS instance.
+`make test-e2e` — 55 tests across 11 specs, driving a real OJS instance.
+
+**Several specs share submission fixtures, and each must restore what it
+changes.** Submissions 8 and 9 are written by `publication-validation`,
+`reviewer-rights` and `status-handler`; submission 10 is deliberately untouched
+by the whole suite, which is what lets `status-handler` assert that it has no
+status history. The status table is append-only with no delete endpoint, so
+"restore" means recording the status the dataset ships with, not removing rows —
+and assertions on history must be relative ("at least two", "the newest is X")
+rather than on an exact count.
+
+`make test-e2e-reverse` runs the same specs in the opposite order, which inverts
+every dependency between them: a spec that quietly relies on what an earlier one
+left behind fails there and nowhere else. Worth running after touching a spec
+that writes. It is deliberately a separate target rather than randomising the
+normal run — an order that changes every time turns a coupling bug into a flake
+nobody can reproduce.
+
+**A red run here has usually had a specific cause.** During the #50 work a whole
+run went red three times: once because a deletion had left the plugin fatal, and
+twice because the dev server was down. "The suite is flaky" was the wrong first
+hypothesis on each occasion. Check that the server answers and that the plugin
+loads before concluding anything about the tests.
 
 - `yaml-generation.cy.js` — YAML preview vs. download parity, preview-button gating
 - `article-sidebar-setting.cy.js` — the `showArticleSidebar` setting, driven through
@@ -544,25 +575,26 @@ through a database-backed facade, so building one is an integration test, and
 the `*-setting.cy.js` e2e specs already open the settings form, change a value
 and save it. **Prefer an e2e test over booting the application inside PHPUnit.**
 
-The API's routing table (`ApiEndpoint`), role sets (`CodecheckRoleArray`) and the
-handler's own request cycle are covered. What is tested of the handler is what
-guards it: route parsing, the CSRF check, the role check, their order, and that
-an authorized request really reaches its endpoint method. `CodecheckApiHandlerUnitTest`
-substitutes a recording `JsonResponseEmitter` that throws where the production
-one exits — an emitter that returned normally would run code no served request
-ever reaches.
+The API's role sets are covered by `CodecheckApiControllerRolesUnitTest`, and the
+absence of the removed file endpoints by `CodecheckApiControllerRoutesUnitTest`.
 
-The endpoint *bodies* are still not unit tested: nearly all of them reach the
-database or GitHub in their first lines, and the e2e specs cover them through
-real HTTP. The exception used in the unit test is `GET register`, which reads
-two settings and nothing else.
+Everything else about the API is covered end to end rather than in PHPUnit, and
+deliberately so: routing, CSRF and authorization are now PKP's, not the plugin's,
+so testing them here would test OJS. What the plugin still owns — which role may
+reach which route, and whether a reviewer is held to the submission they were
+assigned to — is pinned by `reviewer-rights.cy.js` against a running instance.
+
+The endpoint *bodies* are not unit tested: nearly all of them reach the database
+or GitHub in their first lines, and the e2e specs cover them through real HTTP.
+The routes themselves cannot be enumerated in PHPUnit either — they are
+registered through Laravel's `Route` facade, which needs a booted application.
 
 Worth knowing before adding coverage there: **OJS's own API router answers routes
 and methods the plugin's endpoint table does not cover, before the handler is
 reached.** Verified against a running instance — an unknown route and a valid
 route with the wrong method both return OJS's `api.404.endpointNotFound`.
 
-Not covered by PHPUnit at all: the `CodecheckApiHandler` endpoint bodies,
+Not covered by PHPUnit at all: the `CodecheckApiController` endpoint bodies,
 `CodecheckRegisterDepositService`, `SubmissionWizardHandler`, `CurlApiClient`,
 migrations, `CodecheckPageHandler`. All of
 them reach the database, the network or a booted application in their first few lines,
@@ -865,7 +897,7 @@ went months without ever running, and how `setupAPIHandler()` left OJS answering
 every plugin API call with a 404. Neither showed up as a failing test.
 
 Also run **`/security-review`** — separately from the above, whatever the size —
-when a change touches the CSRF or role checks in `CodecheckApiHandler`, the file
+when a change touches the role sets or policies in `CodecheckApiController`, the file
 download path resolution, the GitHub token handling, or any setting rendered
 into an attribute or into HTML on a public page.
 

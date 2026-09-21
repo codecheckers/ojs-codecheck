@@ -77,7 +77,7 @@ class JsonResponse
     }
 
     /**
-     * Convenience instance method used by CodecheckApiHandler.
+     * Convenience instance method: build and send in one call.
      * Immediately sends the response and exits.
      */
     public function response(array $json_array, int $httpResponseCode): void

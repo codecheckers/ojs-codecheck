@@ -15,7 +15,7 @@
  * submission, and on the public CODECHECK register (Issue #173).
  *
  * This answers the per-submission half. It is deliberately separate from
- * `CodecheckRoleArray`, which cannot express it.
+ * a role list, which cannot express it.
  */
 
 namespace APP\plugins\generic\codecheck\classes\Submission;
