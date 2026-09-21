@@ -618,6 +618,53 @@ also works but grants far more — every public repository the holder can push t
 test supplies their own. A token that has been pasted into a chat, a terminal
 transcript or a log should be treated as spent and rotated.
 
+### Live tests against the ORCID sandbox
+
+`cypress/tests/live/orcid-deposit.cy.js` + `make test-orcid-live`, with
+**`dev/live-orcid-tests.md` as the procedure** — read it before running one.
+Same shape as the register live tests: outside `specPattern`, gated on
+`CYPRESS_live=1`, and it leaves a real peer-review item on a sandbox record.
+
+Three things about this are not guessable and cost a while to establish:
+
+- **The deposit needs *Member* API credentials.** The plugin requests the
+  `/activities/update` scope, which ORCID grants only on the Member API; the
+  Public API gives `/authenticate` and `/read-public`. Sandbox Member
+  credentials are a separate request form
+  (<https://info.orcid.org/register-a-client-application-sandbox-member-api/>)
+  and anyone may apply. With Public credentials the credentials check passes and
+  the consent screen refuses the scope, so a passing credentials check proves
+  very little.
+- **ORCID's registration form refuses `localhost` as a redirect URI host**,
+  whatever the scheme. `http://codecheck.lvh.me:8350/` is accepted and resolves
+  to 127.0.0.1 with no hosts file. Registering just the host covers every path
+  under it. OJS must then be *reached* by that name: `getBaseUrl()` builds from
+  the request's Host header and scheme, and only falls back to `base_url` when
+  host auto-detection fails, i.e. on the command line.
+- **Behind a TLS terminator OJS still says http.** `getProtocol()` reads
+  `$_SERVER['HTTPS']` and nothing else — no `X-Forwarded-Proto` — so `base_url`
+  does not help. `make serve-https` runs `php -S` with `dev/https-router.php`,
+  which sets that one variable, and `make serve-tls` puts socat in front.
+
+### Secrets in `.env`, and rebuilding the database
+
+Secrets live in `plugin_settings` and deliberately never in the dataset dump, so
+`make db-reset` drops them. `.env` (gitignored, mode 600) is the durable copy
+and `make db-credentials` writes it into the database — it is part of
+`db-load`, so a reset restores them by itself. `make db-credentials-clear`
+removes them again.
+
+`dev/db-credentials.php` does the reading and writing rather than the Makefile,
+for two reasons worth keeping: **phpdotenv parses the file**, the same parser
+`CodecheckGithubRegisterApiClient` already applies to `.env` at file scope, so
+one file cannot mean two things — and a malformed `.env` fails there with a
+message instead of later as a fatal on a register request. And **prepared
+statements write it**, because whether a backslash in a secret survives a
+hand-escaped SQL literal depends on the server's `sql_mode`.
+
+Do not source `.env` from shell: an apostrophe or `$` in a password is then
+executed rather than read.
+
 ### Test data (`testData/stable-3_5_0-codecheck/`)
 
 A PKP-datasets-shaped MySQL dump + article files for a "CODECHECK Demo Journal"

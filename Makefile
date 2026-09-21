@@ -38,6 +38,8 @@ MYSQL := mysql -u$(DB_USER) -p$(DB_PASS) -h$(DB_HOST) -P$(DB_PORT)
 export OJS_ROOT
 
 .PHONY: help setup deps ojs-install ojs-link ojs-config db-create db-load db-reset \
+        db-credentials db-credentials-clear tls-cert serve-tls serve-https \
+        test-orcid-live \
         clear-cache serve test test-component test-e2e test-php screenshots inspect \
         build watch check-ojs clean
 
@@ -53,12 +55,15 @@ help:
 	@echo
 	@echo "  Running"
 	@echo "    make serve           php -S on port $(PORT)  ($(BASE_URL))"
+	@echo "    make serve-https     php -S announcing HTTPS, to sit behind serve-tls"
+	@echo "    make serve-tls       TLS front-end on $(TLS_PORT), needed for live ORCID tests"
 	@echo "    make build           rebuild the Vue bundle into public/build/"
 	@echo "    make watch           rebuild on change"
 	@echo
 	@echo "  Database"
 	@echo "    make db-load         load the test dataset"
 	@echo "    make db-reset        drop, recreate, reload"
+	@echo "    make db-credentials  write the secrets from .env into the database"
 	@echo
 	@echo "  Tests"
 	@echo "    make test            component + PHPUnit (everything not needing a server)"
@@ -172,6 +177,7 @@ db-load: check-ojs db-create
 	@cp -r "$(DATASET)/files/." "$(OJS_ROOT)/files/"
 	@cp -r "$(DATASET)/public/." "$(OJS_ROOT)/public/"
 	@$(MAKE) --no-print-directory clear-cache
+	@$(MAKE) --no-print-directory db-credentials
 
 # OJS caches plugin settings through Laravel's file cache, so rows written
 # straight into plugin_settings stay invisible until it is dropped.
@@ -180,9 +186,71 @@ clear-cache: check-ojs
 	@rm -f "$(OJS_ROOT)/cache/"*.php 2>/dev/null || true
 	@echo "Cleared OJS caches"
 
+# Dropping the database throws away anything that is not in the dataset. The
+# GitHub PAT used for live register tests is the usual casualty: it lives in
+# plugin_settings, deliberately never in the dump. Confirm, or FORCE=1 to skip
+# the prompt in a script.
 db-reset:
+	@if [ -z "$(FORCE)" ]; then \
+		echo "This DROPS the database $(DB_NAME) and reloads it from the test dataset."; \
+		echo "Anything not in the dataset is lost, including:"; \
+		echo "  - the GitHub PAT in plugin_settings (see dev/live-register-tests.md)"; \
+		echo "  - any settings changed through the UI, and every CODECHECK record"; \
+		printf "Type 'yes' to continue: "; \
+		read answer; \
+		[ "$$answer" = "yes" ] || (echo "Cancelled; nothing was dropped." && exit 1); \
+	fi
+	@$(MAKE) --no-print-directory db-save-token
 	$(MYSQL) -e "DROP DATABASE IF EXISTS \`$(DB_NAME)\`;"
 	@$(MAKE) --no-print-directory db-load
+	@$(MAKE) --no-print-directory db-restore-token
+
+# Keep the live-test PAT across a reset rather than making someone paste it
+# again. It is written to a file outside the repository, readable only by its
+# owner, and put back after the dataset is loaded.
+TOKEN_STASH ?= $(HOME)/.codecheck-ojs-pat
+
+db-save-token:
+	@token=$$($(MYSQL) -N -B $(DB_NAME) -e "SELECT setting_value FROM plugin_settings WHERE plugin_name='codecheckplugin' AND setting_name='githubPersonalAccessToken';" 2>/dev/null); \
+	if [ -n "$$token" ]; then \
+		umask 077 && printf '%s' "$$token" > "$(TOKEN_STASH)"; \
+		echo "Kept the GitHub PAT in $(TOKEN_STASH) to put back after the reload."; \
+	fi
+
+db-restore-token:
+	@if [ -s "$(TOKEN_STASH)" ]; then \
+		token=$$(cat "$(TOKEN_STASH)"); \
+		$(MYSQL) $(DB_NAME) -e "UPDATE plugin_settings SET setting_value='$$token' WHERE plugin_name='codecheckplugin' AND setting_name='githubPersonalAccessToken';"; \
+		$(MAKE) --no-print-directory clear-cache >/dev/null; \
+		echo "Restored the GitHub PAT from $(TOKEN_STASH)."; \
+	fi
+
+# --- Credentials ------------------------------------------------------------
+
+# Secrets live in plugin_settings, never in the dataset dump, so a reset drops
+# them. `.env` is the durable copy: gitignored, mode 600, read only by make.
+# This target writes what it holds into the database, and db-load calls it, so
+# the database can be dropped and rebuilt at any time without re-typing a
+# secret. See dev/live-orcid-tests.md.
+ENV_FILE ?= .env
+CONTEXT_ID ?= 1
+
+# .env is read by phpdotenv and written with prepared statements, both in
+# dev/db-credentials.php — see the comment there for why neither is done in
+# make. A malformed .env fails here rather than later as a fatal inside
+# CodecheckGithubRegisterApiClient, which parses it at file scope.
+db-credentials: check-ojs
+	@if [ ! -f "$(ENV_FILE)" ]; then \
+		echo "No $(ENV_FILE); nothing to apply."; \
+		exit 0; \
+	fi
+	@php dev/db-credentials.php apply "$(DB_NAME)" "$(DB_USER)" "$(DB_PASS)" "$(DB_HOST)" "$(DB_PORT)" "$(CONTEXT_ID)"
+	@$(MAKE) --no-print-directory clear-cache >/dev/null
+
+# Take the credentials back out, leaving the journal as the dataset ships it.
+db-credentials-clear: check-ojs
+	@php dev/db-credentials.php clear "$(DB_NAME)" "$(DB_USER)" "$(DB_PASS)" "$(DB_HOST)" "$(DB_PORT)" "$(CONTEXT_ID)"
+	@$(MAKE) --no-print-directory clear-cache >/dev/null
 
 # --- Running ----------------------------------------------------------------
 
@@ -190,6 +258,56 @@ db-reset:
 # deadlocks as soon as a page issues a second request to itself — the Cypress
 # suites hang rather than fail. PHP_CLI_SERVER_WORKERS forks several handlers.
 SERVER_WORKERS ?= 8
+
+# ORCID accepts only https:// redirect URIs, including on the sandbox, so a
+# live ORCID round trip cannot run against `make serve` alone — php -S speaks
+# no TLS. This puts a TLS front-end in front of it with socat and a self-signed
+# certificate, which is enough for a browser that is told to trust it once.
+#
+# OJS's base_url must be the https origin too, or the redirect URI the plugin
+# builds will not be the one registered with ORCID:
+#
+#   make ojs-config BASE_URL=https://$(TLS_HOST):$(TLS_PORT)
+#   make serve                     # in one terminal
+#   make serve-tls                 # in another
+#
+# See dev/live-orcid-tests.md.
+TLS_PORT ?= 8443
+TLS_DIR  ?= dev/tls
+
+# ORCID's registration form refuses `localhost` as a redirect URI host, whatever
+# the scheme, so a live run needs a name that looks like a domain and resolves
+# to the loopback address. `*.lvh.me` does that with no hosts file and no DNS of
+# your own; a subdomain of a domain you control works too, via /etc/hosts.
+TLS_HOST ?= codecheck.lvh.me
+
+$(TLS_DIR)/$(TLS_HOST).pem:
+	@mkdir -p "$(TLS_DIR)"
+	@openssl req -x509 -newkey rsa:2048 -nodes -days 825 \
+		-keyout "$(TLS_DIR)/$(TLS_HOST).key" -out "$(TLS_DIR)/$(TLS_HOST).crt" \
+		-subj "/CN=$(TLS_HOST)" \
+		-addext "subjectAltName=DNS:$(TLS_HOST),DNS:localhost,IP:127.0.0.1" 2>/dev/null
+	@cat "$(TLS_DIR)/$(TLS_HOST).crt" "$(TLS_DIR)/$(TLS_HOST).key" > "$@"
+	@chmod 600 "$(TLS_DIR)"/*
+	@echo "Generated a self-signed certificate for $(TLS_HOST) (valid 825 days)."
+
+tls-cert: $(TLS_DIR)/$(TLS_HOST).pem
+
+# php -S with the HTTPS router, for use behind `make serve-tls`. OJS decides
+# http vs https from $_SERVER['HTTPS'] alone — it does not read
+# X-Forwarded-Proto, and base_url is only consulted when host auto-detection
+# fails — so the server has to declare it. See dev/https-router.php.
+serve-https: check-ojs
+	@echo "OJS at https://$(TLS_HOST):$(TLS_PORT) once 'make serve-tls' is running"
+	PHP_CLI_SERVER_WORKERS=$(SERVER_WORKERS) php -S localhost:$(PORT) \
+		-t "$(OJS_ROOT)" dev/https-router.php
+
+serve-tls: $(TLS_DIR)/$(TLS_HOST).pem
+	@command -v socat >/dev/null || { echo "socat is not installed."; exit 1; }
+	@echo "TLS front-end: https://$(TLS_HOST):$(TLS_PORT) -> http://localhost:$(PORT)"
+	@echo "The certificate is self-signed; the browser will ask once."
+	socat OPENSSL-LISTEN:$(TLS_PORT),reuseaddr,fork,cert=$(TLS_DIR)/$(TLS_HOST).pem,verify=0 \
+		TCP4:127.0.0.1:$(PORT)
 
 serve: check-ojs
 	@echo "OJS at $(BASE_URL)  (admin / admin)"
@@ -231,6 +349,35 @@ test-live:
 	CYPRESS_registerOrganization=$(REGISTER_ORG) \
 	CYPRESS_registerRepository=$(REGISTER_REPO) \
 	npx cypress run --e2e --config specPattern='cypress/tests/live/**/*.cy.js'
+
+# A LIVE ORCID test: talks to the real ORCID sandbox and writes a peer-review
+# item to a real sandbox record, which nothing here deletes. Outside
+# specPattern, so it only ever runs on purpose. See dev/live-orcid-tests.md.
+#
+# Credentials and the sandbox user come from .env via dev/env-value.php, so
+# nothing secret is typed on the command line or kept in shell history.
+#
+# The base URL is NOT localhost: ORCID's registration form refuses `localhost`
+# as a redirect URI host, and OJS builds the redirect URI from the request's
+# Host header — so the test must reach OJS by the same name that is registered.
+LIVE_ORCID_SUBMISSION ?= 9
+LIVE_ORCID_BASE_URL   ?= http://codecheck.lvh.me:$(PORT)
+
+test-orcid-live:
+	@test -f "$(ENV_FILE)" || (echo "[Error] no $(ENV_FILE); see dev/live-orcid-tests.md" && exit 1)
+	@test -n "$$(php dev/env-value.php ORCID_CLIENT_ID)" \
+		|| (echo "[Error] ORCID_CLIENT_ID is blank in $(ENV_FILE)" && exit 1)
+	@echo "Live ORCID test against the sandbox, submission $(LIVE_ORCID_SUBMISSION)."
+	@echo "This writes to a real sandbox ORCID record and leaves it there."
+	@echo "Base URL: $(LIVE_ORCID_BASE_URL)"
+	@$(MAKE) --no-print-directory db-credentials
+	CYPRESS_BASE_URL=$(LIVE_ORCID_BASE_URL) \
+	CYPRESS_live=1 \
+	CYPRESS_liveSubmissionId=$(LIVE_ORCID_SUBMISSION) \
+	CYPRESS_orcidUserEmail="$$(php dev/env-value.php ORCID_TEST_USER_EMAIL)" \
+	CYPRESS_orcidUserPassword="$$(php dev/env-value.php ORCID_TEST_USER_PASSWORD)" \
+	CYPRESS_orcidUserId="$$(php dev/env-value.php ORCID_TEST_USER_ID)" \
+	npx cypress run --e2e --config specPattern='cypress/tests/live/orcid-deposit.cy.js'
 
 SHOT_WIDTH  ?= 1920
 SHOT_HEIGHT ?= 1200
