@@ -200,27 +200,42 @@ const orcid = (op, query = '') =>
 const REFUSED = 'may connect an ORCID account to it';
 
 describe('The ORCID authorisation routes', () => {
-  it('are closed to a visitor who is not logged in', () => {
+  it('close startAuth to a visitor who is not logged in', () => {
     cy.clearCookies();
 
     cy.request({ url: orcid('startAuth', `?submissionId=${ASSIGNED}`) }).then((response) => {
       expect(response.redirects.join(' '), 'startAuth ends at the login page').to.contain('login');
       expect(response.body).not.to.contain(REFUSED);
     });
+  });
 
-    // The site-level path ORCID itself is sent back to, which carries no
-    // journal. `failOnStatusCode: false` so that a 404 is reported as a 404:
-    // this route exists only while the plugin is enabled at *site* level, and
-    // a bare throw here would look like an authorisation failure instead.
+  /**
+   * Read this one knowing what it does *not* prove.
+   *
+   * The journal in the test dataset is `enabled = 0`, and `PKPPageRouter`
+   * bounces a logged-out visitor from a disabled journal to the login page
+   * before `LoadHandler` runs — before this plugin has a handler at all. So an
+   * anonymous request to a journal-scoped route redirects whatever the plugin
+   * does, and asserting on that redirect would pin the dataset's journal flag
+   * rather than any authorisation. It is `startAuth` above that is pinned by
+   * the logged-in cases below, where the redirect cannot be the cause.
+   *
+   * The callback deliberately does *not* require a session: it is ORCID's
+   * request, not the codechecker's, and its authority is the sealed `state`.
+   * What has to hold is that a state this server did not mint is refused, and
+   * that is what this asserts.
+   */
+  it('refuse a callback whose state this server did not mint', () => {
+    cy.ojsLogin('rreviewer', 'rreviewer');
+
     cy.request({
-      url: '/index.php/index/codecheck/orcid/callback?code=x&state=y',
+      url: orcid('callback', '?code=x&state=not-a-sealed-state'),
       failOnStatusCode: false,
     }).then((response) => {
       expect(response.status, 'the callback route is reachable at all').to.eq(200);
-      expect(response.redirects.join(' '), 'the callback ends at the login page')
-        .to.contain('login');
-      expect(response.body, 'the handler never ran')
-        .not.to.contain('Invalid ORCID callback');
+      expect(response.body).to.contain('Security check failed');
+      expect(response.body, 'no token exchange was attempted')
+        .not.to.contain('token exchange');
     });
   });
 
@@ -250,6 +265,74 @@ describe('The ORCID authorisation routes', () => {
 
     cy.request({ url: orcid('startAuth', '?submissionId=99999') }).then((response) => {
       expect(response.body).to.contain('Submission not found');
+    });
+  });
+});
+
+/**
+ * Where ORCID is told to send the codechecker back (issue #176).
+ *
+ * The redirect URI used to be the site-level `/index.php/index/...`, which no
+ * request could reach unless the plugin was *also* enabled site-wide:
+ * `CodecheckPlugin::register()` gates its hooks on `getEnabled()`, and with no
+ * journal in the request that reads the `context_id IS NULL` setting, which
+ * enabling the plugin for a journal never writes. The first leg worked and the
+ * return leg was a bare 404, so the whole OAuth round trip failed on an
+ * ordinarily configured journal.
+ *
+ * This pins the URI handed to ORCID rather than the 404, because the 404
+ * depends on a `plugin_settings` row that no form exposes — and the test
+ * dataset happens to carry it, which is why this went unnoticed.
+ */
+describe('The ORCID redirect URI', () => {
+  /** Set the ORCID fields on the plugin settings form, which is Smarty, not Vue. */
+  function openSettings() {
+    cy.visit(`/index.php/${JOURNAL}/management/settings/website`);
+    cy.get('a[href*="verb=settings"][href*="plugin=codecheckplugin"]', { timeout: 20000 })
+      .first()
+      .click({ force: true });
+  }
+
+  function saveSettings() {
+    cy.get('form#codecheckSettings').find('button[type="submit"]').first().click();
+    cy.get('#orcidEnabled', { timeout: 20000 }).should('not.exist');
+  }
+
+  before(() => {
+    cy.ojsLogin('admin', 'admin');
+    openSettings();
+    cy.get('#orcidEnabled', { timeout: 20000 }).check();
+    cy.get('input[name="orcidClientId"]').clear().type('APP-CYPRESS');
+    cy.get('input[name="orcidClientSecret"]').clear().type('cypress-secret');
+    saveSettings();
+  });
+
+  after(() => {
+    // The secret field is write-only — an empty value means "keep", so the
+    // dummy secret stays until the dataset is reloaded. Switching ORCID off is
+    // what actually restores the journal's behaviour for the other specs.
+    cy.ojsLogin('admin', 'admin');
+    openSettings();
+    cy.get('#orcidEnabled', { timeout: 20000 }).uncheck();
+    cy.get('input[name="orcidClientId"]').clear();
+    saveSettings();
+  });
+
+  it('sends the codechecker back to the journal, not to the site', () => {
+    cy.ojsLogin('rreviewer', 'rreviewer');
+
+    cy.request({
+      url: orcid('startAuth', `?submissionId=${ASSIGNED}`),
+      followRedirect: false,
+    }).then((response) => {
+      expect(response.status, 'an allowed caller is sent on to ORCID').to.eq(302);
+
+      const redirectUri = decodeURIComponent(
+        new URL(response.headers.location).searchParams.get('redirect_uri')
+      );
+
+      expect(redirectUri).to.contain(`/index.php/${JOURNAL}/codecheck/orcid/callback`);
+      expect(redirectUri, 'not the site-level path').not.to.contain('/index.php/index/');
     });
   });
 });

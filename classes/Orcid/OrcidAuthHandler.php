@@ -9,8 +9,15 @@
  * @brief Handles the OAuth 2.0 flow for codechecker ORCID authorisation.
  *
  * Two routes (wired in CodecheckPlugin::setCodecheckPageHandler):
- *   /codecheck/orcid/startAuth  — redirect the codechecker to ORCID
- *   /codecheck/orcid/callback   — receive the code back from ORCID
+ *   /<journal>/codecheck/orcid/startAuth  — redirect the codechecker to ORCID
+ *   /<journal>/codecheck/orcid/callback   — receive the code back from ORCID
+ *
+ * Both are journal-scoped. The callback used to be the site-level
+ * `/index/codecheck/orcid/callback`, which no request could reach unless the
+ * plugin was also enabled site-wide: `register()` gates its hooks on
+ * `getEnabled()`, and with no journal in the request that reads the
+ * `context_id IS NULL` setting, which enabling the plugin for a journal never
+ * writes. The first leg worked and the return leg was a bare 404 (#176).
  */
 
 namespace APP\plugins\generic\codecheck\classes\Orcid;
@@ -23,47 +30,115 @@ use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionAccess;
+use PKP\security\authorization\ContextRequiredPolicy;
 use PKP\security\authorization\UserRequiredPolicy;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use PKP\user\User;
 
 class OrcidAuthHandler extends Handler
 {
+    /**
+     * How long a sealed `state` stays usable, in seconds.
+     *
+     * Long enough to read ORCID's consent screen, short enough that a state
+     * that leaks — into a browser history, a referrer, a shared screenshot —
+     * stops being useful quickly.
+     */
+    private const STATE_LIFETIME_SECONDS = 900;
+
     private CodecheckPlugin $plugin;
 
     /**
-     * Refuse anyone who is not logged in (GHSA-4p3r-qgp4-g74r).
+     * Refuse a request that no sealed state and no login speaks for.
      *
      * A page handler that declares no policy is **permitted**: for page routers
      * PKP applies a blacklist, not a whitelist — `PKPHandler::authorize()` sets
      * AUTHORIZATION_PERMIT when no policy applies, "to maintain backwards
      * compatibility". This class declared none, so both of its operations were
-     * reachable by an anonymous visitor, and neither the plugin's CSRF check nor
-     * its role check applies here — those live in the API controller, a
-     * different entry point entirely.
+     * reachable by an anonymous visitor (GHSA-4p3r-qgp4-g74r), and neither the
+     * plugin's CSRF check nor its role check applies here — those live in the
+     * API controller, a different entry point entirely.
      *
-     * Only `UserRequiredPolicy` is declared, deliberately: ORCID sends the
-     * codechecker back to `/index/codecheck/orcid/callback`, a site-level URL
-     * with no journal context, so a `ContextRequiredPolicy` would refuse every
-     * real return from ORCID. The journal is taken from the submission instead,
-     * in `submissionCallerMayActOn()`.
-     *
-     * Being logged in is only half of it; `submissionCallerMayActOn()` does the rest.
+     * `ContextRequiredPolicy` applies to both routes, which are journal-scoped
+     * (#176). `UserRequiredPolicy` applies to `startAuth` only: the callback is
+     * ORCID's request, not the codechecker's, and it carries its own authority
+     * in the sealed `state` — see `flowFromState()`. Requiring a session there
+     * would lose an authorisation whenever one lapsed at ORCID's consent
+     * screen, and would say nothing about who started the flow anyway.
      */
     public function authorize($request, &$args, $roleAssignments)
     {
-        $this->addPolicy(new UserRequiredPolicy($request), true);
+        $this->addPolicy(new ContextRequiredPolicy($request), true);
+
+        if (($request->getRequestedArgs()[0] ?? '') === 'startAuth') {
+            $this->addPolicy(new UserRequiredPolicy($request), true);
+        }
 
         return parent::authorize($request, $args, $roleAssignments);
     }
 
     /**
-     * The submission this caller may act on, or null when they may not.
+     * Seal who started this flow, for what, and when, into the `state`.
      *
-     * The submission id arrives in the query string and, on the way back, in the
-     * state parameter. The nonce proves the flow started in this browser; it
-     * says nothing about whether this browser should be starting it for *this*
-     * submission. Without this an authenticated user could bind their ORCID to
-     * any submission id they cared to type.
+     * `Crypt` is Laravel's authenticated encryption under OJS's `app_key`, so
+     * the value is neither readable nor alterable by the person carrying it —
+     * which is what lets the callback take the acting user from here instead of
+     * from whatever session happens to be open in the browser that returns.
+     */
+    private function sealState(int $submissionId, int $userId): string
+    {
+        return Crypt::encryptString(json_encode([
+            'submissionId' => $submissionId,
+            'userId'       => $userId,
+            'issuedAt'     => time(),
+        ]));
+    }
+
+    /**
+     * The flow a `state` stands for, or null when it stands for nothing.
+     *
+     * Returns `['submissionId' => int, 'userId' => int]`. A state that was not
+     * minted here fails to decrypt; one that has expired is refused. Both send
+     * the same popup error, because neither tells the person anything they can
+     * act on beyond starting again.
+     */
+    private function flowFromState(string $state): ?array
+    {
+        try {
+            $flow = json_decode(Crypt::decryptString($state), true);
+        } catch (\Throwable $e) {
+            CodecheckLogger::warning('ORCID callback with an unreadable state parameter');
+            return null;
+        }
+
+        if (!is_array($flow)) {
+            return null;
+        }
+
+        $submissionId = (int) ($flow['submissionId'] ?? 0);
+        $userId       = (int) ($flow['userId'] ?? 0);
+        $issuedAt     = (int) ($flow['issuedAt'] ?? 0);
+
+        if (!$submissionId || !$userId || !$issuedAt) {
+            return null;
+        }
+
+        if (time() - $issuedAt > self::STATE_LIFETIME_SECONDS) {
+            CodecheckLogger::info('ORCID callback with an expired state for submission ' . $submissionId);
+            return null;
+        }
+
+        return ['submissionId' => $submissionId, 'userId' => $userId];
+    }
+
+    /**
+     * The submission this user may act on, or null when they may not.
+     *
+     * On `startAuth` the user is the one asking and the submission id is theirs
+     * to type, so this is what stops them typing someone else's. On `callback`
+     * both come from the sealed state, and this re-asks the question because a
+     * role can be withdrawn while its holder is at ORCID's consent screen.
      *
      * Same rule as the API: an editor for any submission in the journal, a
      * reviewer only for the one they are assigned to. Returning the submission
@@ -74,32 +149,26 @@ class OrcidAuthHandler extends Handler
      * The callers still guard on it, as every error path in this file does, so
      * that dropping the `exit` does not silently change the control flow.
      */
-    private function submissionCallerMayActOn(int $submissionId, $request): ?Submission
+    private function submissionUserMayActOn(?User $user, int $submissionId, $request): ?Submission
     {
-        $submission     = Repo::submission()->get($submissionId);
-        $requestContext = $request->getContext();
+        // Two-argument get(): the submission has to belong to the journal whose
+        // URL this was reached through, or one journal's editor could authorise
+        // against another's submission by keeping their own path in the URL.
+        // ContextRequiredPolicy guarantees there is a journal to ask about.
+        $contextId  = (int) $request->getContext()->getId();
+        $submission = Repo::submission()->get($submissionId, $contextId);
 
-        // Reached through a journal's own URL, the submission has to be that
-        // journal's: otherwise one journal's editor could authorise against
-        // another's submission by keeping their own path in the URL. The
-        // callback carries no journal at all, which is why this is conditional.
-        if (!$submission
-            || ($requestContext && (int) $requestContext->getId() !== (int) $submission->getData('contextId'))
-        ) {
-            $this->sendPopupError('Submission not found.');
+        if (!$submission) {
+            $this->sendPopupError(__('plugins.generic.codecheck.orcid.auth.error.submissionNotFound'));
             return null;
         }
 
-        $contextId = (int) $submission->getData('contextId');
-
-        if (!CodecheckSubmissionAccess::canWriteMetadata($request->getUser(), $submissionId, $contextId)) {
+        if (!CodecheckSubmissionAccess::canWriteMetadata($user, $submissionId, $contextId)) {
             CodecheckLogger::warning(
-                'ORCID authorisation refused: user ' . ($request->getUser()?->getId() ?? '?')
+                'ORCID authorisation refused: user ' . ($user?->getId() ?? '?')
                 . ' may not act on submission ' . $submissionId
             );
-            $this->sendPopupError(
-                'Only an editor, or the reviewer assigned to this submission, may connect an ORCID account to it.'
-            );
+            $this->sendPopupError(__('plugins.generic.codecheck.orcid.auth.error.notPermitted'));
             return null;
         }
 
@@ -113,34 +182,29 @@ class OrcidAuthHandler extends Handler
     }
 
     /**
-     * GET /codecheck/orcid/startAuth?submissionId=XX
+     * GET /<journal>/codecheck/orcid/startAuth?submissionId=XX
      * Redirects the codechecker to ORCID's consent screen.
      */
     public function startAuth($args, $request): void
     {
-        $context = $request->getContext();
-        if (!$context) {
-            // No policy enforces this any more — see authorize().
-            $this->sendPopupError('ORCID authorisation must be started from within a journal.');
-            return;
-        }
+        $context   = $request->getContext();
         $contextId = $context->getId();
 
         $submissionId = (int) $request->getUserVar('submissionId');
         if (!$submissionId) {
-            $this->sendPopupError('Missing submissionId parameter.');
+            $this->sendPopupError(__('plugins.generic.codecheck.orcid.auth.error.missingSubmissionId'));
             return;
         }
 
         // Before the configuration checks below, not after: whether this journal
         // has ORCID set up is not something to tell a caller who may not act on
         // the submission in the first place.
-        if (!$this->submissionCallerMayActOn($submissionId, $request)) {
+        if (!$this->submissionUserMayActOn($request->getUser(), $submissionId, $request)) {
             return;
         }
 
         if (!$this->plugin->getSetting($contextId, Constants::ORCID_ENABLED)) {
-            $this->sendPopupError('ORCID integration is not enabled for this journal.');
+            $this->sendPopupError(__('plugins.generic.codecheck.orcid.auth.error.notEnabled'));
             return;
         }
 
@@ -148,21 +212,15 @@ class OrcidAuthHandler extends Handler
         $clientSecret = $this->plugin->getSetting($contextId, Constants::ORCID_CLIENT_SECRET);
 
         if (!$clientId || !$clientSecret) {
-            $this->sendPopupError(
-                'ORCID credentials are not configured. Please ask the journal manager to set ' .
-                'the Client ID and Client Secret in the CODECHECK plugin settings.'
-            );
+            $this->sendPopupError(__('plugins.generic.codecheck.orcid.auth.error.noCredentials'));
             return;
         }
 
-        $nonce = bin2hex(random_bytes(16));
-        $request->getSession()->put('orcid_nonce_' . $submissionId, $nonce);
-
-        $state = base64_encode(json_encode([
-            'submissionId' => $submissionId,
-            'nonce'        => $nonce,
-            'contextPath'  => $context->getPath(),
-        ]));
+        // Sealed rather than stored in the session: the authorisation should
+        // survive a session that lapses while its owner is at ORCID, and the
+        // journal is not carried at all — the callback is journal-scoped now,
+        // and a caller-supplied path used to feed a redirect.
+        $state = $this->sealState($submissionId, (int) $request->getUser()->getId());
 
         $client      = $this->buildApiClient($contextId);
         $redirectUri = $this->buildRedirectUri($request);
@@ -172,15 +230,15 @@ class OrcidAuthHandler extends Handler
     }
 
     /**
-     * GET /codecheck/orcid/callback?code=XX&state=YY
+     * GET /<journal>/codecheck/orcid/callback?code=XX&state=YY
      * ORCID redirects here after the codechecker grants access.
      */
     public function callback($args, $request): void
     {
         $error = $request->getUserVar('error');
         if ($error) {
-            $desc = $request->getUserVar('error_description') ?? 'Access denied.';
-            $this->sendPopupError('ORCID authorisation denied: ' . $desc);
+            $desc = $request->getUserVar('error_description') ?? __('plugins.generic.codecheck.orcid.auth.error.accessDenied');
+            $this->sendPopupError(__('plugins.generic.codecheck.orcid.auth.error.denied', ['error' => $desc]));
             return;
         }
 
@@ -188,41 +246,32 @@ class OrcidAuthHandler extends Handler
         $state = $request->getUserVar('state');
 
         if (!$code || !$state) {
-            $this->sendPopupError('Invalid ORCID callback: missing code or state.');
+            $this->sendPopupError(__('plugins.generic.codecheck.orcid.auth.error.invalidCallback'));
             return;
         }
 
-        $stateData    = json_decode(base64_decode($state), true);
-        $submissionId = (int) ($stateData['submissionId'] ?? 0);
-        $nonce        = $stateData['nonce'] ?? '';
-        $contextPath  = $stateData['contextPath'] ?? 'index';
-
-        if (!$submissionId) {
-            $this->sendPopupError('Invalid state parameter.');
+        // Everything this request is allowed to do comes from here. The person
+        // browsing is ORCID's redirect target, not necessarily the codechecker,
+        // and their session is never consulted.
+        $flow = $this->flowFromState($state);
+        if (!$flow) {
+            $this->sendPopupError(__('plugins.generic.codecheck.orcid.auth.error.securityCheck'));
             return;
         }
 
-        $sessionNonce = $request->getSession()->get('orcid_nonce_' . $submissionId);
-        if (!$sessionNonce || !hash_equals($sessionNonce, $nonce)) {
-            $this->sendPopupError('Security check failed. Please try again.');
+        $submissionId = $flow['submissionId'];
+        $actingUser   = Repo::user()->get($flow['userId']);
+
+        if (!$actingUser) {
+            $this->sendPopupError(__('plugins.generic.codecheck.orcid.auth.error.initiatorGone'));
             return;
         }
-        // Checked again on the way back, not just on the way out: the state
-        // parameter is the caller's to shape, so the submission it names has to
-        // be re-authorised rather than trusted because startAuth once was. In
-        // practice the nonce above already implies it — only an authorised
-        // `startAuth` can put one in this session — so this is the second lock
-        // rather than the one holding the door, and it catches the case where
-        // the assignment was withdrawn while the user was at ORCID's consent
-        // screen.
-        $submission = $this->submissionCallerMayActOn($submissionId, $request);
+
+        $submission = $this->submissionUserMayActOn($actingUser, $submissionId, $request);
         if (!$submission) {
             return;
         }
 
-        // Burnt only now: a refusal above should not cost the user their one
-        // nonce and force them through startAuth again.
-        $request->getSession()->forget('orcid_nonce_' . $submissionId);
         $contextId = $submission->getData('contextId');
 
         try {
@@ -255,11 +304,7 @@ class OrcidAuthHandler extends Handler
                             'ORCID iD mismatch for submission ' . $submissionId .
                             ': authenticated as ' . $orcidId . ' but not in codechecker list'
                         );
-                        $this->sendPopupError(
-                            'The ORCID iD you authenticated with (' . $orcidId . ') ' .
-                            'does not match any codechecker ORCID on record for this submission. ' .
-                            'Please sign in with the correct ORCID account.'
-                        );
+                        $this->sendPopupError(__('plugins.generic.codecheck.orcid.auth.error.orcidMismatch', ['orcidId' => $orcidId]));
                         return;
                     }
                 }
@@ -271,7 +316,7 @@ class OrcidAuthHandler extends Handler
             CodecheckLogger::info('ORCID token stored for ' . $orcidId . ' / submission ' . $submissionId);
 
             $workflowUrl = $request->getBaseUrl()
-                . '/index.php/' . $contextPath
+                . '/index.php/' . $request->getContext()->getPath()
                 . '/dashboard/editorial?workflowSubmissionId=' . $submissionId;
 
             echo '<html><body>';
@@ -288,7 +333,7 @@ class OrcidAuthHandler extends Handler
 
         } catch (\Throwable $e) {
             CodecheckLogger::error('ORCID token exchange failed: ' . $e->getMessage());
-            $this->sendPopupError('ORCID token exchange failed: ' . $e->getMessage());
+            $this->sendPopupError(__('plugins.generic.codecheck.orcid.auth.error.tokenExchange', ['error' => $e->getMessage()]));
         }
     }
 
@@ -301,10 +346,18 @@ class OrcidAuthHandler extends Handler
         );
     }
 
+    /**
+     * Where ORCID sends the codechecker back.
+     *
+     * Journal-scoped, so the plugin is enabled for the request that arrives
+     * (#176). ORCID matches a registered redirect URI by prefix, so one
+     * registration of the installation's base URL covers every journal.
+     */
     private function buildRedirectUri($request): string
     {
         return $request->getBaseUrl()
-            . '/index.php/index/codecheck/orcid/callback';
+            . '/index.php/' . $request->getContext()->getPath()
+            . '/codecheck/orcid/callback';
     }
 
     private function sendPopupError(string $message): void

@@ -219,17 +219,24 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 
 ### Security
 
-- The ORCID authorisation routes require a logged-in user who may act on the
-  submission (advisory GHSA-4p3r-qgp4-g74r). `OrcidAuthHandler` declared no
-  authorization policy, and for page routers PKP permits a request no policy
-  applies to, so `startAuth` and `callback` were reachable by an anonymous
-  visitor, acting on whatever submission id the caller typed — so any ORCID
-  account could be bound to any submission and credited on publication. The
-  callback stays site-level, where ORCID returns it, and takes the journal from
-  the submission. *Which* ORCID account an authorised person
-  connects is still only checked when a codechecker's ORCID is already on
-  record — that half is unchanged, and now bounded to editors and the assigned
-  reviewer (Issue #50)
+- Starting an ORCID authorisation requires a logged-in user who may act on the
+  submission, and finishing one acts as the person who started it (advisory
+  GHSA-4p3r-qgp4-g74r). `OrcidAuthHandler` declared no authorization policy, and
+  for page routers PKP permits a request no policy applies to, so `startAuth`
+  and `callback` were reachable by an anonymous visitor, acting on whatever
+  submission id the caller typed — so any ORCID account could be bound to any
+  submission and credited on publication.
+
+  The callback no longer asks who is browsing. Who started the flow, and for
+  which submission, is sealed into the OAuth `state` with OJS's application key
+  and expires after fifteen minutes, so the authorisation is the codechecker's
+  own rather than whoever's session happens to be open when ORCID redirects
+  back — and it survives a session that lapses at the consent screen. It used to
+  turn on a nonce in that session and on the roles of whoever returned with it.
+
+  *Which* ORCID account an authorised person connects is still only checked when
+  a codechecker's ORCID is already on record — that half is unchanged, and now
+  bounded to editors and the assigned reviewer (Issue #50)
 
 - A CODECHECK status change is recorded against the user who made the request.
   The actor came from the request body, so any caller could attribute a decision
@@ -349,6 +356,14 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   could not be set and had no effect.
 
 ### Fixed
+
+- The ORCID authorisation round trip completes on an ordinarily configured
+  journal. ORCID was told to send the codechecker back to a site-level address,
+  which only resolves while the plugin is *also* enabled site-wide — enabling it
+  for a journal writes a different setting — so the first leg worked and the
+  return leg was a bare 404, losing the authorisation. Both routes are
+  journal-scoped now, and the journal is no longer carried through the OAuth
+  state parameter, where it was the caller's to set (Issue #176)
 
 - The generated `codecheck.yml` keeps values as the strings they were entered as.
   After dumping the file, the plugin stripped the quotes from every simple scalar,

@@ -1055,6 +1055,12 @@ msgstr "Security check failed. Please try again."
 msgid "plugins.generic.codecheck.orcid.auth.error.submissionNotFound"
 msgstr "Submission not found."
 
+msgid "plugins.generic.codecheck.orcid.auth.error.notPermitted"
+msgstr "Only an editor, or the reviewer assigned to this submission, may connect an ORCID account to it."
+
+msgid "plugins.generic.codecheck.orcid.auth.error.initiatorGone"
+msgstr "The account that started this ORCID authorisation no longer exists."
+
 msgid "plugins.generic.codecheck.orcid.auth.error.orcidMismatch"
 msgstr "The ORCID iD you authenticated with ({$orcidId}) does not match any codechecker ORCID on record for this submission. Please sign in with the correct ORCID account."
 
