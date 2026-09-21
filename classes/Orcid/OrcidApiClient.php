@@ -100,7 +100,9 @@ class OrcidApiClient
             'client_id'     => $this->clientId,
             'client_secret' => $this->clientSecret,
             'grant_type'    => 'client_credentials',
-            'scope'         => '/group-id-record/update',
+            // The scope the deposit uses. Testing with /group-id-record/update
+            // reported a correctly provisioned Member client as broken (#175).
+            'scope'         => '/activities/update',
         ]);
 
         $response = $this->httpPost($tokenUrl, $postFields, [

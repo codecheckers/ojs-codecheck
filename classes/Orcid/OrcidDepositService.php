@@ -43,6 +43,10 @@ class OrcidDepositService
     public function depositForSubmission(int $submissionId, ?string $onlyOrcidId = null): array
     {
         $context   = Application::get()->getRequest()->getContext();
+        if (!$context) {
+            CodecheckLogger::error('ORCID deposit skipped: no journal context on this request.');
+            return [['status' => 'failed', 'error' => __('plugins.generic.codecheck.orcid.test.error.noCredentials')]];
+        }
         $contextId = $context->getId();
 
         $clientId     = $this->plugin->getSetting($contextId, Constants::ORCID_CLIENT_ID);
@@ -89,6 +93,21 @@ class OrcidDepositService
 
         $tokenRows = $this->tokenDAO->getAuthorizedBySubmission($submissionId);
         $results   = [];
+
+        // Without a certificate there is no identifier that distinguishes this
+        // check from any other. Depositing anyway used the literal
+        // "codecheck:unknown" for every one of them, and ORCID de-duplicates on
+        // that value: the second deposit was rejected as a duplicate, the
+        // put-code of somebody else's item was read out of the error, and the
+        // result was reported as a success. Skipping says what is true (#175).
+        if (empty($meta['certificate'])) {
+            CodecheckLogger::info("ORCID deposit skipped for submission {$submissionId}: no certificate identifier yet.");
+
+            return [[
+                'status' => 'skipped',
+                'error'  => __('plugins.generic.codecheck.orcid.deposit.skipped.noCertificate'),
+            ]];
+        }
 
         foreach ($tokenRows as $row) {
             if ($onlyOrcidId !== null && ($row->orcid_id ?? null) !== $onlyOrcidId) {

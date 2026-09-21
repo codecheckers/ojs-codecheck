@@ -40,10 +40,14 @@ class OrcidAuthHandler extends Handler
     public function startAuth($args, $request): void
     {
         $context   = $request->getContext();
+        if (!$context) {
+            $this->sendPopupError(__('plugins.generic.codecheck.orcid.auth.error.notEnabled'));
+            return;
+        }
         $contextId = $context->getId();
 
         if (!$this->plugin->getSetting($contextId, Constants::ORCID_ENABLED)) {
-            $this->sendPopupError('ORCID integration is not enabled for this journal.');
+            $this->sendPopupError(__('plugins.generic.codecheck.orcid.auth.error.notEnabled'));
             return;
         }
 
@@ -51,16 +55,13 @@ class OrcidAuthHandler extends Handler
         $clientSecret = $this->plugin->getSetting($contextId, Constants::ORCID_CLIENT_SECRET);
 
         if (!$clientId || !$clientSecret) {
-            $this->sendPopupError(
-                'ORCID credentials are not configured. Please ask the journal manager to set ' .
-                'the Client ID and Client Secret in the CODECHECK plugin settings.'
-            );
+            $this->sendPopupError(__('plugins.generic.codecheck.orcid.auth.error.noCredentials'));
             return;
         }
 
         $submissionId = (int) $request->getUserVar('submissionId');
         if (!$submissionId) {
-            $this->sendPopupError('Missing submissionId parameter.');
+            $this->sendPopupError(__('plugins.generic.codecheck.orcid.auth.error.missingSubmissionId'));
             return;
         }
 
@@ -88,8 +89,8 @@ class OrcidAuthHandler extends Handler
     {
         $error = $request->getUserVar('error');
         if ($error) {
-            $desc = $request->getUserVar('error_description') ?? 'Access denied.';
-            $this->sendPopupError('ORCID authorisation denied: ' . $desc);
+            $desc = $request->getUserVar('error_description') ?? __('plugins.generic.codecheck.orcid.auth.error.accessDenied');
+            $this->sendPopupError(__('plugins.generic.codecheck.orcid.auth.error.denied', ['error' => $desc]));
             return;
         }
 
@@ -97,7 +98,7 @@ class OrcidAuthHandler extends Handler
         $state = $request->getUserVar('state');
 
         if (!$code || !$state) {
-            $this->sendPopupError('Invalid ORCID callback: missing code or state.');
+            $this->sendPopupError(__('plugins.generic.codecheck.orcid.auth.error.invalidCallback'));
             return;
         }
 
@@ -107,20 +108,20 @@ class OrcidAuthHandler extends Handler
         $contextPath  = $stateData['contextPath'] ?? 'index';
 
         if (!$submissionId) {
-            $this->sendPopupError('Invalid state parameter.');
+            $this->sendPopupError(__('plugins.generic.codecheck.orcid.auth.error.invalidState'));
             return;
         }
 
         $sessionNonce = $request->getSession()->get('orcid_nonce_' . $submissionId);
         if (!$sessionNonce || !hash_equals($sessionNonce, $nonce)) {
-            $this->sendPopupError('Security check failed. Please try again.');
+            $this->sendPopupError(__('plugins.generic.codecheck.orcid.auth.error.securityCheck'));
             return;
         }
         $request->getSession()->forget('orcid_nonce_' . $submissionId);
 
         $submission = Repo::submission()->get($submissionId);
         if (!$submission) {
-            $this->sendPopupError('Submission not found.');
+            $this->sendPopupError(__('plugins.generic.codecheck.orcid.auth.error.submissionNotFound'));
             return;
         }
         $contextId = $submission->getData('contextId');
@@ -155,11 +156,7 @@ class OrcidAuthHandler extends Handler
                             'ORCID iD mismatch for submission ' . $submissionId .
                             ': authenticated as ' . $orcidId . ' but not in codechecker list'
                         );
-                        $this->sendPopupError(
-                            'The ORCID iD you authenticated with (' . $orcidId . ') ' .
-                            'does not match any codechecker ORCID on record for this submission. ' .
-                            'Please sign in with the correct ORCID account.'
-                        );
+                        $this->sendPopupError(__('plugins.generic.codecheck.orcid.auth.error.orcidMismatch', ['orcidId' => $orcidId]));
                         return;
                     }
                 }
@@ -188,7 +185,7 @@ class OrcidAuthHandler extends Handler
 
         } catch (\Throwable $e) {
             CodecheckLogger::error('ORCID token exchange failed: ' . $e->getMessage());
-            $this->sendPopupError('ORCID token exchange failed: ' . $e->getMessage());
+            $this->sendPopupError(__('plugins.generic.codecheck.orcid.auth.error.tokenExchange', ['error' => $e->getMessage()]));
         }
     }
 

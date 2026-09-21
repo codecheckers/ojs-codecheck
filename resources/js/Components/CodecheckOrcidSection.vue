@@ -193,6 +193,11 @@ export default {
           const data = await response.json();
           this.codecheckers       = data.codecheckers ?? [];
           this.journalConfigError = data.journalConfigError ?? null;
+        } else {
+          // Without this a failed request left the list empty, which the
+          // template renders as "No codecheckers have been assigned yet" —
+          // indistinguishable from an answer (#175).
+          this.depositError = this.t('plugins.generic.codecheck.orcid.status.loadFailed');
         }
       } catch (err) {
         console.error('[CODECHECK ORCID] Load error', err);

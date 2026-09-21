@@ -332,6 +332,12 @@ msgstr "The repository's CODECHECK metadata is not equal to the metadata in this
 msgid "plugins.generic.codecheck.repositories.invalidUrl"
 msgstr "A repository address must start with http:// or https://, but {$repository} does not."
 
+msgid "plugins.generic.codecheck.orcid.status.loadFailed"
+msgstr "The ORCID status of the codecheckers could not be loaded. Please reload the page to try again."
+
+msgid "plugins.generic.codecheck.orcid.deposit.skipped.noCertificate"
+msgstr "Nothing was deposited: this CODECHECK has no certificate identifier yet, and ORCID needs one to tell it apart from other checks."
+
 msgid "plugins.generic.codecheck.register.issue.statusComment"
 msgstr "The CODECHECK status changed to: {$status}"
 
@@ -1064,8 +1070,6 @@ msgstr "The ORCID iD you authenticated with ({$orcidId}) does not match any code
 msgid "plugins.generic.codecheck.orcid.auth.error.tokenExchange"
 msgstr "ORCID token exchange failed: {$error}"
 
-msgid "plugins.generic.codecheck.orcid.auth.error.prefix"
-msgstr "Error"
 
 msgid "plugins.generic.codecheck.orcid.auth.success"
 msgstr "Authorisation successful. You may close this window."
