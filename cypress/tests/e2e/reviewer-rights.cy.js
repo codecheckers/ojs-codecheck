@@ -180,3 +180,76 @@ describe('An editor', () => {
     });
   });
 });
+
+/**
+ * The ORCID OAuth routes (advisory GHSA-4p3r-qgp4-g74r).
+ *
+ * These are OJS *page* handlers, not API endpoints, so none of the checks the
+ * tests above exercise applies to them: no CSRF header, no role check. They were
+ * reachable by an anonymous visitor because a page handler that declares no
+ * authorization policy is permitted — PKP's page router uses a blacklist.
+ *
+ * `startAuth` answers the authorization question before it answers whether the
+ * journal has ORCID configured, which is why these tests need no settings: an
+ * allowed caller gets as far as the "not enabled" message, a refused one never
+ * does.
+ */
+const orcid = (op, query = '') =>
+  `/index.php/${JOURNAL}/codecheck/orcid/${op}${query}`;
+
+const REFUSED = 'may connect an ORCID account to it';
+
+describe('The ORCID authorisation routes', () => {
+  it('are closed to a visitor who is not logged in', () => {
+    cy.clearCookies();
+
+    cy.request({ url: orcid('startAuth', `?submissionId=${ASSIGNED}`) }).then((response) => {
+      expect(response.redirects.join(' '), 'startAuth ends at the login page').to.contain('login');
+      expect(response.body).not.to.contain(REFUSED);
+    });
+
+    // The site-level path ORCID itself is sent back to, which carries no
+    // journal. `failOnStatusCode: false` so that a 404 is reported as a 404:
+    // this route exists only while the plugin is enabled at *site* level, and
+    // a bare throw here would look like an authorisation failure instead.
+    cy.request({
+      url: '/index.php/index/codecheck/orcid/callback?code=x&state=y',
+      failOnStatusCode: false,
+    }).then((response) => {
+      expect(response.status, 'the callback route is reachable at all').to.eq(200);
+      expect(response.redirects.join(' '), 'the callback ends at the login page')
+        .to.contain('login');
+      expect(response.body, 'the handler never ran')
+        .not.to.contain('Invalid ORCID callback');
+    });
+  });
+
+  it('refuse a reviewer the submission they are not assigned to', () => {
+    cy.ojsLogin('rreviewer', 'rreviewer');
+
+    cy.request({ url: orcid('startAuth', `?submissionId=${NOT_ASSIGNED}`) })
+      .then((response) => {
+        expect(response.body).to.contain(REFUSED);
+      });
+  });
+
+  it('let a reviewer start on the submission they are assigned to', () => {
+    cy.ojsLogin('rreviewer', 'rreviewer');
+
+    cy.request({ url: orcid('startAuth', `?submissionId=${ASSIGNED}`) }).then((response) => {
+      expect(response.body, 'past the authorisation check').not.to.contain(REFUSED);
+      // ORCID is not configured in the test journal, so this is where an
+      // allowed caller stops. That it is *this* message and not the refusal is
+      // the point.
+      expect(response.body).to.contain('ORCID integration is not enabled');
+    });
+  });
+
+  it('refuse a submission id that does not exist', () => {
+    cy.ojsLogin('rreviewer', 'rreviewer');
+
+    cy.request({ url: orcid('startAuth', '?submissionId=99999') }).then((response) => {
+      expect(response.body).to.contain('Submission not found');
+    });
+  });
+});

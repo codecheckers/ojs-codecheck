@@ -219,6 +219,18 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 
 ### Security
 
+- The ORCID authorisation routes require a logged-in user who may act on the
+  submission (advisory GHSA-4p3r-qgp4-g74r). `OrcidAuthHandler` declared no
+  authorization policy, and for page routers PKP permits a request no policy
+  applies to, so `startAuth` and `callback` were reachable by an anonymous
+  visitor, acting on whatever submission id the caller typed — so any ORCID
+  account could be bound to any submission and credited on publication. The
+  callback stays site-level, where ORCID returns it, and takes the journal from
+  the submission. *Which* ORCID account an authorised person
+  connects is still only checked when a codechecker's ORCID is already on
+  record — that half is unchanged, and now bounded to editors and the assigned
+  reviewer (Issue #50)
+
 - A CODECHECK status change is recorded against the user who made the request.
   The actor came from the request body, so any caller could attribute a decision
   to any user id — in an append-only log that the publication gate reads. The
