@@ -38,7 +38,7 @@ MYSQL := mysql -u$(DB_USER) -p$(DB_PASS) -h$(DB_HOST) -P$(DB_PORT)
 export OJS_ROOT
 
 .PHONY: help setup deps ojs-install ojs-link ojs-config db-create db-load db-reset \
-        clear-cache serve test test-component test-e2e test-php screenshots inspect \
+        clear-cache serve test test-component test-e2e test-e2e-reverse test-php screenshots inspect \
         build watch check-ojs clean
 
 # --- Entry points -----------------------------------------------------------
@@ -65,6 +65,7 @@ help:
 	@echo "    make test-component  Cypress component tests"
 	@echo "    make test-php        PHPUnit"
 	@echo "    make test-e2e        Cypress e2e (needs 'make serve' running)"
+	@echo "    make test-e2e-reverse  the same specs backwards, to catch order dependence"
 	@echo "    make screenshots     capture UI screenshots (needs 'make serve' running)"
 	@echo "    make inspect URL=... ad-hoc page inspection via Playwright"
 	@echo
@@ -208,6 +209,20 @@ test-php: check-ojs
 
 test-e2e:
 	CYPRESS_BASE_URL=$(BASE_URL) npm run test:e2e
+
+# The same specs, in the opposite order.
+#
+# Several specs share submission fixtures — 8 and 9 are written by three of them
+# — and each is supposed to restore what it changed. Running the suite backwards
+# is what checks that: it inverts every dependency between them, so a spec that
+# secretly relies on what an earlier one left behind fails here and nowhere else.
+#
+# Deliberately a separate target rather than randomising the order of the normal
+# run: a suite whose order changes every time turns a coupling bug into a flake
+# nobody can reproduce, which is the problem this is meant to prevent, not cause.
+test-e2e-reverse:
+	CYPRESS_BASE_URL=$(BASE_URL) npx cypress run --e2e \
+	  --spec "$$(ls -r cypress/tests/e2e/*.cy.js | tr '\n' ',' | sed 's/,$$//')"
 
 SHOT_WIDTH  ?= 1920
 SHOT_HEIGHT ?= 1200
