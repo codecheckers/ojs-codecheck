@@ -778,10 +778,10 @@ msgid "plugins.generic.codecheck.repository.addButton"
 msgstr "+ Add URL"
 
 msgid "plugins.generic.codecheck.repository.validation.protocol"
-msgstr "URL must start with http:// or https://"
+msgstr "A repository address must start with http:// or https:// — the submission cannot be saved until this one does."
 
 msgid "plugins.generic.codecheck.repository.validation.invalid"
-msgstr "Please enter a valid URL"
+msgstr "This is not a valid URL — the submission cannot be saved until it is corrected."
 
 msgid "plugins.generic.codecheck.manifestFiles.addButton"
 msgstr "+ Add File"

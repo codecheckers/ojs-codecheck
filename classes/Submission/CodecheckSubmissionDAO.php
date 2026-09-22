@@ -104,10 +104,11 @@ class CodecheckSubmission
      * filtered or edited; a hidden entry holding it simply leaves nothing
      * marked here.
      *
-     * `isWebLink` says whether the address may be rendered as a link. Nothing
-     * validates a repository URL on the way in — `saveMetadata()` stores what it
-     * is given — so a `javascript:` or `data:` URL would otherwise reach the
-     * `href` of a public article page.
+     * `isWebLink` says whether the address may be rendered as a link. The
+     * editorial save refuses such an address and the wizard drops it (#170),
+     * but only for what a save introduces: a value stored before that rule
+     * existed is never rewritten, so a `javascript:` or `data:` URL can still
+     * be in the record and must not reach the `href` of a public article page.
      *
      * @return array<int, array{url: string, containsCodecheckYaml: bool, isWebLink: bool}>
      */

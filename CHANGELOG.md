@@ -117,6 +117,34 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   CODECHECK publication check on that journal. An unset list now means the same thing
   it means on the settings form — no status accepted — so an opted-in submission is
   blocked until the journal chooses which statuses may publish
+- The repositories and expected outputs an author enters in the submission wizard now
+  reach the server at all. The wizard autosaves only the fields of its own form
+  sections, and these two are added by a template hook, so nothing typed in them was
+  ever sent (Issue #170)
+- A repository address the author enters is checked against the same rule the editorial
+  form applies. An address that cannot be a repository link is refused, with the reason
+  shown under the field, rather than stored — it used to be accepted silently and then
+  refuse *every* later save of the CODECHECK metadata, including one that changed only
+  the summary, leaving an editor unable to save with nothing saying which field was at
+  fault (Issue #170)
+- A save is now refused only for an address it introduces. One already in the record no
+  longer blocks a save that did not touch it (Issue #170)
+- The wizard's repository field showed no validation message at all: the loop that
+  rendered them had `v-for` and `v-if` on one element, which Vue 3 evaluates in the
+  other order. Messages now sit with the row that caused them, appear when the row is
+  left rather than after every keystroke, and flag an address that is already stored
+  (Issue #170)
+- The submission wizard shows the repositories and expected outputs the author entered
+  before. They live in the CODECHECK record rather than on the publication and were
+  never restored, so the author came back to an empty step — and an ordinary save then
+  submitted an empty list, which was read as "the author removed all of them" and
+  deleted every entry they had provided. Entries the codechecker added are deliberately
+  not shown there: the wizard's list is the author's own (Issue #170)
+- Saving the CODECHECK metadata with a payload that carries no repository list no
+  longer empties it. The list was overwritten with nothing — the repository flagged as
+  holding the `codecheck.yml` included — and the save still reported success
+- The wizard and the server agree about upper-case schemes. `HTTP://example.org` was
+  reported as invalid by the wizard and accepted by the server (Issue #170)
 - The CODECHECK metadata form refuses to put a repository into that state at all: the
   repository holding the `codecheck.yml` cannot be hidden from the public record, and
   hiding one cannot be combined with marking it. The message appears next to the

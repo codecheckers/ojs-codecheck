@@ -1,6 +1,7 @@
 import { createApp, reactive } from 'vue';
 import CodecheckManifestFiles from "./Components/CodecheckManifestFiles.vue";
 import CodecheckRepositoryList from "./Components/CodecheckRepositoryList.vue";
+import { authorProvidedLines } from "./authorEntries.js";
 import CodecheckReviewDisplay from "./Components/CodecheckReviewDisplay.vue";
 import CodecheckDataAndSoftwareAvailability from "./Components/CodecheckDataAndSoftwareAvailability.vue";
 import CodecheckOrcidSection from "./Components/CodecheckOrcidSection.vue";
@@ -231,6 +232,43 @@ class CodecheckWizardManager {
     } catch (error) {
       console.error('CODECHECK: Failed to load saved data', error);
     }
+
+    await this.loadAuthorEntries(submissionId);
+  }
+
+  /**
+   * Put the author's repositories and expected outputs back into the wizard.
+   *
+   * They live in `codecheck_metadata`, not on the publication, so they were
+   * never restored: the author returned to the step to find it empty, and —
+   * worse — an ordinary save then submitted an empty list, which
+   * `CodecheckAuthorMetadata::merge()` reads as "the author removed all of
+   * them" and deletes every entry they had provided (issue #170).
+   *
+   * Runs before the Vue fields mount, which read their initial value from
+   * these textareas.
+   */
+  async loadAuthorEntries(submissionId) {
+    try {
+      const response = await fetch(
+        `${pkp.context.apiBaseUrl}codecheck/metadata?submissionId=${submissionId}`
+      );
+
+      if (!response.ok) return;
+
+      const data = await response.json();
+      const codecheck = data?.codecheck;
+
+      if (!codecheck) return;
+
+      this.setTextareaValue(
+        'repositories',
+        authorProvidedLines(codecheck.repository?.repositories, 'url')
+      );
+      this.setTextareaValue('manifestFiles', authorProvidedLines(codecheck.manifest, 'file'));
+    } catch (error) {
+      console.error('CODECHECK: Failed to load the author\'s CODECHECK entries', error);
+    }
   }
 
   setTextareaValue(name, value) {
@@ -248,9 +286,6 @@ class CodecheckWizardManager {
     if (!submissionId) return;
 
     const data = {};
-    // Repositories and the manifest are persisted server-side from the request
-    // by CodecheckPlugin::saveWizardFieldsFromRequest(), which writes them into
-    // codecheck_metadata. Only the publication field is saved from here.
     ['dataAvailabilityStatement'].forEach(field => {
       const textarea = document.querySelector(`textarea[name="${field}"]`);
       if (textarea && textarea.value) {
@@ -258,31 +293,104 @@ class CodecheckWizardManager {
       }
     });
 
-    if (Object.keys(data).length === 0) return;
-
     this.saveInProgress = true;
 
     try {
-      const submissionResponse = await fetch(`${pkp.context.apiBaseUrl}/submissions/${submissionId}`);
-      const submission = await submissionResponse.json();
-      const publicationId = submission.currentPublicationId;
+      if (Object.keys(data).length > 0) {
+        const submissionResponse = await fetch(`${pkp.context.apiBaseUrl}/submissions/${submissionId}`);
+        const submission = await submissionResponse.json();
+        const publicationId = submission.currentPublicationId;
 
-      await fetch(
-        `${pkp.context.apiBaseUrl}/submissions/${submissionId}/publications/${publicationId}`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Csrf-Token': pkp.currentUser.csrfToken
-          },
-          body: JSON.stringify(data)
-        }
-      );
+        await fetch(
+          `${pkp.context.apiBaseUrl}/submissions/${submissionId}/publications/${publicationId}`,
+          {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Csrf-Token': pkp.currentUser.csrfToken
+            },
+            body: JSON.stringify(data)
+          }
+        );
+      }
+
+      await this.saveAuthorEntries(submissionId);
     } catch (error) {
       console.error('CODECHECK: Save failed', error);
     } finally {
       this.saveInProgress = false;
     }
+  }
+
+  /**
+   * Send the repositories and expected outputs to the submission endpoint,
+   * where `CodecheckPlugin::saveWizardFieldsFromRequest()` writes them into
+   * `codecheck_metadata`.
+   *
+   * They were never sent: that hook reads them off the request, but the wizard
+   * autosaves only the fields of its own `pkp-form` sections, and these two are
+   * raw textareas added by a template hook — so nothing the author typed here
+   * ever reached the server (issue #170).
+   *
+   * A field whose textarea is not in the DOM is left out of the body entirely.
+   * An absent key means "unchanged" to the hook, the way an absent key means
+   * unchanged to `Repository::edit()`; sending an empty string instead would
+   * read as "the author removed all of them".
+   */
+  async saveAuthorEntries(submissionId) {
+    const body = {};
+
+    ['repositories', 'manifestFiles'].forEach(field => {
+      const textarea = document.querySelector(`textarea[name="${field}"]`);
+      if (textarea) {
+        body[field] = textarea.value;
+      }
+    });
+
+    if (Object.keys(body).length === 0) return;
+
+    const response = await fetch(`${pkp.context.apiBaseUrl}/submissions/${submissionId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Csrf-Token': pkp.currentUser.csrfToken
+      },
+      body: JSON.stringify(body)
+    });
+
+    // The server refuses an address it will not store, with the message keyed
+    // to the field. The wizard renders errors for its own form sections only,
+    // so this one is shown here.
+    if (response.status === 400) {
+      const errors = await response.json();
+      Object.keys(body).forEach(field => this.showFieldError(field, errors[field]?.[0] ?? null));
+      return;
+    }
+
+    Object.keys(body).forEach(field => this.showFieldError(field, null));
+  }
+
+  /** Put a server-side message under a wizard field, or clear it. */
+  showFieldError(name, message) {
+    const textarea = document.querySelector(`textarea[name="${name}"]`);
+    const container = textarea?.parentElement;
+    if (!container) return;
+
+    let error = container.querySelector('.codecheck-wizard-server-error');
+
+    if (!message) {
+      error?.remove();
+      return;
+    }
+
+    if (!error) {
+      error = document.createElement('div');
+      error.className = 'pkpFormField__error codecheck-wizard-server-error';
+      error.setAttribute('role', 'alert');
+      container.appendChild(error);
+    }
+
+    error.textContent = message;
   }
 
   getSubmissionId() {

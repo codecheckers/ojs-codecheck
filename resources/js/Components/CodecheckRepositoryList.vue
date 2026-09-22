@@ -1,19 +1,25 @@
 <template>
   <div class="codecheck-repository-list">
     <div class="repository-list">
-      <div v-for="(repo, index) in repositories" :key="index" class="repository-row">
-        <input
-          v-model="repositories[index]"
-          type="url"
-          :placeholder="t('plugins.generic.codecheck.repository.placeholder')"
-          @input="updateValue"
-          @blur="validateUrl(index)"
-          :class="['form-control', { 'is-invalid': errors[index] }]"
-        />
-        <button type="button" @click="removeRepository(index)" class="btn-remove">×</button>
-      </div>
-      <div v-for="(error, index) in errors" :key="'error-' + index" class="pkpFormField__error" v-if="error">
-        {{ error }}
+      <!--
+        The message sits with the row it belongs to. It used to be a second
+        loop below every input, with `v-if` and `v-for` on one element — which
+        Vue 3 evaluates in the other order, so `error` was out of scope, read
+        `undefined`, and no message was ever shown (issue #170).
+      -->
+      <div v-for="(repo, index) in repositories" :key="index" class="repository-row-group">
+        <div class="repository-row">
+          <input
+            v-model="repositories[index]"
+            type="url"
+            :placeholder="t('plugins.generic.codecheck.repository.placeholder')"
+            @input="updateValue"
+            @blur="validateUrl(index)"
+            :class="['form-control', { 'is-invalid': errors[index] }]"
+          />
+          <button type="button" @click="removeRepository(index)" class="btn-remove">×</button>
+        </div>
+        <div v-if="errors[index]" class="pkpFormField__error">{{ errors[index] }}</div>
       </div>
     </div>
     <button type="button" @click="addRepository" class="btn-add">
@@ -24,6 +30,7 @@
 
 <script setup>
 import { ref, onMounted } from "vue";
+import { isWebUrl } from "../isWebUrl.js";
 
 const { useLocalize } = pkp.modules.useLocalize;
 const { t } = useLocalize();
@@ -35,20 +42,31 @@ const props = defineProps({
   value: { type: String, default: "" }
 });
 
+/** What a freshly added row holds: a scheme to type after, not an address. */
+const NEW_ROW_VALUE = 'https://';
+
 const repositories = ref([]);
 const errors = ref([]);
 
 onMounted(() => {
   if (props.value) {
     props.value.split('\n').forEach(line => {
-      if (line.trim()) repositories.value.push(line.trim());
+      if (line.trim()) {
+        repositories.value.push(line.trim());
+        errors.value.push('');
+      }
     });
   }
   if (repositories.value.length === 0) addRepository();
+
+  // Judge what arrived, so a stored address the rule refuses is flagged rather
+  // than sitting there looking accepted. Deliberately without `updateValue()`:
+  // that would rewrite the textarea from a list the author has not touched.
+  repositories.value.forEach((_, index) => validateUrl(index));
 });
 
 function addRepository() {
-  repositories.value.push('https://');
+  repositories.value.push(NEW_ROW_VALUE);
   errors.value.push('');
 }
 
@@ -58,28 +76,71 @@ function removeRepository(index) {
   updateValue();
 }
 
+/**
+ * A row the author has not filled in yet: neither valid nor an error.
+ *
+ * The shape rather than the seed literal — `isWebUrl()` is true for a bare
+ * `http://` too, so testing only against `NEW_ROW_VALUE` let one keystroke
+ * turn the placeholder into a stored address whose link label is empty.
+ */
+function isEmptyRow(url) {
+  return /^(https?:\/\/)?$/i.test(String(url ?? '').trim());
+}
+
+/**
+ * Whether the server will accept a row: the same rule `Constants::isWebUrl()`
+ * applies, so the message here says in advance what the save would answer.
+ */
+function isSubmittable(url) {
+  return !isEmptyRow(url) && isWebUrl(url);
+}
+
+/**
+ * The rule is `isWebUrl()`, the same one the API applies, so the wizard and the
+ * server cannot disagree about a given address (issue #170). `new URL()` still
+ * runs, but only to tell "that is not a URL at all" from "that is a URL with
+ * the wrong scheme" — it decides nothing.
+ */
 function validateUrl(index) {
   const url = repositories.value[index];
-  if (!url.trim() || url === 'https://') {
+
+  if (isSubmittable(url) || isEmptyRow(url)) {
     errors.value[index] = '';
     return;
   }
-  
+
   try {
     new URL(url);
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      errors.value[index] = t('plugins.generic.codecheck.repository.validation.protocol');
-    } else {
-      errors.value[index] = '';
-    }
+    errors.value[index] = t('plugins.generic.codecheck.repository.validation.protocol');
   } catch {
     errors.value[index] = t('plugins.generic.codecheck.repository.validation.invalid');
   }
 }
 
+/**
+ * Only addresses that pass the rule are written into the hidden textarea the
+ * wizard submits.
+ *
+ * Everything the author typed is submitted, invalid rows included, and the
+ * server refuses the save with the error keyed to this field — which is how
+ * PKP's own form fields work: no field filters its own payload, because
+ * `Repository::edit()` treats a submitted list as complete and an absent entry
+ * as a deletion. Withholding a row here was indistinguishable from the author
+ * removing it, and deleted the address already on file (issue #170).
+ *
+ * The per-row message is still shown, so the author sees which row is at fault
+ * before the server says so.
+ */
 function updateValue() {
+  // Every row is judged on every change, so the message and the submitted value
+  // are never out of step. That does mean an author typing `h`, `ht`, `htt` is
+  // told the row is not a URL yet — accepted deliberately: the alternative is a
+  // row that has quietly stopped being submitted and still looks accepted.
+  repositories.value.forEach((_, index) => validateUrl(index));
+
   const data = repositories.value
-    .filter(r => r.trim() && r !== 'https://')
+    .filter(url => !isEmptyRow(url))
+    .map(url => url.trim())
     .join('\n');
     
   const event = new CustomEvent('update', { detail: data, bubbles: true });
@@ -91,10 +152,13 @@ function updateValue() {
 </script>
 
 <style scoped>
+.repository-row-group {
+  margin-bottom: 10px;
+}
+
 .repository-row {
   display: flex;
   gap: 10px;
-  margin-bottom: 10px;
   align-items: center;
 }
 

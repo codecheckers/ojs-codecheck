@@ -95,8 +95,10 @@ class Constants
      *
      * The same rule decides whether a repository is rendered as a link
      * (`CodecheckSubmissionDAO::getPublicRepositories()`) and whether one is
-     * refused on save (`CodecheckRepositories::unusableUrls()`); it lives here so
-     * there is one definition to audit rather than four.
+     * refused on save (`CodecheckRepositories::newUnusableUrls()`, which judges
+     * what a save introduces); it lives here so there is one definition to
+     * audit rather than four. `resources/js/isWebUrl.js` mirrors it for the
+     * submission wizard's field.
      */
     public static function isWebUrl(?string $url): bool
     {

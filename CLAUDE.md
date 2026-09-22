@@ -227,7 +227,8 @@ register (#154).
 
 `classes/Submission/CodecheckRepositories.php` owns the rules for reading that
 blob — `publicEntries()`, `publicUrls()`, `selectedUrl()`, `publicSelectedUrl()`,
-`selectedIsPrivate()`, `unusableUrls()`, `withOneMarked()` — and the article page, `buildYaml()`, the
+`selectedIsPrivate()`, `unusableUrls()`, `newUnusableUrls()`,
+`withoutNewUnusable()`, `withOneMarked()` — and the article page, `buildYaml()`, the
 publication validator, the register deposit and the register issue all go
 through it. Note the deliberate asymmetry: `publicEntries()` withholds hidden
 repositories because it feeds readers, while `selectedUrl()` does not, because a
@@ -436,7 +437,7 @@ README.md; keep `css/codecheck.css` and inline component styles consistent.
 ### Layout
 
 ```
-tests/                       PHPUnit (31 files, 262 tests)
+tests/                       PHPUnit (31 files, 271 tests)
   bootstrap.php              PKP_STRICT_MODE + BASE_SYS_DIR (OJS_ROOT or ../../../..)
   PKPTestCase.php            local stub extending PHPUnit TestCase
   FakeTranslator.php         minimal translator so __() works without booting OJS
@@ -465,7 +466,7 @@ cypress/
                                this first in every component spec
   support/e2e.js               cy.ojsLogin(), cy.getCsrfToken(), swallow uncaught exceptions
   support/component-index.html
-  tests/component/*.cy.js      5 specs, 66 tests
+  tests/component/*.cy.js      6 specs, 79 tests
   tests/e2e/*.cy.js            11 specs, 62 tests
                                yaml-generation, article-sidebar-setting,
                                issue-toc-setting, issue-toc-badge,
@@ -480,7 +481,7 @@ dev/
 ### Component tests (the reliable suite)
 
 `npm run test:component` — **passes locally with no OJS, no database, no build step**
-(66/66, ~20 s). Cypress mounts the `.vue` sources directly through Vite and stubs the
+(79/79, ~20 s). Cypress mounts the `.vue` sources directly through Vite and stubs the
 API with `cy.intercept`.
 
 Covered: metadata form load/render, manifest files add/remove/comment, repository list
@@ -591,7 +592,7 @@ Still uncovered: opt-in, the submission wizard, and register deposit.
 
 ### PHPUnit tests
 
-`make test-php` — 262 tests, green, none skipped.
+`make test-php` — 271 tests, green, none skipped.
 
 PHPUnit needs an OJS installation: the tests load OJS classes and the runner uses the
 PHPUnit shipped in `lib/pkp`. Both `runTests.sh` and `bootstrap.php` honour `OJS_ROOT`,
@@ -1062,8 +1063,45 @@ description, so the next reader does not re-derive the same objection.
   `CodecheckPublicationValidator` blocks publication, and the register deposit
   refuses. The form is where the mistake is made, so it is where the message
   belongs; the other two are backstops (#169)
-- Repository URLs are not validated by the submission wizard (#170), so anything
-  rendering one must check the scheme itself; `filter_var(…, FILTER_VALIDATE_URL)`
-  is not enough, it accepts `javascript://…`
+- A repository address is checked at both write boundaries — the editorial
+  `saveMetadata()` and the author's wizard save — and the rule is
+  `Constants::isWebUrl()`, mirrored in JS by `resources/js/isWebUrl.js`.
+  `filter_var(…, FILTER_VALIDATE_URL)` is not enough, it accepts `javascript://…`.
+  Anything rendering an address still checks the scheme itself, because a value
+  stored before the rule existed is never rewritten (#154, #170)
+- **A validation failure must never look like a removal.** An entry may only be
+  removed by an act of removal. The wizard field therefore submits everything
+  the author typed, invalid addresses included, and
+  `saveWizardFieldsFromRequest()` refuses the save by writing into the
+  `Submission::validate` hook's `&$errors[0]` under the key `repositories` —
+  PKP's own model, where no form field filters its own payload and
+  `FormComponent::$errors` carries the server's answer back to the field.
+  Withholding the row instead was indistinguishable from a deletion and took
+  the address already on file with it (#170). The hook must not write when it
+  refuses: it runs during validation, so a save OJS is about to abandon must
+  not have happened
+- **The wizard's own autosave does not carry these fields.** It collects the
+  fields of its `pkp-form` sections, and the CODECHECK section is raw markup
+  from a template hook — so `CodecheckWizardManager.saveAuthorEntries()` PUTs
+  `repositories` and `manifestFiles` to the submission endpoint itself, and
+  renders the server's refusal under the field, because the wizard only renders
+  errors for its own sections. A field whose textarea is absent from the DOM is
+  left out of the body: an absent key means "unchanged", as it does to
+  `Repository::edit()`, while an empty string means "remove them all"
+- **The wizard's textareas are the author's complete list**, and
+  `CodecheckAuthorMetadata::merge()` reads them that way: an entry marked
+  `providedByAuthor` that does not come back is deleted, and anything that does
+  come back becomes the author's. So the fields are seeded from the record by
+  `CodecheckWizardManager.loadAuthorEntries()` with **only** the
+  `providedByAuthor` entries (`resources/js/authorEntries.js`). Seeding with
+  everything would hand the codechecker's additions to the author; seeding with
+  nothing — what it did before #170 — made every save delete the author's own
+  entries
+- **Only what a save introduces is judged**, via
+  `CodecheckRepositories::newUnusableUrls($incoming, $stored)`. Refusing every
+  unusable address meant one bad value from the wizard refused every later save
+  of that record, including one that changed only the summary, with nothing
+  saying which field was at fault (#170). The author path drops what it would
+  introduce and logs it; the editorial path answers 400
 - The API handler `exit`s after serving; it bypasses PKP authorization policies and
   does its own CSRF + role check

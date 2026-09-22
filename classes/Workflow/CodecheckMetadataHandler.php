@@ -108,14 +108,38 @@ class CodecheckMetadataHandler
 
         $jsonData = file_get_contents('php://input');
         $data = json_decode($jsonData, true);
+
+        // Every field below falls back to a default when its key is missing, so
+        // a body that did not parse — truncated, or not an object — would
+        // overwrite the certificate, the GitHub issue, the codecheckers, the
+        // summary and the rest with blanks, and answer "saved successfully".
+        // There is nothing to save in that case, so it is refused.
+        if (!is_array($data)) {
+            return [
+                'success' => false,
+                'error' => 'The request body is not a CODECHECK metadata object.',
+                'status' => 400,
+            ];
+        }
         
         $nullIfEmpty = function($value) {
             return (is_string($value) && trim($value) === '') ? null : $value;
         };
 
+        $stored = DB::table('codecheck_metadata')
+            ->where('submission_id', $submissionId)
+            ->first();
+
         // Refuse addresses that cannot be a repository link rather than storing
-        // them and guarding every place they are published (Issue #154).
-        $unusable = CodecheckRepositories::unusableUrls($data['repository'] ?? null);
+        // them and guarding every place they are published (Issue #154) — but
+        // only the ones this payload introduces. Refusing the whole record for
+        // an address already in it turned away saves that changed something
+        // else entirely, which is how an author's `github.com/me/project` could
+        // lock an editor out of the form (issue #170).
+        $unusable = CodecheckRepositories::newUnusableUrls(
+            $data['repository'] ?? null,
+            $stored->repository ?? null
+        );
         if ($unusable !== []) {
             return [
                 'success' => false,
@@ -131,9 +155,14 @@ class CodecheckMetadataHandler
             'version' => $data['version'] ?? 'latest',
             'publication_type' => $data['publication_type'] ?? 'doi',
             'manifest' => json_encode($data['manifest'] ?? []),
-            'repository' => json_encode(
-                CodecheckRepositories::withOneMarked($data['repository'] ?? ['repositories' => null])
-            ),
+            // A payload with no `repository` key leaves the stored list alone. It
+            // used to be overwritten with `{"repositories":null}`, so a partial
+            // save — or a body that failed to parse — erased every repository,
+            // the flagged one included, and still answered success. An empty
+            // list is a different thing and still means "remove them all".
+            'repository' => array_key_exists('repository', $data)
+                ? json_encode(CodecheckRepositories::withOneMarked($data['repository'] ?? ['repositories' => null]))
+                : ($stored->repository ?? json_encode(['repositories' => null])),
             'source' => $nullIfEmpty($data['source'] ?? null),
             'codecheckers' => json_encode($data['codecheckers'] ?? []),
             'certificate' => $nullIfEmpty($data['certificate'] ?? null),
@@ -145,11 +174,7 @@ class CodecheckMetadataHandler
             'updated_at' => date('Y-m-d H:i:s'),
         ];
 
-        $exists = DB::table('codecheck_metadata')
-            ->where('submission_id', $submissionId)
-            ->exists();
-
-        if ($exists) {
+        if ($stored) {
             DB::table('codecheck_metadata')
                 ->where('submission_id', $submissionId)
                 ->update($metadataData);
@@ -356,6 +381,12 @@ class CodecheckMetadataHandler
 
     public function importMetadataFromRepository(string $repository): JsonResponse
     {
+        // Deliberately *not* guarded with `Constants::isWebUrl()`: this is an
+        // import, not a write, and a bare DOI ("10.5281/zenodo.1234567")
+        // resolves here — `resolveDoi()` takes the scheme and host as optional.
+        // The branches below refuse anything they do not recognise, and the
+        // write boundaries are where the rule belongs (#170).
+        //
         // Resolve DOI links (e.g. https://doi.org/10.5281/zenodo.1234567) to their
         // final destination, in case Zenodo or OSF repositories are provided as a DOI.
         $repository = $this->curlApiClient->resolveDoi($repository);

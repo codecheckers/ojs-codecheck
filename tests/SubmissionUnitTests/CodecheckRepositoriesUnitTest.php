@@ -295,4 +295,124 @@ class CodecheckRepositoriesUnitTest extends PKPTestCase
             $this->assertNull(CodecheckRepositories::selectedUrl($malformed));
         }
     }
+
+    /**
+     * Issue #170: a save is refused for the addresses it introduces, never for
+     * one already in the record. Refusing those turned away a save that changed
+     * only the summary, and nothing said which field was at fault.
+     */
+    public function testNewUnusableUrlsIgnoresWhatIsAlreadyStored()
+    {
+        $stored = ['repositories' => [['url' => 'github.com/me/project']]];
+        $incoming = ['repositories' => [
+            ['url' => 'github.com/me/project'],
+            ['url' => 'https://github.com/public/one'],
+        ]];
+
+        $this->assertSame([], CodecheckRepositories::newUnusableUrls($incoming, $stored));
+    }
+
+    public function testNewUnusableUrlsReportsOnlyTheIntroducedOnes()
+    {
+        $stored = ['repositories' => [['url' => 'github.com/me/project']]];
+        $incoming = ['repositories' => [
+            ['url' => 'github.com/me/project'],
+            ['url' => 'javascript://x%0Aalert(1)'],
+        ]];
+
+        $this->assertSame(
+            ['javascript://x%0Aalert(1)'],
+            CodecheckRepositories::newUnusableUrls($incoming, $stored)
+        );
+    }
+
+    /** The submission wizard hands over a bare list of strings. */
+    public function testNewUnusableUrlsTakesBareUrlLists()
+    {
+        $this->assertSame(
+            ['git@github.com:foo/bar.git'],
+            CodecheckRepositories::newUnusableUrls(
+                ['https://github.com/public/one', 'git@github.com:foo/bar.git'],
+                []
+            )
+        );
+    }
+
+    /**
+     * The case disagreement of #170: the wizard refused an upper-case scheme
+     * and the API accepted it, so the author was told their address was wrong
+     * and it was stored anyway.
+     */
+    public function testAnUpperCaseSchemeIsUsable()
+    {
+        $this->assertSame([], CodecheckRepositories::newUnusableUrls(['HTTP://example.org/repo'], []));
+        $this->assertSame([], CodecheckRepositories::unusableUrls(['HTTPS://example.org/repo']));
+    }
+
+    /**
+     * The refused addresses are listed back to the editor, so the same one
+     * twice would read as two different things being wrong.
+     */
+    public function testNewUnusableUrlsReportsEachAddressOnce()
+    {
+        $this->assertSame(
+            ['github.com/me/project'],
+            CodecheckRepositories::newUnusableUrls(
+                ['github.com/me/project', 'github.com/me/project', 'https://github.com/ok'],
+                null
+            )
+        );
+    }
+
+    public function testWithoutNewUnusableKeepsWhatIsStoredAndDropsWhatIsIntroduced()
+    {
+        $this->assertSame(
+            ['github.com/me/project', 'https://github.com/ok'],
+            CodecheckRepositories::withoutNewUnusable(
+                ['github.com/me/project', 'https://github.com/ok', 'javascript://x'],
+                ['repositories' => [['url' => 'github.com/me/project']]]
+            )
+        );
+    }
+
+    /** Nothing to drop: the list comes back as it went in, keys renumbered. */
+    public function testWithoutNewUnusableLeavesAUsableListAlone()
+    {
+        $urls = ['https://github.com/one', 'HTTP://example.org/two'];
+
+        $this->assertSame($urls, CodecheckRepositories::withoutNewUnusable($urls, null));
+    }
+
+    /**
+     * The shape production actually passes: `saveMetadata()` hands over
+     * `$stored->repository`, the raw JSON string out of the TEXT column. Every
+     * other case here passes a decoded array, so nothing else would notice if
+     * the string branch of `entries()` stopped decoding — and the grandfathering
+     * of already-stored addresses rests entirely on it.
+     */
+    public function testNewUnusableUrlsReadsTheStoredBlobAsJson()
+    {
+        $stored = '{"repositories":[{"url":"github.com/me/project","hidden":false}]}';
+
+        $this->assertSame([], CodecheckRepositories::newUnusableUrls(
+            ['repositories' => [['url' => 'github.com/me/project']]],
+            $stored
+        ));
+
+        $this->assertSame(
+            ['javascript://x'],
+            CodecheckRepositories::newUnusableUrls(
+                ['repositories' => [['url' => 'github.com/me/project'], ['url' => 'javascript://x']]],
+                $stored
+            )
+        );
+    }
+
+    public function testNewUnusableUrlsWithNothingStored()
+    {
+        $this->assertSame(
+            ['github.com/me/project'],
+            CodecheckRepositories::newUnusableUrls(['github.com/me/project'], null)
+        );
+    }
 }

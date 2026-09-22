@@ -567,6 +567,10 @@ class CodecheckPlugin extends GenericPlugin
      */
     public function saveWizardFieldsFromRequest(string $hookName, array $params): bool
     {
+        // The hook is `Submission::validate`, raised as
+        // [&$errors, $submission, $props, ...] — so a refusal is added here and
+        // OJS abandons the save. See the repository check below.
+        $errors = &$params[0];
         $submission = $params[1];
 
         if (!$submission) {
@@ -600,6 +604,25 @@ class CodecheckPlugin extends GenericPlugin
 
         if ($manifestFiles !== null) {
             $authorMetadata->setManifest(self::splitLines($manifestFiles));
+        }
+
+        // An address that cannot be a repository link is refused, not dropped:
+        // the author posts what they typed and is told no, the way PKP's own
+        // fields work. Dropping it here would be indistinguishable from the
+        // author removing the entry, and `CodecheckAuthorMetadata::merge()`
+        // would then delete the address already on file (issue #170).
+        //
+        // Nothing is written in that case — this hook runs during validation,
+        // so a save that OJS is about to abandon must not have happened.
+        $unusable = $authorMetadata->introducedUnusableRepositories();
+        if ($unusable !== []) {
+            $errors['repositories'] = [
+                __('plugins.generic.codecheck.repositories.invalidUrl', [
+                    'repository' => implode(', ', $unusable),
+                ]),
+            ];
+
+            return false;
         }
 
         $authorMetadata->save();

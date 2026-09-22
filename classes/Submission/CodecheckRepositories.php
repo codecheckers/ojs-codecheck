@@ -154,6 +154,64 @@ class CodecheckRepositories
     }
 
     /**
+     * The unusable addresses a payload *introduces*: unusable in what arrived,
+     * and not already unusable in what is stored.
+     *
+     * A save is refused for these and not for the rest, because refusing every
+     * unusable address means a value stored before the rule existed — or by a
+     * path that did not apply it — locks the record: an editor changing only
+     * the summary is turned away, with nothing saying which field is at fault
+     * (issue #170). What is already stored is never rendered as a link
+     * anyway: `Constants::isWebUrl()` gates that separately.
+     *
+     * Both arguments take any shape `entries()` accepts, including a bare list
+     * of URL strings, which is what the submission wizard hands over.
+     *
+     * @return array<int, string>
+     */
+    public static function newUnusableUrls(mixed $incoming, mixed $stored): array
+    {
+        $alreadyStored = self::unusableUrls($stored);
+
+        // Unique: the refusal message lists these back to the editor, and the
+        // same address twice reads as though two different things were wrong.
+        return array_values(array_unique(array_filter(
+            self::unusableUrls($incoming),
+            fn (string $url) => !in_array($url, $alreadyStored, true)
+        )));
+    }
+
+    /**
+     * A list of addresses with the unusable ones this save would introduce
+     * removed.
+     *
+     * The filtering belongs here rather than at the caller because matching an
+     * entry against what `newUnusableUrls()` reported means knowing that it
+     * reports *trimmed* addresses — a detail of `unusableUrls()` that no other
+     * class should have to hold (issue #170).
+     *
+     * Takes a plain list of addresses, not the entry shape its sibling accepts:
+     * the one caller is the submission wizard, which hands over one URL per
+     * line. Anything else belongs in `withOneMarked()`'s territory.
+     *
+     * @param array<int, string> $incoming one URL per entry
+     * @return array<int, string>
+     */
+    public static function withoutNewUnusable(array $incoming, mixed $stored): array
+    {
+        $introduced = self::newUnusableUrls($incoming, $stored);
+
+        if ($introduced === []) {
+            return $incoming;
+        }
+
+        return array_values(array_filter(
+            $incoming,
+            fn (string $url) => !in_array(trim($url), $introduced, true)
+        ));
+    }
+
+    /**
      * The blob with at most one entry flagged.
      *
      * Only the editorial form enforces that one repository is chosen, and it is

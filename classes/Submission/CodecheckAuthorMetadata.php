@@ -34,6 +34,9 @@ class CodecheckAuthorMetadata
     private ?array $repositories = null;
     private ?array $manifestFiles = null;
 
+    /** The stored row, loaded on first use by storedRecord(). */
+    private ?object $existing = null;
+
     public function __construct(int $submissionId)
     {
         $this->submissionId = $submissionId;
@@ -55,11 +58,43 @@ class CodecheckAuthorMetadata
         $this->manifestFiles = $files;
     }
 
-    public function save(): void
+    /**
+     * The addresses this save would introduce that cannot be a repository link.
+     *
+     * Asked before saving, so the submission can be refused rather than the
+     * addresses quietly dropped — PKP's own model is that the client posts what
+     * the author typed and the server says no, with the error keyed to the
+     * field (`FormComponent::$errors`). Nothing here alters the payload.
+     *
+     * Only what this save introduces: an address already in the record is left
+     * alone, or an editor would be locked out by a value they did not enter
+     * (issue #170).
+     *
+     * @return array<int, string>
+     */
+    public function introducedUnusableRepositories(): array
     {
-        $existing = DB::table('codecheck_metadata')
+        if ($this->repositories === null) {
+            return [];
+        }
+
+        return CodecheckRepositories::newUnusableUrls(
+            $this->repositories,
+            $this->storedRecord()->repository ?? null
+        );
+    }
+
+    /** The stored row, read once per instance. */
+    private function storedRecord(): ?object
+    {
+        return $this->existing ??= DB::table('codecheck_metadata')
             ->where('submission_id', $this->submissionId)
             ->first();
+    }
+
+    public function save(): void
+    {
+        $existing = $this->storedRecord();
 
         $update = [];
 
