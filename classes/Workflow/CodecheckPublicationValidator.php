@@ -22,6 +22,9 @@ class CodecheckPublicationValidator {
     /** The submission being published, as the hook hands it over. */
     private mixed $submission;
 
+    /** The stored CODECHECK record, loaded on first use by getCodecheckMetadata(). */
+    private ?array $metadata = null;
+
     /**
      * @param CodecheckPlugin $plugin
      * @param mixed $submission the submission from the `Publication::validatePublish`
@@ -34,6 +37,11 @@ class CodecheckPublicationValidator {
         $this->submission = $submission;
         $this->errors = [];
         $this->validationChecks = [
+            // First, because the loop below stops at the first failing check
+            // and `validateCodecheckStatus()` can fail without recording an
+            // error — a publish would then go through with this one never
+            // having run (issue #169).
+            fn() => $this->validateSelectedRepositoryIsPublic(),
             fn() => $this->validateCodecheckStatus(),
             fn() => $this->validateYamlStructure(),
             // If this is not an extended Publication Validation, just return valid (and except that the metadata might be invalid, but ignore it since the user set the configuration setting to fail silently in this case)
@@ -84,9 +92,30 @@ class CodecheckPublicationValidator {
         return $submission ? (int) $submission->getId() : (int) $this->codecheckMetadataHandler->getSubmissionId();
     }
 
+    /**
+     * The stored CODECHECK record, read once per publish attempt.
+     *
+     * `getMetadata()` reloads the submission, its publication, its authors and
+     * the `codecheck_metadata` row each time it is asked, and three checks here
+     * want a different corner of the same answer. The validator lives for one
+     * request and the checks run back to back, so one read serves those three.
+     * `validateYamlStructure()` is not among them: it builds its own handler
+     * by way of `CodecheckYamlValidator::fromRequest()` and reads again.
+     */
+    private function getCodecheckMetadata(): array
+    {
+        return $this->metadata ??= $this->codecheckMetadataHandler->getMetadata($this->request, $this->getSubmissionId());
+    }
+
     private function validateCodecheckStatus(): bool {
         $codecheckStatus = CodecheckStatusHandler::getCurrentStatusData($this->getSubmissionId());
-        $codecheckStatusKeysSelected = $this->plugin->getSetting($this->context->getId(), Constants::CODECHECK_STATUS_KEYS_SELECTED);
+        // Null when the settings form has never been saved. `in_array(…, null)`
+        // is a TypeError, and PKP swallows what a hook throws — so every check
+        // in this class would go silently missing on exactly the unconfigured
+        // install they are there to protect. Empty rather than permissive, to
+        // match `SettingsForm::initData()`, which reads the same absent row as
+        // "no status accepted".
+        $codecheckStatusKeysSelected = $this->plugin->getSetting($this->context->getId(), Constants::CODECHECK_STATUS_KEYS_SELECTED) ?? [];
 
         if(empty($codecheckStatus)) {
             if($this->isExtendedValidation()) {
@@ -119,9 +148,36 @@ class CodecheckPublicationValidator {
         return true;
     }
 
+    /**
+     * The repository holding the `codecheck.yml` must be one a reader may see:
+     * publishing names it in the public register (issue #169).
+     *
+     * Runs whatever the extended-validation setting says, and whether or not
+     * the register deposit is enabled — the choice between "private" and
+     * "published" is not one to make on the journal's behalf. A submission with
+     * no repository marked at all is the extended check's subject, not this
+     * one.
+     */
+    private function validateSelectedRepositoryIsPublic(): bool {
+        $repositoryData = $this->getCodecheckMetadata()['codecheck']['repository'] ?? null;
+
+        if (!CodecheckRepositories::selectedIsPrivate($repositoryData)) {
+            return true;
+        }
+
+        // The label is itself a locale key, so it is passed in rather than
+        // written into the sentence — a translator would otherwise coin a third
+        // name for a checkbox that already has two.
+        $this->errors[] = __('plugins.generic.codecheck.publication.validation.selectedRepositoryIsPrivate', [
+            'hideLabel' => __('plugins.generic.codecheck.repository.markAsHidden'),
+        ]);
+
+        return false;
+    }
+
     public function validateMetadataFromRepository(string|null $repository = null): bool {
         if(empty($repository)) {
-            $codecheckMetadata = $this->codecheckMetadataHandler->getMetadata($this->request, $this->getSubmissionId());
+            $codecheckMetadata = $this->getCodecheckMetadata();
         
             if(isset($codecheckMetadata['error']) || !is_array($codecheckMetadata['codecheck']) || !isset($codecheckMetadata['codecheck']['repository']) || !isset($codecheckMetadata['codecheck']['repository']['repositories'])) {
                 $this->errors[] = __('plugins.generic.codecheck.publication.validation.invalidRepository', [
@@ -189,13 +245,17 @@ class CodecheckPublicationValidator {
     }*/
 
     private function validatePaperTitle(array $codecheckMetadata): bool {
-        $metadataFromOjsSubmission = $this->codecheckMetadataHandler->getMetadata($this->request, $this->getSubmissionId());
+        $metadataFromOjsSubmission = $this->getCodecheckMetadata();
         return $codecheckMetadata['paper']['title'] === $metadataFromOjsSubmission['submission']['title'];
     }
 
     private function isExtendedValidation(): bool {
-        $codecheckExtendPublicationValidation = $this->plugin->getSetting($this->context->getId(), Constants::CODECHECK_PUBLICATION_VALIDATION_EXTENDED);
-        return $codecheckExtendPublicationValidation;
+        // Same hazard as the status list above: unset on a journal that has
+        // never saved the settings form, and returning null from a `: bool`
+        // function is a TypeError PKP swallows — which would take every check
+        // in this class with it.
+        $codecheckExtendPublicationValidation = $this->plugin->getSetting($this->context->getId(), Constants::CODECHECK_PUBLICATION_VALIDATION_EXTENDED) ?? false;
+        return (bool) $codecheckExtendPublicationValidation;
     }
 
     public function validatePublication(): true|array {

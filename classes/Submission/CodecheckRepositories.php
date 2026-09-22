@@ -15,11 +15,18 @@
  * that the article page, the publication validator and the register deposit
  * cannot drift apart again, which is the defect in a different costume.
  *
- * Note the deliberate asymmetry between the two questions this class answers:
+ * Note the deliberate asymmetry between the questions this class answers:
  * `publicEntries()` withholds hidden repositories because it feeds what readers
  * see, while `selectedUrl()` does not, because a repository may be kept private
- * and still be the one carrying the `codecheck.yml` that has to be fetched and
- * deposited.
+ * and still be the one carrying the `codecheck.yml` that has to be fetched.
+ *
+ * Fetching is not publishing, though: `publicSelectedUrl()` is the third
+ * question, asked by anything that writes the chosen repository somewhere
+ * public. The register deposit used to ask `selectedUrl()` and commit the
+ * answer to a public pull request, so a repository marked "Keep private" was
+ * withheld from the article page, the issue table of contents, the generated
+ * `codecheck.yml` and the register issue — and then named in `register.csv`
+ * (issue #169).
  */
 
 namespace APP\plugins\generic\codecheck\classes\Submission;
@@ -47,22 +54,78 @@ class CodecheckRepositories
     }
 
     /**
-     * The address of the repository holding the `codecheck.yml`, hidden or not.
+     * The entry holding the `codecheck.yml`: the first one flagged that has an
+     * address.
+     *
+     * Every question below is asked of *this* entry rather than re-scanned with
+     * an extra clause. Scanning twice with different clauses is how a filtered
+     * pass can answer with a repository the unfiltered pass did not choose —
+     * `withOneMarked()` keeps the choice exclusive on the way in, but it guards
+     * one write path, and a blob with two flags would otherwise have the
+     * register deposit name a repository nobody checked.
+     *
+     * @return array<string, mixed>|null
      */
-    public static function selectedUrl(mixed $repositoryData): ?string
+    private static function selectedEntry(mixed $repositoryData): ?array
     {
         foreach (self::entries($repositoryData) as $entry) {
             if (empty($entry['containsCodecheckYaml'])) {
                 continue;
             }
 
-            $url = trim((string) ($entry['url'] ?? ''));
-            if ($url !== '') {
-                return $url;
+            if (trim((string) ($entry['url'] ?? '')) !== '') {
+                return $entry;
             }
         }
 
         return null;
+    }
+
+    /**
+     * The address of the repository holding the `codecheck.yml`, hidden or not.
+     */
+    public static function selectedUrl(mixed $repositoryData): ?string
+    {
+        $entry = self::selectedEntry($repositoryData);
+
+        return $entry === null ? null : trim((string) $entry['url']);
+    }
+
+    /**
+     * The address of the repository holding the `codecheck.yml` that a reader
+     * may also see.
+     *
+     * This is what belongs in anything public — the `Repository` column of the
+     * `register.csv` row above all, which is committed to a public pull request
+     * against the CODECHECK Register. A private repository cannot stand there,
+     * and no other repository may stand in for it either: the register row
+     * would then name something nobody checked. Publication is blocked instead
+     * (issue #169).
+     *
+     * Note this asks whether *the* chosen repository is public, and never which
+     * public repository could stand in for it.
+     */
+    public static function publicSelectedUrl(mixed $repositoryData): ?string
+    {
+        $entry = self::selectedEntry($repositoryData);
+
+        return $entry === null || !empty($entry['hidden']) ? null : trim((string) $entry['url']);
+    }
+
+    /**
+     * Whether the repository holding the `codecheck.yml` is one no reader may
+     * see — as opposed to there being none marked at all, which is a different
+     * complaint with a different remedy.
+     *
+     * Both the publication gate and the register deposit have to tell those two
+     * apart, so the distinction lives here rather than as a pair of calls at
+     * each of them (issue #169).
+     */
+    public static function selectedIsPrivate(mixed $repositoryData): bool
+    {
+        $entry = self::selectedEntry($repositoryData);
+
+        return $entry !== null && !empty($entry['hidden']);
     }
 
     /**

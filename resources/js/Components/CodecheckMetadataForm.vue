@@ -197,7 +197,12 @@
                 :placeholder="t('plugins.generic.codecheck.repository.placeholder')"
               />
               <label class="repo-hidden-label" :title="t('plugins.generic.codecheck.repository.markAsHidden.tooltip')">
-                <input type="checkbox" v-model="repo.hidden" class="repo-hidden-checkbox" />
+                <input
+                  type="checkbox"
+                  :checked="repo.hidden"
+                  class="repo-hidden-checkbox"
+                  @change="toggleRepositoryHidden(index, $event)"
+                />
                 {{ t('plugins.generic.codecheck.repository.markAsHidden') }}
                 <span class="repo-hidden-info">ℹ️</span>
               </label>
@@ -789,7 +794,60 @@ export default {
       });
     },
 
+    /**
+     * The message for the one state the two repository controls cannot both be
+     * in, built with the checkbox's own label so the refusal names the control
+     * the user just used rather than a second name for it (Issue #169).
+     */
+    hiddenCodecheckYamlConflictMessage() {
+      return this.t('plugins.generic.codecheck.repositories.hiddenCannotHoldCodecheckYaml', {
+        hideLabel: this.t('plugins.generic.codecheck.repository.markAsHidden'),
+      });
+    },
+
+    /**
+     * Hiding a repository and marking it as the one holding the `codecheck.yml`
+     * contradict each other: the second publishes the address in the CODECHECK
+     * Register, the first says it must not be published. Publication validation
+     * refuses that combination, but it does so at the publish dialog — a
+     * different screen, often a different person and weeks later — so the form
+     * refuses the transition that creates it instead (Issue #169).
+     *
+     * A refusal rather than a silent correction: clearing either flag on the
+     * user's behalf would undo a deliberate click without saying so, and which
+     * of the two they meant is not something the form can know.
+     */
+    toggleRepositoryHidden(repo_index, event) {
+      const repository = this.repositories[repo_index];
+      const shouldHide = event.target.checked;
+
+      if (shouldHide && repository.containsCodecheckYaml) {
+        // The click has already changed the checkbox; `hidden` did not change,
+        // so nothing would re-render it without putting the DOM back by hand.
+        event.target.checked = repository.hidden;
+        this.repositoryWarning = {
+          message: this.hiddenCodecheckYamlConflictMessage(),
+          isWarning: false,
+        };
+        return;
+      }
+
+      repository.hidden = shouldHide;
+
+      if (this.repositoryWarning.message === this.hiddenCodecheckYamlConflictMessage()) {
+        this.repositoryWarning = {message: null, isWarning: true};
+      }
+    },
+
     async selectRepositoryWithCodecheckYaml(repo_index) {
+      if (this.repositories[repo_index].hidden) {
+        this.repositoryWarning = {
+          message: this.hiddenCodecheckYamlConflictMessage(),
+          isWarning: false,
+        };
+        return;
+      }
+
       this.markRepositoryWithCodecheckYaml(repo_index);
       // The endpoint validates an address; sending the whole entry made it
       // answer "must be of the type string" on every click (Issue #154).
@@ -1477,6 +1535,14 @@ export default {
       };
       if (!this.metadata.summary) {
         this.showMessage(this.t('plugins.generic.codecheck.validation.summaryRequired'), 'error');
+        return false;
+      }
+      // `toggleRepositoryHidden()` and `selectRepositoryWithCodecheckYaml()`
+      // refuse to create this state, but a record saved before they did — or by
+      // anything else posting to the API — can still arrive in it, and saving it
+      // unchanged would carry it forward (#169).
+      if (this.repositories.some((repository) => repository.hidden && repository.containsCodecheckYaml)) {
+        this.showMessage(this.hiddenCodecheckYamlConflictMessage(), 'error');
         return false;
       }
       return true;

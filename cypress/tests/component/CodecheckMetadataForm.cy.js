@@ -815,6 +815,42 @@ describe('CodecheckMetadataForm Component', () => {
       cy.get('.repository-item').eq(1).find('.btn-radio').should('not.have.class', 'btn-radio__active');
     });
 
+    // Issue #169: hiding a repository and marking it as the one holding the
+    // codecheck.yml contradict each other — the mark publishes the address in
+    // the CODECHECK Register, the hide flag says it must not be published.
+    // Publication validation refuses the combination, but at the publish
+    // dialog; the form refuses to create it in the first place.
+    it('refuses to hide the repository that carries the codecheck.yml', () => {
+      // .click() rather than .check(), which asserts the box ends up checked.
+      cy.get('.repository-item').eq(1).find('.repo-hidden-checkbox').click();
+
+      cy.get('.repository-item').eq(1).find('.repo-hidden-checkbox').should('not.be.checked');
+      cy.get('.repository-item').eq(1).find('.btn-radio').should('have.class', 'btn-radio__active');
+      cy.get('.codecheck-repository-error').should('contain', 'cannot be the one containing');
+    });
+
+    it('refuses to mark a hidden repository as carrying the codecheck.yml', () => {
+      // Hiding an unmarked repository is allowed and is the setup for this.
+      cy.get('.repository-item').eq(0).find('.repo-hidden-checkbox').check();
+      cy.get('.repository-item').eq(0).find('.repo-hidden-checkbox').should('be.checked');
+
+      cy.get('.repository-item').eq(0).find('.btn-radio').click();
+
+      cy.get('.repository-item').eq(0).find('.btn-radio').should('not.have.class', 'btn-radio__active');
+      cy.get('.repository-item').eq(1).find('.btn-radio').should('have.class', 'btn-radio__active');
+      cy.get('.codecheck-repository-error').should('contain', 'cannot be the one containing');
+    });
+
+    it('clears the refusal once the repository is no longer hidden', () => {
+      cy.get('.repository-item').eq(0).find('.repo-hidden-checkbox').check();
+      cy.get('.repository-item').eq(0).find('.btn-radio').click();
+      cy.get('.codecheck-repository-error').should('exist');
+
+      cy.get('.repository-item').eq(0).find('.repo-hidden-checkbox').uncheck();
+
+      cy.get('.codecheck-repository-error').should('not.exist');
+    });
+
     it('offers no delete control on an author repository', () => {
       cy.get('.repository-item').eq(0).find('.pkpButton--close').should('not.exist');
       cy.get('.repository-item').eq(1).find('.pkpButton--close').should('exist');

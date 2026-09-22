@@ -226,13 +226,23 @@ claims, what publication validation fetches, and what is deposited in the public
 register (#154).
 
 `classes/Submission/CodecheckRepositories.php` owns the rules for reading that
-blob — `publicEntries()`, `publicUrls()`, `selectedUrl()`, `unusableUrls()`,
-`withOneMarked()` — and the article page, `buildYaml()`, the publication
-validator, the register deposit and the register issue all go through it.
-Note the deliberate asymmetry: `publicEntries()` withholds hidden repositories
-because it feeds readers, while `selectedUrl()` does not, because a repository
-may be private and still hold the `codecheck.yml` that has to be fetched. That
-asymmetry is itself a known problem for the register deposit — see issue #169.
+blob — `publicEntries()`, `publicUrls()`, `selectedUrl()`, `publicSelectedUrl()`,
+`selectedIsPrivate()`, `unusableUrls()`, `withOneMarked()` — and the article page, `buildYaml()`, the
+publication validator, the register deposit and the register issue all go
+through it. Note the deliberate asymmetry: `publicEntries()` withholds hidden
+repositories because it feeds readers, while `selectedUrl()` does not, because a
+repository may be private and still hold the `codecheck.yml` that has to be
+fetched. Fetching is not publishing, though: `publicSelectedUrl()` is the
+question anything writing the chosen repository somewhere public must ask. The
+register deposit asked `selectedUrl()` and committed the answer to a public pull
+request, so a private repository withheld everywhere else was named in
+`register.csv` (#169). It now asks `publicSelectedUrl()`, and
+`CodecheckPublicationValidator` blocks publication while the marked repository
+is private — the editor un-marks it or marks a public one. **Nothing is
+substituted**: another repository in the `Repository` column would name
+something nobody checked, which is wrong where no reader can see it. A
+submission with *no* repository marked at all is left to the extended check, as
+before.
 
 The pre-#154 index is **not** read back at runtime: the migration converts it, and
 accepting both shapes at once means a half-converted record resolves differently
@@ -266,11 +276,32 @@ flagged as containing `codecheck.yml`, re-verifies the `codecheck.yml` is fetcha
 
 ### Publication validation
 
-`CodecheckPublicationValidator` runs three checks when the submission is opted in:
-current status ∈ configured allow-list, generated YAML parses, and (only when
+**`Publication::validatePublish` is not on every publishing path.** The REST
+submissions controller calls it before publishing; `IssueGridHandler::publishIssue()`
+and the `PublishSubmissions` scheduled task call `Repo::publication()->publish()`
+directly, with no validation. So an editor publishing a whole issue is never shown
+a CODECHECK error, whatever the validator would have said. This is accepted rather
+than worked around: every gate here is therefore backed by a refusal in the thing
+it protects — the register deposit refuses a private selection on its own
+(`Publication::publish` fires on all paths), so nothing private is disclosed on
+the unvalidated routes; the editor simply gets a log line instead of a message.
+Anything new that *must* not happen belongs in the same shape: a check in the
+validator for the message, and a refusal at the point of action for the guarantee.
+
+`CodecheckPublicationValidator` runs four checks when the submission is opted in:
+the repository marked as holding the `codecheck.yml` is not hidden (#169 — it
+would be named in the public register), current status ∈ configured allow-list,
+generated YAML parses, and (only when
 `CODECHECK_PUBLICATION_VALIDATION_EXTENDED` is on) `codecheck.yml` in the selected
 repository is fetchable and its paper title matches the OJS title. Errors are merged into
 OJS's publish-validation error array and block publishing.
+
+**The list short-circuits — `validatePublication()` returns at the first check
+that fails — so the order is load-bearing.** `validateCodecheckStatus()` can
+return false while recording no error at all (no status row, extended validation
+off), which ends the run with an empty error array and lets the publish through.
+The #169 check is first for that reason: a gate placed after it would silently
+not run on a default install.
 
 ### Status system
 
@@ -405,7 +436,7 @@ README.md; keep `css/codecheck.css` and inline component styles consistent.
 ### Layout
 
 ```
-tests/                       PHPUnit (31 files, 239 tests)
+tests/                       PHPUnit (31 files, 262 tests)
   bootstrap.php              PKP_STRICT_MODE + BASE_SYS_DIR (OJS_ROOT or ../../../..)
   PKPTestCase.php            local stub extending PHPUnit TestCase
   FakeTranslator.php         minimal translator so __() works without booting OJS
@@ -434,8 +465,8 @@ cypress/
                                this first in every component spec
   support/e2e.js               cy.ojsLogin(), cy.getCsrfToken(), swallow uncaught exceptions
   support/component-index.html
-  tests/component/*.cy.js      5 specs, 61 tests
-  tests/e2e/*.cy.js            12 specs, 55 tests
+  tests/component/*.cy.js      5 specs, 66 tests
+  tests/e2e/*.cy.js            11 specs, 62 tests
                                yaml-generation, article-sidebar-setting,
                                issue-toc-setting, issue-toc-badge,
                                private-repository, publication-validation,
@@ -449,7 +480,7 @@ dev/
 ### Component tests (the reliable suite)
 
 `npm run test:component` — **passes locally with no OJS, no database, no build step**
-(61/61, ~20 s). Cypress mounts the `.vue` sources directly through Vite and stubs the
+(66/66, ~20 s). Cypress mounts the `.vue` sources directly through Vite and stubs the
 API with `cy.intercept`.
 
 Covered: metadata form load/render, manifest files add/remove/comment, repository list
@@ -477,7 +508,7 @@ columns), and the wizard DOM-scraping classes.
 
 ### E2E tests
 
-`make test-e2e` — 55 tests across 11 specs, driving a real OJS instance.
+`make test-e2e` — 62 tests across 11 specs, driving a real OJS instance.
 
 **Several specs share submission fixtures, and each must restore what it
 changes.** Submissions 8 and 9 are written by `publication-validation`,
@@ -525,7 +556,9 @@ loads before concluding anything about the tests.
   really does publish it, putting the journal back as it was. It calls
   `ensurePublished()` first rather than trusting the state it finds, and
   switches the register deposit off so `Publication::publish` does not reach
-  for GitHub
+  for GitHub. One more test marks submission 8's repository private and
+  restores it afterwards: that is the #169 gate, and it has to run against the
+  database because the check reads the stored blob
 - `status-handler.cy.js` — the status API end to end: pending until recorded,
   newest record wins, append-only history newest first, rejected payloads, and
   the automatic update that picks a status from whether a codechecker is
@@ -558,7 +591,7 @@ Still uncovered: opt-in, the submission wizard, and register deposit.
 
 ### PHPUnit tests
 
-`make test-php` — 239 tests, green, none skipped.
+`make test-php` — 262 tests, green, none skipped.
 
 PHPUnit needs an OJS installation: the tests load OJS classes and the runner uses the
 PHPUnit shipped in `lib/pkp`. Both `runTests.sh` and `bootstrap.php` honour `OJS_ROOT`,
@@ -1023,6 +1056,12 @@ description, so the next reader does not re-derive the same objection.
   the entry, never a position in the list. Read the blob through
   `CodecheckRepositories`, not by hand — five readers used to decide it separately
   and drifted apart (#154)
+- A repository cannot be both hidden and the one holding the `codecheck.yml`.
+  `CodecheckMetadataForm.vue` refuses whichever of the two controls would create
+  that state (and `validateForm()` refuses to save a record that arrived in it),
+  `CodecheckPublicationValidator` blocks publication, and the register deposit
+  refuses. The form is where the mistake is made, so it is where the message
+  belongs; the other two are backstops (#169)
 - Repository URLs are not validated by the submission wizard (#170), so anything
   rendering one must check the scheme itself; `filter_var(…, FILTER_VALIDATE_URL)`
   is not enough, it accepts `javascript://…`

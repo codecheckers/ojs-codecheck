@@ -69,12 +69,21 @@ class CodecheckRegisterDepositService
             return $this->fail('No Certificate Identifier has been reserved for submission #' . $submissionId . '.');
         }
 
-        // Resolve which repository the codechecker marked as containing codecheck.yml.
-        $repositoryUrl = $this->resolveSelectedRepositoryUrl($codecheckMetadata);
+        // Which repository the codechecker marked as containing codecheck.yml —
+        // asked of the repositories a reader may see, because this URL goes into
+        // the `Repository` column of a row committed to a public pull request.
+        // Publication validation refuses a private selection outright; it
+        // refuses a missing one only when extended validation is on, so the
+        // second branch below is an ordinary state, not a bypass (issue #169).
+        $repositoryData = $codecheckMetadata['repository'] ?? null;
+        $repositoryUrl = CodecheckRepositories::publicSelectedUrl($repositoryData);
         if ($repositoryUrl === null) {
             return $this->fail(
-                'No repository containing the codecheck.yml file was selected for submission #' . $submissionId . '. ' .
-                'The codechecker must check "Contains codecheck.yml file" for one of the listed repositories before publication.'
+                CodecheckRepositories::selectedIsPrivate($repositoryData)
+                    ? 'The repository containing the codecheck.yml file for submission #' . $submissionId
+                        . ' is hidden from the public record, so it cannot be named in the public register.'
+                    : 'No repository containing the codecheck.yml file was selected for submission #' . $submissionId . '. '
+                        . 'The codechecker must check "Contains codecheck.yml file" for one of the listed repositories before publication.'
             );
         }
 
@@ -127,14 +136,6 @@ class CodecheckRegisterDepositService
             'prUrl' => $pullRequest['html_url'],
             'row' => $row,
         ];
-    }
-
-    /**
-     * The URL of the repository flagged as holding the `codecheck.yml`.
-     */
-    private function resolveSelectedRepositoryUrl(array $codecheckMetadata): ?string
-    {
-        return CodecheckRepositories::selectedUrl($codecheckMetadata['repository'] ?? null);
     }
 
     /**

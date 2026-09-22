@@ -104,6 +104,23 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   selected repository and checks the paper title against the submission (Issue #143)
 - A `register.csv` row is deposited to the CODECHECK Register as a pull request when a
   CODECHECK-opted-in article is published. Failures never block publication (Issue #10)
+- A repository marked "Hide from public record" can no longer be published in the
+  register by accident: publication is blocked while the repository holding the
+  `codecheck.yml` is a hidden one, and the editor is told to clear the mark or to mark
+  a repository that is not hidden instead. Nothing is substituted for it — a register
+  row naming a repository nobody checked would be wrong in a way no reader could see.
+  The deposit refuses the same case on its own, which also covers publishing routes
+  that do not run publication validation, such as publishing a whole issue (Issue #169)
+- Publication validation no longer goes silently missing on a journal that has never
+  saved the CODECHECK settings form. Reading the unset "statuses accepted for
+  publication" setting raised a `TypeError` that OJS swallows, which disabled every
+  CODECHECK publication check on that journal. An unset list now means the same thing
+  it means on the settings form — no status accepted — so an opted-in submission is
+  blocked until the journal chooses which statuses may publish
+- The CODECHECK metadata form refuses to put a repository into that state at all: the
+  repository holding the `codecheck.yml` cannot be hidden from the public record, and
+  hiding one cannot be combined with marking it. The message appears next to the
+  controls that caused it rather than at the publish dialog weeks later (Issue #169)
 
 #### Published articles
 

@@ -36,6 +36,16 @@ const FULL_REPRODUCTION = 'plugins.generic.codecheck.status.completed.fullReprod
 /** The distinctive part of the plugin's status message. */
 const STATUS_REFUSAL = 'not allowed for publication by the journal';
 
+/** The distinctive part of the hidden-repository message (issue #169). */
+const PRIVATE_REPOSITORY_REFUSAL = 'name that repository in the public CODECHECK Register';
+
+/**
+ * Submission 8's repository list as the test found it, so the `after()` hook can
+ * put it back even when an assertion aborts the test that changed it.
+ */
+let originalRepositories = null;
+let originalMetadata = null;
+
 function api(method, path, body) {
   return cy.getCsrfToken().then((csrfToken) =>
     cy.request({
@@ -96,6 +106,40 @@ function attemptPublish() {
   );
 }
 
+/** The stored CODECHECK metadata of a submission, as the workflow form reads it. */
+const getMetadata = (submissionId) =>
+  api('GET', `api/v1/codecheck/metadata?submissionId=${submissionId}`).then((response) => {
+    expect(response.status, 'the metadata has to be readable').to.eq(200);
+    return response.body.codecheck;
+  });
+
+/**
+ * Rewrites the repository list of a submission, leaving the rest of the record
+ * as it was found.
+ *
+ * `POST metadata` replaces the whole row, so every other field has to be sent
+ * back with it — and the read and write shapes do not use the same key names
+ * for two of them, which is why they are mapped one by one rather than spread.
+ */
+function setRepositories(submissionId, codecheck, repositories) {
+  return api('POST', `api/v1/codecheck/metadata?submissionId=${submissionId}`, {
+    version: codecheck.version,
+    publication_type: codecheck.publicationType,
+    manifest: codecheck.manifest,
+    repository: { repositories },
+    source: codecheck.source,
+    codecheckers: codecheck.codecheckers,
+    certificate: codecheck.certificate,
+    issue: codecheck.issue,
+    check_time: codecheck.check_time,
+    summary: codecheck.summary,
+    report: codecheck.report,
+    additional_content: codecheck.additionalContent,
+  }).then((response) => {
+    expect(response.status, 'the repository list has to be writable').to.eq(200);
+  });
+}
+
 /** Ticks exactly the given CODECHECK statuses in the publication settings. */
 function allowOnlyStatuses(statusKeys) {
   cy.visit(`/index.php/${JOURNAL}/management/settings/website`);
@@ -133,6 +177,16 @@ describe('CODECHECK publication validation', () => {
     ensurePublished(PUBLISHABLE_SUBMISSION);
 
     cy.setCodecheckSetting('codecheckRegisterDepositEnabled', true);
+
+    // Submission 8 is shared with other specs, and the repository test cannot
+    // restore it itself: a failing assertion aborts the chain before any
+    // command queued after it. Restoring here is also idempotent, which
+    // restoring inside the test is not — a second run would otherwise read the
+    // mutated blob back and "restore" that.
+    if (originalRepositories) {
+      setRepositories(SUBMISSION, originalMetadata, originalRepositories);
+    }
+
     // The dataset ships with no status accepted for publication.
     allowOnlyStatuses([]);
     setStatus(ASSIGNED_CODECHECKER);
@@ -210,6 +264,47 @@ describe('CODECHECK publication validation', () => {
     });
 
     cy.setCodecheckSetting('codecheckRegisterDepositEnabled', true);
+  });
+
+  it('refuses to publish while the repository holding the codecheck.yml is private', () => {
+    // Issue #169. Publishing writes that repository into the `Repository`
+    // column of the register.csv row, which is committed to a public pull
+    // request — so a repository the editor marked "Keep private" would be
+    // published by the act of publishing the article, having been withheld
+    // from the article page, the issue TOC, the codecheck.yml and the
+    // register issue. The editor is told before publication rather than
+    // finding out from the public register.
+    allowOnlyStatuses([FULL_REPRODUCTION]);
+    setStatus(FULL_REPRODUCTION);
+
+    getMetadata(SUBMISSION).then((codecheck) => {
+      const original = codecheck.repository.repositories;
+      expect(original, 'the submission has a repository to mark').to.have.length.of.at.least(1);
+
+      // Hand the record to after(), which restores it whatever happens here.
+      originalMetadata = codecheck;
+      originalRepositories = original;
+
+      const marked = (hidden) =>
+        original.map((entry, index) =>
+          index === 0
+            ? { ...entry, hidden, containsCodecheckYaml: true }
+            : { ...entry, containsCodecheckYaml: false }
+        );
+
+      setRepositories(SUBMISSION, codecheck, marked(true));
+      attemptPublish().then((errors) => {
+        expect(errors).to.contain(PRIVATE_REPOSITORY_REFUSAL);
+      });
+
+      // The same record with that repository public passes the check, so the
+      // refusal above is about the "Keep private" mark and nothing else.
+      setRepositories(SUBMISSION, codecheck, marked(false));
+      attemptPublish().then((errors) => {
+        expect(errors).to.not.contain(PRIVATE_REPOSITORY_REFUSAL);
+        expect(errors).to.contain('must be assigned to an issue');
+      });
+    });
   });
 
   it('does not stop OJS from reporting its own reasons', () => {

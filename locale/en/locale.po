@@ -506,6 +506,9 @@ msgstr "Invalid CODECHECK repository: {$repositoryError}"
 msgid "plugins.generic.codecheck.publication.validation.invalidPaperTitle"
 msgstr "The paper title from this submission is not matching the paper title in the provided repository."
 
+msgid "plugins.generic.codecheck.publication.validation.selectedRepositoryIsPrivate"
+msgstr "The repository marked as containing the 'codecheck.yml' file is also marked \"{$hideLabel}\", but publishing this submission would name that repository in the public CODECHECK Register. In the CODECHECK metadata form, either clear \"{$hideLabel}\" for that repository, or mark a repository that is not hidden as the one containing the 'codecheck.yml' file, before this submission can be published."
+
 msgid "plugins.generic.codecheck.publication.validation.noRepositoryWithCodecheckYmlSelected"
 msgstr "Couldn't validate metadata from repository, as for no repository it was selected, that it contains the 'codecheck.yml' file with the CODECHECK metadata."
 
@@ -924,11 +927,14 @@ msgstr "e.g. figures/figure2.png"
 msgid "plugins.generic.codecheck.manifest.hidden"
 msgstr "Hidden"
 
+msgid "plugins.generic.codecheck.repositories.hiddenCannotHoldCodecheckYaml"
+msgstr "A repository marked \"{$hideLabel}\" cannot be the one containing the 'codecheck.yml' file: that repository is named in the public CODECHECK Register when the submission is published. Clear \"{$hideLabel}\" for this repository, or choose a different repository as the one containing the 'codecheck.yml' file."
+
 msgid "plugins.generic.codecheck.repository.markAsHidden"
 msgstr "Hide from public record"
 
 msgid "plugins.generic.codecheck.repository.markAsHidden.tooltip"
-msgstr "This repository will not be shown on the article landing page, not included in the codecheck.yml file, and not posted to the GitHub register issue."
+msgstr "This repository will not be shown on the article landing page, not included in the codecheck.yml file, and not posted to the GitHub register issue. If it is also the repository containing the codecheck.yml file, the submission cannot be published: that repository is named in the public CODECHECK Register."
 
 msgid "plugins.generic.codecheck.settings.github.registerRepository.missingCsvWarning"
 msgstr "Warning: no register.csv was found at the root of {$organization}/{$repository}. Register deposits will fail until this file exists there."

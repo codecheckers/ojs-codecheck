@@ -46,6 +46,110 @@ class CodecheckRepositoriesUnitTest extends PKPTestCase
         );
     }
 
+    /**
+     * Issue #169 — the other half of that asymmetry: fetching a private
+     * repository is fine, naming it in the public register is not.
+     */
+    public function testPublicSelectedUrlWithholdsAHiddenRepository()
+    {
+        $this->assertNull(CodecheckRepositories::publicSelectedUrl(self::BLOB));
+    }
+
+    public function testPublicSelectedUrlFindsAMarkedPublicRepository()
+    {
+        $this->assertSame('https://github.com/public/two', CodecheckRepositories::publicSelectedUrl([
+            'repositories' => [
+                ['url' => 'https://github.com/public/one'],
+                ['url' => 'https://github.com/private/one', 'hidden' => true],
+                ['url' => '  https://github.com/public/two  ', 'containsCodecheckYaml' => true],
+            ],
+        ]));
+    }
+
+    /**
+     * No substitution: an unmarked public repository is not an answer to
+     * "which repository holds the codecheck.yml", so it does not become one
+     * when the marked repository turns out to be private.
+     */
+    public function testPublicSelectedUrlDoesNotFallBackToAnUnmarkedRepository()
+    {
+        $this->assertNull(CodecheckRepositories::publicSelectedUrl([
+            'repositories' => [
+                ['url' => 'https://github.com/public/one'],
+                ['url' => 'https://github.com/private/one', 'hidden' => true, 'containsCodecheckYaml' => true],
+            ],
+        ]));
+    }
+
+    public function testPublicSelectedUrlIsNullWhenNothingIsMarked()
+    {
+        $this->assertNull(CodecheckRepositories::publicSelectedUrl([
+            'repositories' => [['url' => 'https://github.com/public/one']],
+        ]));
+    }
+
+    public function testPublicSelectedUrlSkipsAMarkedEntryWithoutAnAddress()
+    {
+        $this->assertNull(CodecheckRepositories::publicSelectedUrl([
+            'repositories' => [['url' => '   ', 'containsCodecheckYaml' => true]],
+        ]));
+    }
+
+    /**
+     * "Marked but private" and "nothing marked" are different complaints with
+     * different remedies, and both the publication gate and the register
+     * deposit have to tell them apart.
+     */
+    public function testSelectedIsPrivateOnlyWhenTheMarkedRepositoryIsHidden()
+    {
+        $this->assertTrue(CodecheckRepositories::selectedIsPrivate(self::BLOB));
+
+        $this->assertFalse(CodecheckRepositories::selectedIsPrivate([
+            'repositories' => [['url' => 'https://github.com/public/one', 'containsCodecheckYaml' => true]],
+        ]));
+
+        $this->assertFalse(CodecheckRepositories::selectedIsPrivate([
+            'repositories' => [['url' => 'https://github.com/public/one']],
+        ]));
+    }
+
+    /**
+     * The ordinary CODECHECK shape — a private repository alongside the public
+     * one that was checked — is not a private *selection*, and must publish.
+     */
+    public function testSelectedIsPrivateIgnoresAHiddenRepositoryThatIsNotTheMarkedOne()
+    {
+        $blob = [
+            'repositories' => [
+                ['url' => 'https://github.com/private/one', 'hidden' => true],
+                ['url' => 'https://github.com/public/two', 'containsCodecheckYaml' => true],
+            ],
+        ];
+
+        $this->assertFalse(CodecheckRepositories::selectedIsPrivate($blob));
+        $this->assertSame('https://github.com/public/two', CodecheckRepositories::publicSelectedUrl($blob));
+    }
+
+    /**
+     * Only `withOneMarked()` keeps the choice exclusive, and it guards one
+     * write path. A blob that arrived with two flags must not have the public
+     * question answered with a repository the fetch question did not choose:
+     * that is the silent substitution the whole change exists to prevent.
+     */
+    public function testTwoMarkedEntriesNeverSubstituteOneForTheOther()
+    {
+        $blob = [
+            'repositories' => [
+                ['url' => 'https://github.com/private/one', 'hidden' => true, 'containsCodecheckYaml' => true],
+                ['url' => 'https://github.com/public/two', 'containsCodecheckYaml' => true],
+            ],
+        ];
+
+        $this->assertSame('https://github.com/private/one', CodecheckRepositories::selectedUrl($blob));
+        $this->assertNull(CodecheckRepositories::publicSelectedUrl($blob));
+        $this->assertTrue(CodecheckRepositories::selectedIsPrivate($blob));
+    }
+
     public function testSelectedUrlIsNullWhenNothingIsMarked()
     {
         $this->assertNull(CodecheckRepositories::selectedUrl([

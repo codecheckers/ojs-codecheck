@@ -126,6 +126,7 @@
   "plugins.generic.codecheck.repositories.doesntContainCodecheckYamlError",
   "plugins.generic.codecheck.repositories.emptyState",
   "plugins.generic.codecheck.repositories.error",
+  "plugins.generic.codecheck.repositories.hiddenCannotHoldCodecheckYaml",
   "plugins.generic.codecheck.repositories.infoTextLinkToAllowedRepositories",
   "plugins.generic.codecheck.repositories.infoTextMoreInformation",
   "plugins.generic.codecheck.repositories.infoTextNote",
