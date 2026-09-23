@@ -215,6 +215,9 @@ class CodecheckWizardManager {
   constructor() {
     this.textareas = {};
     this.saveInProgress = false;
+    // Until the stored entries have been read back, this wizard does not know
+    // what the author's list is and must not claim to (#170).
+    this.authorEntriesLoaded = false;
   }
 
   async loadSavedData() {
@@ -266,6 +269,13 @@ class CodecheckWizardManager {
         authorProvidedLines(codecheck.repository?.repositories, 'url')
       );
       this.setTextareaValue('manifestFiles', authorProvidedLines(codecheck.manifest, 'file'));
+
+      // Only now may a save send these fields. Until the record has been read
+      // back, an empty textarea is "not loaded", and sending it would be read
+      // as "the author removed everything" — merge() deletes what the author
+      // does not send. An expired session answering 401, or any other failed
+      // read, would otherwise delete the record through the load path (#170).
+      this.authorEntriesLoaded = true;
     } catch (error) {
       console.error('CODECHECK: Failed to load the author\'s CODECHECK entries', error);
     }
@@ -338,6 +348,11 @@ class CodecheckWizardManager {
    * read as "the author removed all of them".
    */
   async saveAuthorEntries(submissionId) {
+    if (!this.authorEntriesLoaded) {
+      console.warn('CODECHECK: not saving the author entries — they were never loaded');
+      return;
+    }
+
     const body = {};
 
     ['repositories', 'manifestFiles'].forEach(field => {

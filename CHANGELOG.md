@@ -135,6 +135,10 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   reach the server at all. The wizard autosaves only the fields of its own form
   sections, and these two are added by a template hook, so nothing typed in them was
   ever sent (Issue #170)
+- The submission wizard no longer saves the author's repositories and expected outputs
+  before it has read the stored ones back. A failed read — an expired session, say —
+  left both fields empty, and an empty field means "the author removed everything", so
+  saving would have deleted every entry they had provided (Issue #170)
 - A repository address the author enters is checked against the same rule the editorial
   form applies. An address that cannot be a repository link is refused, with the reason
   shown under the field, rather than stored — it used to be accepted silently and then
