@@ -5,7 +5,7 @@ namespace APP\plugins\generic\codecheck\classes\Exceptions;
 class ApiCreateException extends \Exception
 {
     public function __construct(
-        string $message = "Error while creating data with the API",
+        string $message = 'Error while creating data with the API',
         int $code = 0,
         ?\Throwable $previous = null
     ) {

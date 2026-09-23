@@ -7,6 +7,7 @@
  * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * @class FakeTranslator
+ *
  * @brief Minimal translator so `__()` works in unit tests.
  *
  * `__()` resolves through Laravel's container, which OJS populates when the

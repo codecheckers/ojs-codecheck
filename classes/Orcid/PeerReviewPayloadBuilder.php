@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file classes/Orcid/PeerReviewPayloadBuilder.php
  *
@@ -6,6 +7,7 @@
  * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * @class PeerReviewPayloadBuilder
+ *
  * @brief Builds the JSON payload for an ORCID peer-review item.
  */
 
@@ -35,7 +37,7 @@ class PeerReviewPayloadBuilder
         // getDoi(), not pub-id::doi: the 3.4 upgrade removed those settings rows,
         // so on OJS 3.5 the old key is always null and no deposited item ever
         // linked back to the article (#175).
-        $articleDoi     = $publication?->getDoi();
+        $articleDoi = $publication?->getDoi();
 
         $issn = !empty($journal['issn']) ? trim($journal['issn']) : '';
         if (!empty($issn)) {
@@ -45,14 +47,14 @@ class PeerReviewPayloadBuilder
         }
 
         $payload = [
-            'reviewer-role'          => 'reviewer',
-            'review-type'            => 'review',
+            'reviewer-role' => 'reviewer',
+            'review-type' => 'review',
             'review-completion-date' => $this->buildDate($checkDate),
-            'review-group-id'        => $groupId,
-            'review-identifiers'     => $this->buildReviewIdentifiers($certificateDoi),
+            'review-group-id' => $groupId,
+            'review-identifiers' => $this->buildReviewIdentifiers($certificateDoi),
             'convening-organization' => $this->buildConveningOrganization($journal),
-            'subject-type'           => 'journal-article',
-            'subject-name'           => ['title' => ['value' => $submissionTitle]],
+            'subject-type' => 'journal-article',
+            'subject-name' => ['title' => ['value' => $submissionTitle]],
         ];
 
         if ($certificateDoi) {
@@ -76,9 +78,9 @@ class PeerReviewPayloadBuilder
     private function buildDate(\DateTime $date): array
     {
         return [
-            'year'  => ['value' => $date->format('Y')],
+            'year' => ['value' => $date->format('Y')],
             'month' => ['value' => $date->format('m')],
-            'day'   => ['value' => $date->format('d')],
+            'day' => ['value' => $date->format('d')],
         ];
     }
 
@@ -87,8 +89,8 @@ class PeerReviewPayloadBuilder
         if (!$certificateDoi) {
             return [
                 'external-id' => [[
-                    'external-id-type'         => 'uri',
-                    'external-id-value'        => 'codecheck:unknown',
+                    'external-id-type' => 'uri',
+                    'external-id-value' => 'codecheck:unknown',
                     'external-id-relationship' => 'self',
                 ]]
             ];
@@ -98,9 +100,9 @@ class PeerReviewPayloadBuilder
 
         return [
             'external-id' => [[
-                'external-id-type'         => $isDoi ? 'doi' : 'source-work-id',
-                'external-id-value'        => ltrim($certificateDoi, '/'),
-                'external-id-url'          => ['value' => $isDoi
+                'external-id-type' => $isDoi ? 'doi' : 'source-work-id',
+                'external-id-value' => ltrim($certificateDoi, '/'),
+                'external-id-url' => ['value' => $isDoi
                     ? 'https://doi.org/' . ltrim($certificateDoi, '/')
                     : 'https://codecheck.org.uk/register/venues/journals/' . ltrim($certificateDoi, '/')
                 ],
@@ -112,9 +114,9 @@ class PeerReviewPayloadBuilder
     private function buildExternalId(string $type, string $value): array
     {
         return [
-            'external-id-type'         => $type,
-            'external-id-value'        => $value,
-            'external-id-url'          => ['value' => 'https://doi.org/' . ltrim($value, '/')],
+            'external-id-type' => $type,
+            'external-id-value' => $value,
+            'external-id-url' => ['value' => 'https://doi.org/' . ltrim($value, '/')],
             'external-id-relationship' => 'self',
         ];
     }
@@ -136,17 +138,21 @@ class PeerReviewPayloadBuilder
         $country = !empty($journal['publisherCountry']) ? trim($journal['publisherCountry']) : '';
 
         $missing = [];
-        if (empty($publisherName)) $missing[] = __('plugins.generic.codecheck.orcid.payload.missingPublisherName');
-        if (empty($country))       $missing[] = __('plugins.generic.codecheck.orcid.payload.missingCountry');
+        if (empty($publisherName)) {
+            $missing[] = __('plugins.generic.codecheck.orcid.payload.missingPublisherName');
+        }
+        if (empty($country)) {
+            $missing[] = __('plugins.generic.codecheck.orcid.payload.missingCountry');
+        }
 
         if (!empty($missing)) {
-        throw new \InvalidArgumentException(
+            throw new \InvalidArgumentException(
                 __('plugins.generic.codecheck.orcid.payload.missingMetadata', ['fields' => implode(', ', $missing)])
             );
         }
 
         $org = [
-            'name'    => $publisherName,
+            'name' => $publisherName,
             'address' => [
                 'country' => $country,
             ],
@@ -160,7 +166,7 @@ class PeerReviewPayloadBuilder
         if (!empty($journal['ringgoldId'])) {
             $org['disambiguated-organization'] = [
                 'disambiguated-organization-identifier' => $journal['ringgoldId'],
-                'disambiguation-source'                 => 'RINGGOLD',
+                'disambiguation-source' => 'RINGGOLD',
             ];
         }
 

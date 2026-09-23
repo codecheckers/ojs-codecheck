@@ -5,15 +5,13 @@ namespace APP\plugins\generic\codecheck\classes\Workflow;
 use APP\core\Application;
 use APP\core\Request;
 use APP\facades\Repo;
-use Illuminate\Support\Facades\DB;
-use APP\plugins\generic\codecheck\CodecheckPlugin;
-use APP\plugins\generic\codecheck\classes\Constants;
-use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
-use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
+use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Exceptions\GithubUrlParseException;
-use \Github\Client;
+use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckRepositories;
+use APP\plugins\generic\codecheck\CodecheckPlugin;
+use Github\Client;
 
 /**
  * Assembles the register.csv row for a published CODECHECK and deposits it
@@ -43,7 +41,6 @@ class CodecheckRegisterDepositService
      * Entry point: build the register row for a submission and open a PR
      * against the configured register repository.
      *
-     * @param int $submissionId
      * @return array{success: bool, prUrl?: string, row?: array, error?: string}
      */
     public function depositForSubmission(int $submissionId): array
@@ -52,7 +49,7 @@ class CodecheckRegisterDepositService
 
         $submission = Repo::submission()->get($submissionId);
         if (!$submission) {
-            return $this->fail("Submission #$submissionId not found.");
+            return $this->fail("Submission #{$submissionId} not found.");
         }
 
         $metadataResult = $this->codecheckMetadataHandler->getMetadata($this->request, $submissionId);
@@ -187,7 +184,7 @@ class CodecheckRegisterDepositService
             return "gitlab::{$matches[1]}";
         }
 
-        throw new GithubUrlParseException("Repository URL \"$repository\" does not match any register-supported format.");
+        throw new GithubUrlParseException("Repository URL \"{$repository}\" does not match any register-supported format.");
     }
 
     /**

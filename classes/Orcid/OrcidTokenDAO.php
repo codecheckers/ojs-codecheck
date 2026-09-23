@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file classes/Orcid/OrcidTokenDAO.php
  *
@@ -6,6 +7,7 @@
  * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * @class OrcidTokenDAO
+ *
  * @brief Database access for the codecheck_orcid_tokens table.
  */
 
@@ -66,24 +68,24 @@ class OrcidTokenDAO
                 ->where('submission_id', $submissionId)
                 ->where('orcid_id', $orcidId)
                 ->update([
-                    'access_token'     => $accessToken,
-                    'refresh_token'    => $refreshToken,
+                    'access_token' => $accessToken,
+                    'refresh_token' => $refreshToken,
                     'token_expires_at' => $tokenExpiresAt,
-                    'deposit_status'   => Constants::ORCID_DEPOSIT_STATUS_PENDING,
-                    'put_code'         => null,
-                    'error_message'    => null,
-                    'updated_at'       => now(),
+                    'deposit_status' => Constants::ORCID_DEPOSIT_STATUS_PENDING,
+                    'put_code' => null,
+                    'error_message' => null,
+                    'updated_at' => now(),
                 ]);
         } else {
             DB::table('codecheck_orcid_tokens')->insert([
-                'submission_id'    => $submissionId,
-                'orcid_id'         => $orcidId,
-                'access_token'     => $accessToken,
-                'refresh_token'    => $refreshToken,
+                'submission_id' => $submissionId,
+                'orcid_id' => $orcidId,
+                'access_token' => $accessToken,
+                'refresh_token' => $refreshToken,
                 'token_expires_at' => $tokenExpiresAt,
-                'deposit_status'   => Constants::ORCID_DEPOSIT_STATUS_PENDING,
-                'created_at'       => now(),
-                'updated_at'       => now(),
+                'deposit_status' => Constants::ORCID_DEPOSIT_STATUS_PENDING,
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
         }
     }
@@ -97,10 +99,10 @@ class OrcidTokenDAO
             ->where('id', $id)
             ->update([
                 'deposit_status' => Constants::ORCID_DEPOSIT_STATUS_SUCCESS,
-                'put_code'       => $putCode,
-                'error_message'  => null,
-                'deposited_at'   => now(),
-                'updated_at'     => now(),
+                'put_code' => $putCode,
+                'error_message' => null,
+                'deposited_at' => now(),
+                'updated_at' => now(),
             ]);
     }
 
@@ -113,8 +115,8 @@ class OrcidTokenDAO
             ->where('id', $id)
             ->update([
                 'deposit_status' => Constants::ORCID_DEPOSIT_STATUS_FAILED,
-                'error_message'  => $errorMessage,
-                'updated_at'     => now(),
+                'error_message' => $errorMessage,
+                'updated_at' => now(),
             ]);
     }
 }

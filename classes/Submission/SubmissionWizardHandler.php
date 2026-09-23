@@ -24,15 +24,21 @@ class SubmissionWizardHandler
     {
         $request = Application::get()->getRequest();
 
-        if ($request->getRequestedPage() !== 'submission') return false;
-        if ($request->getRequestedOp() === 'saved') return false;
+        if ($request->getRequestedPage() !== 'submission') {
+            return false;
+        }
+        if ($request->getRequestedOp() === 'saved') {
+            return false;
+        }
 
         $submission = $request
             ->getRouter()
             ->getHandler()
             ->getAuthorizedContextObject(Application::ASSOC_TYPE_SUBMISSION);
 
-        if (!$submission || !$submission->getData('submissionProgress')) return false;
+        if (!$submission || !$submission->getData('submissionProgress')) {
+            return false;
+        }
 
         /** @var TemplateManager $templateMgr */
         $templateMgr = $params[0];

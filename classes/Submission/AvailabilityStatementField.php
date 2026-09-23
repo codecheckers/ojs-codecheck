@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file classes/Submission/AvailabilityStatementField.php
  *
@@ -6,6 +7,7 @@
  * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * @class AvailabilityStatementField
+ *
  * @brief Puts the data and software availability statement on the publication
  *  metadata form, so an editor can correct it after submission.
  */
@@ -38,6 +40,7 @@ class AvailabilityStatementField
      * see it, not whether it can be recorded.
      *
      * @param FormComponent $form the form being configured
+     *
      * @return bool false, so OJS and other plugins still get the hook
      */
     public function addToMetadataForm(string $hookName, FormComponent $form): bool

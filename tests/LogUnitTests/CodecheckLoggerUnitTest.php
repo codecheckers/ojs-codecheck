@@ -68,10 +68,10 @@ class CodecheckLoggerUnitTest extends PKPTestCase
     public static function logLevelProvider(): array
     {
         return [
-            'debug'   => ['debug', '[codecheck][debug]'],
-            'info'    => ['info', '[codecheck][info]'],
+            'debug' => ['debug', '[codecheck][debug]'],
+            'info' => ['info', '[codecheck][info]'],
             'warning' => ['warning', '[codecheck][warning]'],
-            'error'   => ['error', '[codecheck][error]'],
+            'error' => ['error', '[codecheck][error]'],
         ];
     }
 }

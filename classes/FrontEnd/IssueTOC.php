@@ -1,11 +1,12 @@
 <?php
+
 namespace APP\plugins\generic\codecheck\classes\FrontEnd;
 
 use APP\core\Application;
-use APP\template\TemplateManager;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionDAO;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
+use APP\template\TemplateManager;
 
 class IssueTOC
 {
@@ -50,10 +51,10 @@ class IssueTOC
                 $codecheckData->getCertificate(),
                 $codecheckData->getDoiLink()
             ),
-            'badgeUrl'        => $badge->getUrl(),
-            'badgeText'       => $badge->getText(),
-            'badgeTextColor'  => $badge->getTextColor(),
-            'badgeStyle'      => $badge->getStyle(),
+            'badgeUrl' => $badge->getUrl(),
+            'badgeText' => $badge->getText(),
+            'badgeTextColor' => $badge->getTextColor(),
+            'badgeStyle' => $badge->getStyle(),
         ]);
 
         $badgeHtml = $badgeTemplateManager->fetch($this->plugin->getTemplateResource('frontend/objects/codecheck_badge.tpl'));

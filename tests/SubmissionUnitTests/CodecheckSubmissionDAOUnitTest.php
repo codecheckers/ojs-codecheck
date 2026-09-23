@@ -2,11 +2,11 @@
 
 namespace APP\plugins\generic\codecheck\tests;
 
-use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionDAO;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmission;
+use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionDAO;
+use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PKP\tests\PKPTestCase;
-use Illuminate\Support\Facades\DB;
 
 class CodecheckSubmissionDAOUnitTest extends PKPTestCase
 {
@@ -24,18 +24,18 @@ class CodecheckSubmissionDAOUnitTest extends PKPTestCase
             ->with('codecheck_metadata')
             ->once()
             ->andReturnSelf();
-        
+
         DB::shouldReceive('where')
             ->with('submission_id', 123)
             ->once()
             ->andReturnSelf();
-        
+
         DB::shouldReceive('first')
             ->once()
             ->andReturn(null);
 
         $result = $this->dao->getBySubmissionId(123);
-        
+
         $this->assertNull($result);
     }
 
@@ -64,18 +64,18 @@ class CodecheckSubmissionDAOUnitTest extends PKPTestCase
             ->with('codecheck_metadata')
             ->once()
             ->andReturnSelf();
-        
+
         DB::shouldReceive('where')
             ->with('submission_id', 123)
             ->once()
             ->andReturnSelf();
-        
+
         DB::shouldReceive('first')
             ->once()
             ->andReturn($mockData);
 
         $result = $this->dao->getBySubmissionId(123);
-        
+
         $this->assertInstanceOf(CodecheckSubmission::class, $result);
         $this->assertSame(123, $result->getSubmissionId());
         $this->assertSame(
@@ -90,12 +90,12 @@ class CodecheckSubmissionDAOUnitTest extends PKPTestCase
             ->with('codecheck_metadata')
             ->twice()
             ->andReturnSelf();
-        
+
         DB::shouldReceive('where')
             ->with('submission_id', 456)
             ->twice()
             ->andReturnSelf();
-        
+
         DB::shouldReceive('first')
             ->once()
             ->andReturn(null);
@@ -136,12 +136,12 @@ class CodecheckSubmissionDAOUnitTest extends PKPTestCase
             ->with('codecheck_metadata')
             ->times(3)
             ->andReturnSelf();
-        
+
         DB::shouldReceive('where')
             ->with('submission_id', 789)
             ->times(3)
             ->andReturnSelf();
-        
+
         DB::shouldReceive('first')
             ->once()
             ->andReturn($existingData);
@@ -180,10 +180,10 @@ class CodecheckSubmissionDAOUnitTest extends PKPTestCase
     {
         return [
             'legacy comma-separated string' => ['https://github.com/a/b, https://github.com/c/d'],
-            'plain url'                     => ['https://github.com/a/b'],
+            'plain url' => ['https://github.com/a/b'],
             'json without repositories key' => ['{"other": 0}'],
-            'json repositories not a list'  => ['{"repositories": "https://github.com/a/b"}'],
-            'invalid json'                  => ['{not json'],
+            'json repositories not a list' => ['{"repositories": "https://github.com/a/b"}'],
+            'invalid json' => ['{not json'],
         ];
     }
 

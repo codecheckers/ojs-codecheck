@@ -1,4 +1,5 @@
 <?php
+
 /**
  * A `php -S` router that tells OJS the request arrived over HTTPS.
  *

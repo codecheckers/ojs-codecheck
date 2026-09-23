@@ -2,12 +2,12 @@
 
 namespace APP\plugins\generic\codecheck\tests;
 
-use APP\plugins\generic\codecheck\CodecheckPlugin;
 use APP\plugins\generic\codecheck\classes\Constants;
+use APP\plugins\generic\codecheck\CodecheckPlugin;
 use APP\plugins\generic\codecheck\controllers\page\CodecheckPageHandler;
+use PKP\components\forms\FormComponent;
 use PKP\plugins\GenericPlugin;
 use PKP\tests\PKPTestCase;
-use PKP\components\forms\FormComponent;
 
 class CodecheckPluginUnitTest extends PKPTestCase
 {
@@ -146,9 +146,9 @@ class CodecheckPluginUnitTest extends PKPTestCase
     {
         $mockSchema = (object)['properties' => (object)[]];
         $args = [&$mockSchema];
-        
+
         $result = $this->plugin->addOptInToSchema('test_hook', $args);
-        
+
         $this->assertFalse($result);
         $this->assertObjectHasProperty('codecheckOptIn', $mockSchema->properties);
         $this->assertSame('boolean', $mockSchema->properties->codecheckOptIn->type);
@@ -159,9 +159,9 @@ class CodecheckPluginUnitTest extends PKPTestCase
     {
         $mockSchema = (object)['properties' => (object)[]];
         $args = [&$mockSchema];
-        
+
         $this->plugin->addOptInToSchema('test_hook', $args);
-        
+
         $this->assertObjectHasProperty('retrieveReserveCertificateIdentifier', $mockSchema->properties);
         $this->assertSame('string', $mockSchema->properties->retrieveReserveCertificateIdentifier->type);
         $this->assertTrue($mockSchema->properties->retrieveReserveCertificateIdentifier->apiSummary);
@@ -171,12 +171,12 @@ class CodecheckPluginUnitTest extends PKPTestCase
     {
         $mockForm = $this->createMock(FormComponent::class);
         $mockForm->id = 'someOtherForm';
-        
+
         $mockForm->expects($this->never())
             ->method('addField');
-        
+
         $result = $this->plugin->addOptInCheckbox('test_hook', $mockForm);
-        
+
         $this->assertFalse($result);
     }
 
@@ -185,11 +185,11 @@ class CodecheckPluginUnitTest extends PKPTestCase
         $mockSubmission = $this->createMock(\APP\submission\Submission::class);
         $mockSubmission->expects($this->never())
             ->method('setData');
-        
+
         $params = [$mockSubmission, null, []];
-        
+
         $result = $this->plugin->saveOptIn('test_hook', $params);
-        
+
         $this->assertFalse($result);
     }
 
@@ -199,11 +199,11 @@ class CodecheckPluginUnitTest extends PKPTestCase
         $mockSubmission->expects($this->once())
             ->method('setData')
             ->with('codecheckOptIn', true);
-        
+
         $params = [$mockSubmission, null, ['codecheckOptIn' => true]];
-        
+
         $result = $this->plugin->saveOptIn('test_hook', $params);
-        
+
         $this->assertFalse($result);
     }
 

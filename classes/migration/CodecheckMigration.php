@@ -7,6 +7,7 @@
  * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * @class CodecheckMigration
+ *
  * @brief Abstract base class for all CODECHECK migrations.
  *        Wraps execution with logging so every migration is traceable.
  *        Subclasses implement runUp() instead of up().

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file classes/FrontEnd/ArticleAvailability.php
  *
@@ -6,6 +7,7 @@
  * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * @class ArticleAvailability
+ *
  * @brief Renders the data and software availability statement on the article landing page.
  */
 
@@ -17,10 +19,10 @@ use APP\plugins\generic\codecheck\CodecheckPlugin;
 
 class ArticleAvailability
 {
-    /** @var CodecheckPlugin */
+    /**  */
     public CodecheckPlugin $plugin;
 
-    /** @param CodecheckPlugin $plugin */
+    /**  */
     public function __construct(CodecheckPlugin &$plugin)
     {
         $this->plugin = &$plugin;
@@ -65,10 +67,10 @@ class ArticleAvailability
         }
 
         $templateMgr->assign([
-            'codecheckAvailabilityHeading'   => $heading,
+            'codecheckAvailabilityHeading' => $heading,
             'codecheckAvailabilityStatement' => $statement,
             // Lets a theme tell the author's words from our stand-in message.
-            'codecheckAvailabilityProvided'  => trim((string) $publication->getData('dataAvailabilityStatement')) !== '',
+            'codecheckAvailabilityProvided' => trim((string) $publication->getData('dataAvailabilityStatement')) !== '',
         ]);
 
         $output .= $templateMgr->fetch(

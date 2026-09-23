@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file classes/Submission/CodecheckAuthorMetadata.php
  *
@@ -6,6 +7,7 @@
  * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * @class CodecheckAuthorMetadata
+ *
  * @brief Writes what the author entered in the submission wizard into the
  *        CODECHECK record the codechecker later edits.
  *

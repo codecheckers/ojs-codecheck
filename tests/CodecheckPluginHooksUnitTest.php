@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file tests/CodecheckPluginHooksUnitTest.php
  *
@@ -6,6 +7,7 @@
  * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * @class CodecheckPluginHooksUnitTest
+ *
  * @brief Every hook the plugin registers points at a method that exists.
  *
  * `Hook::add()` takes a callable, so a callback naming a method that is not

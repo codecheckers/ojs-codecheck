@@ -80,7 +80,6 @@ class IssueTOCUnitTest extends PKPTestCase
     /**
      * Runs the hook and returns what it appended to the output.
      *
-     * @param mixed $article what the template offers as the current article
      */
     private function runHook(IssueTOC $issueTOC, FakeTemplateManager $templateMgr, mixed &$returned = null): string
     {
@@ -162,7 +161,9 @@ class FakeTemplateManager
 {
     public int $articleLookups = 0;
 
-    public function __construct(private mixed $article) {}
+    public function __construct(private mixed $article)
+    {
+    }
 
     public function getTemplateVars(string $name): mixed
     {

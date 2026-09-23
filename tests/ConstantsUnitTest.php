@@ -3,8 +3,8 @@
 namespace APP\plugins\generic\codecheck\tests;
 
 use APP\plugins\generic\codecheck\classes\Constants;
-use PKP\tests\PKPTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PKP\tests\PKPTestCase;
 
 /**
  * The config version list and the specification URL built from it are mirrored

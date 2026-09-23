@@ -43,9 +43,9 @@ class CodecheckSubmissionAccessUnitTest extends PKPTestCase
     {
         return [
             'journal manager' => [Role::ROLE_ID_MANAGER],
-            'site admin'      => [Role::ROLE_ID_SITE_ADMIN],
-            'section editor'  => [Role::ROLE_ID_SUB_EDITOR],
-            'assistant'       => [Role::ROLE_ID_ASSISTANT],
+            'site admin' => [Role::ROLE_ID_SITE_ADMIN],
+            'section editor' => [Role::ROLE_ID_SUB_EDITOR],
+            'assistant' => [Role::ROLE_ID_ASSISTANT],
         ];
     }
 
@@ -63,8 +63,8 @@ class CodecheckSubmissionAccessUnitTest extends PKPTestCase
     {
         return [
             'reviewer' => [Role::ROLE_ID_REVIEWER],
-            'author'   => [Role::ROLE_ID_AUTHOR],
-            'reader'   => [Role::ROLE_ID_READER],
+            'author' => [Role::ROLE_ID_AUTHOR],
+            'reader' => [Role::ROLE_ID_READER],
         ];
     }
 

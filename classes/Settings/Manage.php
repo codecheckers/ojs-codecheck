@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file classes/Settings/Manage.php
  *
@@ -6,6 +7,7 @@
  * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * @class Manage
+ *
  * @brief Settings show and saving class for the CODECHECK plugin.
  */
 
@@ -17,10 +19,10 @@ use PKP\core\JSONMessage;
 
 class Manage
 {
-    /** @var CodecheckPlugin */
+    /**  */
     public CodecheckPlugin $plugin;
 
-    /** @param CodecheckPlugin $plugin */
+    /**  */
     public function __construct(CodecheckPlugin &$plugin)
     {
         $this->plugin = &$plugin;
@@ -30,8 +32,6 @@ class Manage
      * Load a form when the `settings` button is clicked and
      * save the form when the user saves it.
      *
-     * @param array $args
-     * @param Request $request
      */
     public function execute(array $args, Request $request): JSONMessage
     {

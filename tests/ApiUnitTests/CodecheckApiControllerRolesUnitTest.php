@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file tests/ApiUnitTests/CodecheckApiControllerRolesUnitTest.php
  *
@@ -6,6 +7,7 @@
  * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * @class CodecheckApiControllerRolesUnitTest
+ *
  * @brief The role sets the API controller installs.
  *
  * Replaces the half of CodecheckRoleArrayUnitTest that was about policy rather

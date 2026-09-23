@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file classes/Settings/Actions.php
  *
@@ -6,6 +7,7 @@
  * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * @class Actions
+ *
  * @brief Settings actions class for the CODECHECK plugin.
  */
 
@@ -18,10 +20,10 @@ use PKP\linkAction\request\AjaxModal;
 
 class Actions
 {
-    /** @var CodecheckPlugin */
+    /**  */
     public CodecheckPlugin $plugin;
 
-    /** @param CodecheckPlugin $plugin */
+    /**  */
     public function __construct(CodecheckPlugin &$plugin)
     {
         $this->plugin = &$plugin;
@@ -30,14 +32,13 @@ class Actions
     /**
      * Add a settings action to the plugin's entry in the plugins list.
      *
-     * @param Request $request
-     * @param array $actionArgs
-     * @param array $parentActions
      */
     public function execute(Request $request, array $actionArgs, array $parentActions): array
     {
         // Only add the settings action when the plugin is enabled
-        if (!$this->plugin->getEnabled()) return $parentActions;
+        if (!$this->plugin->getEnabled()) {
+            return $parentActions;
+        }
 
         // Create a LinkAction that will make a request to the
         // plugin's `manage` method with the `settings` verb.

@@ -2,16 +2,14 @@
 
 namespace APP\plugins\generic\codecheck\tests;
 
-use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifier;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterIssue;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckIssueLabels;
-use APP\plugins\generic\codecheck\classes\Exceptions\ApiFetchException;
-use APP\plugins\generic\codecheck\classes\Exceptions\ApiCreateException;
-use APP\plugins\generic\codecheck\classes\Exceptions\NoMatchingIssuesFoundException;
-use APP\plugins\generic\codecheck\classes\DataStructures\UniqueArray;
-use PKP\tests\PKPTestCase;
 use APP\plugins\generic\codecheck\classes\Constants;
+use APP\plugins\generic\codecheck\classes\DataStructures\UniqueArray;
+use APP\plugins\generic\codecheck\classes\Exceptions\NoMatchingIssuesFoundException;
+use PKP\tests\PKPTestCase;
 
 /**
  * @file APP/plugins/generic/codecheck/tests/unittests/CodecheckGithubRegisterApiClientUnitTest.php
@@ -29,10 +27,10 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
     private string $githubRegisterRepository;
     private string $journalName;
     private array $updateInformation;
-    
+
     protected function setUp(): void
-	{
-		parent::setUp();
+    {
+        parent::setUp();
         $this->submissionId = 0;
         $this->githubPAT = 'testtoken123';
         $this->githubRegisterOrganization = 'codecheckers';
@@ -44,7 +42,7 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
             Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE,
             Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY,
         ];
-	}
+    }
 
     public function testGithubRegisterClientGetEmptyLabels()
     {
@@ -183,8 +181,8 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
                 $this->githubRegisterOrganization,
                 $this->githubRegisterRepository,
                 [
-                    'title'  => 'Daniel Nüst et al. | 2025-001',
-                    'body'   => $expectedBody,
+                    'title' => 'Daniel Nüst et al. | 2025-001',
+                    'body' => $expectedBody,
                     'labels' => ['id assigned', 'institution', 'check-nl']
                 ]
             )

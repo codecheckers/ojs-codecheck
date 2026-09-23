@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file api/v1/CodecheckApiController.php
  *
@@ -6,6 +7,7 @@
  * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * @class CodecheckApiController
+ *
  * @brief The CODECHECK API.
  *
  * Every CODECHECK API route is served here. It replaced a hand-rolled router
@@ -36,25 +38,25 @@
 namespace APP\plugins\generic\codecheck\api\v1;
 
 use APP\core\Application;
-use APP\plugins\generic\codecheck\CodecheckPlugin;
-use APP\plugins\generic\codecheck\classes\Constants;
-use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
-use APP\plugins\generic\codecheck\classes\Workflow\CodecheckStatusHandler;
-use APP\plugins\generic\codecheck\classes\Orcid\OrcidDepositService;
-use APP\plugins\generic\codecheck\classes\Orcid\OrcidTokenDAO;
-use Illuminate\Support\Facades\DB;
-use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionAccess;
-use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifier;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifierList;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterIssue;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckIssueLabels;
+use APP\plugins\generic\codecheck\classes\Constants;
+use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\classes\Orcid\OrcidApiClient;
-use APP\plugins\generic\codecheck\classes\Workflow\CodecheckYamlValidator;
-use Illuminate\Support\Facades\Schema;
+use APP\plugins\generic\codecheck\classes\Orcid\OrcidDepositService;
+use APP\plugins\generic\codecheck\classes\Orcid\OrcidTokenDAO;
+use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionAccess;
+use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckPublicationValidator;
+use APP\plugins\generic\codecheck\classes\Workflow\CodecheckStatusHandler;
+use APP\plugins\generic\codecheck\classes\Workflow\CodecheckYamlValidator;
+use APP\plugins\generic\codecheck\CodecheckPlugin;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 use PKP\core\PKPBaseController;
 use PKP\core\PKPRequest;
 use PKP\security\authorization\ContextAccessPolicy;
@@ -260,7 +262,7 @@ class CodecheckApiController extends PKPBaseController
         if (empty($statusHistory)) {
             return response()->json([
                 'success' => false,
-                'error' => "Currently there is no recorded CODECHECK status history for this submission ID in the OJS database.",
+                'error' => 'Currently there is no recorded CODECHECK status history for this submission ID in the OJS database.',
                 'statusHistory' => null,
             ], 400);
         }
@@ -353,7 +355,7 @@ class CodecheckApiController extends PKPBaseController
             }
         }
 
-        $tokenDAO  = new OrcidTokenDAO();
+        $tokenDAO = new OrcidTokenDAO();
         $tokenRows = $tokenDAO->getAllBySubmission($submissionId);
 
         $tokensByOrcid = [];
@@ -367,28 +369,28 @@ class CodecheckApiController extends PKPBaseController
 
         if (!empty($codecheckerNames)) {
             foreach ($codecheckerNames as $cc) {
-                $name     = is_array($cc) ? ($cc['name'] ?? '') : (string) $cc;
-                $orcidId  = is_array($cc) ? ($cc['orcid'] ?? $cc['ORCID'] ?? null) : null;
+                $name = is_array($cc) ? ($cc['name'] ?? '') : (string) $cc;
+                $orcidId = is_array($cc) ? ($cc['orcid'] ?? $cc['ORCID'] ?? null) : null;
                 $tokenRow = $orcidId ? ($tokensByOrcid[$orcidId] ?? null) : null;
 
                 $codecheckers[] = [
-                    'name'          => $name,
-                    'orcidId'       => $tokenRow->orcid_id ?? null,
+                    'name' => $name,
+                    'orcidId' => $tokenRow->orcid_id ?? null,
                     'depositStatus' => $tokenRow->deposit_status ?? null,
-                    'putCode'       => $tokenRow->put_code ?? null,
-                    'depositedAt'   => $tokenRow->deposited_at ?? null,
-                    'errorMessage'  => $tokenRow->error_message ?? null,
+                    'putCode' => $tokenRow->put_code ?? null,
+                    'depositedAt' => $tokenRow->deposited_at ?? null,
+                    'errorMessage' => $tokenRow->error_message ?? null,
                 ];
             }
         } else {
             foreach ($tokenRows as $row) {
                 $codecheckers[] = [
-                    'name'          => $row->orcid_id ?? 'Unknown',
-                    'orcidId'       => $row->orcid_id,
+                    'name' => $row->orcid_id ?? 'Unknown',
+                    'orcidId' => $row->orcid_id,
                     'depositStatus' => $row->deposit_status,
-                    'putCode'       => $row->put_code,
-                    'depositedAt'   => $row->deposited_at,
-                    'errorMessage'  => $row->error_message,
+                    'putCode' => $row->put_code,
+                    'depositedAt' => $row->deposited_at,
+                    'errorMessage' => $row->error_message,
                 ];
             }
         }
@@ -402,9 +404,9 @@ class CodecheckApiController extends PKPBaseController
         }
 
         return response()->json([
-            'success'            => true,
-            'submissionId'       => $submissionId,
-            'codecheckers'       => $codecheckers,
+            'success' => true,
+            'submissionId' => $submissionId,
+            'codecheckers' => $codecheckers,
             'journalConfigError' => $journalConfigError,
         ], 200);
     }
@@ -486,8 +488,8 @@ class CodecheckApiController extends PKPBaseController
         // endpoint used to ignore it either way and deposit for every authorised
         // codechecker, so the two buttons did the same thing and a re-deposit
         // re-PUT someone else's item (#175).
-        $postParams  = json_decode(file_get_contents('php://input'), true) ?? [];
-        $requested   = $postParams['orcidId'] ?? null;
+        $postParams = json_decode(file_get_contents('php://input'), true) ?? [];
+        $requested = $postParams['orcidId'] ?? null;
         $onlyOrcidId = is_string($requested) && $requested !== '' ? $requested : null;
 
         if (!$isEditor) {
@@ -499,7 +501,7 @@ class CodecheckApiController extends PKPBaseController
             if (!CodecheckSubmissionAccess::isAssignedReviewer($user, $submissionId)) {
                 return response()->json([
                     'success' => false,
-                    'error'   => 'Only an editor, or a reviewer assigned to this submission, may deposit to ORCID.',
+                    'error' => 'Only an editor, or a reviewer assigned to this submission, may deposit to ORCID.',
                 ], 403);
             }
 
@@ -510,7 +512,7 @@ class CodecheckApiController extends PKPBaseController
             if (empty($onlyOrcidId)) {
                 return response()->json([
                     'success' => false,
-                    'error'   => 'No ORCID iD is recorded for your account, so there is nothing to deposit to.',
+                    'error' => 'No ORCID iD is recorded for your account, so there is nothing to deposit to.',
                 ], 400);
             }
         }
@@ -614,8 +616,7 @@ class CodecheckApiController extends PKPBaseController
 
     /**
      * Gets the Issue Labels of the CODECHECK API
-     * 
-     * @return void
+     *
      */
     public function getCodecheckIssueLabels(): \Illuminate\Http\JsonResponse
     {
@@ -626,26 +627,26 @@ class CodecheckApiController extends PKPBaseController
             $issueLabelsLastUpdated = strtotime($this->getIssueLabelsLastUpdated());
         } catch (\Throwable $e) {
             return response()->json([
-                'success'   => false,
-                'error'     => $e->getMessage(),
+                'success' => false,
+                'error' => $e->getMessage(),
             ], $e->getCode());
         }
         $now = strtotime(date('Y-m-d H:i:s'));
         $timeDifferenceInHours = round(($now - $issueLabelsLastUpdated) / 3600);
 
-        if($timeDifferenceInHours > 6) {
+        if ($timeDifferenceInHours > 6) {
             $dbLabelsOutdated = true;
         }
 
         $codecheckIssueLabels = CodecheckIssueLabels::fromDB();
 
-        if($dbLabelsOutdated) {
+        if ($dbLabelsOutdated) {
             try {
-                $codecheckIssueLabels = CodecheckIssueLabels::fromApi("https://codecheck.org.uk/register/venues/index.json");
+                $codecheckIssueLabels = CodecheckIssueLabels::fromApi('https://codecheck.org.uk/register/venues/index.json');
             } catch (\Throwable $e) {
                 return response()->json([
-                    'success'   => false,
-                    'error'     => $e->getMessage(),
+                    'success' => false,
+                    'error' => $e->getMessage(),
                 ], $e->getCode());
             }
         }
@@ -674,7 +675,7 @@ class CodecheckApiController extends PKPBaseController
 
         return response()->json([
             'success' => true,
-            'url' => "github.com/$githubRegisterRepositoryOrganization/$githubRegisterRepositoryRepository",
+            'url' => "github.com/{$githubRegisterRepositoryOrganization}/{$githubRegisterRepositoryRepository}",
         ], 200);
     }
 
@@ -688,7 +689,7 @@ class CodecheckApiController extends PKPBaseController
     public function testOrcidSetup(): \Illuminate\Http\JsonResponse
     {
         $request = Application::get()->getRequest();
-        $context   = $request->getContext();
+        $context = $request->getContext();
         $contextId = $context->getId();
 
         try {
@@ -697,21 +698,21 @@ class CodecheckApiController extends PKPBaseController
         } catch (\InvalidArgumentException $e) {
             return response()->json([
                 'success' => false,
-                'step'    => 'metadata',
-                'error'   => $e->getMessage(),
+                'step' => 'metadata',
+                'error' => $e->getMessage(),
             ], 400);
         }
 
-        $clientId     = $this->plugin->getSetting($contextId, Constants::ORCID_CLIENT_ID);
+        $clientId = $this->plugin->getSetting($contextId, Constants::ORCID_CLIENT_ID);
         $clientSecret = $this->plugin->getSetting($contextId, Constants::ORCID_CLIENT_SECRET);
-        $apiType      = $this->plugin->getSetting($contextId, Constants::ORCID_API_TYPE)
+        $apiType = $this->plugin->getSetting($contextId, Constants::ORCID_API_TYPE)
                         ?? Constants::ORCID_API_TYPE_SANDBOX;
 
         if (!$clientId || !$clientSecret) {
             return response()->json([
                 'success' => false,
-                'step'    => 'credentials',
-                'error'   => __('plugins.generic.codecheck.orcid.test.error.noCredentials'),
+                'step' => 'credentials',
+                'error' => __('plugins.generic.codecheck.orcid.test.error.noCredentials'),
             ], 400);
         }
 
@@ -721,8 +722,8 @@ class CodecheckApiController extends PKPBaseController
         } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
-                'step'    => 'credentials',
-                'error'   => __('plugins.generic.codecheck.orcid.test.error.credentialsFailed') . ' ' . $e->getMessage(),
+                'step' => 'credentials',
+                'error' => __('plugins.generic.codecheck.orcid.test.error.credentialsFailed') . ' ' . $e->getMessage(),
             ], 400);
         }
 
@@ -734,28 +735,27 @@ class CodecheckApiController extends PKPBaseController
 
     /**
      * This reserves a new Identifier
-     * 
-     * @return void
+     *
      */
     public function reserveIdentifier(): \Illuminate\Http\JsonResponse
     {
         $request = Application::get()->getRequest();
         $postParams = json_decode(file_get_contents('php://input'), true);
-        
+
         $parameterValidationError = IdentifierParameterValidator::forReserveIdentifier($postParams);
 
         if ($parameterValidationError !== null) {
             return response()->json([
-                'success'   => false,
-                'error'     => $parameterValidationError,
+                'success' => false,
+                'error' => $parameterValidationError,
             ], 400);
         }
 
-        $issueLabelArray = $postParams["issue"]["labelsSelected"];
-        $submissionData = $postParams["submission"];
-        $articleTitle = $submissionData["title"];
-        $repositories = $postParams["repositories"];
-        $codecheckers = $postParams["codecheckers"];
+        $issueLabelArray = $postParams['issue']['labelsSelected'];
+        $submissionData = $postParams['submission'];
+        $articleTitle = $submissionData['title'];
+        $repositories = $postParams['repositories'];
+        $codecheckers = $postParams['codecheckers'];
         $reserveIdentifierMode = $postParams['reserveIdentifierMode'];
 
         $context = $request->getContext();
@@ -768,7 +768,7 @@ class CodecheckApiController extends PKPBaseController
         if (!in_array($reserveIdentifierMode, ['api', 'newIssueUrl', 'linkExistingIdentifier'])) {
             return response()->json([
                 'success' => false,
-                'error'   => "An unexpected mode for the reservation of the Certificate Identifier was given: " . $reserveIdentifierMode,
+                'error' => 'An unexpected mode for the reservation of the Certificate Identifier was given: ' . $reserveIdentifierMode,
             ], 400);
         }
 
@@ -783,8 +783,8 @@ class CodecheckApiController extends PKPBaseController
 
         // CODECHECK Register with list of all identifiers in range
         try {
-            if($reserveIdentifierMode == 'linkExistingIdentifier') {
-                $identifierStr = $postParams["identifier"];
+            if ($reserveIdentifierMode == 'linkExistingIdentifier') {
+                $identifierStr = $postParams['identifier'];
                 $certificateIdentifierList = CertificateIdentifierList::fromApiWithIdentifier(
                     $codecheckGithubRegisterApiClient,
                     CertificateIdentifier::fromStr($identifierStr)
@@ -803,7 +803,7 @@ class CodecheckApiController extends PKPBaseController
             // create the CODECHECK Issue Labels with the selected issue labels
             $codecheckIssueLabels = new CodecheckIssueLabels($issueLabelArray);
 
-            if($reserveIdentifierMode == 'api') {
+            if ($reserveIdentifierMode == 'api') {
                 $issue = $this->reserveIdentifierWithApi(
                     $codecheckGithubRegisterApiClient,
                     $newIdentifier,
@@ -815,7 +815,7 @@ class CodecheckApiController extends PKPBaseController
                 );
                 $issueGithubUrl = $issue['html_url'];
                 $issueNumber = $issue['number'];
-            } else if($reserveIdentifierMode == 'newIssueUrl') {
+            } elseif ($reserveIdentifierMode == 'newIssueUrl') {
                 $issueGithubUrl = $this->reserveIdentifierWithNewIssueUrl(
                     $githubRegisterOrganization,
                     $githubRegisterRepository,
@@ -830,8 +830,8 @@ class CodecheckApiController extends PKPBaseController
             }
         } catch (\Throwable $e) {
             return response()->json([
-                'success'   => false,
-                'error'     => $e->getMessage(),
+                'success' => false,
+                'error' => $e->getMessage(),
             ], $e->getCode());
         }
 
@@ -852,18 +852,18 @@ class CodecheckApiController extends PKPBaseController
 
         if ($parameterValidationError !== null) {
             return response()->json([
-                'success'   => false,
-                'error'     => $parameterValidationError,
+                'success' => false,
+                'error' => $parameterValidationError,
             ], 400);
         }
 
         $issue = $postParams['issue'];
-        $issueLabelArray = $postParams["issue"]["labelsSelected"];
-        $submissionData = $postParams["submission"];
-        $articleTitle = $submissionData["title"];
-        $identifierStr = $postParams["identifier"];
-        $repositories = $postParams["repositories"];
-        $codecheckers = $postParams["codecheckers"];
+        $issueLabelArray = $postParams['issue']['labelsSelected'];
+        $submissionData = $postParams['submission'];
+        $articleTitle = $submissionData['title'];
+        $identifierStr = $postParams['identifier'];
+        $repositories = $postParams['repositories'];
+        $codecheckers = $postParams['codecheckers'];
 
         $context = $request->getContext();
         $githubPersonalAccessToken = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN);
@@ -913,16 +913,15 @@ class CodecheckApiController extends PKPBaseController
 
     /**
      * This function validates if the contents of the CODECHECK metadata form are equal to the contents in the provided repositories `codecheck.yml` file
-     * 
-     * @return void
+     *
      */
     public function validateMetadataFromRepository(): \Illuminate\Http\JsonResponse
     {
         $request = Application::get()->getRequest();
         $postParams = json_decode(file_get_contents('php://input'), true);
-        $repository = $postParams["repository"];
+        $repository = $postParams['repository'];
 
-        if(!is_string($repository)) {
+        if (!is_string($repository)) {
             return response()->json([
                 'success' => false,
                 'error' => 'The provided Repository must be of the type string.'
@@ -933,7 +932,7 @@ class CodecheckApiController extends PKPBaseController
         $publicationValidator->validateMetadataFromRepository($repository);
         $errors = $publicationValidator->getErrors();
 
-        if(count($errors) > 0) {
+        if (count($errors) > 0) {
             return response()->json([
                 'success' => false,
                 'error' => implode(' ,', $errors),
@@ -946,14 +945,13 @@ class CodecheckApiController extends PKPBaseController
 
     /**
      * This function validates the structure of a Yaml file
-     * 
-     * @return void
+     *
      */
     public function validateYamlStructure(): \Illuminate\Http\JsonResponse
     {
         $request = Application::get()->getRequest();
         $postParams = json_decode(file_get_contents('php://input'), true);
-        $yamlContent = $postParams["yaml"];
+        $yamlContent = $postParams['yaml'];
 
         $yamlValidator = new CodecheckYamlValidator($yamlContent);
 
@@ -1025,8 +1023,7 @@ class CodecheckApiController extends PKPBaseController
 
     /**
      * This reserves a new Identifier with the GitHub New Issue Url
-     * 
-     * @return string
+     *
      */
     private function reserveIdentifierWithNewIssueUrl(
         string $githubRegisterOrganization,
@@ -1037,8 +1034,7 @@ class CodecheckApiController extends PKPBaseController
         string $authorString,
         array $codecheckers,
         array $repositories
-    ): string
-    {
+    ): string {
         // Not a parameter and not a property: this method was extracted for #50
         // without it, so every call fatalled on "Call to a member function
         // getContext() on null". `reserveIdentifier()` gets it the same way.
@@ -1065,8 +1061,7 @@ class CodecheckApiController extends PKPBaseController
 
     /**
      * This reserves a new Identifier with the GitHub API
-     * 
-     * @return array
+     *
      */
     private function reserveIdentifierWithApi(
         CodecheckGithubRegisterApiClient $codecheckGithubRegisterApiClient,
@@ -1076,8 +1071,7 @@ class CodecheckApiController extends PKPBaseController
         string $authorString,
         array $codecheckers,
         array $repositories
-    ): array
-    {
+    ): array {
         $updateInformation = $this->plugin->getSetting($request->getContext()->getId(), Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_FIELDS);
         // Add the new issue to the CODECHECK GtiHub Register
         $issue = $codecheckGithubRegisterApiClient->addIssue(
@@ -1097,22 +1091,22 @@ class CodecheckApiController extends PKPBaseController
         string $identifierStr,
         CertificateIdentifierList $certificateIdentifierList
     ) {
-        $title =  "a | " . $identifierStr;
+        $title = 'a | ' . $identifierStr;
         $rawIdentifier = CertificateIdentifierList::getRawIdentifier($title);
-        if($rawIdentifier == null) {
+        if ($rawIdentifier == null) {
             return response()->json([
-                'success'   => false,
+                'success' => false,
                 'identifier' => $identifierStr,
-                'error'     => "The identifier: " . $identifierStr . " isn't matching the required format (YYYY-NNN or YYYY-NNN/YYYY-NNN).",
+                'error' => 'The identifier: ' . $identifierStr . " isn't matching the required format (YYYY-NNN or YYYY-NNN/YYYY-NNN).",
             ], 400);
         }
         $identifier = CertificateIdentifier::fromStr($rawIdentifier);
         $issue = $certificateIdentifierList->getIssueInformationByIdentifier($identifier);
-        if(!is_array($issue) || !is_string($issue['issueUrl']) || !is_int($issue['issueNumber'])) {
+        if (!is_array($issue) || !is_string($issue['issueUrl']) || !is_int($issue['issueNumber'])) {
             return response()->json([
-                'success'   => false,
+                'success' => false,
                 'identifier' => $identifierStr,
-                'error'     => "The certificate with the Identifier: ". $identifierStr . " doesn't exist in the GitHub Register.",
+                'error' => 'The certificate with the Identifier: ' . $identifierStr . " doesn't exist in the GitHub Register.",
             ], 404);
         }
 
@@ -1126,7 +1120,7 @@ class CodecheckApiController extends PKPBaseController
 
     /**
      * This function gets when the Codecheck Issue Labels where last updated
-     * 
+     *
      * @return string The Date when the issues where last updated
      */
     private function getIssueLabelsLastUpdated(): string
@@ -1141,13 +1135,13 @@ class CodecheckApiController extends PKPBaseController
             ->select(['labels_last_updated'])
             ->first();
 
-        CodecheckLogger::debug("Labels: " . print_r(DB::table('codecheck_issue_labels')->select(['*'])->get()->toArray(), true));
+        CodecheckLogger::debug('Labels: ' . print_r(DB::table('codecheck_issue_labels')->select(['*'])->get()->toArray(), true));
 
         // If Labels weren't updated yet, set last updated to earliest date possible, so they will definitely get updated
         $labelsLastUpdated = $labelsLastUpdated->labels_last_updated ?? date('Y-m-d H:i:s', 0);
 
-        CodecheckLogger::debug("CODECHECK API: Codecheck Issues Last Updated: " . json_encode($labelsLastUpdated));
-        
+        CodecheckLogger::debug('CODECHECK API: Codecheck Issues Last Updated: ' . json_encode($labelsLastUpdated));
+
         return $labelsLastUpdated;
     }
 }

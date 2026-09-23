@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Write the local development credentials from .env into plugin_settings.
  *
@@ -39,10 +40,10 @@ $contextId = (int) $contextId;
 
 /** The plugin settings this script owns, and where each one comes from. */
 const ORCID_SETTINGS = [
-    'orcidClientId'     => 'ORCID_CLIENT_ID',
+    'orcidClientId' => 'ORCID_CLIENT_ID',
     'orcidClientSecret' => 'ORCID_CLIENT_SECRET',
-    'orcidApiType'      => 'ORCID_API_TYPE',
-    'orcidCity'         => 'ORCID_CITY',
+    'orcidApiType' => 'ORCID_API_TYPE',
+    'orcidCity' => 'ORCID_CITY',
 ];
 
 try {
@@ -73,11 +74,11 @@ $write = $pdo->prepare(
 
 $set = function (string $setting, string $value) use ($write, $contextId): void {
     $write->execute([
-        ':plugin'  => 'codecheckplugin',
+        ':plugin' => 'codecheckplugin',
         ':context' => $contextId,
-        ':name'    => $setting,
-        ':value'   => $value,
-        ':type'    => 'string',
+        ':name' => $setting,
+        ':value' => $value,
+        ':type' => 'string',
     ]);
 };
 
@@ -91,7 +92,7 @@ if ($action === 'clear') {
 }
 
 $clientId = trim((string) ($env['ORCID_CLIENT_ID'] ?? ''));
-$secret   = (string) ($env['ORCID_CLIENT_SECRET'] ?? '');
+$secret = (string) ($env['ORCID_CLIENT_SECRET'] ?? '');
 
 if ($clientId === '' || $secret === '') {
     echo ".env: ORCID_CLIENT_ID/ORCID_CLIENT_SECRET are blank, leaving ORCID off.\n";

@@ -2,19 +2,18 @@
 
 namespace APP\plugins\generic\codecheck\api\v1;
 
-use CurlHandle;
-use APP\plugins\generic\codecheck\api\v1\ApiClientInterface;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlHttpException;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitException;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
+use CurlHandle;
 
 class CurlApiClient implements ApiClientInterface
 {
     private function initialize(string $url): CurlHandle
     {
         $curl_handle = curl_init($url);
-        if($curl_handle === false) {
-            throw new CurlInitException("Error initializing cURL Session", 500);
+        if ($curl_handle === false) {
+            throw new CurlInitException('Error initializing cURL Session', 500);
         }
         return $curl_handle;
     }
@@ -31,14 +30,14 @@ class CurlApiClient implements ApiClientInterface
         ]);
 
         $response = curl_exec($curlHandle);
-        if($response === false) {
+        if ($response === false) {
             throw new CurlReadException($curlHandle);
         }
 
         $httpCode = curl_getinfo($curlHandle, CURLINFO_HTTP_CODE);
         if ($httpCode >= 400) {
             throw new CurlHttpException(
-                "Request to $url failed with HTTP status $httpCode. " . curl_error($curlHandle),
+                "Request to {$url} failed with HTTP status {$httpCode}. " . curl_error($curlHandle),
                 $httpCode
             );
         }

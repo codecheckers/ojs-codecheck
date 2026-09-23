@@ -7,6 +7,7 @@
  * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * @class I154_MoveCodecheckYamlFlagOntoRepository
+ *
  * @brief Issue #154 — Record which repository holds the `codecheck.yml` on the
  *        repository entry itself instead of as `repoWithCodecheckYaml`, an index
  *        into the list.

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file classes/Workflow/CodecheckStatusRegisterComment.php
  *
@@ -6,6 +7,7 @@
  * Distributed under the GNU GPL v3. For full terms see the file docs/COPYING.
  *
  * @class CodecheckStatusRegisterComment
+ *
  * @brief Records a CODECHECK status change as a comment on the register issue.
  *
  * The register issue's title, body and labels are rewritten in place as a check

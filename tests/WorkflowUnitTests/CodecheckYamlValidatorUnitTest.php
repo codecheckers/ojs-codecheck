@@ -3,8 +3,8 @@
 namespace APP\plugins\generic\codecheck\tests;
 
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckYamlValidator;
-use Symfony\Component\Yaml\Exception\ParseException;
 use PKP\tests\PKPTestCase;
+use Symfony\Component\Yaml\Exception\ParseException;
 
 /**
  * @file APP/plugins/generic/codecheck/tests/WorkflowUnitTests/CodecheckYamlValidatorUnitTest.php
@@ -20,20 +20,20 @@ class CodecheckYamlValidatorUnitTest extends PKPTestCase
      * Set up the test environment
      */
     protected function setUp(): void
-	{
-		parent::setUp();
+    {
+        parent::setUp();
 
-        $this->codecheckYamlValidator = new CodecheckYamlValidator("example: {yaml: true}");
-	}
+        $this->codecheckYamlValidator = new CodecheckYamlValidator('example: {yaml: true}');
+    }
 
     public function testYamlValidatorStructurallyValidYaml()
     {
-        $validYamlContent = "this:
+        $validYamlContent = 'this:
     is:
         valid: |
             yaml
             content.
-";
+';
         $this->codecheckYamlValidator = new CodecheckYamlValidator($validYamlContent);
         $this->codecheckYamlValidator->validateYaml();
         $this->expectNotToPerformAssertions();
@@ -41,12 +41,12 @@ class CodecheckYamlValidatorUnitTest extends PKPTestCase
 
     public function testYamlValidatorStructurallyInvalidYaml()
     {
-        $invalidYamlContent = "this:
+        $invalidYamlContent = 'this:
    >is:
        invalid: |
             yaml
             content.
-";
+';
         $expectedExceptionMessage = 'The reserved indicator ">" cannot start a plain scalar; you need to quote the scalar at line 2 (near ">is:").';
         $this->expectException(ParseException::class);
         $this->expectExceptionMessage($expectedExceptionMessage);

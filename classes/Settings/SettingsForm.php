@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file classes/Settings/SettingsForm.php
  *
@@ -6,6 +7,7 @@
  * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * @class SettingsForm
+ *
  * @brief Settings form class for the CODECHECK plugin.
  */
 
@@ -17,14 +19,14 @@ use APP\notification\NotificationManager;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
 use APP\template\TemplateManager;
+use Github\Client;
 use PKP\form\Form;
 use PKP\form\validation\FormValidatorCSRF;
 use PKP\form\validation\FormValidatorPost;
-use Github\Client;
 
 class SettingsForm extends Form
 {
-    /** @var CodecheckPlugin */
+    /**  */
     public CodecheckPlugin $plugin;
 
     /**
@@ -323,6 +325,8 @@ class SettingsForm extends Form
      * Data assigned to the form using $this->setData() during the
      * initData() or readInputData() methods will be passed to the
      * template.
+     *
+     * @param null|mixed $template
      */
     public function fetch($request, $template = null, $display = false): ?string
     {
@@ -333,8 +337,8 @@ class SettingsForm extends Form
             $this->getData(Constants::CODECHECK_GITHUB_CUSTOM_LABELS) ?? []
         );
         $templateMgr->assign('codecheckModes', [
-            'opt-in'    => __('plugins.generic.codecheck.settings.mode.opt.in'),
-            'opt-out'   => __('plugins.generic.codecheck.settings.mode.opt.out'),
+            'opt-in' => __('plugins.generic.codecheck.settings.mode.opt.in'),
+            'opt-out' => __('plugins.generic.codecheck.settings.mode.opt.out'),
             'mandatory' => __('plugins.generic.codecheck.settings.mode.mandatory'),
         ]);
 
@@ -388,7 +392,7 @@ class SettingsForm extends Form
         $templateMgr->assign('codecheckStatuses', Constants::CODECHECK_STATUSES);
 
         $templateMgr->assign('orcidApiTypes', [
-            Constants::ORCID_API_TYPE_SANDBOX    => __('plugins.generic.codecheck.orcid.apiType.sandbox'),
+            Constants::ORCID_API_TYPE_SANDBOX => __('plugins.generic.codecheck.orcid.apiType.sandbox'),
             Constants::ORCID_API_TYPE_PRODUCTION => __('plugins.generic.codecheck.orcid.apiType.production'),
         ]);
 

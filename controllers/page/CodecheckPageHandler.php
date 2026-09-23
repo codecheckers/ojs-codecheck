@@ -4,9 +4,6 @@ namespace APP\plugins\generic\codecheck\controllers\page;
 
 use APP\plugins\generic\codecheck\CodecheckPlugin;
 use APP\template\TemplateManager;
-use PKP\controllers\page\PageHandler;
-use PKP\security\authorization\ContextRequiredPolicy;
-use PKP\security\Role;
 
 class CodecheckPageHandler extends \APP\handler\Handler
 {
@@ -43,7 +40,7 @@ class CodecheckPageHandler extends \APP\handler\Handler
         $templateMgr = TemplateManager::getManager($request);
         $this->setupTemplate($request);
         $templateMgr->assign([
-            'title'     => __('plugins.generic.codecheck.infoPage.title'),
+            'title' => __('plugins.generic.codecheck.infoPage.title'),
             'pluginUrl' => $request->getBaseUrl() . '/' . $this->plugin->getPluginPath(),
         ]);
         $templateMgr->display($this->plugin->getTemplateResource('pages/codecheck-info.tpl'));

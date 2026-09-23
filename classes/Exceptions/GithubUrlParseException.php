@@ -5,7 +5,7 @@ namespace APP\plugins\generic\codecheck\classes\Exceptions;
 class GithubUrlParseException extends \Exception
 {
     public function __construct(
-        string $message = "Error while parsing the Github Url",
+        string $message = 'Error while parsing the Github Url',
         int $code = 0,
         ?\Throwable $previous = null
     ) {

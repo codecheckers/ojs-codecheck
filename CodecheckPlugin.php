@@ -1,36 +1,32 @@
 <?php
+
 namespace APP\plugins\generic\codecheck;
 
-use PKP\security\Role;
 use APP\core\Application;
-use APP\template\TemplateManager;
-use APP\plugins\generic\codecheck\classes\FrontEnd\ArticleAvailability;
-use APP\plugins\generic\codecheck\classes\FrontEnd\ArticleDetails;
-use APP\plugins\generic\codecheck\classes\Settings\Actions;
-use APP\plugins\generic\codecheck\classes\Settings\Manage;
-use APP\plugins\generic\codecheck\classes\migration\install\CodecheckSchemaMigration;
-use APP\plugins\generic\codecheck\classes\Submission\AvailabilityStatementField;
-use APP\plugins\generic\codecheck\classes\Submission\Schema;
-use APP\plugins\generic\codecheck\classes\Submission\SubmissionWizardHandler;
-use APP\plugins\generic\codecheck\classes\Orcid\OrcidAuthHandler;
-use APP\plugins\generic\codecheck\classes\Orcid\OrcidDepositService;
-use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
-use PKP\plugins\GenericPlugin;
-use PKP\plugins\Hook;
-use PKP\components\forms\FieldOptions;
 use APP\facades\Repo;
 use APP\plugins\generic\codecheck\api\v1\CodecheckApiController;
-use APP\plugins\generic\codecheck\api\v1\CurlApiClient;
-use PKP\core\JSONMessage;
 use APP\plugins\generic\codecheck\classes\Constants;
-use APP\plugins\generic\codecheck\classes\Workflow\CodecheckStatusHandler;
-use APP\plugins\generic\codecheck\controllers\page\CodecheckPageHandler;
-use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
+use APP\plugins\generic\codecheck\classes\FrontEnd\ArticleAvailability;
+use APP\plugins\generic\codecheck\classes\FrontEnd\ArticleDetails;
+use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
+use APP\plugins\generic\codecheck\classes\migration\install\CodecheckSchemaMigration;
+use APP\plugins\generic\codecheck\classes\Orcid\OrcidAuthHandler;
+use APP\plugins\generic\codecheck\classes\Orcid\OrcidDepositService;
+use APP\plugins\generic\codecheck\classes\Settings\Actions;
+use APP\plugins\generic\codecheck\classes\Settings\Manage;
+use APP\plugins\generic\codecheck\classes\Submission\AvailabilityStatementField;
+use APP\plugins\generic\codecheck\classes\Submission\CodecheckAuthorMetadata;
+use APP\plugins\generic\codecheck\classes\Submission\Schema;
+use APP\plugins\generic\codecheck\classes\Submission\SubmissionWizardHandler;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckPublicationValidator;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckRegisterDepositService;
-use APP\plugins\generic\codecheck\classes\Submission\CodecheckAuthorMetadata;
+use APP\plugins\generic\codecheck\controllers\page\CodecheckPageHandler;
+use APP\template\TemplateManager;
+use PKP\components\forms\FieldOptions;
+use PKP\core\JSONMessage;
 use PKP\core\Request;
-use \Github\Client;
+use PKP\plugins\GenericPlugin;
+use PKP\plugins\Hook;
 
 class CodecheckPlugin extends GenericPlugin
 {
@@ -97,7 +93,7 @@ class CodecheckPlugin extends GenericPlugin
 
             // ORCID: automatically deposit when an article is published
             Hook::add('Publication::publish', $this->onPublicationPublish(...));
-            
+
             // Test if we can hook into the publication to block it if codecheck failed
             Hook::add('Publication::validatePublish', $this->validatePublicationHook(...));
 
@@ -115,15 +111,15 @@ class CodecheckPlugin extends GenericPlugin
      * The publication will be invalid, whenever we ship at least one error in the `$errors` Array. And it will be valid, whenever the array is empty.
      * The return value of this function doesn't have to do anything with the publication validation. Instead it has to do with how OJS handles this hook. If `true` where to be returned, the Hook: `'Publication::validatePublish'` would stop to be called (meaning that for other plugins & OJS itsself this Hook wouldn't be fired anymore, if we have invalid metadata). This of course means, that e.g. if a submission is in the review stage, but somehow the editor already wants to publish it, we never get to see this error during the publication validation (because our invalid CODECHECK data would stop the hook).
      * To prevent this, it is best practise to always return `false` on a Hook, so other Plugins and OJS itsself get to call the Hook as well after our plugin did.
-     * 
+     *
      * @param string $hookName The name of the Hook (`'Publication::validatePublish'`)
      * @param array $args The arguments of the Hook including the validation `$errors` Array at `&$args[0]`
-     * 
+     *
      * @return bool Returns `false` to enable OJS itsself and other Plugins to continue with their implementation for this Hook
     */
     public function validatePublicationHook(string $hookName, array $args): bool
     {
-        CodecheckLogger::debug("Validating Publication!");
+        CodecheckLogger::debug('Validating Publication!');
         $errors = &$args[0];
         // The hook hands over the submission being published. Passing it on
         // matters: publishing goes through the REST API, where there is no page
@@ -133,7 +129,7 @@ class CodecheckPlugin extends GenericPlugin
 
         $validationErrors = $codecheckPublicationValidator->validatePublication();
 
-        if(is_array($validationErrors)) {
+        if (is_array($validationErrors)) {
             $errors = array_merge($errors, $validationErrors);
         }
 
@@ -155,9 +151,7 @@ class CodecheckPlugin extends GenericPlugin
      * CODECHECK_GITHUB_REGISTER_REPOSITORY) — currently defaulting to
      * codecheckers/testing-dev-register for development.
      *
-     * @param string $hookName
      * @param array $args [0] => Publication $newPublication, [1] => Publication $publication, [2] => Submission $submission
-     * @return bool
      */
     public function depositToRegister(string $hookName, array $args): bool
     {
@@ -199,7 +193,7 @@ class CodecheckPlugin extends GenericPlugin
 
         $localeKeys = array_combine(
             Constants::CODECHECK_STATUSES,
-            array_map(fn($status) => __($status), Constants::CODECHECK_STATUSES)
+            array_map(fn ($status) => __($status), Constants::CODECHECK_STATUSES)
         );
 
         $localeKeys[Constants::CODECHECK_STATUS_PENDING] = __(Constants::CODECHECK_STATUS_PENDING);
@@ -223,8 +217,12 @@ class CodecheckPlugin extends GenericPlugin
         // documented in CLAUDE.md. Same shape as depositToRegister() above.
         [$newPublication, $publication, $submission] = $args;
 
-        if (!$submission) return false;
-        if (!$submission->getData('codecheckOptIn')) return false;
+        if (!$submission) {
+            return false;
+        }
+        if (!$submission->getData('codecheckOptIn')) {
+            return false;
+        }
 
         // The context can be null on that same REST path, and PKP swallows what
         // a hook throws as "failed to handle the hook" — so publishing would
@@ -235,7 +233,9 @@ class CodecheckPlugin extends GenericPlugin
             return false;
         }
 
-        if (!$this->getSetting($context->getId(), Constants::ORCID_ENABLED)) return false;
+        if (!$this->getSetting($context->getId(), Constants::ORCID_ENABLED)) {
+            return false;
+        }
 
         try {
             $depositService = new OrcidDepositService($this);
@@ -331,8 +331,8 @@ class CodecheckPlugin extends GenericPlugin
      */
     public function setCodecheckPageHandler($hookName, $args)
     {
-        $page    = &$args[0];
-        $op      = &$args[1];
+        $page = &$args[0];
+        $op = &$args[1];
         $handler = &$args[3];
 
         // ORCID OAuth routes. The request is only needed to read the sub-operation
@@ -392,7 +392,9 @@ class CodecheckPlugin extends GenericPlugin
         $context = $request->getContext();
 
         // No context means we're on a site-wide admin page — nothing to inject
-        if (!$context) return false;
+        if (!$context) {
+            return false;
+        }
 
         $contextId = $context->getId();
 
@@ -404,14 +406,14 @@ class CodecheckPlugin extends GenericPlugin
         if ($request->getRequestedPage() == 'dashboard') {
             $dashboardConfig = json_encode([
                 'showDashboardColumn' => (bool) $this->getSettingWithDefault($contextId, Constants::CODECHECK_SHOW_DASHBOARD_COLUMN),
-                'codecheckMode'       => $this->getSetting($contextId, Constants::CODECHECK_MODE) ?? 'opt-in',
+                'codecheckMode' => $this->getSetting($contextId, Constants::CODECHECK_MODE) ?? 'opt-in',
             ]);
 
             $templateMgr->addJavaScript(
                 'codecheck-dashboard-config',
                 'window.codecheckDashboardConfig = ' . $dashboardConfig . ';',
                 [
-                    'inline'   => true,
+                    'inline' => true,
                     'contexts' => ['backend'],
                     'priority' => TemplateManager::STYLE_SEQUENCE_LAST,
                 ]
@@ -452,7 +454,7 @@ class CodecheckPlugin extends GenericPlugin
                         'id' => $submission->getId(),
                         'codecheckOptIn' => $submission->getData('codecheckOptIn'),
                         'retrieveReserveCertificateIdentifier' => $submission->getData('retrieveReserveCertificateIdentifier'),
-                        'dataAvailabilityStatement'            => $publication ? $publication->getData('dataAvailabilityStatement') : null,
+                        'dataAvailabilityStatement' => $publication ? $publication->getData('dataAvailabilityStatement') : null,
                     ]
                 ]);
             }
@@ -462,24 +464,24 @@ class CodecheckPlugin extends GenericPlugin
         // Reviewer page — inject submission data + ORCID config for Vue
         // ----------------------------------------------------------------
         if ($request->getRequestedPage() == 'reviewer' && $request->getRequestedOp() == 'submission') {
-            $requestArgs  = $request->getRequestedArgs();
+            $requestArgs = $request->getRequestedArgs();
             $submissionId = (int) ($requestArgs[0] ?? 0);
 
             if ($submissionId) {
-                $context    = $request->getContext();
-                $contextId  = $context->getId();
+                $context = $request->getContext();
+                $contextId = $context->getId();
                 $submission = Repo::submission()->get($submissionId);
 
                 if ($submission && $submission->getData('codecheckOptIn')) {
                     $orcidAuthUrl = $request->getBaseUrl() . '/index.php/' . $context->getPath() . '/codecheck/orcid/startAuth';
 
                     $reviewerData = json_encode([
-                        'submissionId'   => $submission->getId(),
+                        'submissionId' => $submission->getId(),
                         'codecheckOptIn' => true,
-                        'orcid'          => [
-                            'enabled'    => (bool) $this->getSetting($contextId, Constants::ORCID_ENABLED),
-                            'authUrl'    => $orcidAuthUrl,
-                            'apiType'    => $this->getSetting($contextId, Constants::ORCID_API_TYPE) ?? Constants::ORCID_API_TYPE_SANDBOX,
+                        'orcid' => [
+                            'enabled' => (bool) $this->getSetting($contextId, Constants::ORCID_ENABLED),
+                            'authUrl' => $orcidAuthUrl,
+                            'apiType' => $this->getSetting($contextId, Constants::ORCID_API_TYPE) ?? Constants::ORCID_API_TYPE_SANDBOX,
                             'apiBaseUrl' => $request->getBaseUrl() . '/index.php/' . $context->getPath(),
                         ],
                     ]);
@@ -488,7 +490,7 @@ class CodecheckPlugin extends GenericPlugin
                         'codecheck-reviewer-data',
                         'window.codecheckReviewerData = ' . $reviewerData . ';',
                         [
-                            'inline'   => true,
+                            'inline' => true,
                             'contexts' => ['backend'],
                             'priority' => TemplateManager::STYLE_SEQUENCE_LAST,
                         ]
@@ -511,13 +513,13 @@ class CodecheckPlugin extends GenericPlugin
         $schema = $args[0];
 
         $schema->properties->codecheckOptIn = (object) [
-            'type'       => 'boolean',
+            'type' => 'boolean',
             'apiSummary' => true,
             'validation' => ['nullable']
         ];
 
         $schema->properties->retrieveReserveCertificateIdentifier = (object) [
-            'type'       => 'string',
+            'type' => 'string',
             'apiSummary' => true,
             'validation' => ['nullable']
         ];
@@ -535,7 +537,7 @@ class CodecheckPlugin extends GenericPlugin
             $checkboxValue = false;
             $codecheckMandatory = false;
             $codecheckDescription = __('plugins.generic.codecheck.optIn.description', [
-                'codecheckLink' => "<a href='{$this->getUrlPageRoute("codecheck")}/info' target='_blank'>" . __('plugins.generic.codecheck.displayName') . "</a>"
+                'codecheckLink' => "<a href='{$this->getUrlPageRoute('codecheck')}/info' target='_blank'>" . __('plugins.generic.codecheck.displayName') . '</a>'
             ]);
 
             if ($codecheckMode == 'opt-out') {
@@ -544,7 +546,7 @@ class CodecheckPlugin extends GenericPlugin
                 $checkboxValue = true;
                 $codecheckMandatory = true;
                 $codecheckDescription = __('plugins.generic.codecheck.mandatory.description', [
-                    'codecheckLink' => "<a href='{$this->getUrlPageRoute("codecheck")}/info' target='_blank'>" . __('plugins.generic.codecheck.displayName') . "</a>"
+                    'codecheckLink' => "<a href='{$this->getUrlPageRoute('codecheck')}/info' target='_blank'>" . __('plugins.generic.codecheck.displayName') . '</a>'
                 ]);
             }
 
@@ -554,12 +556,12 @@ class CodecheckPlugin extends GenericPlugin
                 'type' => 'checkbox',
                 'options' => [
                     [
-                        'value' => 1, 
+                        'value' => 1,
                         'label' => $codecheckDescription,
                         'disabled' => $codecheckMandatory,
                     ]
                 ],
-                'value'   => $checkboxValue,
+                'value' => $checkboxValue,
                 'groupId' => 'default'
             ]));
         }
@@ -569,7 +571,7 @@ class CodecheckPlugin extends GenericPlugin
 
     public function saveOptIn(string $hookName, array $params): bool
     {
-        $submission   = $params[0];
+        $submission = $params[0];
         $params_array = $params[2];
 
         if (isset($params_array['codecheckOptIn'])) {

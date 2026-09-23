@@ -2,16 +2,13 @@
 
 namespace APP\plugins\generic\codecheck\classes\CodecheckRegister;
 
-use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifier;
-use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckIssueLabels;
-use APP\plugins\generic\codecheck\classes\Workflow\CodecheckStatusHandler;
 use APP\plugins\generic\codecheck\classes\Constants;
-use PKP\plugins\PluginRegistry;
-use APP\core\Application;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckRepositories;
+use APP\plugins\generic\codecheck\classes\Workflow\CodecheckStatusHandler;
 
-class CodecheckGithubRegisterIssue {
+class CodecheckGithubRegisterIssue
+{
     private string $repositoryOwner;
     private string $repository;
     private string $title;
@@ -34,18 +31,18 @@ class CodecheckGithubRegisterIssue {
         array $codecheckers,
         array $repositories,
         array $updateInformation
-    ){
+    ) {
         $this->repositoryOwner = $repositoryOwner;
         $this->repository = $repository;
         $this->submissionID = $submissionID;
         $this->codecheckStatus = '';
         $this->updateStatus = false;
-        if(in_array(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_STATUS, $updateInformation)) {
+        if (in_array(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_STATUS, $updateInformation)) {
             $this->updateStatus = true;
             $this->codecheckStatus = CodecheckStatusHandler::getCurrentStatusData($this->submissionID)->status;
         }
         $updateCodecheckStatus = $this->updateStatus ? 'true' : 'false';
-        CodecheckLogger::debug("Record / Update Status: " . $updateCodecheckStatus);
+        CodecheckLogger::debug('Record / Update Status: ' . $updateCodecheckStatus);
         $authorString = empty($authorString) ? 'New CODECHECK' : $authorString;
         // The issue is public. A repository marked hidden is part of the record
         // but must never reach a reader, and the editorial form posts whole
@@ -81,8 +78,7 @@ class CodecheckGithubRegisterIssue {
     private function createTitleMarkdown(
         string $authorString,
         CertificateIdentifier $certificateIdentifier
-    ): string
-    {
+    ): string {
         return $authorString . ' | ' . $certificateIdentifier->toStr();
     }
 
@@ -93,18 +89,17 @@ class CodecheckGithubRegisterIssue {
         string $submissionID,
         array $codecheckers,
         array $repositories
-    ): string
-    {
-        $statusInformation = $this->updateStatus ? "\n\t\"status\": \"" . $this->codecheckStatus . "\"," : "";
+    ): string {
+        $statusInformation = $this->updateStatus ? "\n\t\"status\": \"" . $this->codecheckStatus . '",' : '';
         return "<details>\n<summary><h3>JSON encoded CODECHECK metadata</h3></summary>\n\n"
         . "```json\n"
-        . "{"
-        . "\n\t\"identifier\": \"" . $certificateIdentifier->toStr() . "\","
+        . '{'
+        . "\n\t\"identifier\": \"" . $certificateIdentifier->toStr() . '",'
         . $statusInformation
-        . "\n\t\"repositories\": " . json_encode($repositories) . ","
-        . "\n\t\"codecheckers\": " . json_encode($codecheckers) . ","
+        . "\n\t\"repositories\": " . json_encode($repositories) . ','
+        . "\n\t\"codecheckers\": " . json_encode($codecheckers) . ','
         . "\n\t\"links\": [],"
-        . "\n\t\"journal\": {\"name\": \"" . $journalName . "\", \"submissionID\": $submissionID},"
+        . "\n\t\"journal\": {\"name\": \"" . $journalName . "\", \"submissionID\": {$submissionID}},"
         . "\n}"
         . "\n```"
         . "\n\n</details>";
@@ -114,25 +109,23 @@ class CodecheckGithubRegisterIssue {
         string $paperTitle,
         string $journalName,
         array $repositories
-    ): string
-    {
-        $repoStr = "";
+    ): string {
+        $repoStr = '';
         foreach ($repositories as $repo) {
             $repoStr .= "\t- " . $repo . "\n";
         }
-        $statusInformation = $this->updateStatus ? "<!-- The current status of the CODECHECK -->\n**CODECHECK Status:** " . __($this->codecheckStatus) . "\n\n" : "";
-        
+        $statusInformation = $this->updateStatus ? "<!-- The current status of the CODECHECK -->\n**CODECHECK Status:** " . __($this->codecheckStatus) . "\n\n" : '';
+
         return "<!-- Provide the title of your published paper or preprint -->\n## " . $paperTitle . "\n\n"
         . "<!-- Provide a link to your published paper or preprint, ideally with a DOI -->\n**Article:**\n\n"
-        . "<!-- Information about the Journal in which the paper/ preprint is published -->\n**Journal:** " . $journalName . " *(Submission ID: " . $this->submissionID . ")*\n\n"
+        . "<!-- Information about the Journal in which the paper/ preprint is published -->\n**Journal:** " . $journalName . ' *(Submission ID: ' . $this->submissionID . ")*\n\n"
         . "<!-- Provide a link to your code (and data) repository(s) (GitHub, GitLab, etc.) -->\n**Repositories:**\n" . $repoStr . "\n\n"
         . $statusInformation;
     }
 
     private function fillLabels(
         CodecheckIssueLabels $codecheckIssueLabels
-    ): array
-    {
+    ): array {
         $labels = ['id assigned'];
         $labels = array_merge($labels, $codecheckIssueLabels->get()->toArray());
 
@@ -141,13 +134,13 @@ class CodecheckGithubRegisterIssue {
 
     private function getFormattedLabelsForUrl(): string
     {
-        $labels = "";
+        $labels = '';
         $countLabels = 0;
-        foreach($this->labels as $label) {
+        foreach ($this->labels as $label) {
             $labels = $labels . rawurlencode($label);
 
-            if($countLabels < count($this->labels) - 1) {
-                $labels = $labels  . ",";
+            if ($countLabels < count($this->labels) - 1) {
+                $labels = $labels . ',';
             }
 
             $countLabels++;
@@ -158,11 +151,11 @@ class CodecheckGithubRegisterIssue {
 
     public function getNewIssueUrl(): string
     {
-        $url = "https://github.com/$this->repositoryOwner/$this->repository/issues/new";
-        $queryTitle = "title=" . rawurlencode($this->title);
-        $queryBody = "body=" . rawurlencode($this->body);
-        $queryLabels = "labels=" . $this->getFormattedLabelsForUrl();
+        $url = "https://github.com/{$this->repositoryOwner}/{$this->repository}/issues/new";
+        $queryTitle = 'title=' . rawurlencode($this->title);
+        $queryBody = 'body=' . rawurlencode($this->body);
+        $queryLabels = 'labels=' . $this->getFormattedLabelsForUrl();
 
-        return $url . "?" . $queryTitle . "&" . $queryBody . "&" . $queryLabels;
+        return $url . '?' . $queryTitle . '&' . $queryBody . '&' . $queryLabels;
     }
 }

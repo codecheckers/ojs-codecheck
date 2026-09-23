@@ -7,6 +7,7 @@
  * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * @class I94_AddMissingColumns
+ *
  * @brief Issue #94 — Add columns that were introduced after the initial release
  *        to installations that already have the table. All checks are idempotent.
  */

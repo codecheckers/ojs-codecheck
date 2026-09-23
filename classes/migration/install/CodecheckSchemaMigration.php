@@ -7,6 +7,7 @@
  * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * @class CodecheckSchemaMigration
+ *
  * @brief Create all CODECHECK database tables on fresh install.
  *        Also calls all upgrade migrations so that fresh installs
  *        and existing installs both end up at the same schema state.
@@ -24,13 +25,12 @@
 
 namespace APP\plugins\generic\codecheck\classes\migration\install;
 
+use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\classes\migration\CodecheckMigration;
-use APP\plugins\generic\codecheck\classes\migration\upgrade\I94_AddMissingColumns;
 use APP\plugins\generic\codecheck\classes\migration\upgrade\I154_MoveCodecheckYamlFlagOntoRepository;
+use APP\plugins\generic\codecheck\classes\migration\upgrade\I94_AddMissingColumns;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-
-use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 
 class CodecheckSchemaMigration extends CodecheckMigration
 {

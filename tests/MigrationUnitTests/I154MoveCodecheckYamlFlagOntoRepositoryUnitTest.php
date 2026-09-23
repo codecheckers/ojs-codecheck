@@ -89,10 +89,10 @@ class I154MoveCodecheckYamlFlagOntoRepositoryUnitTest extends PKPTestCase
     public static function unchangedProvider(): array
     {
         return [
-            'null'            => [null],
-            'empty'           => ['' ],
+            'null' => [null],
+            'empty' => ['' ],
             'already migrated' => ['{"repositories":[{"url":"https://github.com/a/b","containsCodecheckYaml":true}]}'],
-            'not json'        => ['{not json'],
+            'not json' => ['{not json'],
         ];
     }
 }

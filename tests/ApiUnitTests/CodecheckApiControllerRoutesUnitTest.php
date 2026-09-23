@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file tests/ApiUnitTests/CodecheckApiControllerRoutesUnitTest.php
  *
@@ -6,6 +7,7 @@
  * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * @class CodecheckApiControllerRoutesUnitTest
+ *
  * @brief What the CODECHECK API does and does not expose.
  *
  * The routes themselves are registered through Laravel's Route facade, which

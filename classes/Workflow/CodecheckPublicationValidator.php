@@ -2,16 +2,15 @@
 
 namespace APP\plugins\generic\codecheck\classes\Workflow;
 
-use \APP\core\Request;
 use APP\core\Application;
-use APP\plugins\generic\codecheck\api\v1\JsonResponse;
-use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
-use APP\plugins\generic\codecheck\CodecheckPlugin;
+use APP\core\Request;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckRepositories;
+use APP\plugins\generic\codecheck\CodecheckPlugin;
 
-class CodecheckPublicationValidator {
+class CodecheckPublicationValidator
+{
     private array $validationChecks;
     private Request $request;
     private mixed $context;
@@ -26,7 +25,6 @@ class CodecheckPublicationValidator {
     private ?array $metadata = null;
 
     /**
-     * @param CodecheckPlugin $plugin
      * @param mixed $submission the submission from the `Publication::validatePublish`
      *  hook. Required in practice: publishing happens through the REST API, where
      *  there is no page handler to ask for the authorized submission — the router
@@ -41,11 +39,11 @@ class CodecheckPublicationValidator {
             // and `validateCodecheckStatus()` can fail without recording an
             // error — a publish would then go through with this one never
             // having run (issue #169).
-            fn() => $this->validateSelectedRepositoryIsPublic(),
-            fn() => $this->validateCodecheckStatus(),
-            fn() => $this->validateYamlStructure(),
+            fn () => $this->validateSelectedRepositoryIsPublic(),
+            fn () => $this->validateCodecheckStatus(),
+            fn () => $this->validateYamlStructure(),
             // If this is not an extended Publication Validation, just return valid (and except that the metadata might be invalid, but ignore it since the user set the configuration setting to fail silently in this case)
-            fn() => !$this->isExtendedValidation() || $this->validateMetadataFromRepository(),
+            fn () => !$this->isExtendedValidation() || $this->validateMetadataFromRepository(),
         ];
 
         $this->request = Application::get()->getRequest();
@@ -72,7 +70,8 @@ class CodecheckPublicationValidator {
         return $handler ? $handler->getAuthorizedContextObject(ASSOC_TYPE_SUBMISSION) : null;
     }
 
-    private function isOptedInToCodecheck(): bool {
+    private function isOptedInToCodecheck(): bool
+    {
         $submission = $this->getSubmission();
 
         return $submission && $submission->getData('codecheckOptIn');
@@ -107,7 +106,8 @@ class CodecheckPublicationValidator {
         return $this->metadata ??= $this->codecheckMetadataHandler->getMetadata($this->request, $this->getSubmissionId());
     }
 
-    private function validateCodecheckStatus(): bool {
+    private function validateCodecheckStatus(): bool
+    {
         $codecheckStatus = CodecheckStatusHandler::getCurrentStatusData($this->getSubmissionId());
         // Null when the settings form has never been saved. `in_array(…, null)`
         // is a TypeError, and PKP swallows what a hook throws — so every check
@@ -117,8 +117,8 @@ class CodecheckPublicationValidator {
         // "no status accepted".
         $codecheckStatusKeysSelected = $this->plugin->getSetting($this->context->getId(), Constants::CODECHECK_STATUS_KEYS_SELECTED) ?? [];
 
-        if(empty($codecheckStatus)) {
-            if($this->isExtendedValidation()) {
+        if (empty($codecheckStatus)) {
+            if ($this->isExtendedValidation()) {
                 $this->errors[] = __('plugins.generic.codecheck.status.validation.failed.noStatusSet');
             }
             return false;
@@ -134,7 +134,8 @@ class CodecheckPublicationValidator {
         return true;
     }
 
-    private function validateYamlStructure(): bool {
+    private function validateYamlStructure(): bool
+    {
         try {
             $yamlValidator = CodecheckYamlValidator::fromRequest($this->request);
             $yamlValidator->validateYaml();
@@ -163,7 +164,8 @@ class CodecheckPublicationValidator {
      * A submission with no repository marked at all is the extended check's
      * subject, not this one.
      */
-    private function validateSelectedRepositoryIsPublic(): bool {
+    private function validateSelectedRepositoryIsPublic(): bool
+    {
         if (!$this->plugin->isRegisterDepositEnabled($this->context->getId())) {
             return true;
         }
@@ -184,11 +186,12 @@ class CodecheckPublicationValidator {
         return false;
     }
 
-    public function validateMetadataFromRepository(string|null $repository = null): bool {
-        if(empty($repository)) {
+    public function validateMetadataFromRepository(string|null $repository = null): bool
+    {
+        if (empty($repository)) {
             $codecheckMetadata = $this->getCodecheckMetadata();
-        
-            if(isset($codecheckMetadata['error']) || !is_array($codecheckMetadata['codecheck']) || !isset($codecheckMetadata['codecheck']['repository']) || !isset($codecheckMetadata['codecheck']['repository']['repositories'])) {
+
+            if (isset($codecheckMetadata['error']) || !is_array($codecheckMetadata['codecheck']) || !isset($codecheckMetadata['codecheck']['repository']) || !isset($codecheckMetadata['codecheck']['repository']['repositories'])) {
                 $this->errors[] = __('plugins.generic.codecheck.publication.validation.invalidRepository', [
                     'repositoryError' => __('plugins.generic.codecheck.publication.validation.metadataDBLoadError')
                 ]);
@@ -205,8 +208,8 @@ class CodecheckPublicationValidator {
         }
         $response = $this->codecheckMetadataHandler->importMetadataFromRepository($repository);
         $responseArray = $response->getPayloadArray();
-        if($response->isSuccess()) { 
-            if(!$this->validatePaperTitle($responseArray['metadata'])) {
+        if ($response->isSuccess()) {
+            if (!$this->validatePaperTitle($responseArray['metadata'])) {
                 $this->errors[] = __('plugins.generic.codecheck.publication.validation.invalidRepository', [
                     'repositoryError' => __('plugins.generic.codecheck.publication.validation.invalidPaperTitle')
                 ]);
@@ -253,12 +256,14 @@ class CodecheckPublicationValidator {
         return true;
     }*/
 
-    private function validatePaperTitle(array $codecheckMetadata): bool {
+    private function validatePaperTitle(array $codecheckMetadata): bool
+    {
         $metadataFromOjsSubmission = $this->getCodecheckMetadata();
         return $codecheckMetadata['paper']['title'] === $metadataFromOjsSubmission['submission']['title'];
     }
 
-    private function isExtendedValidation(): bool {
+    private function isExtendedValidation(): bool
+    {
         // Same hazard as the status list above: unset on a journal that has
         // never saved the settings form, and returning null from a `: bool`
         // function is a TypeError PKP swallows — which would take every check
@@ -267,7 +272,8 @@ class CodecheckPublicationValidator {
         return (bool) $codecheckExtendPublicationValidation;
     }
 
-    public function validatePublication(): true|array {
+    public function validatePublication(): true|array
+    {
         // Every check below reads a journal setting, and two of them do it
         // without a null guard — so one missing context would be a TypeError
         // thrown inside the hook, which PKP swallows as "failed to handle the
@@ -278,9 +284,9 @@ class CodecheckPublicationValidator {
             return true;
         }
 
-        if($this->isOptedInToCodecheck()) {
+        if ($this->isOptedInToCodecheck()) {
             foreach ($this->validationChecks as $validationCheck) {
-                CodecheckLogger::debug("Validation Check!");
+                CodecheckLogger::debug('Validation Check!');
                 if (!$validationCheck()) {
                     return $this->errors;
                 }
@@ -290,7 +296,8 @@ class CodecheckPublicationValidator {
         return true;
     }
 
-    public function getErrors(): array {
+    public function getErrors(): array
+    {
         return $this->errors;
     }
 }

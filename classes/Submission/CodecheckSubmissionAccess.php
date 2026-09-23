@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file classes/Submission/CodecheckSubmissionAccess.php
  *
@@ -6,6 +7,7 @@
  * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * @class CodecheckSubmissionAccess
+ *
  * @brief Whether a user may act on one particular submission.
  *
  * The API handler's role check asks whether a user holds a role *anywhere in the

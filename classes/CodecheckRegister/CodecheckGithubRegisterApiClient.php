@@ -4,17 +4,14 @@ namespace APP\plugins\generic\codecheck\classes\CodecheckRegister;
 
 require __DIR__ . '/../../vendor/autoload.php';
 
-use Github\Client;
-use APP\plugins\generic\codecheck\classes\DataStructures\UniqueArray;
-use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifier;
-use APP\plugins\generic\codecheck\classes\Exceptions\NoMatchingIssuesFoundException;
-use APP\plugins\generic\codecheck\classes\Exceptions\ApiFetchException;
-use APP\plugins\generic\codecheck\classes\Exceptions\ApiCreateException;
-use APP\plugins\generic\codecheck\classes\Exceptions\GithubUrlParseException;
-use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterIssue;
 use APP\plugins\generic\codecheck\classes\Constants;
+use APP\plugins\generic\codecheck\classes\DataStructures\UniqueArray;
+use APP\plugins\generic\codecheck\classes\Exceptions\ApiCreateException;
+use APP\plugins\generic\codecheck\classes\Exceptions\ApiFetchException;
 use APP\plugins\generic\codecheck\classes\Exceptions\ApiUpdateException;
-use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
+use APP\plugins\generic\codecheck\classes\Exceptions\GithubUrlParseException;
+use APP\plugins\generic\codecheck\classes\Exceptions\NoMatchingIssuesFoundException;
+use Github\Client;
 
 // api client
 class CodecheckGithubRegisterApiClient
@@ -30,14 +27,14 @@ class CodecheckGithubRegisterApiClient
 
     /**
      * Initializes a new CODECHECK GitHub Register Api Parser (initialize the GitHub Client and a new unique Array)
-     * 
+     *
      * @param string $githubPersonalAccessToken The required GitHub `(PAT)` (classic), to access the GitHub Register Repository
      * @param string $githubRegisterOrganization The Organization owning the GitHub Register Repository
      * @param string $githubRegisterRepository The Repository of the GitHub Register
      * @param string $submissionID The ID of the Submission realted to the GitHub Register Issue
      * @param mixed $journal The name of the Journal the Submission is published in
      */
-    function __construct(string $githubPersonalAccessToken, string $githubRegisterOrganization, string $githubRegisterRepository, string $submissionID, mixed $journal, ?Client $client = null)
+    public function __construct(string $githubPersonalAccessToken, string $githubRegisterOrganization, string $githubRegisterRepository, string $submissionID, mixed $journal, ?Client $client = null)
     {
         $this->client = $client ?? new Client();
         $this->labels = new UniqueArray();
@@ -50,7 +47,9 @@ class CodecheckGithubRegisterApiClient
 
     /**
      * Parses a GitHub Url and returns owner, repository, branch and a specified path (if a path was specified)
+     *
      * @param string $url The GitHub Url
+     *
      * @return array The GitHub Url data (owner, repository, branch and a specified path)
      */
     public static function parseGithubUrl(string $url): array
@@ -60,9 +59,9 @@ class CodecheckGithubRegisterApiClient
         if (preg_match($patternBlob, $url, $matches)) {
             return [
                 'owner' => $matches[1],
-                'repo'  => $matches[2],
-                'ref'   => $matches[3],
-                'path'  => rtrim($matches[4], '/'),
+                'repo' => $matches[2],
+                'ref' => $matches[3],
+                'path' => rtrim($matches[4], '/'),
             ];
         }
 
@@ -72,13 +71,13 @@ class CodecheckGithubRegisterApiClient
         if (preg_match($patternRepo, $url, $matches)) {
             return [
                 'owner' => $matches[1],
-                'repo'  => $matches[2],
-                'ref'   => 'main',   // default branch guess
-                'path'  => '',       // repo root
+                'repo' => $matches[2],
+                'ref' => 'main',   // default branch guess
+                'path' => '',       // repo root
             ];
         }
 
-        throw new GithubUrlParseException("Unsupported GitHub URL format: $url");
+        throw new GithubUrlParseException("Unsupported GitHub URL format: {$url}");
     }
 
     /**
@@ -93,12 +92,12 @@ class CodecheckGithubRegisterApiClient
         do {
             try {
                 $allissues = $this->client->api('issue')->all($this->githubRegisterOrganization, $this->githubRegisterRepository, [
-                    'state'     => 'all',          // 'open', 'closed', or 'all'
-                    'labels'    => 'id assigned',  // select only issues where there is an id assigned
-                    'sort'      => 'updated',
+                    'state' => 'all',          // 'open', 'closed', or 'all'
+                    'labels' => 'id assigned',  // select only issues where there is an id assigned
+                    'sort' => 'updated',
                     'direction' => 'desc',
-                    'per_page'  => $issuesToFetchPerPage, // issues that will be fetched per page
-                    'page'      => $issuePage,
+                    'per_page' => $issuesToFetchPerPage, // issues that will be fetched per page
+                    'page' => $issuePage,
                 ]);
             } catch (\Throwable $e) {
                 throw new ApiFetchException("Failed fetching the GitHub Issues\n" . $e->getMessage());
@@ -148,10 +147,9 @@ class CodecheckGithubRegisterApiClient
      */
     public function fetchIssueByIdentifier(
         CertificateIdentifier $certificateIdentifier
-    ): void
-    {
+    ): void {
         try {
-            $allissues = $this->client->api('search')->issues('repo:' . $this->githubRegisterOrganization . '/' . $this->githubRegisterRepository . ' "'. $certificateIdentifier->toStr() . '" sort:"updated"');
+            $allissues = $this->client->api('search')->issues('repo:' . $this->githubRegisterOrganization . '/' . $this->githubRegisterRepository . ' "' . $certificateIdentifier->toStr() . '" sort:"updated"');
         } catch (\Throwable $e) {
             throw new ApiFetchException("Failed fetching the GitHub Issues\n" . $e->getMessage());
         }
@@ -178,9 +176,9 @@ class CodecheckGithubRegisterApiClient
         } catch (\Throwable $e) {
             throw new ApiFetchException("Failed fetching the GitHub Issue Labels for the Venue Names\n" . $e->getMessage());
         }
-        
-        foreach($fetchedLabels as $label) {
-            $this->labels->add($label["name"]);
+
+        foreach ($fetchedLabels as $label) {
+            $this->labels->add($label['name']);
         }
     }
 
@@ -191,6 +189,7 @@ class CodecheckGithubRegisterApiClient
      * @param CodecheckIssueLabels $codecheckIssueLabels The CODECHECK Issue Labels that will be added
      * @param string $authorString The formatted author string e.g. `author name et al.`
      * @param string $paperTitle The Title of the submitted paper / preprint / article
+     *
      * @return array Returns the GitHub URL & Issue Number of the newly created issue
      */
     public function addIssue(
@@ -224,27 +223,17 @@ class CodecheckGithubRegisterApiClient
                 $this->githubRegisterRepository,
                 [
                     'title' => $codecheckIssue->getTitle(),
-                    'body'  => $codecheckIssue->getBody(),
+                    'body' => $codecheckIssue->getBody(),
                     'labels' => $codecheckIssue->getLabels()
                 ]
             );
         } catch (\Throwable $e) {
-            throw new ApiCreateException("Error while adding the new GitHub issue with the new Certificate Identifier: " . $certificateIdentifier->toStr() . "\n" . $e->getMessage(), $e->getCode());
+            throw new ApiCreateException('Error while adding the new GitHub issue with the new Certificate Identifier: ' . $certificateIdentifier->toStr() . "\n" . $e->getMessage(), $e->getCode());
         }
 
         return $issue;
     }
 
-    /**
-     * Adds an Issue with the new Certificate Identifier to the CODECHECK GitHub Register
-     *
-     * @param int $issueNumber The Number of the corresponding GitHub Issue
-     * @param CertificateIdentifier $certificateIdentifier The Certificate identifier to be added
-     * @param CodecheckIssueLabels $codecheckIssueLabels The CODECHECK Issue Labels that will be updated
-     * @param string $authorString The formatted author string e.g. `author name et al.`
-     * @param string $paperTitle The Title of the submitted paper / preprint / article
-     * @return array Returns the GitHub URL & Issue Number of the newly created issue
-     */
     /**
      * Write a comment under a register issue.
      *
@@ -273,6 +262,18 @@ class CodecheckGithubRegisterApiClient
         }
     }
 
+    /**
+     * Updates the register issue that carries this Certificate Identifier
+     *
+     * @param array $updateInformation Which parts of the issue to rewrite
+     * @param int $issueNumber The Number of the corresponding GitHub Issue
+     * @param CertificateIdentifier $certificateIdentifier The Certificate identifier the issue carries
+     * @param CodecheckIssueLabels $codecheckIssueLabels The CODECHECK Issue Labels that will be updated
+     * @param string $paperTitle The Title of the submitted paper / preprint / article
+     * @param string $authorString The formatted author string e.g. `author name et al.`
+     *
+     * @return array Returns the GitHub URL & Issue Number of the updated issue
+     */
     public function updateIssue(
         array $updateInformation,
         int $issueNumber,
@@ -304,15 +305,15 @@ class CodecheckGithubRegisterApiClient
 
         $issueContents = [];
 
-        if(in_array(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE, $updateInformation)) {
+        if (in_array(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE, $updateInformation)) {
             $issueContents['title'] = $codecheckIssue->getTitle();
         }
 
-        if(in_array(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY, $updateInformation)) {
+        if (in_array(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY, $updateInformation)) {
             $issueContents['body'] = $codecheckIssue->getBody();
         }
 
-        if(!empty($codecheckIssueLabels->get()->toArray())){
+        if (!empty($codecheckIssueLabels->get()->toArray())) {
             $issueContents['labels'] = $codecheckIssue->getLabels();
         }
 
@@ -324,7 +325,7 @@ class CodecheckGithubRegisterApiClient
                 $issueContents,
             );
         } catch (\Throwable $e) {
-            throw new ApiUpdateException("Error while updating GitHub issue #$issueNumber with the Certificate Identifier: " . $certificateIdentifier->toStr() . "\n" . $e->getMessage(), $e->getCode());
+            throw new ApiUpdateException("Error while updating GitHub issue #{$issueNumber} with the Certificate Identifier: " . $certificateIdentifier->toStr() . "\n" . $e->getMessage(), $e->getCode());
         }
 
         return $issue;
@@ -340,6 +341,7 @@ class CodecheckGithubRegisterApiClient
      *
      * @param array $row Associative array with keys: Certificate, Repository, Type, Venue, Issue
      * @param string $certificateIdentifier Used to build a unique branch name and PR title
+     *
      * @return array The created Pull Request's GitHub API response array
      */
     public function depositRegisterRow(array $row, string $certificateIdentifier): array
@@ -360,7 +362,7 @@ class CodecheckGithubRegisterApiClient
                 $defaultBranch
             );
         } catch (\Throwable $e) {
-            throw new ApiFetchException("Failed fetching '$registerFilePath' from the register repository.\n" . $e->getMessage());
+            throw new ApiFetchException("Failed fetching '{$registerFilePath}' from the register repository.\n" . $e->getMessage());
         }
 
         $currentCsv = base64_decode($fileContents['content']);
@@ -389,7 +391,7 @@ class CodecheckGithubRegisterApiClient
                 ]
             );
         } catch (\Throwable $e) {
-            throw new ApiCreateException("Failed creating the branch '$branchName' for the register deposit.\n" . $e->getMessage(), $e->getCode());
+            throw new ApiCreateException("Failed creating the branch '{$branchName}' for the register deposit.\n" . $e->getMessage(), $e->getCode());
         }
 
         // 4. Commit the updated register.csv to the new branch
@@ -404,7 +406,7 @@ class CodecheckGithubRegisterApiClient
                 $branchName
             );
         } catch (\Throwable $e) {
-            throw new ApiUpdateException("Failed committing the updated '$registerFilePath' to branch '$branchName'.\n" . $e->getMessage(), $e->getCode());
+            throw new ApiUpdateException("Failed committing the updated '{$registerFilePath}' to branch '{$branchName}'.\n" . $e->getMessage(), $e->getCode());
         }
 
         // 5. Open the Pull Request
@@ -443,7 +445,7 @@ class CodecheckGithubRegisterApiClient
         }
 
         $newLine = implode(',', array_map(
-            fn($value) => str_contains($value, ',') ? '"' . str_replace('"', '""', $value) . '"' : $value,
+            fn ($value) => str_contains($value, ',') ? '"' . str_replace('"', '""', $value) . '"' : $value,
             $newLineValues
         ));
 
@@ -463,14 +465,14 @@ class CodecheckGithubRegisterApiClient
                 $issueUrl = "https://github.com/{$this->githubRegisterOrganization}/{$this->githubRegisterRepository}/issues/{$value}";
                 $value = "[#{$value}]({$issueUrl})";
             }
-            $body .= "| $column | $value |\n";
+            $body .= "| {$column} | {$value} |\n";
         }
         return $body;
     }
 
     /**
      * Gets all fetched CODECHECK GtiHub Register Issues
-     * 
+     *
      * @return array Returns an array of all CODECHECK GtiHub Register Issues
      */
     public function getIssues(): array
@@ -480,7 +482,7 @@ class CodecheckGithubRegisterApiClient
 
     /**
      * Gets all fetched CODECHECK GtiHub Register Issue Labels
-     * 
+     *
      * @return UniqueArray Returns a `UniqueArray` of all CODECHECK GtiHub Register Issue Labels
      */
     public function getLabels(): UniqueArray

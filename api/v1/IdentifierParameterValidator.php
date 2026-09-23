@@ -58,7 +58,7 @@ class IdentifierParameterValidator
             return $error;
         }
         if (!is_string($postParams['reserveIdentifierMode'] ?? null)) {
-            return "No Reserve Identifier Mode was specified.";
+            return 'No Reserve Identifier Mode was specified.';
         }
         if ($postParams['reserveIdentifierMode'] === 'linkExistingIdentifier' && !is_string($postParams['identifier'] ?? null)) {
             return "Parameter 'identifier' must be a string when using mode 'linkExistingIdentifier'.";

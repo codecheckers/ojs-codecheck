@@ -3,12 +3,12 @@
 namespace APP\plugins\generic\codecheck\classes\Workflow;
 
 require __DIR__ . '/../../vendor/autoload.php';
-use Symfony\Component\Yaml\Yaml;
-use \APP\core\Request;
+use APP\core\Request;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
-use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
+use Symfony\Component\Yaml\Yaml;
 
-class CodecheckYamlValidator {
+class CodecheckYamlValidator
+{
     private string $yamlContent;
 
     public function __construct(string $yamlContent)
@@ -20,10 +20,10 @@ class CodecheckYamlValidator {
     {
         $codecheckMetadataHandler = new CodecheckMetadataHandler($request);
         $submissionId = $codecheckMetadataHandler->getSubmissionId();
-        CodecheckLogger::debug("Submission ID during Yaml Validation: " . $submissionId);
+        CodecheckLogger::debug('Submission ID during Yaml Validation: ' . $submissionId);
         $result = $codecheckMetadataHandler->generateYaml($request, $submissionId);
 
-        if(isset($result['error'])) {
+        if (isset($result['error'])) {
             throw new \Exception("Something went wrong during the creation of the Yaml File from the CODECHECK Metadata.\n" . $result['error'], 404);
         }
 

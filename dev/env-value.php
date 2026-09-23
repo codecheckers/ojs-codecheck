@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Print one value from the plugin's .env, using the same parser the plugin does.
  *

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file classes/Submission/CodecheckRepositories.php
  *
@@ -6,6 +7,7 @@
  * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * @class CodecheckRepositories
+ *
  * @brief The rules for reading the `repository` blob of `codecheck_metadata`.
  *
  * The blob is `{"repositories": [{url, hidden, providedByAuthor,
@@ -195,6 +197,7 @@ class CodecheckRepositories
      * line. Anything else belongs in `withOneMarked()`'s territory.
      *
      * @param array<int, string> $incoming one URL per entry
+     *
      * @return array<int, string>
      */
     public static function withoutNewUnusable(array $incoming, mixed $stored): array

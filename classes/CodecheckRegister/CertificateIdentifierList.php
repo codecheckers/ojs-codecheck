@@ -2,11 +2,7 @@
 
 namespace APP\plugins\generic\codecheck\classes\CodecheckRegister;
 
-use APP\plugins\generic\codecheck\classes\Exceptions\ApiFetchException;
-use APP\plugins\generic\codecheck\classes\Exceptions\NoMatchingIssuesFoundException;
 use APP\plugins\generic\codecheck\classes\DataStructures\UniqueIdentifierArray;
-use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
-use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifier;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 
 class CertificateIdentifierList
@@ -15,21 +11,21 @@ class CertificateIdentifierList
 
     /**
      * This initializes a new Certificate Identifier List with a new `uniqueIdentifierArray`
-     * 
-     * @return void
+     *
      */
-    function __construct()
+    public function __construct()
     {
-        $this->uniqueIdentifierArray = new UniqueIdentifierArray();   
+        $this->uniqueIdentifierArray = new UniqueIdentifierArray();
     }
 
     /**
      * Factory Method to create a new CertificateIdentifierList from a GitHub API fetch
-     * 
+     *
      * @param CodecheckGithubRegisterApiClient $codecheckGithubRegisterApiClient The APIParser for the GitHub Issues
+     *
      * @return CertificateIdentifierList Returns a new List containing all fetched Certificate Identifiers from GitHub
      */
-    static function fromApi(
+    public static function fromApi(
         CodecheckGithubRegisterApiClient $codecheckGithubRegisterApiClient,
         ?bool $onlyNewestIdentifiers
     ): CertificateIdentifierList {
@@ -37,13 +33,13 @@ class CertificateIdentifierList
 
         // fetch API
         try {
-            if($onlyNewestIdentifiers == true) {
+            if ($onlyNewestIdentifiers == true) {
                 $codecheckGithubRegisterApiClient->fetchNewestIssues();
             } else {
                 $codecheckGithubRegisterApiClient->fetchAllIssues();
             }
         } catch (\Throwable $e) {
-            CodecheckLogger::error($e->getCode() . ": " . $e->getMessage());
+            CodecheckLogger::error($e->getCode() . ': ' . $e->getMessage());
             throw $e;
         }
 
@@ -55,11 +51,12 @@ class CertificateIdentifierList
 
     /**
      * Factory Method to create a new CertificateIdentifierList from a GitHub API fetch
-     * 
+     *
      * @param CodecheckGithubRegisterApiClient $codecheckGithubRegisterApiClient The APIParser for the GitHub Issues
+     *
      * @return CertificateIdentifierList Returns a new List containing all fetched Certificate Identifiers from GitHub
      */
-    static function fromApiWithIdentifier(
+    public static function fromApiWithIdentifier(
         CodecheckGithubRegisterApiClient $codecheckGithubRegisterApiClient,
         CertificateIdentifier $certificateIdentifier
     ): CertificateIdentifierList {
@@ -69,7 +66,7 @@ class CertificateIdentifierList
         try {
             $codecheckGithubRegisterApiClient->fetchIssueByIdentifier($certificateIdentifier);
         } catch (\Throwable $e) {
-            CodecheckLogger::error($e->getCode() . ": " . $e->getMessage());
+            CodecheckLogger::error($e->getCode() . ': ' . $e->getMessage());
             throw $e;
         }
 
@@ -86,10 +83,10 @@ class CertificateIdentifierList
         foreach ($issues as $issue) {
             // raw identifier (can still have ranges of identifiers);
             $rawIdentifier = CertificateIdentifierList::getRawIdentifier($issue['title']);
-            
+
             // check if the identifier is empty (either empty string or null) and not set
             // -> if so skip this identifier and move onto the next issue
-            if(empty($rawIdentifier)) {
+            if (empty($rawIdentifier)) {
                 continue;
             }
 
@@ -103,8 +100,9 @@ class CertificateIdentifierList
 
     /**
      * Get the Certificate Identifier from the GitHub Issue Title
-     * 
+     *
      * @param string $title The Title of the GitHub Issue
+     *
      * @return ?string Either it returns a new Certificate identifier raw string (if the title matches the required form), or it returns null otherwise
      */
     public static function getRawIdentifier(string $title): ?string
@@ -122,7 +120,7 @@ class CertificateIdentifierList
             // $matches[0] is the last sub-string so here the Certificate Identifier
             // when no '|' would exist then it would be the whole string -> but this case is excluded because of the if statement in line 17
             $rawIdentifier = preg_replace('/[\s]+/', '', $matches[0] ?? '');
-        
+
             // Check if the $rawIdentifier has the form 'year-number' or 'year-number/year-number'
             // If it has another form like 'year-number - year-number' it will be set back to null
             if (!preg_match('/^\d{4}-\d+(?:\/\d{4}-\d+)?$/', $rawIdentifier)) {
@@ -135,10 +133,9 @@ class CertificateIdentifierList
 
     /**
      * Appends a raw Identifier to the list of Certificate Identifiers
-     * 
+     *
      * @param string $rawIdentifier The raw Identifier to be appended
      * @param array $issue The GitHub Issue information of the raw Identifier to be appended
-     * @return void
      */
     public function appendToCertificateIdList(string $rawIdentifier, array $issue): void
     {
@@ -146,9 +143,9 @@ class CertificateIdentifierList
         $idRange = [];
 
         // if it is a range
-        if(strpos($rawIdentifier, '/')) {
+        if (strpos($rawIdentifier, '/')) {
             // split into "fromIdStr" and "toIdStr"
-            list($fromIdStr, $toIdStr) = explode('/', $rawIdentifier);
+            [$fromIdStr, $toIdStr] = explode('/', $rawIdentifier);
 
             $fromIdentifier = CertificateIdentifier::fromStr($fromIdStr);
             $toIdentifier = CertificateIdentifier::fromStr($toIdStr);
@@ -183,7 +180,7 @@ class CertificateIdentifierList
      */
     public function sortAsc(): void
     {
-        $this->uniqueIdentifierArray->sort(function($a, $b) {
+        $this->uniqueIdentifierArray->sort(function ($a, $b) {
             // First, compare year
             if ($a['identifier']->getYear() !== $b['identifier']->getYear()) {
                 return $a['identifier']->getYear() <=> $b['identifier']->getYear();
@@ -198,7 +195,7 @@ class CertificateIdentifierList
      */
     public function sortDesc(): void
     {
-        $this->uniqueIdentifierArray->sort(function($a, $b) {
+        $this->uniqueIdentifierArray->sort(function ($a, $b) {
             // First, compare year descending
             if ($a['identifier']->getYear() !== $b['identifier']->getYear()) {
                 return $b['identifier']->getYear() <=> $a['identifier']->getYear();
@@ -210,7 +207,7 @@ class CertificateIdentifierList
 
     /**
      * Returns the count of all Certificate Identifiers that are inside the Certificate Identifier List
-     * 
+     *
      * @return int The count of all Certificate Identifiers
      */
     public function getNumberOfIdentifiers(): int
@@ -220,7 +217,7 @@ class CertificateIdentifierList
 
     /**
      * Get the latest/ newest Certificate Identifier
-     * 
+     *
      * @return CertificateIdentifier Returns the newest Certificate Identifier
      */
     public function getNewestIdentifier(): CertificateIdentifier
@@ -232,7 +229,7 @@ class CertificateIdentifierList
 
     /**
      * Converts the Certificate Identifier List to a string that is good for print debugging
-     * 
+     *
      * @return string The List of the Certificate Identifiers as a string
      */
     public function toStr(): string
@@ -247,7 +244,7 @@ class CertificateIdentifierList
     public function getIssueInformationByIdentifier(CertificateIdentifier $identifier): ?array
     {
         foreach ($this->uniqueIdentifierArray->toArray() as $identifierInformation) {
-            if($identifierInformation['identifier']->toStr() == $identifier->toStr()){
+            if ($identifierInformation['identifier']->toStr() == $identifier->toStr()) {
                 return $identifierInformation;
             }
         }

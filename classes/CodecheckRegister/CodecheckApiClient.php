@@ -10,8 +10,9 @@ class CodecheckApiClient extends CurlApiClient
 
     /**
      * This function fetches all the data from the given URL
-     * 
+     *
      * @param string $url The Url the `CodecheckApiClient` is calling
+     *
      * @return string `$response` The response is the json string from the CODECHECK API
      */
     public function fetch(string $url): string
@@ -27,7 +28,7 @@ class CodecheckApiClient extends CurlApiClient
 
     /**
      * Gets the fetched JSON Data
-     * 
+     *
      * @return array Returns the fetched and json decoded data from the API
      */
     public function getData(): array

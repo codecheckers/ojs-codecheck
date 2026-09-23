@@ -4,21 +4,17 @@ namespace APP\plugins\generic\codecheck\classes\Workflow;
 
 require __DIR__ . '/../../vendor/autoload.php';
 
-use APP\core\Application;
+use APP\core\Request;
 use APP\facades\Repo;
-use Illuminate\Support\Facades\DB;
-use \APP\core\Request;
-use APP\plugins\generic\codecheck\api\v1\JsonResponse;
-use Github\Client;
-use Symfony\Component\Yaml\Yaml;
-use APP\plugins\generic\codecheck\classes\RetrieveReserveIdentifiers\CodecheckRegisterGithubIssuesApiParser;
 use APP\plugins\generic\codecheck\api\v1\CurlApiClient;
-use APP\plugins\generic\codecheck\classes\Constants;
+use APP\plugins\generic\codecheck\api\v1\JsonResponse;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
-use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitException;
-use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
+use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckRepositories;
+use Github\Client;
+use Illuminate\Support\Facades\DB;
+use Symfony\Component\Yaml\Yaml;
 
 class CodecheckMetadataHandler
 {
@@ -28,6 +24,7 @@ class CodecheckMetadataHandler
 
     /**
      * `CodecheckMetadataHandler`
+     *
      * @param \APP\core\Request $request The API Request
      */
     public function __construct(Request $request, Client $client = new Client(), CurlApiClient $curlApiClient = new CurlApiClient())
@@ -35,7 +32,7 @@ class CodecheckMetadataHandler
         $this->client = $client;
         $this->submissionId = $request->getUserVar('submissionId');
         $this->curlApiClient = $curlApiClient;
-      
+
         // Load Composer dependencies if not already loaded
         if (!class_exists('Symfony\Component\Yaml\Yaml')) {
             $autoloadPath = __DIR__ . '/../../vendor/autoload.php';
@@ -47,6 +44,7 @@ class CodecheckMetadataHandler
 
     /**
      * Get the submission ID
+     *
      * @return mixed Returns the Submission ID for the Request that was passed in the constructor
      */
     public function getSubmissionId(): mixed
@@ -57,17 +55,17 @@ class CodecheckMetadataHandler
     public function getMetadata($request, $submissionId): array
     {
         $submission = Repo::submission()->get($submissionId);
-        
+
         if (!$submission) {
             return ['error' => 'Submission not found'];
         }
 
         $publication = $submission->getCurrentPublication();
-        
+
         $metadata = DB::table('codecheck_metadata')
             ->where('submission_id', $submissionId)
             ->first();
-            
+
         $response = [
             'submissionId' => $submissionId,
             'submission' => [
@@ -94,14 +92,14 @@ class CodecheckMetadataHandler
                 'additionalContent' => $metadata->additional_content,
             ] : null
         ];
-        
+
         return $response;
     }
 
     public function saveMetadata($request, $submissionId): array
     {
         $submission = Repo::submission()->get($submissionId);
-        
+
         if (!$submission) {
             return ['success' => false, 'error' => 'Submission not found', 'status' => 404];
         }
@@ -121,8 +119,8 @@ class CodecheckMetadataHandler
                 'status' => 400,
             ];
         }
-        
-        $nullIfEmpty = function($value) {
+
+        $nullIfEmpty = function ($value) {
             return (is_string($value) && trim($value) === '') ? null : $value;
         };
 
@@ -149,7 +147,7 @@ class CodecheckMetadataHandler
                 'status' => 400,
             ];
         }
-        
+
         $metadataData = [
             'submission_id' => $submissionId,
             'version' => $data['version'] ?? 'latest',
@@ -168,7 +166,7 @@ class CodecheckMetadataHandler
             'certificate' => $nullIfEmpty($data['certificate'] ?? null),
             'issue' => json_encode($data['issue'] ?? ['url' => null, 'number' => null, 'labelsSelected' => []]),
             'check_time' => $nullIfEmpty($data['check_time'] ?? null),
-            'summary' => $nullIfEmpty($data['summary'] ?? null),    
+            'summary' => $nullIfEmpty($data['summary'] ?? null),
             'report' => $nullIfEmpty($data['report'] ?? null),
             'additional_content' => $nullIfEmpty($data['additional_content'] ?? null),
             'updated_at' => date('Y-m-d H:i:s'),
@@ -192,13 +190,13 @@ class CodecheckMetadataHandler
     public function generateYaml($request, $submissionId): array
     {
         $submission = Repo::submission()->get($submissionId);
-        
+
         if (!$submission) {
             return ['error' => 'Submission not found'];
         }
 
         $publication = $submission->getCurrentPublication();
-        
+
         $metadata = DB::table('codecheck_metadata')
             ->where('submission_id', $submissionId)
             ->first();
@@ -289,7 +287,7 @@ class CodecheckMetadataHandler
         $stored = is_array($repository['repositories'] ?? null) ? $repository['repositories'] : [];
         $withheld = count($stored) - count($publicUrls);
         if ($withheld > 0) {
-            CodecheckLogger::debug("Left {$withheld} of " . count($stored) . " repositories out of the codecheck.yml: hidden, or with no address.");
+            CodecheckLogger::debug("Left {$withheld} of " . count($stored) . ' repositories out of the codecheck.yml: hidden, or with no address.');
         }
 
         // The specification takes "a URL or a list of URLs", so several
@@ -330,7 +328,9 @@ class CodecheckMetadataHandler
 
     /**
      * Get the Authors for a specific publication
+     *
      * @param mixed $publication The publication data
+     *
      * @return array The Authors with Name and ORCID (if isset) in an Array
      */
     public function getAuthors($publication): array
@@ -338,7 +338,7 @@ class CodecheckMetadataHandler
         if (!$publication) {
             return [];
         }
-        
+
         $authors = [];
         foreach ($publication->getData('authors') as $author) {
             $locale = $author->getDefaultLocale();
@@ -347,7 +347,7 @@ class CodecheckMetadataHandler
             $fullName = trim($givenName . ' ' . $familyName);
 
             $authors[] = [
-                'name' => $fullName,    
+                'name' => $fullName,
                 'orcid' => $author->getOrcid()
             ];
         }
@@ -398,19 +398,16 @@ class CodecheckMetadataHandler
             return $this->importMetadataFromZenodo($repository);
         }
         // Check if the Repository is a GitHub Repository
-        elseif (preg_match('#^https://github\.com/codecheckers/#', $repository))
-        {
+        elseif (preg_match('#^https://github\.com/codecheckers/#', $repository)) {
             return $this->importMetadataFromGitHub($repository);
         }
         // Check if the Repository is an OSF Repository
-        elseif (preg_match('#^https://osf\.io/([A-Za-z0-9]{5})/?$#', $repository, $matches))
-        {
+        elseif (preg_match('#^https://osf\.io/([A-Za-z0-9]{5})/?$#', $repository, $matches)) {
             $osf_node_id = $matches[1];
             return $this->importMetadataFromOSF($osf_node_id);
         }
         // Check if the Repository is a GitLab Repository
-        elseif (preg_match('#^https://gitlab\.com/cdchck/community-codechecks/([^/]+)/?$#', $repository))
-        {
+        elseif (preg_match('#^https://gitlab\.com/cdchck/community-codechecks/([^/]+)/?$#', $repository)) {
             // Remove trailing / if it exists
             $repository = rtrim($repository, '/');
             return $this->importMetadataFromGitLab($repository);
@@ -418,14 +415,16 @@ class CodecheckMetadataHandler
             return new JsonResponse([
                 'success' => false,
                 'repository' => $repository,
-                'error' => "The repository (" . $repository . ") URL isn't of the required format.",
+                'error' => 'The repository (' . $repository . ") URL isn't of the required format.",
             ], 400);
         }
     }
 
     /**
      * Import the codecheck metadata from an existing `codecheck.yml` from the CODECHECK GitHub Repository
+     *
      * @param string $repository The GitHub Repository
+     *
      * @return JsonResponse The Metadata from the Repositories `codecheck.yml`
      */
     private function importMetadataFromGitHub(string $repository): JsonResponse
@@ -454,7 +453,7 @@ class CodecheckMetadataHandler
         } catch (\Exception $e) {
             return new JsonResponse([
                 'success' => false,
-                'error' => "There is no '$filename' file in this repository.",
+                'error' => "There is no '{$filename}' file in this repository.",
                 'repository' => $repository,
             ], 404);
         }
@@ -465,7 +464,7 @@ class CodecheckMetadataHandler
             return new JsonResponse([
                 'success' => false,
                 'repository' => $repository,
-                'error' => "$filename not found",
+                'error' => "{$filename} not found",
             ], 404);
         }
 
@@ -494,13 +493,15 @@ class CodecheckMetadataHandler
         return new JsonResponse([
             'success' => false,
             'repository' => $repository,
-            'error' => "$filename not found",
+            'error' => "{$filename} not found",
         ], 404);
     }
 
     /**
      * Import the codecheck metadata from an existing `codecheck.yml` from the CODECHECK Zenodo Repository
+     *
      * @param string $repository The Zenodo Repository
+     *
      * @return JsonResponse The Metadata from the Repositories `codecheck.yml`
      */
     private function importMetadataFromZenodo(string $repository): JsonResponse
@@ -513,14 +514,16 @@ class CodecheckMetadataHandler
 
     /**
      * Import the codecheck metadata from an existing `codecheck.yml` from the CODECHECK OSF Repository
+     *
      * @param string $osf_node_id The node_id of the OSF Repository for the OSF API
+     *
      * @return JsonResponse The Metadata from the Repositories `codecheck.yml`
      */
     private function importMetadataFromOSF(string $osf_node_id): JsonResponse
     {
         $filename = 'codecheck.yml';
-        $repository = "https://osf.io/$osf_node_id/";
-        $apiUrl = "https://api.osf.io/v2/nodes/" . $osf_node_id . "/files/osfstorage/";
+        $repository = "https://osf.io/{$osf_node_id}/";
+        $apiUrl = 'https://api.osf.io/v2/nodes/' . $osf_node_id . '/files/osfstorage/';
 
         // Get YAML Contents
         try {
@@ -554,7 +557,7 @@ class CodecheckMetadataHandler
             } else {
                 return new JsonResponse([
                     'success' => false,
-                    'error' => "$filename not found",
+                    'error' => "{$filename} not found",
                     'repository' => $repository
                 ], 404);
             }
@@ -571,7 +574,9 @@ class CodecheckMetadataHandler
 
     /**
      * Import the codecheck metadata from an existing `codecheck.yml` from the CODECHECK GitLab Repository
+     *
      * @param string $repository The GitLab Repository
+     *
      * @return JsonResponse The Metadata from the Repositories `codecheck.yml`
      */
     private function importMetadataFromGitLab(string $repository): JsonResponse
@@ -584,8 +589,10 @@ class CodecheckMetadataHandler
 
     /**
      * Read the yaml data and return an API response array with the content of the yaml file
+     *
      * @param string $pathToYamlContent The exact path to the download of the yaml file
      * @param string $repository The exact path to the code repository
+     *
      * @return JsonResponse The API Response with the repository and the yaml content array
      */
     private function readYamlContent(string $pathToYamlContent, string $repository): JsonResponse

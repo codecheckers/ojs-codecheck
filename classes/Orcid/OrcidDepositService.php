@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file classes/Orcid/OrcidDepositService.php
  *
@@ -6,16 +7,17 @@
  * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * @class OrcidDepositService
+ *
  * @brief Orchestrates depositing CODECHECK activity to ORCID profiles.
  */
 
 namespace APP\plugins\generic\codecheck\classes\Orcid;
 
 use APP\core\Application;
+use APP\facades\Repo;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
-use APP\facades\Repo;
 use Illuminate\Support\Facades\DB;
 
 class OrcidDepositService
@@ -26,8 +28,8 @@ class OrcidDepositService
 
     public function __construct(CodecheckPlugin $plugin)
     {
-        $this->plugin         = $plugin;
-        $this->tokenDAO       = new OrcidTokenDAO();
+        $this->plugin = $plugin;
+        $this->tokenDAO = new OrcidTokenDAO();
         $this->payloadBuilder = new PeerReviewPayloadBuilder();
     }
 
@@ -42,16 +44,16 @@ class OrcidDepositService
      */
     public function depositForSubmission(int $submissionId, ?string $onlyOrcidId = null): array
     {
-        $context   = Application::get()->getRequest()->getContext();
+        $context = Application::get()->getRequest()->getContext();
         if (!$context) {
             CodecheckLogger::error('ORCID deposit skipped: no journal context on this request.');
             return [['status' => 'failed', 'error' => __('plugins.generic.codecheck.orcid.test.error.noCredentials')]];
         }
         $contextId = $context->getId();
 
-        $clientId     = $this->plugin->getSetting($contextId, Constants::ORCID_CLIENT_ID);
+        $clientId = $this->plugin->getSetting($contextId, Constants::ORCID_CLIENT_ID);
         $clientSecret = $this->plugin->getSetting($contextId, Constants::ORCID_CLIENT_SECRET);
-        $apiType      = $this->plugin->getSetting($contextId, Constants::ORCID_API_TYPE)
+        $apiType = $this->plugin->getSetting($contextId, Constants::ORCID_API_TYPE)
                         ?? Constants::ORCID_API_TYPE_SANDBOX;
 
         if (empty($clientId) || empty($clientSecret)) {
@@ -72,15 +74,15 @@ class OrcidDepositService
         $this->validateJournalInfo($journal);
 
         $client = new OrcidApiClient($clientId, $clientSecret, $apiType);
-        $meta   = $this->loadCodecheckMeta($submissionId);
+        $meta = $this->loadCodecheckMeta($submissionId);
 
         // Ensure the group-id exists in ORCID before depositing peer-reviews.
         $issn = !empty($journal['issn']) ? trim($journal['issn']) : '';
         if (!empty($issn)) {
-            $groupId   = 'issn:' . $issn;
+            $groupId = 'issn:' . $issn;
             $groupName = !empty($journal['name']) ? $journal['name'] : $journal['publisherName'];
         } else {
-            $groupId   = 'orcid-generated:codecheck-ojs';
+            $groupId = 'orcid-generated:codecheck-ojs';
             $groupName = !empty($journal['name']) ? $journal['name'] : $journal['publisherName'];
         }
 
@@ -92,7 +94,7 @@ class OrcidDepositService
         }
 
         $tokenRows = $this->tokenDAO->getAuthorizedBySubmission($submissionId);
-        $results   = [];
+        $results = [];
 
         // Without a certificate there is no identifier that distinguishes this
         // check from any other. Depositing anyway used the literal
@@ -105,7 +107,7 @@ class OrcidDepositService
 
             return [[
                 'status' => 'skipped',
-                'error'  => __('plugins.generic.codecheck.orcid.deposit.skipped.noCertificate'),
+                'error' => __('plugins.generic.codecheck.orcid.deposit.skipped.noCertificate'),
             ]];
         }
 
@@ -135,8 +137,12 @@ class OrcidDepositService
         $country = !empty($journal['publisherCountry']) ? trim($journal['publisherCountry']) : '';
 
         $missing = [];
-        if (empty($publisherName)) $missing[] = 'Publisher Name (Journal Settings → Masthead → Publisher)';
-        if (empty($country))       $missing[] = 'Country (Journal Settings → Masthead → Country)';
+        if (empty($publisherName)) {
+            $missing[] = 'Publisher Name (Journal Settings → Masthead → Publisher)';
+        }
+        if (empty($country)) {
+            $missing[] = 'Country (Journal Settings → Masthead → Country)';
+        }
 
         if (!empty($missing)) {
             throw new \InvalidArgumentException(
@@ -163,9 +169,9 @@ class OrcidDepositService
         array $meta,
         array $journal
     ): array {
-        $orcidId     = $row->orcid_id;
+        $orcidId = $row->orcid_id;
         $accessToken = $row->access_token;
-        $putCode     = $row->put_code;
+        $putCode = $row->put_code;
 
         try {
             $payload = $this->payloadBuilder->build($submission, $orcidId, $meta, $journal);
@@ -199,12 +205,12 @@ class OrcidDepositService
     {
         $context = Application::get()->getRequest()->getContext();
         return [
-            'name'             => $context->getLocalizedName() ?? '',
-            'issn'             => $context->getData('onlineIssn') ?? $context->getData('printIssn') ?? '',
-            'publisherName'    => $context->getData('publisherInstitution') ?? '',
-            'publisherCity'   => $this->plugin->getSetting($contextId, Constants::ORCID_CITY) ?? '',
+            'name' => $context->getLocalizedName() ?? '',
+            'issn' => $context->getData('onlineIssn') ?? $context->getData('printIssn') ?? '',
+            'publisherName' => $context->getData('publisherInstitution') ?? '',
+            'publisherCity' => $this->plugin->getSetting($contextId, Constants::ORCID_CITY) ?? '',
             'publisherCountry' => $context->getData('country') ?? '',
-            'ringgoldId'       => $context->getData('ringgoldId') ?? null,
+            'ringgoldId' => $context->getData('ringgoldId') ?? null,
         ];
     }
 }

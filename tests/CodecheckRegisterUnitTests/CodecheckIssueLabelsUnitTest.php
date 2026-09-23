@@ -2,12 +2,8 @@
 
 namespace APP\plugins\generic\codecheck\tests;
 
-use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckVenueNames;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckApiClient;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckIssueLabels;
-use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
-use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckVenueTypes;
-use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitException;
 use PKP\tests\PKPTestCase;
 
 /**
@@ -20,16 +16,16 @@ use PKP\tests\PKPTestCase;
 class CodecheckIssueLabelsUnitTest extends PKPTestCase
 {
     protected function setUp(): void
-	{
-		parent::setUp();
-	}
+    {
+        parent::setUp();
+    }
 
     public function testAddLabels()
     {
-        $labels = ["l1", "l2"];
+        $labels = ['l1', 'l2'];
         $codecheckIssueLabels = new CodecheckIssueLabels($labels);
-        $codecheckIssueLabels->add("l3");
-        $codecheckIssueLabels->addLabelArray(["l4", "l5"]);
+        $codecheckIssueLabels->add('l3');
+        $codecheckIssueLabels->addLabelArray(['l4', 'l5']);
         $this->assertCount(5, $codecheckIssueLabels->get()->toArray());
     }
 
@@ -49,7 +45,7 @@ class CodecheckIssueLabelsUnitTest extends PKPTestCase
         $jsonApiMockVenueNames->expects($this->once())
                                 ->method('fetch')
                                 ->with('https://codecheck.org.uk/register/venues/index.json');
-                                
+
         $jsonApiMockVenueNames->method('getData')->willReturn([
             ["Issue label" => 'journal'],
             ["Issue label" => 'lifecycle journal'],

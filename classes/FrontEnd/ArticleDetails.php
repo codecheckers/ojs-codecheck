@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file classes/FrontEnd/ArticleDetails.php
  *
@@ -6,6 +7,7 @@
  * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * @class ArticleDetails
+ *
  * @brief Front end article details page class for the CODECHECK plugin.
  */
 
@@ -13,16 +15,16 @@ namespace APP\plugins\generic\codecheck\classes\FrontEnd;
 
 use APP\core\Application;
 use APP\plugins\generic\codecheck\classes\Constants;
-use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionDAO;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmission;
+use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionDAO;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
 
 class ArticleDetails
 {
-    /** @var CodecheckPlugin */
+    /**  */
     public CodecheckPlugin $plugin;
 
-    /** @param CodecheckPlugin $plugin */
+    /**  */
     public function __construct(CodecheckPlugin &$plugin)
     {
         $this->plugin = &$plugin;
@@ -84,16 +86,16 @@ class ArticleDetails
         $badge = new Badge($this->plugin, $context->getId());
 
         $templateMgr->assign([
-            'badgeLink'    => $badge->getCertificateUrl(
+            'badgeLink' => $badge->getCertificateUrl(
                 $codecheckData->getCertificate(),
                 $codecheckData->getDoiLink()
             ),
-            'logoUrl'      => $badge->getUrl(),
-            'badgeText'    => $badge->getText(),
+            'logoUrl' => $badge->getUrl(),
+            'badgeText' => $badge->getText(),
             'badgeTextColor' => $badge->getTextColor(),
-            'badgeStyle'   => $badge->getStyle(),
+            'badgeStyle' => $badge->getStyle(),
             'orcidIconUrl' => $request->getBaseUrl() . '/' . $this->plugin->getPluginPath() . '/assets/img/orcid.svg',
-            'articleId'    => $article->getId(),
+            'articleId' => $article->getId(),
             // Both the completed and the pending branch render the same list
             'repositoriesTemplate' => $this->plugin->getTemplateResource(
                 'frontend/objects/article_codecheck_repositories.tpl'
@@ -102,21 +104,21 @@ class ArticleDetails
 
         if ($codecheckData->hasCompletedCheck()) {
             $templateMgr->assign([
-                'codecheckStatus'   => 'completed',
-                'certificateLink'   => $codecheckData->getCertificateLink(),
-                'doiLink'           => $codecheckData->getDoiLink(),
-                'linkText'          => $codecheckData->getCertificate(),
-                'codecheckers'      => $codecheckData->getCodecheckers(),
-                'certificateDate'   => $codecheckData->getCertificateDate(),
-                'summary'           => $codecheckData->getSummary(),
-                'repositories'      => $codecheckData->getPublicRepositories(),
-                'manifest'          => $codecheckData->getManifest(),
+                'codecheckStatus' => 'completed',
+                'certificateLink' => $codecheckData->getCertificateLink(),
+                'doiLink' => $codecheckData->getDoiLink(),
+                'linkText' => $codecheckData->getCertificate(),
+                'codecheckers' => $codecheckData->getCodecheckers(),
+                'certificateDate' => $codecheckData->getCertificateDate(),
+                'summary' => $codecheckData->getSummary(),
+                'repositories' => $codecheckData->getPublicRepositories(),
+                'manifest' => $codecheckData->getManifest(),
                 'additionalContent' => $codecheckData->getAdditionalContent(),
             ]);
         } elseif ($codecheckData->hasAssignedChecker()) {
             $templateMgr->assign([
                 'codecheckStatus' => 'pending',
-                'repositories'    => $codecheckData->getPublicRepositories(),
+                'repositories' => $codecheckData->getPublicRepositories(),
             ]);
         } else {
             return '';

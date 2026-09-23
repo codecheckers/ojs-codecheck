@@ -1,4 +1,5 @@
 <?php
+
 namespace APP\plugins\generic\codecheck\classes\Submission;
 
 use APP\plugins\generic\codecheck\classes\Constants;
@@ -71,23 +72,23 @@ class CodecheckSubmission
         $this->data = $data;
     }
 
-    public function getSubmissionId(): int 
-    { 
-        return (int) $this->data['submission_id']; 
+    public function getSubmissionId(): int
+    {
+        return (int) $this->data['submission_id'];
     }
 
-    public function getVersion(): string 
-    { 
-        return $this->data['version'] ?? 'latest'; 
+    public function getVersion(): string
+    {
+        return $this->data['version'] ?? 'latest';
     }
 
-    public function getPublicationType(): string 
-    { 
-        return $this->data['publication_type'] ?? 'doi'; 
+    public function getPublicationType(): string
+    {
+        return $this->data['publication_type'] ?? 'doi';
     }
 
-    public function getManifest(): array 
-    { 
+    public function getManifest(): array
+    {
         if (empty($this->data['manifest'])) {
             return [];
         }
@@ -122,7 +123,7 @@ class CodecheckSubmission
         $decoded = json_decode($raw, true);
 
         if (!is_array($decoded) || !is_array($decoded['repositories'] ?? null)) {
-            CodecheckLogger::warning("Repository data is not in expected format. Raw value: " . $raw);
+            CodecheckLogger::warning('Repository data is not in expected format. Raw value: ' . $raw);
             return [];
         }
 
@@ -147,13 +148,13 @@ class CodecheckSubmission
         return $public;
     }
 
-    public function getSource(): string 
-    { 
-        return $this->data['source'] ?? ''; 
+    public function getSource(): string
+    {
+        return $this->data['source'] ?? '';
     }
 
-    public function getCodecheckers(): array 
-    { 
+    public function getCodecheckers(): array
+    {
         if (empty($this->data['codecheckers'])) {
             return [];
         }
@@ -161,43 +162,43 @@ class CodecheckSubmission
         return is_array($decoded) ? $decoded : [];
     }
 
-    public function getCertificate(): string 
-    { 
-        return $this->data['certificate'] ?? ''; 
+    public function getCertificate(): string
+    {
+        return $this->data['certificate'] ?? '';
     }
 
-    public function getIssueUrl(): string 
-    { 
-        return $this->data['issueUrl'] ?? ''; 
+    public function getIssueUrl(): string
+    {
+        return $this->data['issueUrl'] ?? '';
     }
 
-    public function getIssueNumber(): string 
-    { 
-        return $this->data['issueNumber'] ?? ''; 
+    public function getIssueNumber(): string
+    {
+        return $this->data['issueNumber'] ?? '';
     }
 
-    public function getCheckTime(): ?string 
-    { 
-        return $this->data['check_time'] ?? null; 
+    public function getCheckTime(): ?string
+    {
+        return $this->data['check_time'] ?? null;
     }
 
-    public function getSummary(): string 
-    { 
-        return $this->data['summary'] ?? ''; 
+    public function getSummary(): string
+    {
+        return $this->data['summary'] ?? '';
     }
 
-    public function getReport(): string 
-    { 
-        return $this->data['report'] ?? ''; 
+    public function getReport(): string
+    {
+        return $this->data['report'] ?? '';
     }
 
-    public function getAdditionalContent(): string 
-    { 
-        return $this->data['additional_content'] ?? ''; 
+    public function getAdditionalContent(): string
+    {
+        return $this->data['additional_content'] ?? '';
     }
 
-    public function getCodecheckerNames(): string 
-    { 
+    public function getCodecheckerNames(): string
+    {
         $codecheckers = $this->getCodecheckers();
         if (empty($codecheckers)) {
             return '';
@@ -205,15 +206,15 @@ class CodecheckSubmission
         return implode(', ', array_column($codecheckers, 'name'));
     }
 
-    public function getCertificateDate(): ?string 
-    { 
-        return $this->getCheckTime(); 
+    public function getCertificateDate(): ?string
+    {
+        return $this->getCheckTime();
     }
 
     /**
      * Check if this submission has a completed CODECHECK
      */
-    public function hasCompletedCheck(): bool 
+    public function hasCompletedCheck(): bool
     {
         return !empty($this->getCertificate());
     }
@@ -229,16 +230,16 @@ class CodecheckSubmission
     /**
      * Get the primary certificate link
      */
-    public function getCertificateLink(): string 
+    public function getCertificateLink(): string
     {
         $certificate = $this->getCertificate();
-        
+
         // If it's already a URL, return it. Not filter_var(): that accepts
         // `javascript://…` — see Constants::isWebUrl().
         if (Constants::isWebUrl($certificate)) {
             return $certificate;
         }
-        
+
         // Otherwise it is a register identifier — stored as YYYY-NNN, though
         // older records carry a CODECHECK- prefix — and the link is its landing
         // page in the register.
@@ -248,25 +249,25 @@ class CodecheckSubmission
     /**
      * Get DOI link if available
      */
-    public function getDoiLink(): string 
+    public function getDoiLink(): string
     {
         $report = $this->getReport();
-        
+
         // If report is empty, return empty
         if (empty($report)) {
             return '';
         }
-        
+
         // Check if report is a valid DOI format
         if (preg_match('/^(https?:\/\/)?(doi\.org\/)?(.+)$/', $report, $matches)) {
             $doi = $matches[3];
-            
+
             // Validate DOI format (should contain at least one slash, e.g., 10.xxxx/yyyy)
             if (strpos($doi, '/') !== false && preg_match('/^10\.\d+\//', $doi)) {
                 return 'https://doi.org/' . $doi;
             }
         }
-        
+
         // Anything that is not an http(s) address is not a link. The value is
         // still stored; it is simply never turned into one, because this is
         // rendered straight into an href on the public article page and

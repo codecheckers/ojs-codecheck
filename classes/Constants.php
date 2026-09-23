@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file classes/Constants.php
  *
@@ -6,6 +7,7 @@
  * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * @class Constants
+ *
  * @brief Constants used in the CODECHECK plugin.
  */
 
@@ -43,7 +45,7 @@ class Constants
         Constants::CODECHECK_STATUS_PUBLISHED_PARTIAL_REPRODUCTION,
         Constants::CODECHECK_STATUS_PUBLISHED_FULL_REPRODUCTION,
     ];
-    
+
     public const CODECHECK_SHOW_ARTICLE_SIDEBAR = 'showArticleSidebar';
     public const CODECHECK_SHOW_IN_TOC = 'showInTOC';
 

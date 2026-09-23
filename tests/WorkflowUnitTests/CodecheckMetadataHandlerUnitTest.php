@@ -2,16 +2,14 @@
 
 namespace APP\plugins\generic\codecheck\tests\WorkflowUnitTests;
 
-use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
-use PKP\tests\PKPTestCase;
-
-use \APP\core\Request;
+use APP\core\Request;
 use APP\plugins\generic\codecheck\api\v1\CurlApiClient;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitException;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
-use CurlHandle;
-use Symfony\Component\Yaml\Yaml;
+use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PKP\tests\PKPTestCase;
+use Symfony\Component\Yaml\Yaml;
 
 /**
  * @file APP/plugins/generic/codecheck/tests/WorkflowUnitTests/CodecheckMetadataHandlerUnitTest.php
@@ -42,7 +40,7 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $this->curlApiClient = new CurlApiClient();
 
         $this->handler = new CodecheckMetadataHandler($this->mockRequest, $client, $this->curlApiClient);
-	}
+    }
 
     /**
      * The generated codecheck.yml is validated at publication and deposited in
@@ -145,7 +143,7 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
 
                 // 2nd call: file contents
                 [
-                    'content' => base64_encode("test: yaml")
+                    'content' => base64_encode('test: yaml')
                 ]
             );
 
@@ -178,9 +176,9 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $actualMetadataReturnArray = json_decode($response->getPayload(), true);
         $this->assertEquals(200, $response->getHttpResponseCode());
         $this->assertCount(3, $actualMetadataReturnArray);
-        $this->assertTrue($actualMetadataReturnArray["success"]);
-        $this->assertEquals($repositoryUrl, $actualMetadataReturnArray["repository"]);
-        $this->assertEquals(["test" => "yaml"], $actualMetadataReturnArray["metadata"]);
+        $this->assertTrue($actualMetadataReturnArray['success']);
+        $this->assertEquals($repositoryUrl, $actualMetadataReturnArray['repository']);
+        $this->assertEquals(['test' => 'yaml'], $actualMetadataReturnArray['metadata']);
     }
 
     public function testImportMetadataFromGithubDefaultBranchMain()
@@ -200,7 +198,7 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
 
                 // 2nd call: file contents
                 [
-                    'content' => base64_encode("test: yaml")
+                    'content' => base64_encode('test: yaml')
                 ]
             );
 
@@ -273,8 +271,8 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $actualMetadataReturnArray = json_decode($response->getPayload(), true);
         $this->assertEquals(404, $response->getHttpResponseCode());
         $this->assertCount(3, $actualMetadataReturnArray);
-        $this->assertFalse($actualMetadataReturnArray["success"]);
-        $this->assertEquals($repositoryUrl, $actualMetadataReturnArray["repository"]);
+        $this->assertFalse($actualMetadataReturnArray['success']);
+        $this->assertEquals($repositoryUrl, $actualMetadataReturnArray['repository']);
     }
 
     public function testImportMetadataFromGithubNoCodecheckYamlFound()
@@ -314,9 +312,9 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $actualMetadataReturnArray = json_decode($response->getPayload(), true);
         $this->assertEquals(404, $response->getHttpResponseCode());
         $this->assertCount(3, $actualMetadataReturnArray);
-        $this->assertFalse($actualMetadataReturnArray["success"]);
-        $this->assertEquals($repositoryUrl, $actualMetadataReturnArray["repository"]);
-        $this->assertEquals('codecheck.yml not found', $actualMetadataReturnArray["error"]);
+        $this->assertFalse($actualMetadataReturnArray['success']);
+        $this->assertEquals($repositoryUrl, $actualMetadataReturnArray['repository']);
+        $this->assertEquals('codecheck.yml not found', $actualMetadataReturnArray['error']);
     }
 
     public function testImportMetadataFromZenodo()
@@ -326,132 +324,132 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $request = new Request();
         $curlApiClient = $this->createMock(CurlApiClient::class);
         $curlApiClient->method('resolveDoi')->willReturn($repository);
-        $curlApiClient->method('fetch')->willReturn("test: yaml");
+        $curlApiClient->method('fetch')->willReturn('test: yaml');
         $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
         $response = $this->handler->importMetadataFromRepository($repository);
         $actualMetadataReturnArray = json_decode($response->getPayload(), true);
         print_r($actualMetadataReturnArray);
         $this->assertEquals(200, $response->getHttpResponseCode());
         $this->assertCount(3, $actualMetadataReturnArray);
-        $this->assertTrue($actualMetadataReturnArray["success"]);
-        $this->assertEquals($repository, $actualMetadataReturnArray["repository"]);
-        $this->assertEquals(["test" => "yaml"], $actualMetadataReturnArray["metadata"]);
+        $this->assertTrue($actualMetadataReturnArray['success']);
+        $this->assertEquals($repository, $actualMetadataReturnArray['repository']);
+        $this->assertEquals(['test' => 'yaml'], $actualMetadataReturnArray['metadata']);
     }
 
     public function testImportMetadataFromOsf()
     {
         $osfNodeId = 'ymc3t';
-        $repository = "https://osf.io/$osfNodeId/";
+        $repository = "https://osf.io/{$osfNodeId}/";
         $client = $this->createMock(\Github\Client::class);
         $request = new Request();
         $curlApiClient = $this->createMock(CurlApiClient::class);
         $curlApiClient->method('resolveDoi')->willReturn($repository);
         $curlApiClient->method('fetch')
-                        ->willReturnOnConsecutiveCalls(
-                            json_encode([
-                                "data" => [
-                                    [
-                                        "attributes" => [
-                                            "name" => "README.md",
-                                            "guid" => "4co4h"
-                                        ],
-                                        "attributes" => [
-                                            "name" => "codecheck.yml",
-                                            "guid" => "5zu8b"
-                                        ]
-                                    ]
-                                ]
-                            ]),
-                            "test: yaml"
-                        );
+            ->willReturnOnConsecutiveCalls(
+                json_encode([
+                    'data' => [
+                        [
+                            'attributes' => [
+                                'name' => 'README.md',
+                                'guid' => '4co4h'
+                            ],
+                            'attributes' => [
+                                'name' => 'codecheck.yml',
+                                'guid' => '5zu8b'
+                            ]
+                        ]
+                    ]
+                ]),
+                'test: yaml'
+            );
         $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
         $response = $this->handler->importMetadataFromRepository($osfNodeId);
         $actualMetadataReturnArray = json_decode($response->getPayload(), true);
         $this->assertEquals(200, $response->getHttpResponseCode());
         $this->assertCount(3, $actualMetadataReturnArray);
-        $this->assertTrue($actualMetadataReturnArray["success"]);
-        $this->assertEquals($repository, $actualMetadataReturnArray["repository"]);
-        $this->assertEquals(["test" => "yaml"], $actualMetadataReturnArray["metadata"]);
+        $this->assertTrue($actualMetadataReturnArray['success']);
+        $this->assertEquals($repository, $actualMetadataReturnArray['repository']);
+        $this->assertEquals(['test' => 'yaml'], $actualMetadataReturnArray['metadata']);
     }
 
     public function testImportMetadataFromOsfNoDataFromOsfFilestorage()
     {
         $osfNodeId = 'ymc3t';
-        $repository = "https://osf.io/$osfNodeId/";
+        $repository = "https://osf.io/{$osfNodeId}/";
         $client = $this->createMock(\Github\Client::class);
         $request = new Request();
         $curlApiClient = $this->createMock(CurlApiClient::class);
         $curlApiClient->method('resolveDoi')->willReturn($repository);
         $curlApiClient->method('fetch')
-                        ->willReturnOnConsecutiveCalls(
-                            json_encode([
-                                "data" => NULL
-                            ]),
-                            "test: yaml"
-                        );
+            ->willReturnOnConsecutiveCalls(
+                json_encode([
+                    'data' => null
+                ]),
+                'test: yaml'
+            );
         $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
         $response = $this->handler->importMetadataFromRepository($osfNodeId);
         $actualMetadataReturnArray = json_decode($response->getPayload(), true);
         $this->assertEquals(500, $response->getHttpResponseCode());
         $this->assertCount(3, $actualMetadataReturnArray);
-        $this->assertFalse($actualMetadataReturnArray["success"]);
-        $this->assertEquals($repository, $actualMetadataReturnArray["repository"]);
-        $this->assertEquals('Invalid OSF API response', $actualMetadataReturnArray["error"]);
+        $this->assertFalse($actualMetadataReturnArray['success']);
+        $this->assertEquals($repository, $actualMetadataReturnArray['repository']);
+        $this->assertEquals('Invalid OSF API response', $actualMetadataReturnArray['error']);
     }
 
     public function testImportMetadataFromOsfCodecheckYamlHasNoGuid()
     {
         $osfNodeId = 'ymc3t';
-        $repository = "https://osf.io/$osfNodeId/";
+        $repository = "https://osf.io/{$osfNodeId}/";
         $client = $this->createMock(\Github\Client::class);
         $request = new Request();
         $curlApiClient = $this->createMock(CurlApiClient::class);
         $curlApiClient->method('resolveDoi')->willReturn($repository);
         $curlApiClient->method('fetch')
-                        ->willReturnOnConsecutiveCalls(
-                            json_encode([
-                                "data" => [
-                                    [
-                                        "attributes" => [
-                                            "name" => "codecheck.yml",
-                                            "guid" => NULL
-                                        ]
-                                    ]
-                                ]
-                            ]),
-                            "test: yaml"
-                        );
+            ->willReturnOnConsecutiveCalls(
+                json_encode([
+                    'data' => [
+                        [
+                            'attributes' => [
+                                'name' => 'codecheck.yml',
+                                'guid' => null
+                            ]
+                        ]
+                    ]
+                ]),
+                'test: yaml'
+            );
         $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
         $response = $this->handler->importMetadataFromRepository($osfNodeId);
         $actualMetadataReturnArray = json_decode($response->getPayload(), true);
         $this->assertEquals(404, $response->getHttpResponseCode());
         $this->assertCount(3, $actualMetadataReturnArray);
-        $this->assertFalse($actualMetadataReturnArray["success"]);
-        $this->assertEquals($repository, $actualMetadataReturnArray["repository"]);
-        $this->assertEquals('codecheck.yml not found', $actualMetadataReturnArray["error"]);
+        $this->assertFalse($actualMetadataReturnArray['success']);
+        $this->assertEquals($repository, $actualMetadataReturnArray['repository']);
+        $this->assertEquals('codecheck.yml not found', $actualMetadataReturnArray['error']);
     }
 
     public function testImportMetadataFromOsfCurlInitException()
     {
         $errorCode = 500;
-        $errorMessage = "Error initializing the cURL API";
+        $errorMessage = 'Error initializing the cURL API';
         $osfNodeId = 'ymc3t';
-        $repository = "https://osf.io/$osfNodeId/";
+        $repository = "https://osf.io/{$osfNodeId}/";
         $client = $this->createMock(\Github\Client::class);
         $request = new Request();
         $curlApiClient = $this->createMock(CurlApiClient::class);
         $curlApiClient->method('resolveDoi')->willReturn($repository);
         $curlApiClient->method('fetch')
-                        ->will($this->throwException(new CurlInitException($errorMessage, $errorCode)));
+            ->will($this->throwException(new CurlInitException($errorMessage, $errorCode)));
 
         $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
         $response = $this->handler->importMetadataFromRepository($osfNodeId);
         $actualMetadataReturnArray = json_decode($response->getPayload(), true);
         $this->assertEquals($errorCode, $response->getHttpResponseCode());
         $this->assertCount(3, $actualMetadataReturnArray);
-        $this->assertFalse($actualMetadataReturnArray["success"]);
-        $this->assertEquals($repository, $actualMetadataReturnArray["repository"]);
-        $this->assertEquals($errorMessage, $actualMetadataReturnArray["error"]);
+        $this->assertFalse($actualMetadataReturnArray['success']);
+        $this->assertEquals($repository, $actualMetadataReturnArray['repository']);
+        $this->assertEquals($errorMessage, $actualMetadataReturnArray['error']);
     }
 
     public function testImportMetadataFromOsfCurlReadException()
@@ -460,22 +458,22 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $errorCode = curl_errno($curlHandle);
         $errorMessage = curl_error($curlHandle);
         $osfNodeId = 'ymc3t';
-        $repository = "https://osf.io/$osfNodeId/";
+        $repository = "https://osf.io/{$osfNodeId}/";
         $client = $this->createMock(\Github\Client::class);
         $request = new Request();
         $curlApiClient = $this->createMock(CurlApiClient::class);
         $curlApiClient->method('resolveDoi')->willReturn($repository);
         $curlApiClient->method('fetch')
-                        ->will($this->throwException(new CurlReadException($curlHandle)));
+            ->will($this->throwException(new CurlReadException($curlHandle)));
 
         $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
         $response = $this->handler->importMetadataFromRepository($osfNodeId);
         $actualMetadataReturnArray = json_decode($response->getPayload(), true);
         $this->assertEquals($errorCode, $response->getHttpResponseCode());
         $this->assertCount(3, $actualMetadataReturnArray);
-        $this->assertFalse($actualMetadataReturnArray["success"]);
-        $this->assertEquals($repository, $actualMetadataReturnArray["repository"]);
-        $this->assertEquals($errorMessage, $actualMetadataReturnArray["error"]);
+        $this->assertFalse($actualMetadataReturnArray['success']);
+        $this->assertEquals($repository, $actualMetadataReturnArray['repository']);
+        $this->assertEquals($errorMessage, $actualMetadataReturnArray['error']);
     }
 
     public function testImportMetadataFromGitlab()
@@ -485,36 +483,36 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $request = new Request();
         $curlApiClient = $this->createMock(CurlApiClient::class);
         $curlApiClient->method('resolveDoi')->willReturn($repository);
-        $curlApiClient->method('fetch')->willReturn("test: yaml");
+        $curlApiClient->method('fetch')->willReturn('test: yaml');
         $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
         $response = $this->handler->importMetadataFromRepository($repository);
         $actualMetadataReturnArray = json_decode($response->getPayload(), true);
         $this->assertEquals(200, $response->getHttpResponseCode());
         $this->assertCount(3, $actualMetadataReturnArray);
-        $this->assertTrue($actualMetadataReturnArray["success"]);
-        $this->assertEquals($repository, $actualMetadataReturnArray["repository"]);
-        $this->assertEquals(["test" => "yaml"], $actualMetadataReturnArray["metadata"]);
+        $this->assertTrue($actualMetadataReturnArray['success']);
+        $this->assertEquals($repository, $actualMetadataReturnArray['repository']);
+        $this->assertEquals(['test' => 'yaml'], $actualMetadataReturnArray['metadata']);
     }
 
     public function testReadYamlContentCurlInitException()
     {
         $repository = 'https://gitlab.com/cdchck/community-codechecks/2022-svaRetro-svaNUMT';
         $errorCode = 500;
-        $errorMessage = "Error initializing the cURL API";
+        $errorMessage = 'Error initializing the cURL API';
         $client = $this->createMock(\Github\Client::class);
         $request = new Request();
         $curlApiClient = $this->createMock(CurlApiClient::class);
         $curlApiClient->method('resolveDoi')->willReturn($repository);
         $curlApiClient->method('fetch')
-                        ->will($this->throwException(new CurlInitException($errorMessage, $errorCode)));
+            ->will($this->throwException(new CurlInitException($errorMessage, $errorCode)));
         $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
         $response = $this->handler->importMetadataFromRepository($repository);
         $actualMetadataReturnArray = json_decode($response->getPayload(), true);
         $this->assertEquals($errorCode, $response->getHttpResponseCode());
         $this->assertCount(3, $actualMetadataReturnArray);
-        $this->assertFalse($actualMetadataReturnArray["success"]);
-        $this->assertEquals($repository, $actualMetadataReturnArray["repository"]);
-        $this->assertEquals($errorMessage, $actualMetadataReturnArray["error"]);
+        $this->assertFalse($actualMetadataReturnArray['success']);
+        $this->assertEquals($repository, $actualMetadataReturnArray['repository']);
+        $this->assertEquals($errorMessage, $actualMetadataReturnArray['error']);
     }
 
     public function testReadYamlContentCurlReadException()
@@ -528,15 +526,15 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $curlApiClient = $this->createMock(CurlApiClient::class);
         $curlApiClient->method('resolveDoi')->willReturn($repository);
         $curlApiClient->method('fetch')
-                        ->will($this->throwException(new CurlReadException($curlHandle)));
+            ->will($this->throwException(new CurlReadException($curlHandle)));
         $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
         $response = $this->handler->importMetadataFromRepository($repository);
         $actualMetadataReturnArray = json_decode($response->getPayload(), true);
         $this->assertEquals($errorCode, $response->getHttpResponseCode());
         $this->assertCount(3, $actualMetadataReturnArray);
-        $this->assertFalse($actualMetadataReturnArray["success"]);
-        $this->assertEquals($repository, $actualMetadataReturnArray["repository"]);
-        $this->assertEquals($errorMessage, $actualMetadataReturnArray["error"]);
+        $this->assertFalse($actualMetadataReturnArray['success']);
+        $this->assertEquals($repository, $actualMetadataReturnArray['repository']);
+        $this->assertEquals($errorMessage, $actualMetadataReturnArray['error']);
     }
 
     public function testBuildYamlDeclaresTheRecordedConfigVersion()
@@ -564,16 +562,16 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
     private function buildYamlMetadata(string $version): object
     {
         return (object) [
-            'version'            => $version,
-            'publication_type'   => 'doi',
-            'manifest'           => '[]',
-            'repository'         => '{"repositories":null}',
-            'codecheckers'       => '[]',
-            'source'             => null,
-            'summary'            => null,
-            'check_time'         => null,
-            'certificate'        => null,
-            'report'             => null,
+            'version' => $version,
+            'publication_type' => 'doi',
+            'manifest' => '[]',
+            'repository' => '{"repositories":null}',
+            'codecheckers' => '[]',
+            'source' => null,
+            'summary' => null,
+            'check_time' => null,
+            'certificate' => null,
+            'report' => null,
             'additional_content' => null,
         ];
     }
@@ -586,21 +584,21 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $publication->method('getStoredPubId')->willReturn(null);
 
         $metadata = (object) [
-            'version'            => 'latest',
-            'publication_type'   => 'doi',
-            'manifest'           => '[]',
+            'version' => 'latest',
+            'publication_type' => 'doi',
+            'manifest' => '[]',
             'repository' => json_encode([
                 'repositories' => [
                     ['url' => 'https://github.com/public/repo', 'hidden' => false],
                     ['url' => 'https://github.com/private/repo', 'hidden' => true],
                 ],
             ]),
-            'codecheckers'       => '[]',
-            'source'             => null,
-            'summary'            => null,
-            'check_time'         => null,
-            'certificate'        => null,
-            'report'             => null,
+            'codecheckers' => '[]',
+            'source' => null,
+            'summary' => null,
+            'check_time' => null,
+            'certificate' => null,
+            'report' => null,
             'additional_content' => null,
         ];
 
@@ -618,21 +616,21 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $publication->method('getStoredPubId')->willReturn(null);
 
         $metadata = (object) [
-            'version'            => 'latest',
-            'publication_type'   => 'doi',
-            'manifest'           => '[]',
+            'version' => 'latest',
+            'publication_type' => 'doi',
+            'manifest' => '[]',
             'repository' => json_encode([
                 'repositories' => [
                     ['url' => 'https://github.com/private/repo-one', 'hidden' => true],
                     ['url' => 'https://github.com/private/repo-two', 'hidden' => true],
                 ],
             ]),
-            'codecheckers'       => '[]',
-            'source'             => null,
-            'summary'            => null,
-            'check_time'         => null,
-            'certificate'        => null,
-            'report'             => null,
+            'codecheckers' => '[]',
+            'source' => null,
+            'summary' => null,
+            'check_time' => null,
+            'certificate' => null,
+            'report' => null,
             'additional_content' => null,
         ];
 
@@ -715,18 +713,18 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
     private function buildYamlMetadataWithRepositories(array $repositories): object
     {
         return (object) [
-            'version'            => 'latest',
-            'publication_type'   => 'doi',
-            'manifest'           => '[]',
-            'repository'         => json_encode([
+            'version' => 'latest',
+            'publication_type' => 'doi',
+            'manifest' => '[]',
+            'repository' => json_encode([
                 'repositories' => $repositories,
             ]),
-            'codecheckers'       => '[]',
-            'source'             => null,
-            'summary'            => null,
-            'check_time'         => null,
-            'certificate'        => null,
-            'report'             => null,
+            'codecheckers' => '[]',
+            'source' => null,
+            'summary' => null,
+            'check_time' => null,
+            'certificate' => null,
+            'report' => null,
             'additional_content' => null,
         ];
     }

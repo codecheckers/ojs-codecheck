@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file classes/FrontEnd/Badge.php
  *
@@ -6,6 +7,7 @@
  * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * @class Badge
+ *
  * @brief What the journal's badge settings resolve to on the reader-facing pages.
  *
  * The article sidebar and the issue table of contents show the same badge and
@@ -22,7 +24,7 @@ use APP\plugins\generic\codecheck\CodecheckPlugin;
 
 class Badge
 {
-    /** @var CodecheckPlugin */
+    /**  */
     private CodecheckPlugin $plugin;
 
     private int $contextId;
@@ -45,9 +47,9 @@ class Badge
 
         return match ($this->getType()) {
             'codecheck_logo' => $base . '/assets/img/codecheck_logo.svg',
-            'custom'         => $this->getSetting(Constants::CODECHECK_BADGE_CUSTOM_URL) ?: null,
-            'none'           => null,
-            default          => $base . '/assets/img/codeworks-badge.png',
+            'custom' => $this->getSetting(Constants::CODECHECK_BADGE_CUSTOM_URL) ?: null,
+            'none' => null,
+            default => $base . '/assets/img/codeworks-badge.png',
         };
     }
 

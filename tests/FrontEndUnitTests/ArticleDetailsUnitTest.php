@@ -14,7 +14,7 @@ class ArticleDetailsUnitTest extends PKPTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->mockPlugin = $this->createMock(CodecheckPlugin::class);
         $this->articleDetails = new ArticleDetails($this->mockPlugin);
     }
@@ -23,7 +23,7 @@ class ArticleDetailsUnitTest extends PKPTestCase
     {
         $plugin = $this->createMock(CodecheckPlugin::class);
         $articleDetails = new ArticleDetails($plugin);
-        
+
         $this->assertInstanceOf(ArticleDetails::class, $articleDetails);
         $this->assertSame($plugin, $articleDetails->plugin);
     }

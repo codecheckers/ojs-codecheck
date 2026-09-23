@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file classes/Orcid/OrcidApiClient.php
  *
@@ -6,6 +7,7 @@
  * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * @class OrcidApiClient
+ *
  * @brief Handles all HTTP communication with the ORCID Member API.
  */
 
@@ -26,15 +28,15 @@ class OrcidApiClient
         string $clientSecret,
         string $apiType = Constants::ORCID_API_TYPE_SANDBOX
     ) {
-        $this->clientId     = $clientId;
+        $this->clientId = $clientId;
         $this->clientSecret = $clientSecret;
 
         if ($apiType === Constants::ORCID_API_TYPE_PRODUCTION) {
             $this->orcidBaseUrl = Constants::ORCID_URL_PRODUCTION;
-            $this->orcidApiUrl  = Constants::ORCID_API_URL_PRODUCTION;
+            $this->orcidApiUrl = Constants::ORCID_API_URL_PRODUCTION;
         } else {
             $this->orcidBaseUrl = Constants::ORCID_URL_SANDBOX;
-            $this->orcidApiUrl  = Constants::ORCID_API_URL_SANDBOX;
+            $this->orcidApiUrl = Constants::ORCID_API_URL_SANDBOX;
         }
     }
 
@@ -44,11 +46,11 @@ class OrcidApiClient
     public function buildAuthorizationUrl(string $redirectUri, string $state): string
     {
         $params = http_build_query([
-            'client_id'     => $this->clientId,
+            'client_id' => $this->clientId,
             'response_type' => 'code',
-            'scope'         => Constants::ORCID_ACTIVITIES_SCOPE,
-            'redirect_uri'  => $redirectUri,
-            'state'         => $state,
+            'scope' => Constants::ORCID_ACTIVITIES_SCOPE,
+            'redirect_uri' => $redirectUri,
+            'state' => $state,
         ]);
 
         return $this->orcidBaseUrl . '/oauth/authorize?' . $params;
@@ -64,11 +66,11 @@ class OrcidApiClient
         $tokenUrl = $this->orcidBaseUrl . '/oauth/token';
 
         $postFields = http_build_query([
-            'client_id'     => $this->clientId,
+            'client_id' => $this->clientId,
             'client_secret' => $this->clientSecret,
-            'grant_type'    => 'authorization_code',
-            'code'          => $code,
-            'redirect_uri'  => $redirectUri,
+            'grant_type' => 'authorization_code',
+            'code' => $code,
+            'redirect_uri' => $redirectUri,
         ]);
 
         $response = $this->httpPost($tokenUrl, $postFields, [
@@ -97,12 +99,12 @@ class OrcidApiClient
         $tokenUrl = $this->orcidBaseUrl . '/oauth/token';
 
         $postFields = http_build_query([
-            'client_id'     => $this->clientId,
+            'client_id' => $this->clientId,
             'client_secret' => $this->clientSecret,
-            'grant_type'    => 'client_credentials',
+            'grant_type' => 'client_credentials',
             // The scope the deposit uses. Testing with /group-id-record/update
             // reported a correctly provisioned Member client as broken (#175).
-            'scope'         => '/activities/update',
+            'scope' => '/activities/update',
         ]);
 
         $response = $this->httpPost($tokenUrl, $postFields, [
@@ -132,10 +134,10 @@ class OrcidApiClient
         $clientToken = $this->getClientCredentialsToken();
 
         $payload = json_encode([
-            'name'        => $groupName,
-            'group-id'    => $groupId,
+            'name' => $groupName,
+            'group-id' => $groupId,
             'description' => 'CODECHECK peer-review group for ' . $groupName,
-            'type'        => $groupType,
+            'type' => $groupType,
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
         $url = $this->orcidApiUrl . '/group-id-record';
@@ -172,7 +174,7 @@ class OrcidApiClient
      */
     public function postPeerReview(string $orcidId, string $accessToken, array $payload): string
     {
-        $url  = $this->orcidApiUrl . '/' . $orcidId . '/peer-review';
+        $url = $this->orcidApiUrl . '/' . $orcidId . '/peer-review';
         $json = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
         CodecheckLogger::debug('POST peer-review to ORCID: ' . $orcidId);
@@ -185,7 +187,7 @@ class OrcidApiClient
 
         if ($response['status'] === 409) {
             $body = json_decode($response['body'], true);
-            $msg  = $body['developer-message'] ?? '';
+            $msg = $body['developer-message'] ?? '';
             if (preg_match('/put-code\s+(\d+)/', $msg, $matches)) {
                 CodecheckLogger::info('ORCID peer-review already exists, reusing put-code: ' . $matches[1]);
                 return $matches[1];
@@ -218,7 +220,7 @@ class OrcidApiClient
     {
         $payload['put-code'] = (int) $putCode;
 
-        $url  = $this->orcidApiUrl . '/' . $orcidId . '/peer-review/' . $putCode;
+        $url = $this->orcidApiUrl . '/' . $orcidId . '/peer-review/' . $putCode;
         $json = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
         CodecheckLogger::debug('PUT peer-review to ORCID: ' . $orcidId . ' put-code: ' . $putCode);
@@ -246,13 +248,13 @@ class OrcidApiClient
     {
         $ch = curl_init($url);
         curl_setopt_array($ch, [
-            CURLOPT_POST           => true,
-            CURLOPT_POSTFIELDS     => $body,
-            CURLOPT_HTTPHEADER     => $headers,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $body,
+            CURLOPT_HTTPHEADER => $headers,
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HEADER         => true,
-            CURLOPT_TIMEOUT        => 60,
-            CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
+            CURLOPT_HEADER => true,
+            CURLOPT_TIMEOUT => 60,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
         ]);
         return $this->executeAndParse($ch);
     }
@@ -261,22 +263,22 @@ class OrcidApiClient
     {
         $ch = curl_init($url);
         curl_setopt_array($ch, [
-            CURLOPT_CUSTOMREQUEST  => 'PUT',
-            CURLOPT_POSTFIELDS     => $body,
-            CURLOPT_HTTPHEADER     => $headers,
+            CURLOPT_CUSTOMREQUEST => 'PUT',
+            CURLOPT_POSTFIELDS => $body,
+            CURLOPT_HTTPHEADER => $headers,
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HEADER         => true,
-            CURLOPT_TIMEOUT        => 60,
-            CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
+            CURLOPT_HEADER => true,
+            CURLOPT_TIMEOUT => 60,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
         ]);
         return $this->executeAndParse($ch);
     }
 
     private function executeAndParse($ch): array
     {
-        $raw    = curl_exec($ch);
+        $raw = curl_exec($ch);
         $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $error  = curl_error($ch);
+        $error = curl_error($ch);
         curl_close($ch);
 
         if ($raw === false) {
@@ -285,7 +287,7 @@ class OrcidApiClient
 
         $headerSize = strrpos($raw, "\r\n\r\n");
         $rawHeaders = substr($raw, 0, $headerSize);
-        $body       = substr($raw, $headerSize + 4);
+        $body = substr($raw, $headerSize + 4);
 
         $headers = [];
         foreach (explode("\r\n", $rawHeaders) as $line) {
@@ -304,7 +306,7 @@ class OrcidApiClient
             return null;
         }
         $parts = explode('/', rtrim($location, '/'));
-        $last  = end($parts);
+        $last = end($parts);
         return is_numeric($last) ? $last : null;
     }
 }

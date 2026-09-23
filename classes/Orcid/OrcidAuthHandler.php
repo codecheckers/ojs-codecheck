@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file classes/Orcid/OrcidAuthHandler.php
  *
@@ -6,6 +7,7 @@
  * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
  *
  * @class OrcidAuthHandler
+ *
  * @brief Handles the OAuth 2.0 flow for codechecker ORCID authorisation.
  *
  * Two routes (wired in CodecheckPlugin::setCodecheckPageHandler):
@@ -22,18 +24,17 @@
 
 namespace APP\plugins\generic\codecheck\classes\Orcid;
 
-use APP\handler\Handler;
-use APP\core\Application;
 use APP\facades\Repo;
-use APP\submission\Submission;
+use APP\handler\Handler;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
-use APP\plugins\generic\codecheck\CodecheckPlugin;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionAccess;
-use PKP\security\authorization\ContextRequiredPolicy;
-use PKP\security\authorization\UserRequiredPolicy;
+use APP\plugins\generic\codecheck\CodecheckPlugin;
+use APP\submission\Submission;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use PKP\security\authorization\ContextRequiredPolicy;
+use PKP\security\authorization\UserRequiredPolicy;
 use PKP\user\User;
 
 class OrcidAuthHandler extends Handler
@@ -90,8 +91,8 @@ class OrcidAuthHandler extends Handler
     {
         return Crypt::encryptString(json_encode([
             'submissionId' => $submissionId,
-            'userId'       => $userId,
-            'issuedAt'     => time(),
+            'userId' => $userId,
+            'issuedAt' => time(),
         ]));
     }
 
@@ -117,8 +118,8 @@ class OrcidAuthHandler extends Handler
         }
 
         $submissionId = (int) ($flow['submissionId'] ?? 0);
-        $userId       = (int) ($flow['userId'] ?? 0);
-        $issuedAt     = (int) ($flow['issuedAt'] ?? 0);
+        $userId = (int) ($flow['userId'] ?? 0);
+        $issuedAt = (int) ($flow['issuedAt'] ?? 0);
 
         if (!$submissionId || !$userId || !$issuedAt) {
             return null;
@@ -155,7 +156,7 @@ class OrcidAuthHandler extends Handler
         // URL this was reached through, or one journal's editor could authorise
         // against another's submission by keeping their own path in the URL.
         // ContextRequiredPolicy guarantees there is a journal to ask about.
-        $contextId  = (int) $request->getContext()->getId();
+        $contextId = (int) $request->getContext()->getId();
         $submission = Repo::submission()->get($submissionId, $contextId);
 
         if (!$submission) {
@@ -187,7 +188,7 @@ class OrcidAuthHandler extends Handler
      */
     public function startAuth($args, $request): void
     {
-        $context   = $request->getContext();
+        $context = $request->getContext();
         $contextId = $context->getId();
 
         $submissionId = (int) $request->getUserVar('submissionId');
@@ -208,7 +209,7 @@ class OrcidAuthHandler extends Handler
             return;
         }
 
-        $clientId     = $this->plugin->getSetting($contextId, Constants::ORCID_CLIENT_ID);
+        $clientId = $this->plugin->getSetting($contextId, Constants::ORCID_CLIENT_ID);
         $clientSecret = $this->plugin->getSetting($contextId, Constants::ORCID_CLIENT_SECRET);
 
         if (!$clientId || !$clientSecret) {
@@ -222,9 +223,9 @@ class OrcidAuthHandler extends Handler
         // and a caller-supplied path used to feed a redirect.
         $state = $this->sealState($submissionId, (int) $request->getUser()->getId());
 
-        $client      = $this->buildApiClient($contextId);
+        $client = $this->buildApiClient($contextId);
         $redirectUri = $this->buildRedirectUri($request);
-        $authUrl     = $client->buildAuthorizationUrl($redirectUri, $state);
+        $authUrl = $client->buildAuthorizationUrl($redirectUri, $state);
 
         $request->redirectUrl($authUrl);
     }
@@ -242,7 +243,7 @@ class OrcidAuthHandler extends Handler
             return;
         }
 
-        $code  = $request->getUserVar('code');
+        $code = $request->getUserVar('code');
         $state = $request->getUserVar('state');
 
         if (!$code || !$state) {
@@ -260,7 +261,7 @@ class OrcidAuthHandler extends Handler
         }
 
         $submissionId = $flow['submissionId'];
-        $actingUser   = Repo::user()->get($flow['userId']);
+        $actingUser = Repo::user()->get($flow['userId']);
 
         if (!$actingUser) {
             $this->sendPopupError(__('plugins.generic.codecheck.orcid.auth.error.initiatorGone'));
@@ -275,14 +276,14 @@ class OrcidAuthHandler extends Handler
         $contextId = $submission->getData('contextId');
 
         try {
-            $client      = $this->buildApiClient($contextId);
+            $client = $this->buildApiClient($contextId);
             $redirectUri = $this->buildRedirectUri($request);
-            $tokenData   = $client->exchangeCodeForToken($code, $redirectUri);
+            $tokenData = $client->exchangeCodeForToken($code, $redirectUri);
 
-            $orcidId      = $tokenData['orcid'];
-            $accessToken  = $tokenData['access_token'];
+            $orcidId = $tokenData['orcid'];
+            $accessToken = $tokenData['access_token'];
             $refreshToken = $tokenData['refresh_token'] ?? null;
-            $expiresAt    = null;
+            $expiresAt = null;
 
             // Verify the authenticated ORCID iD belongs to one of the
             // codecheckers assigned to this submission. If stored ORCIDs
@@ -295,7 +296,7 @@ class OrcidAuthHandler extends Handler
                 $codecheckers = json_decode($metadata->codecheckers, true);
                 if (is_array($codecheckers)) {
                     $storedOrcids = array_filter(array_map(
-                        fn($cc) => $cc['orcid'] ?? $cc['ORCID'] ?? null,
+                        fn ($cc) => $cc['orcid'] ?? $cc['ORCID'] ?? null,
                         $codecheckers
                     ));
 

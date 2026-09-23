@@ -2,9 +2,9 @@
 
 namespace APP\plugins\generic\codecheck\tests\SettingsUnitTests;
 
+use APP\core\Request;
 use APP\plugins\generic\codecheck\classes\Settings\Actions;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
-use APP\core\Request;
 use PKP\core\PKPRouter;
 use PKP\linkAction\LinkAction;
 use PKP\tests\PKPTestCase;
