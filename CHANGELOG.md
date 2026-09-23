@@ -223,6 +223,20 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 
 #### Under the hood
 
+- The data and software availability statement, the dashboard column and the issue
+  TOC badge each record their "on unless switched off" default in one place,
+  `Constants::CODECHECK_SETTING_DEFAULTS`, and are read through
+  `CodecheckPlugin::getSettingWithDefault()`. Each used to resolve its default
+  where it was read, in two places apiece, which is the arrangement that produced
+  the register-deposit mismatch in Issue #177. A journal gets a stored row for the
+  three on upgrade and on enable, so changing one of these defaults in a future
+  release will need a migration. Other settings with a non-obvious default —
+  the CODECHECK mode, the ORCID API type, the badge type and height — are
+  unchanged and still resolve where they are read (Issue #178)
+- The CODECHECK dashboard column follows the journal's setting on every dashboard
+  view. Its configuration was injected only into the editorial dashboard, so the
+  column appeared in an author's submission list and a reviewer's assignment list
+  even for a journal that had switched it off (Issue #178)
 - `version.xml` declares the release it actually is. It read `0.0.0.0` with a
   placeholder date, including in the tagged v1.0.0.0 release, so OJS recorded any
   install as version zero and would have shown the plugin as permanently

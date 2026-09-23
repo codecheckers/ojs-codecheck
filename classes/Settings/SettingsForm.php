@@ -62,14 +62,12 @@ class SettingsForm extends Form
             )
         );
 
-        // Default to true — the availability statement shows unless switched off
-        $showAvailabilityStatement = $this->plugin->getSetting(
-            $context->getId(),
-            Constants::CODECHECK_SHOW_AVAILABILITY_STATEMENT
-        );
         $this->setData(
             Constants::CODECHECK_SHOW_AVAILABILITY_STATEMENT,
-            $showAvailabilityStatement === null ? true : (bool) $showAvailabilityStatement
+            (bool) $this->plugin->getSettingWithDefault(
+                $context->getId(),
+                Constants::CODECHECK_SHOW_AVAILABILITY_STATEMENT
+            )
         );
 
         // Default to false — an article without a statement says so rather
@@ -92,25 +90,19 @@ class SettingsForm extends Form
             ) ?? ''
         );
 
-        // Default to the current stable specification only; a journal that
-        // wants more adds them.
-        $enabledConfigVersions = $this->plugin->getSetting(
-            $context->getId(),
-            Constants::CODECHECK_ENABLED_CONFIG_VERSIONS
-        );
+        // The versions on offer, asked of the plugin so the form cannot show a
+        // version the metadata form would not accept.
         $this->setData(
             Constants::CODECHECK_ENABLED_CONFIG_VERSIONS,
-            empty($enabledConfigVersions)
-                ? Constants::CODECHECK_DEFAULT_CONFIG_VERSIONS
-                : (array) $enabledConfigVersions
+            $this->plugin->getEnabledConfigVersions($context->getId())
         );
 
         $this->setData(
             Constants::CODECHECK_SHOW_IN_TOC,
-            $this->plugin->getSetting(
+            (bool) $this->plugin->getSettingWithDefault(
                 $context->getId(),
                 Constants::CODECHECK_SHOW_IN_TOC
-            ) ?? true
+            )
         );
 
         $this->setData(
@@ -211,14 +203,12 @@ class SettingsForm extends Form
             $this->plugin->isRegisterDepositEnabled($context->getId())
         );
 
-        // Default to true — show the dashboard column unless explicitly disabled
-        $showDashboardColumn = $this->plugin->getSetting(
-            $context->getId(),
-            Constants::CODECHECK_SHOW_DASHBOARD_COLUMN
-        );
         $this->setData(
             Constants::CODECHECK_SHOW_DASHBOARD_COLUMN,
-            $showDashboardColumn === null ? true : (bool) $showDashboardColumn
+            (bool) $this->plugin->getSettingWithDefault(
+                $context->getId(),
+                Constants::CODECHECK_SHOW_DASHBOARD_COLUMN
+            )
         );
 
         $updateFields = $this->plugin->getSetting(
@@ -445,19 +435,16 @@ class SettingsForm extends Form
             (bool) $this->getData(Constants::CODECHECK_HIDE_EMPTY_AVAILABILITY_STATEMENT)
         );
 
-        // An empty selection would leave the metadata form with no version to
-        // offer at all, so it falls back to the default rather than being
-        // stored as an empty list.
-        $enabledConfigVersions = array_values(array_intersect(
-            Constants::CODECHECK_CONFIG_VERSIONS,
-            (array) $this->getData(Constants::CODECHECK_ENABLED_CONFIG_VERSIONS)
-        ));
+        // Stored as selected, narrowed by the plugin's own rule so nothing the
+        // form did not offer is written. An empty selection is stored empty and
+        // resolved when it is read (#178) — the default is not spelled out
+        // here a second time.
         $this->plugin->updateSetting(
             $context->getId(),
             Constants::CODECHECK_ENABLED_CONFIG_VERSIONS,
-            empty($enabledConfigVersions)
-                ? Constants::CODECHECK_DEFAULT_CONFIG_VERSIONS
-                : $enabledConfigVersions
+            CodecheckPlugin::narrowConfigVersions(
+                (array) $this->getData(Constants::CODECHECK_ENABLED_CONFIG_VERSIONS)
+            )
         );
 
         $this->plugin->updateSetting(

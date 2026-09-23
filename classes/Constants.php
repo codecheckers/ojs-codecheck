@@ -139,7 +139,7 @@ class Constants
     public const CODECHECK_REGISTER_DEPOSIT_ENABLED_DEFAULT = true;
 
     /**
-     * The settings that get a written row, and the value written (#177).
+     * The settings that get a written row, and the value written (#177, #178).
      *
      * `CodecheckPlugin::getSettingWithDefault()` reads through this map and
      * `writeDefaultSettings()` writes from it, so the value a reader resolves
@@ -147,16 +147,29 @@ class Constants
      * of #177: the settings form rendered the deposit checkbox ticked while the
      * deposit itself read the same missing row as off.
      *
-     * Only the register deposit is here. The other settings that treat an
-     * absent row as "on" — `showInTOC`, `showAvailabilityStatement`,
-     * `showDashboardColumn`, `enabledConfigVersions` — still resolve their
-     * default where they are read, and `showDashboardColumn` does so in two
-     * places (`SettingsForm::initData()` and `CodecheckPlugin::addDashboardConfig()`),
-     * which is the same arrangement that produced #177. Moving them here is a
-     * follow-up, not a thing to do by halves.
+     * A default recorded here belongs to the setting, not to any one reader:
+     * the value is written once, here, and read through
+     * `getSettingWithDefault()` — no PHP read site states it a second time.
+     * (`resources/js/main.js` carries its own fallback for the dashboard
+     * column, as the Vue layer cannot read a PHP constant; it is unreachable
+     * while `callbackTemplateManagerDisplay()` injects the config on every
+     * dashboard view, which is why it does.)
+     *
+     * Changing a value here does not reach a journal that already has the row:
+     * the writers only ever fill a gap, so a real default change needs an
+     * upgrade migration. **A setting whose default is expected to change does
+     * not belong here at all** — `CODECHECK_ENABLED_CONFIG_VERSIONS` follows
+     * the current stable specification, so a row frozen at today's value is
+     * exactly what it must not have, and it keeps its default in
+     * `CodecheckPlugin::getEnabledConfigVersions()`, its single reader.
      */
     public const CODECHECK_SETTING_DEFAULTS = [
         self::CODECHECK_REGISTER_DEPOSIT_ENABLED => self::CODECHECK_REGISTER_DEPOSIT_ENABLED_DEFAULT,
+        // Present until a journal switches it off: each predates its setting,
+        // so a journal that never configured one keeps what it already had.
+        self::CODECHECK_SHOW_AVAILABILITY_STATEMENT => true,
+        self::CODECHECK_SHOW_DASHBOARD_COLUMN => true,
+        self::CODECHECK_SHOW_IN_TOC => true,
     ];
 
     // ORCID integration settings

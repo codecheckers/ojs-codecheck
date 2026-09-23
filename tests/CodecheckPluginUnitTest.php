@@ -62,6 +62,75 @@ class CodecheckPluginUnitTest extends PKPTestCase
         $this->assertTrue($this->pluginWithSettings([])->isRegisterDepositEnabled(null));
     }
 
+    /**
+     * The three display switches and the version list moved into the same map
+     * for #178, so an absent row is answered in one place rather than at each
+     * read site. Pinned here because the settings form, the article page, the
+     * issue TOC and the dashboard all depend on the same answer.
+     */
+    public function testTheDisplaySwitchesAreOnWhenNothingIsStored()
+    {
+        $plugin = $this->pluginWithSettings([]);
+
+        foreach ([
+            Constants::CODECHECK_SHOW_AVAILABILITY_STATEMENT,
+            Constants::CODECHECK_SHOW_DASHBOARD_COLUMN,
+            Constants::CODECHECK_SHOW_IN_TOC,
+        ] as $name) {
+            $this->assertTrue((bool) $plugin->getSettingWithDefault(1, $name), $name);
+            $this->assertFalse(
+                (bool) $this->pluginWithSettings([$name => false])->getSettingWithDefault(1, $name),
+                $name . ' switched off'
+            );
+        }
+    }
+
+    /**
+     * Only `null` is unset. A switched-off boolean stores something `empty()`
+     * calls empty, so a general "empty means unset" rule in the shared reader
+     * would switch every default-on setting back on.
+     */
+    public function testASwitchedOffBooleanIsNotResolvedBackToItsDefault()
+    {
+        foreach (['', '0', 0, false] as $stored) {
+            $this->assertFalse(
+                (bool) $this->pluginWithSettings([Constants::CODECHECK_SHOW_IN_TOC => $stored])
+                    ->getSettingWithDefault(1, Constants::CODECHECK_SHOW_IN_TOC),
+                var_export($stored, true)
+            );
+        }
+    }
+
+    /**
+     * The version list resolves its default at its single reader rather than
+     * from the map, because a written row would freeze today's stable
+     * specification into every journal. A stored version the plugin no longer
+     * knows is dropped, and a selection that narrows to nothing — or was
+     * cleared — falls back, because a journal offering no version would leave
+     * the metadata form with nothing to record a check against.
+     */
+    public function testEnabledConfigVersionsNarrowsToTheVersionsThePluginKnows()
+    {
+        $default = Constants::CODECHECK_DEFAULT_CONFIG_VERSIONS;
+
+        $this->assertSame(
+            ['latest'],
+            $this->pluginWithSettings([Constants::CODECHECK_ENABLED_CONFIG_VERSIONS => ['latest', '0.9']])
+                ->getEnabledConfigVersions(1)
+        );
+
+        foreach ([null, [], ['0.9']] as $stored) {
+            $this->assertSame(
+                $default,
+                $this->pluginWithSettings([Constants::CODECHECK_ENABLED_CONFIG_VERSIONS => $stored])
+                    ->getEnabledConfigVersions(1),
+                var_export($stored, true)
+            );
+        }
+
+        $this->assertSame($default, $this->pluginWithSettings([])->getEnabledConfigVersions(null));
+    }
+
     /** A name with no recorded default has none to resolve to. */
     public function testASettingWithNoRecordedDefaultResolvesToNull()
     {

@@ -21,12 +21,11 @@ class IssueTOC
         $templateMgr = $params[1];
         $output = &$params[2];
 
-        // Unset means "show": the badge predates this setting, so journals that
-        // never configured it keep the behaviour they already had.
         $request = Application::get()->getRequest();
         $context = $request->getContext();
-        $showInTOC = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_SHOW_IN_TOC);
-        if ($showInTOC !== null && !$showInTOC) {
+        // `getSettingWithDefault()` takes a null context; a fatal here would be
+        // swallowed by PKP as "failed to handle the hook".
+        if (!$this->plugin->getSettingWithDefault($context?->getId(), Constants::CODECHECK_SHOW_IN_TOC)) {
             return false;
         }
 

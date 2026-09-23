@@ -107,14 +107,12 @@ class ArticleAvailability
     }
 
     /**
-     * Whether the statement is shown. Unset means show — the section is only
-     * absent once a journal has switched it off.
+     * Whether the statement is shown, resolved against the default recorded in
+     * `Constants::CODECHECK_SETTING_DEFAULTS`.
      */
     public function isEnabled(int $contextId): bool
     {
-        $setting = $this->plugin->getSetting($contextId, Constants::CODECHECK_SHOW_AVAILABILITY_STATEMENT);
-
-        return $setting === null ? true : (bool) $setting;
+        return (bool) $this->plugin->getSettingWithDefault($contextId, Constants::CODECHECK_SHOW_AVAILABILITY_STATEMENT);
     }
 
     /**

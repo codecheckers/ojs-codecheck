@@ -65,7 +65,9 @@ class IssueTOCUnitTest extends PKPTestCase
     /** An IssueTOC whose plugin answers $showInTOC for the TOC setting. */
     private function issueTOC(mixed $showInTOC): IssueTOC
     {
-        $plugin = $this->createMock(CodecheckPlugin::class);
+        // Partial, so the plugin's own getSettingWithDefault() resolves the
+        // recorded default rather than being stubbed out (#178).
+        $plugin = $this->createPartialMock(CodecheckPlugin::class, ['getSetting']);
         $plugin->method('getSetting')->willReturnCallback(
             fn ($contextId, $name) => $name === Constants::CODECHECK_SHOW_IN_TOC ? $showInTOC : null
         );

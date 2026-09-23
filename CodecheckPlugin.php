@@ -290,18 +290,32 @@ class CodecheckPlugin extends GenericPlugin
      */
     public function getEnabledConfigVersions(?int $contextId): array
     {
-        if ($contextId === null) {
-            return Constants::CODECHECK_DEFAULT_CONFIG_VERSIONS;
-        }
-
-        // Intersect rather than trust the stored value, so a version dropped
-        // from the plugin cannot reappear in the form.
-        $enabled = array_values(array_intersect(
-            Constants::CODECHECK_CONFIG_VERSIONS,
+        // Deliberately not in `CODECHECK_SETTING_DEFAULTS`: a recorded default
+        // is written into a row, and the writers never reconcile, so a journal
+        // enabled today would keep being offered 1.0 after 1.1 became the
+        // stable specification. This default is expected to change, so it is
+        // resolved here, at the one place that reads the setting.
+        //
+        // Narrowing to nothing is the same answer as nothing stored: a journal
+        // offering no version at all would leave the metadata form with nothing
+        // to record a check against.
+        $enabled = $contextId === null ? [] : self::narrowConfigVersions(
             (array) $this->getSetting($contextId, Constants::CODECHECK_ENABLED_CONFIG_VERSIONS)
-        ));
+        );
 
-        return empty($enabled) ? Constants::CODECHECK_DEFAULT_CONFIG_VERSIONS : $enabled;
+        return $enabled ?: Constants::CODECHECK_DEFAULT_CONFIG_VERSIONS;
+    }
+
+    /**
+     * The versions of $versions the plugin still knows, in the plugin's own
+     * order. One rule, applied at both boundaries: the settings form narrows
+     * what it stores, and `getEnabledConfigVersions()` narrows what it reads,
+     * so a version dropped from the plugin cannot reappear from a row written
+     * before it was dropped.
+     */
+    public static function narrowConfigVersions(array $versions): array
+    {
+        return array_values(array_intersect(Constants::CODECHECK_CONFIG_VERSIONS, $versions));
     }
 
     /**
@@ -383,12 +397,14 @@ class CodecheckPlugin extends GenericPlugin
 
         $contextId = $context->getId();
 
-        // Editorial dashboard — inject dashboard config for the Vue JS layer.
-        if ($request->getRequestedOp() == 'editorial' && $request->getRequestedPage() == 'dashboard') {
-            $showDashboardColumn = $this->getSetting($contextId, Constants::CODECHECK_SHOW_DASHBOARD_COLUMN);
-
+        // Every dashboard view, not just /editorial: `mySubmissions` and
+        // `reviewAssignments` render the same Pinia store and the same bundle,
+        // so a config injected for one op only leaves the JS fallback deciding
+        // on the other two — which is a second statement of the default, and
+        // the opposite one for a journal that switched the column off.
+        if ($request->getRequestedPage() == 'dashboard') {
             $dashboardConfig = json_encode([
-                'showDashboardColumn' => $showDashboardColumn === null ? true : (bool) $showDashboardColumn,
+                'showDashboardColumn' => (bool) $this->getSettingWithDefault($contextId, Constants::CODECHECK_SHOW_DASHBOARD_COLUMN),
                 'codecheckMode'       => $this->getSetting($contextId, Constants::CODECHECK_MODE) ?? 'opt-in',
             ]);
 
@@ -738,10 +754,17 @@ class CodecheckPlugin extends GenericPlugin
             return;
         }
 
-        foreach (Constants::CODECHECK_SETTING_DEFAULTS as $name => $default) {
-            if ($this->getSetting($contextId, $name) === null) {
-                $this->updateSetting($contextId, $name, $default);
-            }
+        // Read every setting before writing any of them: `updateSetting()`
+        // forgets the cache entry holding this plugin's whole settings array,
+        // so an interleaved loop re-queries on each iteration.
+        $missing = array_filter(
+            Constants::CODECHECK_SETTING_DEFAULTS,
+            fn ($default, $name) => $this->getSetting($contextId, $name) === null,
+            ARRAY_FILTER_USE_BOTH
+        );
+
+        foreach ($missing as $name => $default) {
+            $this->updateSetting($contextId, $name, $default);
         }
     }
 
@@ -769,12 +792,14 @@ class CodecheckPlugin extends GenericPlugin
      * and "nothing stored" are the same answer, and answering anything else
      * would encode the opposite of the declared default.
      *
-     * **Only `null` counts as unset here.** A stored `''` or `[]` is returned
-     * as it is, which is right for a boolean and wrong for
-     * `CODECHECK_AVAILABILITY_STATEMENT_HEADING` (must fall back when cleared)
-     * and `CODECHECK_ENABLED_CONFIG_VERSIONS` (must fall back on an empty
-     * selection). Those need a per-setting "is this value meaningful" rule
-     * before they can move into the map — see #178.
+     * **Only `null` counts as unset here.** A switched-off boolean is stored,
+     * and read back, as `false` — a legitimate value that `empty()` cannot tell
+     * apart from a missing row, so an "empty means unset" rule here would
+     * switch every default-on setting back on. A setting that must also fall
+     * back on an empty value says so where the emptiness means something:
+     * `getEnabledConfigVersions()` does, after narrowing the list, and
+     * `CODECHECK_AVAILABILITY_STATEMENT_HEADING` where it is read, its default
+     * being a localised string rather than a value a constant can hold.
      */
     public function getSettingWithDefault(?int $contextId, string $name): mixed
     {

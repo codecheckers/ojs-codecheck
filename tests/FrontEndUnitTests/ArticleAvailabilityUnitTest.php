@@ -24,7 +24,9 @@ class ArticleAvailabilityUnitTest extends PKPTestCase
     /** Builds the class with a plugin whose settings answer from $settings. */
     private function availabilityWithSettings(array $settings): ArticleAvailability
     {
-        $plugin = $this->createMock(CodecheckPlugin::class);
+        // Partial, so the plugin's own getSettingWithDefault() resolves the
+        // recorded default rather than being stubbed out (#178).
+        $plugin = $this->createPartialMock(CodecheckPlugin::class, ['getSetting']);
         $plugin->method('getSetting')->willReturnCallback(
             fn ($contextId, $name) => $settings[$name] ?? null
         );

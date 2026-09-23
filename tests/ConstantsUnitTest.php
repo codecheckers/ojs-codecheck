@@ -117,4 +117,34 @@ class ConstantsUnitTest extends PKPTestCase
             Constants::CODECHECK_SETTING_DEFAULTS[Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED]
         );
     }
+
+    /**
+     * #178: the display switches and the version list used to resolve their
+     * default at each read site, two readers apiece. The map is now the one
+     * record of what an absent row means.
+     */
+    public function testEveryDisplaySwitchHasARecordedDefault()
+    {
+        foreach ([
+            Constants::CODECHECK_SHOW_AVAILABILITY_STATEMENT,
+            Constants::CODECHECK_SHOW_DASHBOARD_COLUMN,
+            Constants::CODECHECK_SHOW_IN_TOC,
+        ] as $name) {
+            $this->assertSame(true, Constants::CODECHECK_SETTING_DEFAULTS[$name], $name);
+        }
+    }
+
+    /**
+     * A recorded default is *written* into a row, and the writers never
+     * reconcile, so a setting whose default is expected to change must stay
+     * out of the map: a journal enabled today would otherwise keep being
+     * offered 1.0 long after 1.1 became the stable specification.
+     */
+    public function testTheConfigVersionDefaultIsNotWrittenIntoJournals()
+    {
+        $this->assertArrayNotHasKey(
+            Constants::CODECHECK_ENABLED_CONFIG_VERSIONS,
+            Constants::CODECHECK_SETTING_DEFAULTS
+        );
+    }
 }

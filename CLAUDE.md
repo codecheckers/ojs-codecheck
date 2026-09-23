@@ -358,15 +358,47 @@ miss, and a null context resolves to it as well, because "no journal to ask" and
 writers only ever fill a gap and never reconcile, so **changing a value in
 `CODECHECK_SETTING_DEFAULTS` does not reach a journal that already has the row**
 — that is the price of having no unset state, and a real default change needs an
-upgrade migration. And `getSettingWithDefault()` treats only `null` as unset, so
-a setting whose default must also fire on `''` or `[]` cannot move into the map
-without a per-setting "is this value meaningful" rule (#178).
+upgrade migration. And `getSettingWithDefault()` treats only `null` as unset: a
+stored `''` or `[]` is what a switched-off boolean looks like, so a general
+"empty means unset" rule would switch every default-on switch back on. A setting
+that must fall back on an empty value says so where the emptiness means
+something, not in the shared reader.
 
-The settings below predate that and still resolve their default at the point of
-reading. Two deliberately treat "unset" and "empty" as *not* the stored value:
+`CODECHECK_SHOW_AVAILABILITY_STATEMENT`, `CODECHECK_SHOW_DASHBOARD_COLUMN` and
+`CODECHECK_SHOW_IN_TOC` — all **on** when unset, the feature being present until
+a journal switches it off — joined the map for #178 and have no read-site
+fallback left in PHP. They now get a written row on enable and on context
+creation, so changing one of their defaults needs an upgrade migration.
 
-- `CODECHECK_SHOW_AVAILABILITY_STATEMENT` and `CODECHECK_SHOW_DASHBOARD_COLUMN` default
-  to **on** when null, so the feature is present until a journal switches it off
+**`CODECHECK_ENABLED_CONFIG_VERSIONS` deliberately did not join it**, although
+it has the same shape. A recorded default is a *written* default, and this one
+is expected to change: a row frozen at today's stable specification would still
+offer `1.0` long after `1.1` replaced it, with no way for a migration to tell
+that row apart from a deliberate choice. It resolves its default in
+`getEnabledConfigVersions()`, which is its only reader, and which also owns the
+two rules that are not the default — narrowing the stored list to the versions
+the plugin knows (`CodecheckPlugin::narrowConfigVersions()`, which the settings
+form applies on save as well, so the rule is one function rather than two
+copies) and treating a list that narrows to nothing as nothing stored. **A
+setting is a candidate for the map only if its default would still be right in
+five years.**
+
+The Vue layer cannot read a PHP constant, so `resources/js/main.js` carries its
+own `showDashboardColumn` fallback. It stays unreachable only because
+`callbackTemplateManagerDisplay()` injects the dashboard config on **every**
+dashboard view. It once injected for `op == 'editorial'` alone, and
+`mySubmissions` and `reviewAssignments` render the same Pinia store from the
+same bundle, so the JS default decided there — showing the column to authors and
+reviewers in a journal that had switched it off (#178).
+
+The settings below are **not** in the map. The two bullets cannot be, their
+default being a localised string rather than a value a constant can hold; the
+rest simply have not been migrated yet and still carry the two-reader shape that
+produced #177 — `CODECHECK_MODE` (`'opt-in'`), `ORCID_API_TYPE`
+(`ORCID_API_TYPE_SANDBOX`, six readers), `CODECHECK_BADGE_TYPE` (`'codeworks'`)
+and `CODECHECK_BADGE_HEIGHT` (`24`, where `Badge.php`'s `?: 24` and
+`SettingsForm`'s `?? '24'` already disagree about a stored empty string):
+
 - `CODECHECK_AVAILABILITY_STATEMENT_HEADING` falls back to the localised
   `plugins.generic.codecheck.dataSoftwareAvailability` when cleared, so the article
   page never renders an empty heading. `CODECHECK_HIDE_EMPTY_AVAILABILITY_STATEMENT`
@@ -380,11 +412,10 @@ reading. Two deliberately treat "unset" and "empty" as *not* the stored value:
   colour — it is written into a `style` attribute on a public page, so it is
   validated both on save and on read, as OJS's own theme colour option is
   (pkp/pkp-lib#11974)
-- `CODECHECK_ENABLED_CONFIG_VERSIONS` defaults to `CODECHECK_DEFAULT_CONFIG_VERSIONS`
-  — `1.0` alone, not every known version — so a journal that has not chosen records
-  checks against the current stable specification rather than a moving target. An
-  empty selection falls back to the same default, because an empty list would leave
-  the metadata form with no version to offer at all
+
+`CODECHECK_ENABLED_CONFIG_VERSIONS` defaults to `CODECHECK_DEFAULT_CONFIG_VERSIONS`
+— `1.0` alone, not every known version — so a journal that has not chosen records
+checks against the current stable specification rather than a moving target.
 
 `Constants::CODECHECK_DEFAULT_CONFIG_VERSIONS` and `getConfigSpecUrl()` are mirrored by
 `CODECHECK_DEFAULT_CONFIG_VERSIONS` / `CODECHECK_SPEC_URL` in `CodecheckMetadataForm.vue`.
@@ -904,11 +935,16 @@ Notes that matter when touching this:
 - **Three independent display switches.** `plugin_settings.enabled` turns the
   plugin on; `showArticleSidebar` gates the reader-facing article sidebar in
   `ArticleDetails`; `showInTOC` gates the badge in `IssueTOC`. Their defaults
-  differ on purpose: `showInTOC` treats unset as on, because the badge predates
-  the setting and journals that never configured it should keep what they had,
+  differ on purpose: `showInTOC` treats unset as on (recorded in
+  `CODECHECK_SETTING_DEFAULTS`), because the badge predates the setting and
+  journals that never configured it should keep what they had,
   while `showArticleSidebar` treats unset as off. The test dataset sets
   `showArticleSidebar` explicitly and leaves `showInTOC` unset, so the
-  default-on path gets exercised.
+  default-on path gets exercised. That is on purpose and is why the three
+  settings that joined `CODECHECK_SETTING_DEFAULTS` for #178 were *not* given
+  rows in the dump: a real install has them written by `writeDefaultSettings()`,
+  but a fixture that carried them would stop exercising the reader that is the
+  actual guarantee.
 
 ### Inspecting the UI
 

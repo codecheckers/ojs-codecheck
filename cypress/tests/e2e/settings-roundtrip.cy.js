@@ -237,6 +237,49 @@ describe('Settings round-trip', () => {
     });
   });
 
+  /**
+   * The round-trip above deliberately leaves checkbox-group membership alone,
+   * so the one multi-value setting is recorded but never varied. The config
+   * versions are the group that matters: what is stored is narrowed on save
+   * and resolved on read, and neither side is pinned by anything else. An
+   * empty selection is the interesting case — nothing is posted at all, so the
+   * row is written empty and the form must still offer the default.
+   */
+  it('keeps a config version unticked, and offers the default when none is left', () => {
+    const versions = () => cy.get('input[name="codecheckEnabledConfigVersions[]"]');
+
+    openSettings();
+    versions().should('have.length.greaterThan', 1);
+
+    // Tick every version, so the state under test is one this save produced.
+    versions().check({ force: true });
+    saveSettings();
+    openSettings();
+    versions().each(($el) => expect($el[0].checked, `${$el.val()} ticked`).to.be.true);
+
+    versions().first().uncheck({ force: true });
+    versions().first().invoke('val').then((unticked) => {
+      saveSettings();
+      openSettings();
+
+      versions().each(($el) => {
+        expect($el[0].checked, `${$el.val()} after unticking ${unticked}`)
+          .to.equal($el.val() !== unticked);
+      });
+    });
+
+    // Nothing ticked posts no value at all; the default stands in on read.
+    versions().uncheck({ force: true });
+    saveSettings();
+    openSettings();
+    versions().filter(':checked').should('have.length', 1);
+    versions().filter(':checked').should('have.value', '1.0');
+
+    // The dataset ships no row at all for this setting, and no form can put
+    // that state back; the after() hook's save records the default the form
+    // renders, which resolves to the same list.
+  });
+
   it('returns the original values once they are written back', () => {
     openSettings();
     applyFields(originalFields);
