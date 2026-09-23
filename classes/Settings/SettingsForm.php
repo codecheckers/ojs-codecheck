@@ -205,14 +205,10 @@ class SettingsForm extends Form
             ) ?? []
         );
 
-        // Default to true — register deposit runs unless explicitly disabled
-        $registerDepositEnabled = $this->plugin->getSetting(
-            $context->getId(),
-            Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED
-        );
+        // Asked of the plugin, never resolved here — see #177.
         $this->setData(
             Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED,
-            $registerDepositEnabled === null ? true : (bool) $registerDepositEnabled
+            $this->plugin->isRegisterDepositEnabled($context->getId())
         );
 
         // Default to true — show the dashboard column unless explicitly disabled

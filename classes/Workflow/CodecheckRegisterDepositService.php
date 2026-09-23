@@ -114,6 +114,21 @@ class CodecheckRegisterDepositService
         $githubRegisterOrganization = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION);
         $githubRegisterRepository = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY);
 
+        // A journal with no GitHub configuration has nothing to deposit with.
+        // The client's parameters are typed `string`, and it is built before
+        // the try below, so a null would leave a TypeError to escape this
+        // method and the hook — where PKP swallows it as "failed to handle the
+        // hook" and abandons every remaining Publication::publish callback,
+        // including other plugins'. That is the opposite of the best-effort
+        // contract this service is supposed to keep. Reachable since the
+        // deposit setting defaults to on (#177).
+        if (empty($githubPersonalAccessToken) || empty($githubRegisterOrganization) || empty($githubRegisterRepository)) {
+            return $this->fail(
+                'The CODECHECK Register deposit is enabled for this journal, but its GitHub access token, '
+                . 'register organization or register repository is not configured; skipping submission #' . $submissionId . '.'
+            );
+        }
+
         $codecheckGithubRegisterApiClient = new CodecheckGithubRegisterApiClient(
             $githubPersonalAccessToken,
             $githubRegisterOrganization,

@@ -3,6 +3,7 @@
 namespace APP\plugins\generic\codecheck\tests;
 
 use APP\plugins\generic\codecheck\CodecheckPlugin;
+use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\controllers\page\CodecheckPageHandler;
 use PKP\plugins\GenericPlugin;
 use PKP\tests\PKPTestCase;
@@ -16,6 +17,55 @@ class CodecheckPluginUnitTest extends PKPTestCase
     {
         parent::setUp();
         $this->plugin = new CodecheckPlugin();
+    }
+
+    /**
+     * Issue #177: the settings form rendered the deposit checkbox ticked when
+     * the row was missing while the deposit read the same missing row as off,
+     * so a journal that never opened the form was told it deposits and did
+     * not. One reader answers for both now, and the default is on.
+     */
+    private function pluginWithSettings(array $settings): CodecheckPlugin
+    {
+        // Partial, not a full mock: the methods under test are the plugin's
+        // own, and a full mock would stub those out too and answer false.
+        $plugin = $this->createPartialMock(CodecheckPlugin::class, ['getSetting']);
+        $plugin->method('getSetting')->willReturnCallback(
+            fn ($contextId, $name) => $settings[$name] ?? null
+        );
+
+        return $plugin;
+    }
+
+    public function testRegisterDepositIsOnWhenNothingIsStored()
+    {
+        $this->assertTrue($this->pluginWithSettings([])->isRegisterDepositEnabled(1));
+    }
+
+    public function testRegisterDepositFollowsWhatIsStored()
+    {
+        $off = $this->pluginWithSettings([Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED => false]);
+        $on = $this->pluginWithSettings([Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED => true]);
+
+        $this->assertFalse($off->isRegisterDepositEnabled(1));
+        $this->assertTrue($on->isRegisterDepositEnabled(1));
+    }
+
+    /**
+     * No journal to ask is the same answer as nothing stored. Anything else
+     * would have a null context quietly mean the opposite of the declared
+     * default — and for a gate that exists to prevent disclosure, "unknown"
+     * must not be the permissive side.
+     */
+    public function testRegisterDepositFallsBackToTheDefaultWithoutAContext()
+    {
+        $this->assertTrue($this->pluginWithSettings([])->isRegisterDepositEnabled(null));
+    }
+
+    /** A name with no recorded default has none to resolve to. */
+    public function testASettingWithNoRecordedDefaultResolvesToNull()
+    {
+        $this->assertNull($this->pluginWithSettings([])->getSettingWithDefault(1, 'somethingElse'));
     }
 
     public function testPluginExtendsGenericPlugin()

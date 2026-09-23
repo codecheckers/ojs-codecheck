@@ -104,4 +104,17 @@ class ConstantsUnitTest extends PKPTestCase
             )
         );
     }
+
+    /**
+     * The value written into `plugin_settings` and the value a reader resolves
+     * are the same constant, so the two cannot drift — which is #177.
+     */
+    public function testTheRegisterDepositDefaultIsRecordedOnce()
+    {
+        $this->assertTrue(Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED_DEFAULT);
+        $this->assertSame(
+            Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED_DEFAULT,
+            Constants::CODECHECK_SETTING_DEFAULTS[Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED]
+        );
+    }
 }

@@ -104,6 +104,17 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   selected repository and checks the paper title against the submission (Issue #143)
 - A `register.csv` row is deposited to the CODECHECK Register as a pull request when a
   CODECHECK-opted-in article is published. Failures never block publication (Issue #10)
+- The "deposit to the CODECHECK Register" setting had two defaults: the settings form
+  showed it switched on when a journal had never saved the form, while the deposit
+  itself read the same unsaved state as off — so a journal was told it deposits and did
+  not. It is on by default, one place decides that, and enabling the plugin writes the
+  value so there is no unsaved state to interpret (Issue #177)
+- A journal with the register deposit enabled but no GitHub access token, organization
+  or repository configured now skips the deposit with a log line, instead of failing in
+  a way that abandoned the rest of the publication hook (Issue #177)
+- Publication is only blocked over a hidden repository where the disclosure can
+  actually happen — a journal that does not deposit to the register publishes that
+  address nowhere, and could not publish at all (Issue #177)
 - A repository marked "Hide from public record" can no longer be published in the
   register by accident: publication is blocked while the repository holding the
   `codecheck.yml` is a hidden one, and the editor is told to clear the mark or to mark

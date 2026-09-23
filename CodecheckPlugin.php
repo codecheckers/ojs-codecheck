@@ -39,6 +39,16 @@ class CodecheckPlugin extends GenericPlugin
     {
         $success = parent::register($category, $path);
 
+        // Outside the enabled check on purpose. Creating a journal is a
+        // site-scoped request, so `getEnabled()` there reads the *site* row,
+        // which a per-journal install does not have — registering this inside
+        // the block below means it never attaches at all (#177). PKP registers
+        // its own equivalent, `installContextSpecificSettings`, outside any
+        // enabled check for the same reason.
+        if ($success) {
+            Hook::add('Context::add', $this->writeDefaultSettingsForNewContext(...));
+        }
+
         if ($success && $this->getEnabled()) {
             $this->addAssets();
 
@@ -54,6 +64,7 @@ class CodecheckPlugin extends GenericPlugin
             Hook::add('Schema::get::submission', $this->addOptInToSchema(...));
             Hook::add('Form::config::before', $this->addOptInCheckbox(...));
             Hook::add('Submission::edit', $this->saveOptIn(...));
+
 
             Hook::add('Submission::validate', $this->saveWizardFieldsFromRequest(...));
 
@@ -163,7 +174,7 @@ class CodecheckPlugin extends GenericPlugin
             return false;
         }
 
-        if (!$this->getSetting($context->getId(), Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED)) {
+        if (!$this->isRegisterDepositEnabled($context->getId())) {
             CodecheckLogger::debug('Register deposit is disabled for this journal; skipping for submission #' . $submission->getId());
             return false;
         }
@@ -690,14 +701,92 @@ class CodecheckPlugin extends GenericPlugin
 
     public function setEnabled($enabled, $contextId = null)
     {
-        $result = parent::setEnabled($enabled, $contextId);
+        // The parent takes only $enabled and derives the context itself, so
+        // passing $contextId there would be silently discarded — the two writes
+        // would then be able to land in different journals.
+        $result = parent::setEnabled($enabled);
 
         if ($enabled) {
             // Single entry point — install migration calls upgrade migrations internally.
             $this->getInstallMigration()->up();
+            $this->writeDefaultSettings($this->getCurrentContextId());
         }
 
         return $result;
+    }
+
+    /**
+     * Give a journal a stored row for every setting in
+     * `Constants::CODECHECK_SETTING_DEFAULTS`, so "unset" is not a third state
+     * anything has to have an opinion about (#177).
+     *
+     * Only writes what is not there, so a journal that switched something off
+     * keeps it off through a disable and re-enable.
+     *
+     * Called from three places, because a journal can acquire this plugin in
+     * three ways: enabling it (`setEnabled()`), being created while it is
+     * already enabled (`Context::add`), and existing before this version
+     * (the install migration). `getSettingWithDefault()` still resolves the
+     * default for anything these miss — the row is for visibility, the reader
+     * is the guarantee.
+     */
+    public function writeDefaultSettings(?int $contextId): void
+    {
+        // Enabling the plugin from the site-wide list has no journal to write
+        // for; each journal is written when it enables it, or on creation.
+        if ($contextId === null) {
+            return;
+        }
+
+        foreach (Constants::CODECHECK_SETTING_DEFAULTS as $name => $default) {
+            if ($this->getSetting($contextId, $name) === null) {
+                $this->updateSetting($contextId, $name, $default);
+            }
+        }
+    }
+
+    /**
+     * Writes the defaults for a journal created while the plugin was already
+     * enabled, which never calls `setEnabled()` (#177).
+     */
+    public function writeDefaultSettingsForNewContext(string $hookName, array $args): bool
+    {
+        $context = $args[0] ?? null;
+
+        if ($context) {
+            $this->writeDefaultSettings((int) $context->getId());
+        }
+
+        return false;
+    }
+
+    /**
+     * A setting resolved against its recorded default.
+     *
+     * The one reader, so that no two callers can disagree about what a missing
+     * row means — the settings form and the register deposit disagreed, which
+     * is #177. A null context resolves to the default too: "no journal to ask"
+     * and "nothing stored" are the same answer, and answering anything else
+     * would encode the opposite of the declared default.
+     *
+     * **Only `null` counts as unset here.** A stored `''` or `[]` is returned
+     * as it is, which is right for a boolean and wrong for
+     * `CODECHECK_AVAILABILITY_STATEMENT_HEADING` (must fall back when cleared)
+     * and `CODECHECK_ENABLED_CONFIG_VERSIONS` (must fall back on an empty
+     * selection). Those need a per-setting "is this value meaningful" rule
+     * before they can move into the map — see #178.
+     */
+    public function getSettingWithDefault(?int $contextId, string $name): mixed
+    {
+        $stored = $contextId === null ? null : $this->getSetting($contextId, $name);
+
+        return $stored ?? (Constants::CODECHECK_SETTING_DEFAULTS[$name] ?? null);
+    }
+
+    /** Whether a published article is deposited to the CODECHECK Register. */
+    public function isRegisterDepositEnabled(?int $contextId): bool
+    {
+        return (bool) $this->getSettingWithDefault($contextId, Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED);
     }
 
     /**

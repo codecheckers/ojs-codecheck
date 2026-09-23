@@ -140,6 +140,17 @@ function setRepositories(submissionId, codecheck, repositories) {
   });
 }
 
+/**
+ * The repository list with entry 0 marked as holding the codecheck.yml, hidden
+ * or not, and every other entry unmarked.
+ */
+const markedFirst = (entries, hidden) =>
+  entries.map((entry, index) =>
+    index === 0
+      ? {...entry, hidden, containsCodecheckYaml: true}
+      : {...entry, containsCodecheckYaml: false}
+  );
+
 /** Ticks exactly the given CODECHECK statuses in the publication settings. */
 function allowOnlyStatuses(statusKeys) {
   cy.visit(`/index.php/${JOURNAL}/management/settings/website`);
@@ -276,6 +287,8 @@ describe('CODECHECK publication validation', () => {
     // finding out from the public register.
     allowOnlyStatuses([FULL_REPRODUCTION]);
     setStatus(FULL_REPRODUCTION);
+    // The gate only exists where the disclosure does (#177).
+    cy.setCodecheckSetting('codecheckRegisterDepositEnabled', true);
 
     getMetadata(SUBMISSION).then((codecheck) => {
       const original = codecheck.repository.repositories;
@@ -285,21 +298,14 @@ describe('CODECHECK publication validation', () => {
       originalMetadata = codecheck;
       originalRepositories = original;
 
-      const marked = (hidden) =>
-        original.map((entry, index) =>
-          index === 0
-            ? { ...entry, hidden, containsCodecheckYaml: true }
-            : { ...entry, containsCodecheckYaml: false }
-        );
-
-      setRepositories(SUBMISSION, codecheck, marked(true));
+      setRepositories(SUBMISSION, codecheck, markedFirst(original, true));
       attemptPublish().then((errors) => {
         expect(errors).to.contain(PRIVATE_REPOSITORY_REFUSAL);
       });
 
       // The same record with that repository public passes the check, so the
-      // refusal above is about the "Keep private" mark and nothing else.
-      setRepositories(SUBMISSION, codecheck, marked(false));
+      // refusal above is about the hidden mark and nothing else.
+      setRepositories(SUBMISSION, codecheck, markedFirst(original, false));
       attemptPublish().then((errors) => {
         expect(errors).to.not.contain(PRIVATE_REPOSITORY_REFUSAL);
         expect(errors).to.contain('must be assigned to an issue');
@@ -307,6 +313,48 @@ describe('CODECHECK publication validation', () => {
     });
   });
 
+  /**
+   * Issue #177. The gate exists because publishing names the repository in
+   * the public register. A journal that does not deposit publishes it
+   * nowhere, so the same record must go through — otherwise a journal
+   * codechecking embargoed material cannot publish at all, and the message
+   * names a consequence that cannot occur.
+   */
+  it('does not refuse a hidden repository when the journal does not deposit', () => {
+    allowOnlyStatuses([FULL_REPRODUCTION]);
+    setStatus(FULL_REPRODUCTION);
+    cy.setCodecheckSetting('codecheckRegisterDepositEnabled', false);
+
+    getMetadata(SUBMISSION).then((codecheck) => {
+      const original = codecheck.repository.repositories;
+      expect(original, 'the submission has a repository to mark').to.have.length.of.at.least(1);
+
+      // Never overwrite a snapshot an earlier test took: this list has already
+      // been changed by the test above, so recording it here would make
+      // after() "restore" that change and the fixture would drift for good.
+      originalMetadata ??= codecheck;
+      originalRepositories ??= original;
+
+      setRepositories(SUBMISSION, codecheck, markedFirst(original, true));
+
+      attemptPublish().then((errors) => {
+        expect(errors).to.not.contain(PRIVATE_REPOSITORY_REFUSAL);
+        // Still refused, by OJS, for its own reasons — so the absence above
+        // is the gate standing down rather than the request not happening.
+        expect(errors).to.contain('must be assigned to an issue');
+      });
+
+      // And the plugin is demonstrably still running: OJS's own errors would
+      // be there even if the hook had thrown and contributed nothing, which is
+      // the failure this spec exists to catch. A status the journal does not
+      // accept has to come back from CODECHECK in the same configuration.
+      setStatus(ASSIGNED_CODECHECKER);
+      attemptPublish().then((errors) => {
+        expect(errors).to.contain(STATUS_REFUSAL);
+        expect(errors).to.not.contain(PRIVATE_REPOSITORY_REFUSAL);
+      });
+    });
+  });
   it('does not stop OJS from reporting its own reasons', () => {
     // The hook returns false so the rest of OJS and other plugins still run;
     // a CODECHECK error must never be the only thing an editor is told.

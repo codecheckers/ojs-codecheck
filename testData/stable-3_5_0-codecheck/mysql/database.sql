@@ -2067,7 +2067,10 @@ INSERT INTO `plugin_settings` (`plugin_setting_id`, `plugin_name`, `context_id`,
 (28, 'pdfjsviewerplugin', 1, 'enabled', '1', 'bool'),
 (29, 'jatstemplateplugin', 1, 'enabled', '1', 'bool'),
 (30, 'codecheckplugin', 1, 'enabled', '1', 'bool'),
-(31, 'codecheckplugin', 1, 'showArticleSidebar', '1', 'bool');
+(31, 'codecheckplugin', 1, 'showArticleSidebar', '1', 'bool'),
+-- Written by CodecheckPlugin::writeDefaultSettings() on enable; the dump has
+-- `enabled` baked in, so that never runs here and the row is carried (#177).
+(32, 'codecheckplugin', 1, 'codecheckRegisterDepositEnabled', '1', 'bool');
 
 -- --------------------------------------------------------
 

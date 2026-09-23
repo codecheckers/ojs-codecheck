@@ -135,6 +135,30 @@ class Constants
     // Register Deposit (Issue #10)
     public const CODECHECK_REGISTER_DEPOSIT_ENABLED = 'codecheckRegisterDepositEnabled';
 
+    /** Deposit to the CODECHECK Register unless a journal says otherwise. */
+    public const CODECHECK_REGISTER_DEPOSIT_ENABLED_DEFAULT = true;
+
+    /**
+     * The settings that get a written row, and the value written (#177).
+     *
+     * `CodecheckPlugin::getSettingWithDefault()` reads through this map and
+     * `writeDefaultSettings()` writes from it, so the value a reader resolves
+     * and the value stored cannot be two different things — which is the whole
+     * of #177: the settings form rendered the deposit checkbox ticked while the
+     * deposit itself read the same missing row as off.
+     *
+     * Only the register deposit is here. The other settings that treat an
+     * absent row as "on" — `showInTOC`, `showAvailabilityStatement`,
+     * `showDashboardColumn`, `enabledConfigVersions` — still resolve their
+     * default where they are read, and `showDashboardColumn` does so in two
+     * places (`SettingsForm::initData()` and `CodecheckPlugin::addDashboardConfig()`),
+     * which is the same arrangement that produced #177. Moving them here is a
+     * follow-up, not a thing to do by halves.
+     */
+    public const CODECHECK_SETTING_DEFAULTS = [
+        self::CODECHECK_REGISTER_DEPOSIT_ENABLED => self::CODECHECK_REGISTER_DEPOSIT_ENABLED_DEFAULT,
+    ];
+
     // ORCID integration settings
     public const ORCID_ENABLED = 'orcidEnabled';
     public const ORCID_API_TYPE = 'orcidApiType';

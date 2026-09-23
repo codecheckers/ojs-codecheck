@@ -76,7 +76,13 @@ class CodecheckPublicationValidatorUnitTest extends PKPTestCase
 
     private function validatorFor(mixed $submission): CodecheckPublicationValidator
     {
-        return new CodecheckPublicationValidator($this->createMock(CodecheckPlugin::class), $submission);
+        $plugin = $this->createMock(CodecheckPlugin::class);
+        // A bare mock answers false, which stands the #169 repository gate down
+        // before it reads anything — it is the first check in the list, so any
+        // test written for it would pass without exercising a line (#177).
+        $plugin->method('isRegisterDepositEnabled')->willReturn(true);
+
+        return new CodecheckPublicationValidator($plugin, $submission);
     }
 
     public function testASubmissionThatIsNotOptedInIsNeverBlocked()

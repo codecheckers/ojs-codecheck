@@ -30,6 +30,8 @@ use APP\plugins\generic\codecheck\classes\migration\upgrade\I154_MoveCodecheckYa
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
+use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
+
 class CodecheckSchemaMigration extends CodecheckMigration
 {
     protected function runUp(): void
@@ -102,11 +104,48 @@ class CodecheckSchemaMigration extends CodecheckMigration
         }
 
         $this->createCodecheckGenres();
+        $this->writeDefaultSettings();
 
         // Run upgrade migrations in order — each is idempotent so safe to run
         // on both fresh installs and existing ones. Add new migrations here.
         (new I94_AddMissingColumns())->up();
         (new I154_MoveCodecheckYamlFlagOntoRepository())->up();
+    }
+
+    /**
+     * Give the journals that already have this plugin a row for each setting in
+     * `Constants::CODECHECK_SETTING_DEFAULTS` (#177).
+     *
+     * `CodecheckPlugin::setEnabled()` covers a journal enabling the plugin and
+     * the `Context::add` hook covers one created afterwards; this covers the
+     * journals that had it before either existed.
+     *
+     * **Only journals where the plugin is enabled.** This runs from
+     * `setEnabled()`, from `resetSchema()` and from `Installer::postInstall`,
+     * so writing to every journal would put CODECHECK rows into journals that
+     * never installed it — including on a plain upgrade of a site where it is
+     * switched off everywhere. Writes only what is missing, so a journal that
+     * switched something off keeps it off.
+     */
+    private function writeDefaultSettings(): void
+    {
+        $plugin = \PKP\plugins\PluginRegistry::getPlugin('generic', 'codecheckplugin');
+
+        if (!$plugin) {
+            CodecheckLogger::warning(
+                'The CODECHECK plugin is not in the registry; no default settings were written.'
+            );
+            return;
+        }
+
+        $contexts = \APP\core\Application::getContextDAO()->getAll();
+        while ($context = $contexts->next()) {
+            $contextId = (int) $context->getId();
+
+            if ($plugin->getSetting($contextId, 'enabled')) {
+                $plugin->writeDefaultSettings($contextId);
+            }
+        }
     }
 
     /**

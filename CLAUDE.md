@@ -329,7 +329,41 @@ list of options: `fetch()` assigns the template variables the field renders from
 `settings-roundtrip.cy.js` derives its field list from the rendered form, so a new
 setting is covered there automatically — but only if it actually renders.
 
-Two settings deliberately treat "unset" and "empty" as *not* the stored value:
+**A setting with a non-obvious default has one recorded default.**
+`Constants::CODECHECK_SETTING_DEFAULTS` holds the name and the value;
+`CodecheckPlugin::getSettingWithDefault()` reads through it and
+`writeDefaultSettings()` writes from it. `CODECHECK_REGISTER_DEPOSIT_ENABLED` is
+there because two readers disagreed about the unset state — the form rendered
+the box ticked, the deposit read it as off (#177);
+`CodecheckPlugin::isRegisterDepositEnabled()` is the single reader now, used by
+the form, by `depositToRegister()` and by the publication gate.
+
+**A journal acquires the plugin in three ways, so the write happens in three
+places**: `setEnabled()` (the journal enables it), the `Context::add` hook (a
+journal created while it is already enabled — that never calls `setEnabled()`),
+and the install migration, which writes for journals that already have the
+plugin *enabled* and no others. The dump carries the row by hand, because it has
+`enabled` baked in so `setEnabled()` never runs there.
+
+**`Context::add` is registered outside the `getEnabled()` block in
+`register()`,** and must stay there: creating a journal is a site-scoped
+request, so `getEnabled()` reads the *site* row, which a per-journal install
+does not have. Registered inside, the hook never attaches at all. PKP's own
+`installContextSpecificSettings` sits outside any enabled check for this reason.
+
+**The row is for visibility; the reader is the guarantee.**
+`getSettingWithDefault()` resolves the default for anything the three writers
+miss, and a null context resolves to it as well, because "no journal to ask" and
+"nothing stored" are the same answer. Two consequences worth knowing: the
+writers only ever fill a gap and never reconcile, so **changing a value in
+`CODECHECK_SETTING_DEFAULTS` does not reach a journal that already has the row**
+— that is the price of having no unset state, and a real default change needs an
+upgrade migration. And `getSettingWithDefault()` treats only `null` as unset, so
+a setting whose default must also fire on `''` or `[]` cannot move into the map
+without a per-setting "is this value meaningful" rule (#178).
+
+The settings below predate that and still resolve their default at the point of
+reading. Two deliberately treat "unset" and "empty" as *not* the stored value:
 
 - `CODECHECK_SHOW_AVAILABILITY_STATEMENT` and `CODECHECK_SHOW_DASHBOARD_COLUMN` default
   to **on** when null, so the feature is present until a journal switches it off
@@ -437,7 +471,7 @@ README.md; keep `css/codecheck.css` and inline component styles consistent.
 ### Layout
 
 ```
-tests/                       PHPUnit (31 files, 271 tests)
+tests/                       PHPUnit (31 files, 276 tests)
   bootstrap.php              PKP_STRICT_MODE + BASE_SYS_DIR (OJS_ROOT or ../../../..)
   PKPTestCase.php            local stub extending PHPUnit TestCase
   FakeTranslator.php         minimal translator so __() works without booting OJS
@@ -467,7 +501,7 @@ cypress/
   support/e2e.js               cy.ojsLogin(), cy.getCsrfToken(), swallow uncaught exceptions
   support/component-index.html
   tests/component/*.cy.js      6 specs, 79 tests
-  tests/e2e/*.cy.js            11 specs, 62 tests
+  tests/e2e/*.cy.js            11 specs, 63 tests
                                yaml-generation, article-sidebar-setting,
                                issue-toc-setting, issue-toc-badge,
                                private-repository, publication-validation,
@@ -509,7 +543,7 @@ columns), and the wizard DOM-scraping classes.
 
 ### E2E tests
 
-`make test-e2e` — 62 tests across 11 specs, driving a real OJS instance.
+`make test-e2e` — 63 tests across 11 specs, driving a real OJS instance.
 
 **Several specs share submission fixtures, and each must restore what it
 changes.** Submissions 8 and 9 are written by `publication-validation`,
@@ -592,7 +626,7 @@ Still uncovered: opt-in, the submission wizard, and register deposit.
 
 ### PHPUnit tests
 
-`make test-php` — 271 tests, green, none skipped.
+`make test-php` — 276 tests, green, none skipped.
 
 PHPUnit needs an OJS installation: the tests load OJS classes and the runner uses the
 PHPUnit shipped in `lib/pkp`. Both `runTests.sh` and `bootstrap.php` honour `OJS_ROOT`,

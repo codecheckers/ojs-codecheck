@@ -152,13 +152,22 @@ class CodecheckPublicationValidator {
      * The repository holding the `codecheck.yml` must be one a reader may see:
      * publishing names it in the public register (issue #169).
      *
-     * Runs whatever the extended-validation setting says, and whether or not
-     * the register deposit is enabled — the choice between "private" and
-     * "published" is not one to make on the journal's behalf. A submission with
-     * no repository marked at all is the extended check's subject, not this
-     * one.
+     * Runs whatever the extended-validation setting says, but only where the
+     * disclosure can happen: a journal that does not deposit to the register
+     * publishes that address nowhere, so blocking it would deadlock a journal
+     * codechecking embargoed material, with a message naming a consequence that
+     * cannot occur (#177). The deposit refuses the same case unconditionally,
+     * which is what guarantees nothing private is published on the routes that
+     * never run publication validation at all.
+     *
+     * A submission with no repository marked at all is the extended check's
+     * subject, not this one.
      */
     private function validateSelectedRepositoryIsPublic(): bool {
+        if (!$this->plugin->isRegisterDepositEnabled($this->context->getId())) {
+            return true;
+        }
+
         $repositoryData = $this->getCodecheckMetadata()['codecheck']['repository'] ?? null;
 
         if (!CodecheckRepositories::selectedIsPrivate($repositoryData)) {
@@ -259,6 +268,16 @@ class CodecheckPublicationValidator {
     }
 
     public function validatePublication(): true|array {
+        // Every check below reads a journal setting, and two of them do it
+        // without a null guard — so one missing context would be a TypeError
+        // thrown inside the hook, which PKP swallows as "failed to handle the
+        // hook" and every check goes silently missing. Answer once, here.
+        if ($this->context === null) {
+            CodecheckLogger::warning('No context while validating a publication; CODECHECK checks were skipped.');
+
+            return true;
+        }
+
         if($this->isOptedInToCodecheck()) {
             foreach ($this->validationChecks as $validationCheck) {
                 CodecheckLogger::debug("Validation Check!");
