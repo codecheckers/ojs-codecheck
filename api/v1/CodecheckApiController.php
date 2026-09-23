@@ -1039,8 +1039,12 @@ class CodecheckApiController extends PKPBaseController
         array $repositories
     ): string
     {
+        // Not a parameter and not a property: this method was extracted for #50
+        // without it, so every call fatalled on "Call to a member function
+        // getContext() on null". `reserveIdentifier()` gets it the same way.
+        $request = Application::get()->getRequest();
         $context = $request->getContext();
-        $journalName = $context?->getLocalizedName() ?? 'Unknwon Journal';
+        $journalName = $context?->getLocalizedName() ?? 'Unknown Journal';
         $updateInformation = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_FIELDS);
         $codecheckIssue = new CodecheckGithubRegisterIssue(
             $githubRegisterOrganization,

@@ -109,6 +109,9 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   itself read the same unsaved state as off — so a journal was told it deposits and did
   not. It is on by default, one place decides that, and enabling the plugin writes the
   value so there is no unsaved state to interpret (Issue #177)
+- Reserving a certificate identifier by opening a new register issue answered a server
+  error every time: the handler used a request object it never obtained. Nothing else
+  reached that branch, so it went unnoticed since the API moved to a PKP controller
 - A journal with the register deposit enabled but no GitHub access token, organization
   or repository configured now skips the deposit with a log line, instead of failing in
   a way that abandoned the rest of the publication hook (Issue #177)
