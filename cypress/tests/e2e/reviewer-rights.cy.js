@@ -190,9 +190,12 @@ describe('An editor', () => {
  * authorization policy is permitted — PKP's page router uses a blacklist.
  *
  * `startAuth` answers the authorization question before it answers whether the
- * journal has ORCID configured, which is why these tests need no settings: an
- * allowed caller gets as far as the "not enabled" message, a refused one never
- * does.
+ * journal has ORCID configured: an allowed caller gets as far as the "not
+ * enabled" message, a refused one never does. That makes the *not enabled*
+ * state part of what these tests assert, so they set it rather than assume it —
+ * `make db-load` applies whatever ORCID credentials `.env` holds and switches
+ * ORCID on, which on a freshly reloaded database sent an allowed caller to the
+ * real ORCID sandbox instead.
  */
 const orcid = (op, query = '') =>
   `/index.php/${JOURNAL}/codecheck/orcid/${op}${query}`;
@@ -200,6 +203,14 @@ const orcid = (op, query = '') =>
 const REFUSED = 'may connect an ORCID account to it';
 
 describe('The ORCID authorisation routes', () => {
+  before(() => {
+    // Left off afterwards rather than put back: off is the state the dataset
+    // ships and what the describe below also leaves behind, so the suite has
+    // one answer for the journal's ORCID configuration however it is entered.
+    cy.ojsLogin('admin', 'admin');
+    cy.setCodecheckSetting('orcidEnabled', false);
+  });
+
   it('close startAuth to a visitor who is not logged in', () => {
     cy.clearCookies();
 
