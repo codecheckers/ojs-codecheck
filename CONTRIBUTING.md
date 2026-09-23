@@ -61,6 +61,16 @@ If you want to contribute to this project, please follow these guidelines:
 - Maintain backward compatibility within major versions
 - Make sure your code lints
 
+The standard is enforced by a tool, so you do not have to apply it by hand:
+`make lint` reports what does not match and `make lint-fix` rewrites it, both
+using [PHP-CS-Fixer](https://cs.symfony.com/) (installed by `make deps` into
+`dev/tools/`) with the rule set in `.php-cs-fixer.dist.php` (PSR-12 plus PKP's own additions, so the plugin reads
+like OJS core). `make hooks` installs a git pre-commit hook that checks the
+files you are about to commit, and the same check runs in CI on every pull
+request. VS Code users get it on save via the recommended extension. See
+[Code style and linting](README.md#code-style-and-linting) in the README for the
+details, including how to run the tools without the Makefile.
+
 ### Improving the documentation
 
 - When contributing to the documentation inside the [README.md](https://github.com/codecheckers/ojs-codecheck/blob/main/README.md), [CONTRIBUTING.md](https://github.com/codecheckers/ojs-codecheck/blob/main/CONTRIBUTING.md), or [CHANGELOG.md](https://github.com/codecheckers/ojs-codecheck/blob/main/CHANGELOG.md), please follow the same rules listed in [Contributing to ojs-codecheck](#contributing-to-ojs-codecheckk)

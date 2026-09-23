@@ -47,6 +47,35 @@ expects OJS's globals (`pkp.registry`, `pkp.modules.vue`) to already exist.
 It cannot be exercised standalone; Cypress component tests substitute
 `cypress/support/pkp-mock.js` for these globals.
 
+### Code style
+
+```bash
+make lint       # report PHP coding-standard violations; changes nothing
+make lint-fix   # rewrite the files to the standard
+make lint-deps  # install the tool into dev/tools/vendor/
+make hooks      # install the git pre-commit hook that lints staged PHP
+```
+
+**php-cs-fixer lives in `dev/tools/`, with its own `composer.json`, and must
+stay out of the plugin's `require-dev`.** `vendor/autoload.php` is required at
+file scope by three runtime classes and Composer registers it *prepended*, so
+every package in the plugin's `vendor/` outranks OJS's copy of the same library
+for every request that touches the plugin. php-cs-fixer pulls in a third of
+Symfony; installed there, those versions — not `lib/pkp/lib/vendor`'s — would be
+what OJS runs against, tested by nothing. The same reasoning applies to any
+future development tool.
+
+PHP-CS-Fixer with the rule set in `.php-cs-fixer.dist.php` — a copy of PKP's
+own `lib/pkp/.php_cs_rules` (PSR-12 plus their additions), minus their custom
+`PKP/hookfixer`, which only exists inside `lib/pkp`. It is a copy rather than an
+include because the plugin is developed as a standalone checkout and must lint
+without an OJS install beside it; if PKP changes its rules, this file is what to
+update. The whole tree was swept to the standard in one formatting-only commit
+for #43, so `make lint` is expected to be clean — a violation means the change
+being made introduced it. `.github/workflows/lint.yml` runs the same check plus
+`php -l`, separately from `tests.yml` because it needs no OJS, database or
+browser.
+
 ### Tests
 
 Use the Makefile — it sets `OJS_ROOT` and the base URL for you:
@@ -57,6 +86,7 @@ make test-component    # Cypress component tests — runs anywhere, no OJS neede
 make test-php          # PHPUnit — needs the linked OJS install
 make test-e2e          # Cypress e2e — needs `make serve` running
 make test-e2e-reverse  # the same specs backwards, to catch order dependence
+make test-e2e-shuffle  # the same specs in a seeded random order (SEED=n replays one)
 make screenshots       # capture every UI surface to cypress/ui-screenshots/
 ```
 
@@ -602,6 +632,13 @@ that writes. It is deliberately a separate target rather than randomising the
 normal run — an order that changes every time turns a coupling bug into a flake
 nobody can reproduce.
 
+`make test-e2e-shuffle` covers the orders neither of those two reaches, without
+giving that property up: the order comes from a seed, which is printed before
+the run and taken back as `make test-e2e-shuffle SEED=…`, so an order that finds
+a coupling bug can be replayed exactly. `dev/shuffle-specs.mjs` does the
+shuffling. The normal run stays deterministic; this is the target to reach for
+after touching a spec that writes, when reverse order alone is not convincing.
+
 **A red run here has usually had a specific cause.** During the #50 work a whole
 run went red three times: once because a deletion had left the plugin fatal, and
 twice because the dev server was down. "The suite is flaky" was the wrong first
@@ -729,6 +766,9 @@ Three jobs on push/PR to `main`:
 3. **Cypress e2e** — full stack: OJS + `pkp/datasets` + this repo's
    `testData/stable-3_5_0-codecheck` dump, `loadfiles.sh`, OJS npm build, plugin npm
    build, Apache + mod_php on :8888, then `npm run test:e2e`.
+
+`.github/workflows/lint.yml` is a fourth job on the same events, in its own
+workflow: the coding-standard check and a `php -l` pass. See "Code style".
 
 ### Live tests against the CODECHECK register
 
@@ -1107,7 +1147,9 @@ description, so the next reader does not re-derive the same objection.
 
 ## Conventions
 
-- PSR-12; speaking names, verbs in function names; document public methods/classes
+- PSR-12 — enforced, not aspirational: run `make lint` (or let the pre-commit
+  hook from `make hooks` do it) before handing a change over. Speaking names,
+  verbs in function names; document public methods/classes
 - Vue SFCs use `<script setup>`-style composition where already present — match the file
 - Every user-visible change belongs in `CHANGELOG.md`, under `[Unreleased]` in the
   section it fits (Frontend, Configuration, Under the hood, …)

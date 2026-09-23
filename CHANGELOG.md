@@ -224,6 +224,18 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 
 #### Under the hood
 
+- A coding standard that a tool checks: PHP-CS-Fixer with PSR-12 plus PKP's own
+  additions (the rule set OJS core itself uses), driven by `make lint` and
+  `make lint-fix`, by a git pre-commit hook (`make hooks`), by the recommended
+  VS Code extension, and by its own GitHub Actions workflow, which also runs a
+  `php -l` syntax pass over every file. The tool has its own `dev/tools/`
+  installation so that nothing a developer needs ends up in the `vendor/`
+  directory OJS autoloads at runtime (Issue #43)
+- The e2e specs can be run in a seeded random order, `make test-e2e-shuffle`, to
+  check that no spec relies on what an earlier one left behind. The order comes
+  from a seed that is printed and can be passed back in, so a failure can be
+  replayed; the ordinary run stays deterministic
+
 - The data and software availability statement, the dashboard column and the issue
   TOC badge each record their "on unless switched off" default in one place,
   `Constants::CODECHECK_SETTING_DEFAULTS`, and are read through

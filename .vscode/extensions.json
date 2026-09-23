@@ -1,0 +1,9 @@
+{
+    // Suggested to anyone opening this checkout in VS Code. The formatter is
+    // the same php-cs-fixer the pre-commit hook and CI run, driven from the
+    // same .php-cs-fixer.dist.php, so the editor cannot disagree with them.
+    "recommendations": [
+        "junstyle.php-cs-fixer",
+        "bmewburn.vscode-intelephense-client"
+    ]
+}

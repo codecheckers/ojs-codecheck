@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+#
+# Pre-commit hook: hold the PHP files in this commit to the coding standard.
+#
+# Install with `make hooks`. Bypass a single commit with `git commit --no-verify`.
+#
+# It checks the staged PHP files **as they are in the working tree**, not as
+# they are staged: php-cs-fixer resolves its paths against the configured
+# finder root, so linting the index would mean checking the index out somewhere
+# else and losing that root. The difference only shows when a file is staged
+# and then edited further, which the commit would not contain — and in that
+# case a report on the newer content is the more useful of the two. A file that
+# is staged and then deleted is skipped rather than reported, since there is
+# nothing left to read.
+#
+# Nothing is rewritten: the hook reports and refuses, so the formatting change
+# is the author's to make and to see.
+#
+# bash rather than sh for two reasons: `read -d ''` and `mapfile -d ''`. The
+# file list is carried
+# NUL-delimited from end to end, because a path with a space in it would
+# otherwise reach the fixer as two unreadable paths — and that failure would be
+# reported as a style violation which `make lint-fix` then cannot reproduce.
+
+set -e
+
+root="$(git rev-parse --show-toplevel)"
+cd "$root"
+
+fixer=dev/tools/vendor/bin/php-cs-fixer
+if [ ! -x "$fixer" ]; then
+    echo "pre-commit: $fixer is missing — run 'make lint-deps'. Skipping the lint." >&2
+    exit 0
+fi
+
+list="$(mktemp)"
+trap 'rm -f "$list"' EXIT
+
+git diff --cached --name-only --diff-filter=ACMR -z \
+    | while IFS= read -r -d '' file; do
+          if [ -f "$file" ]; then
+              case "$file" in
+                  *.php) printf '%s\0' "$file" ;;
+              esac
+          fi
+      done > "$list"
+
+[ -s "$list" ] || exit 0
+mapfile -d '' -t files < "$list"
+
+# Invoked directly rather than through xargs, which collapses every command
+# failure into its own exit 123 and so loses the 8 below. --config is spelled
+# out because php-cs-fixer demands it as soon as more than one path is given.
+status=0
+"$fixer" fix --config=.php-cs-fixer.dist.php \
+    --path-mode=intersection --dry-run --diff --show-progress=none \
+    -- "${files[@]}" || status=$?
+
+# 8 is php-cs-fixer's "some files would be changed". Anything else is the tool
+# itself failing — a broken configuration, an unreadable path — and saying "your
+# code does not match the standard" there sends the author after the wrong thing.
+if [ "$status" -eq 8 ]; then
+    cat >&2 <<'MSG'
+
+pre-commit: the staged PHP does not match the coding standard.
+
+  make lint-fix              rewrite the files
+  git add -u                 stage the result
+  git commit --no-verify     commit anyway
+
+MSG
+    exit 1
+elif [ "$status" -ne 0 ]; then
+    echo "pre-commit: php-cs-fixer failed (exit ${status}); the output above says why." >&2
+    exit 1
+fi

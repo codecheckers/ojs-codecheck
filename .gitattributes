@@ -11,6 +11,8 @@
 # before this file existed will not honour it.
 
 /.github/                export-ignore
+/.php-cs-fixer.dist.php  export-ignore
+/.vscode/                export-ignore
 /.gitattributes          export-ignore
 /.gitignore              export-ignore
 /CLAUDE.md               export-ignore

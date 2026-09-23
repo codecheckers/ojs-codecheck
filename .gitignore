@@ -38,6 +38,23 @@ node_modules/
 public/
 public/*
 
+# php-cs-fixer's incremental cache (make lint / make lint-fix)
+.php-cs-fixer.cache
+
+# Development tools with their own composer.json, kept out of the plugin's
+# runtime vendor/ on purpose — see the "Code style" section of the Makefile.
+dev/tools/vendor/
+
+# VS Code: the two files below are shared deliberately (#43), so they are
+# un-ignored here. A contributor's *global* ignore very often excludes
+# .vscode/, and a repository .gitignore outranks it — without these lines the
+# files exist on disk, are documented in the README, and are silently never
+# committed.
+!.vscode/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
 # test results
 tests/.phpunit.result.cache
 tests/results/

@@ -40,7 +40,9 @@ export OJS_ROOT
 .PHONY: help setup deps ojs-install ojs-link ojs-config db-create db-load db-reset \
         db-credentials db-credentials-clear tls-cert serve-tls serve-https \
         test-orcid-live \
-        clear-cache serve test test-component test-e2e test-e2e-reverse test-php screenshots inspect \
+        clear-cache serve test test-component test-e2e test-e2e-reverse test-e2e-shuffle \
+        lint lint-deps lint-fix hooks \
+        test-php screenshots inspect \
         build watch check-ojs clean
 
 # --- Entry points -----------------------------------------------------------
@@ -71,8 +73,14 @@ help:
 	@echo "    make test-php        PHPUnit"
 	@echo "    make test-e2e        Cypress e2e (needs 'make serve' running)"
 	@echo "    make test-e2e-reverse  the same specs backwards, to catch order dependence"
+	@echo "    make test-e2e-shuffle [SEED=n]  the same specs in a seeded random order"
 	@echo "    make screenshots     capture UI screenshots (needs 'make serve' running)"
 	@echo "    make inspect URL=... ad-hoc page inspection via Playwright"
+	@echo
+	@echo "  Code style"
+	@echo "    make lint            report PHP coding-standard violations (changes nothing)"
+	@echo "    make lint-fix        rewrite the files to the coding standard"
+	@echo "    make hooks           install the git pre-commit hook that runs the linter"
 	@echo
 	@echo "  OJS_ROOT = $(OJS_ROOT)"
 	@echo "  DB       = $(DB_NAME) as $(DB_USER)@$(DB_HOST):$(DB_PORT)"
@@ -86,6 +94,7 @@ setup: deps ojs-link ojs-config db-load
 
 deps:
 	composer install --no-interaction
+	composer install --working-dir=dev/tools --no-interaction
 	npm install
 	npm run build
 
@@ -315,6 +324,45 @@ serve: check-ojs
 	@echo "Journal: $(BASE_URL)/index.php/codecheck"
 	PHP_CLI_SERVER_WORKERS=$(SERVER_WORKERS) php -S localhost:$(PORT) -t "$(OJS_ROOT)"
 
+# --- Code style -------------------------------------------------------------
+
+# PHP coding standard: PSR-12 plus PKP's own additions, in
+# .php-cs-fixer.dist.php. `lint` reports and exits non-zero (what CI and the
+# pre-commit hook run); `lint-fix` rewrites the files.
+#
+# The tool lives in dev/tools/, with its own composer.json, and deliberately
+# NOT in the plugin's require-dev: the plugin's vendor/autoload.php is loaded at
+# file scope by three runtime classes and registers itself *prepended*, so
+# anything installed there outranks OJS's own copy of the same library for every
+# request. php-cs-fixer drags in a third of Symfony, which would then be the
+# version OJS runs against, tested by nothing. A formatter has no business in
+# the runtime autoloader.
+PHP_CS_FIXER = dev/tools/vendor/bin/php-cs-fixer
+
+lint-deps:
+	@test -x $(PHP_CS_FIXER) || composer install --working-dir=dev/tools --no-interaction
+
+lint: lint-deps
+	$(PHP_CS_FIXER) fix --dry-run --diff --show-progress=none
+
+lint-fix: lint-deps
+	$(PHP_CS_FIXER) fix --show-progress=none
+
+# Git hooks live outside the repository, so they have to be installed per
+# checkout. dev/hooks/pre-commit lints the staged PHP files only.
+#
+# The guard is `git rev-parse`, not `test -d .git`: in a git worktree — the
+# arrangement CLAUDE.md describes for working on this repo — `.git` is a file.
+hooks:
+	@git rev-parse --git-dir >/dev/null 2>&1 || { echo "[Error] not a git checkout."; exit 1; }
+	@target="$$(git rev-parse --git-path hooks)/pre-commit"; \
+	if [ -e "$$target" ] && ! cmp -s dev/hooks/pre-commit "$$target"; then \
+		cp "$$target" "$$target.bak"; \
+		echo "An existing pre-commit hook was moved to $$target.bak"; \
+	fi; \
+	install -m 755 dev/hooks/pre-commit "$$target"
+	@echo "Installed the pre-commit hook. Skip it for one commit with: git commit --no-verify"
+
 # --- Tests ------------------------------------------------------------------
 
 test: test-component test-php
@@ -341,6 +389,22 @@ test-e2e:
 test-e2e-reverse:
 	CYPRESS_BASE_URL=$(BASE_URL) npx cypress run --e2e \
 	  --spec "$$(ls -r cypress/tests/e2e/*.cy.js | tr '\n' ',' | sed 's/,$$//')"
+
+# The same specs in a random order — but a *seeded* one, printed before the run
+# and accepted back as SEED=..., so an order that finds a coupling bug can be
+# replayed. That is the difference between this and randomising the normal run:
+# the normal run stays deterministic, and a failure here comes with a repro.
+#
+#   make test-e2e-shuffle            # a fresh seed, printed
+#   make test-e2e-shuffle SEED=42    # exactly the order seed 42 produced
+SEED ?=
+
+test-e2e-shuffle:
+	@seed="$(SEED)"; \
+	if [ -z "$$seed" ]; then seed=$$(date +%s); fi; \
+	specs="$$(node dev/shuffle-specs.mjs $$seed)" || exit 1; \
+	echo "Replay this order with: make test-e2e-shuffle SEED=$$seed"; \
+	CYPRESS_BASE_URL=$(BASE_URL) npx cypress run --e2e --spec "$$specs"
 
 # Live tests write to the real CODECHECK register on GitHub and leave issues
 # behind, so they are not in any suite: specPattern excludes cypress/tests/live/

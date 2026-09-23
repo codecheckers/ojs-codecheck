@@ -1,0 +1,12 @@
+{
+    "description": "Development tools, installed separately from the plugin's own dependencies.",
+    "license": "Apache-2.0",
+    "require": {
+        "friendsofphp/php-cs-fixer": "^3.90"
+    },
+    "config": {
+        "platform": {
+            "php": "8.2"
+        }
+    }
+}

@@ -1,0 +1,64 @@
+name: Lint
+
+# Deliberately its own workflow rather than a job in tests.yml: it needs
+# neither an OJS checkout, a database nor a browser, so it answers in under a
+# minute and can be made a required check on its own (#43).
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  php-coding-standard:
+    name: PHP coding standard
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout plugin
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer:v2
+          coverage: none
+
+      - name: Install the linter
+        # Only the tool, from its own composer.json in dev/tools — the plugin's
+        # own dependencies are not needed to check formatting, and php-cs-fixer
+        # is deliberately not one of them (see the Makefile's "Code style").
+        run: composer install --working-dir=dev/tools --no-interaction --no-progress
+
+      - name: Check the coding standard
+        # Reports and exits non-zero; it never rewrites anything in CI. The
+        # diff is in the log, and `make lint-fix` applies it locally.
+        run: dev/tools/vendor/bin/php-cs-fixer fix --dry-run --diff --show-progress=none
+
+  php-syntax:
+    name: PHP syntax
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout plugin
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - name: Lint every PHP file
+        # `php -l` is not a coding-standard check — it is the cheapest possible
+        # guard against a parse error reaching main, which matters here because
+        # PHPUnit cannot reach large parts of this plugin (see CLAUDE.md) and a
+        # fatal in a hook is swallowed by PKP rather than reported.
+        run: |
+          find . -name '*.php' \
+            -not -path './vendor/*' \
+            -not -path './node_modules/*' \
+            -not -path './public/*' \
+            -print0 | xargs -0 -n1 -P4 php -l > /dev/null

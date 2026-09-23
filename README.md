@@ -180,6 +180,43 @@ npm run build
   a fresh clone the CODECHECK UI is missing until you build. Re-run after every
   change under `resources/js/`.
 
+### Code style and linting
+
+PHP in this plugin follows **PSR-12 plus PKP's own additions** — the rule set in
+[`.php-cs-fixer.dist.php`](.php-cs-fixer.dist.php) is a copy of
+`lib/pkp/.php_cs_rules` from an OJS checkout, so plugin code reads like the core
+it lives in. The tool is [PHP-CS-Fixer](https://cs.symfony.com/). It has its own
+`dev/tools/composer.json` and is **not** a `require-dev` of the plugin: the
+plugin's `vendor/autoload.php` is loaded at file scope by runtime classes and
+registers itself ahead of OJS's own autoloader, so a development tool installed
+there would decide which version of a third of Symfony OJS runs against.
+`make deps` installs it; on its own it is
+`composer install --working-dir=dev/tools`.
+
+```bash
+make lint         # report violations and exit non-zero; changes nothing
+make lint-fix     # rewrite the files to the standard
+make hooks        # install a git pre-commit hook that lints the staged PHP
+```
+
+Without the Makefile: `dev/tools/vendor/bin/php-cs-fixer fix --dry-run --diff`
+and `dev/tools/vendor/bin/php-cs-fixer fix`.
+
+The pre-commit hook installed by `make hooks` refuses a commit whose PHP does
+not match the standard, and prints the diff. It never rewrites anything — the
+formatting change is yours to make and to see. Bypass it once with
+`git commit --no-verify`.
+
+In **VS Code**, [`.vscode/extensions.json`](.vscode/extensions.json) recommends
+the `junstyle.php-cs-fixer` extension and
+[`.vscode/settings.json`](.vscode/settings.json) points it at this checkout's
+own binary and configuration, so format-on-save produces exactly what `make
+lint` checks. Install the recommended extensions when VS Code offers, and run `make lint-deps`
+(or `make deps`) first — the extension calls `dev/tools/vendor/bin/php-cs-fixer`.
+
+[`.github/workflows/lint.yml`](.github/workflows/lint.yml) runs the same check
+on every push and pull request, alongside a `php -l` pass over every PHP file.
+
 ### Frontend Development
 
 This plugin uses **Vite** for building Vue.js components.
@@ -533,6 +570,11 @@ suites on every push and pull request to `main`: PHPUnit against a checkout of
 `pkp/ojs@stable-3_5_0` with MySQL, the Cypress component tests standalone, and
 the e2e tests against a full Apache + MySQL + OJS stack seeded from
 [`testData/`](testData/).
+
+[`.github/workflows/lint.yml`](.github/workflows/lint.yml) is separate and runs
+on the same events: the coding-standard check and a `php -l` syntax pass. It
+needs neither OJS nor a database, so it answers in well under a minute — see
+[Code style and linting](#code-style-and-linting).
 
 ## License
 

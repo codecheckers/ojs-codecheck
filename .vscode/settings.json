@@ -1,0 +1,17 @@
+{
+    // PHP coding standard (#43): format with the project's own php-cs-fixer
+    // binary and configuration — never a globally installed one, whose rules
+    // would differ from what `make lint` and CI check.
+    "php-cs-fixer.executablePath": "${workspaceFolder}/dev/tools/vendor/bin/php-cs-fixer",
+    "php-cs-fixer.config": "${workspaceFolder}/.php-cs-fixer.dist.php",
+    "php-cs-fixer.rules": "",
+    "php-cs-fixer.allowRisky": false,
+    "php-cs-fixer.formatHtml": false,
+    "php-cs-fixer.onsave": false,
+    "[php]": {
+        "editor.defaultFormatter": "junstyle.php-cs-fixer",
+        "editor.formatOnSave": true,
+        "editor.insertSpaces": true,
+        "editor.tabSize": 4
+    }
+}
