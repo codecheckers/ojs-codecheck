@@ -1112,9 +1112,52 @@ description, so the next reader does not re-derive the same objection.
 - Every user-visible change belongs in `CHANGELOG.md`, under `[Unreleased]` in the
   section it fits (Frontend, Configuration, Under the hood, …)
 - Release process, packaging (`package-plugin.sh`) and the API-extension recipe are in
-  `README.md`
+  `README.md`. **Three files state the release and must agree**: `version.xml`
+  (`<release>`, `<date>`), `CITATION.cff` (`version`, `date-released`) and the
+  heading in `CHANGELOG.md`. A release that moves one and not the others is the
+  defect `version.xml` already had once, when it claimed `0.0.0.0` in a tagged
+  release — see "Releases and citation metadata" below
 - `.claude/ISSUE_CODE_IMPROVEMENTS.md` and `.claude/issue-65-update.md` hold earlier
   code-review findings; several are still open (dual storage, schema mismatch, dead DAO)
+
+## Releases and citation metadata
+
+`CITATION.cff` is what GitHub renders in the "Cite this repository" widget, and
+GitHub validates it on push — a malformed file is worse than none, because the
+widget then shows an error to anyone who wanted to cite the plugin. `cffconvert
+--validate` checks it locally, but it pins `jsonschema<4` and will downgrade a
+shared environment to get it, so GitHub's own validation is usually the better
+check.
+
+**At every release, three files state the version and must be moved together**:
+`version.xml`, `CITATION.cff` and `CHANGELOG.md`. The release procedure in
+`README.md` steps through `version.xml`; `CITATION.cff` carries the same two
+values (`version`, `date-released`) and is the one most easily forgotten,
+because nothing at runtime reads it and no test covers it.
+
+**The Zenodo DOI is not in the file yet, and this is where it goes.** Issue #8
+(beta release incl. Zenodo deposit) mints it. When it exists, add it to
+`CITATION.cff` as
+
+```yaml
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.XXXXXXX
+    description: The concept DOI for all versions
+```
+
+and use the *concept* DOI — the one Zenodo keeps stable across versions — not
+the DOI of a single deposit, so a citation of "the plugin" does not pin the
+reader to whichever release happened to be current. A version DOI can be added
+alongside it per release if that is ever wanted, but the concept DOI is the one
+that belongs in a file that ships in the repository.
+
+**The author list is a human decision, not a derivation.** The current order
+follows commit counts from `git shortlog -sne --all`, which is a stand-in rather
+than an answer: authorship order, who counts as an author at all, and the
+missing family name and ORCIDs for two of the three are things to ask the people
+concerned. Email addresses are deliberately omitted although git history carries
+them.
 
 ## Traps
 

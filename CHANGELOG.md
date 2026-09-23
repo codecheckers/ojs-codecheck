@@ -21,6 +21,9 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 - Documentation: [README.md](README.md) (Issue #4), [CONTRIBUTING.md](CONTRIBUTING.md) (Issue #3), [CHANGELOG.md](CHANGELOG.md) (Issue #5)
 - Color scheme documentation in [README.md](README.md)
 - Mock-Ups in Issue descriptions (Issue #26)
+- `CITATION.cff`, so the plugin can be cited and GitHub can render a "Cite this
+  repository" entry. The Zenodo DOI is added once the beta release mints one
+  (Issue #24, Issue #8)
 
 #### Submission
 

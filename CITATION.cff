@@ -1,0 +1,36 @@
+# Citation metadata for this repository, rendered by GitHub's "Cite this
+# repository" widget. Keep `version` and `date-released` in step with
+# `version.xml`, and add the Zenodo DOI under `identifiers` once one is minted
+# (issue #8) — the release process in README.md says when.
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata from this file."
+title: ojs-codecheck
+abstract: >-
+  An Open Journal Systems (OJS) plugin that integrates the CODECHECK process
+  into a journal's submission, editorial and publication workflows: codecheck
+  metadata and status on the submission, a generated codecheck.yml, deposit to
+  the CODECHECK Register, and display of CODECHECK certificates to readers.
+type: software
+authors:
+  - given-names: Linus
+    alias: dxL1nus
+  - family-names: Nüst
+    given-names: Daniel
+    orcid: "https://orcid.org/0000-0002-0024-5046"
+    affiliation: TU Dresden
+  - family-names: Ali
+    given-names: Subhan
+    alias: subhanaliweb
+repository-code: "https://github.com/codecheckers/ojs-codecheck"
+url: "https://codecheck.org.uk/"
+license: Apache-2.0
+version: 1.0.0.0
+date-released: "2026-09-18"
+keywords:
+  - codecheck
+  - reproducibility
+  - open-journal-systems
+  - ojs
+  - ojs-plugin
+  - peer-review
+  - research-software

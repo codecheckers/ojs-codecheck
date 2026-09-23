@@ -294,20 +294,26 @@ Both need `make serve` running in another terminal.
     - `git checkout -b "release-x_y_z-0"` (see [CHANGELOG.md](https://github.com/codecheckers/ojs-codecheck/blob/main/CHANGELOG.md) for further information on the version names)
 2. Change the release in the `version.xml` to the new version specified in the Release branch name
     - please use the full OJS format, so `x.y.z.0`
-3. Install dependencies: `npm install`
-4. Build the frontend: `npm run build`
-5. Ensure that:
+    - set `<date>` to the release date
+3. Update `CITATION.cff` to match: `version` and `date-released` carry the same
+   two values, and this is where the Zenodo DOI goes under `identifiers` once
+   issue #8 mints one (use the *concept* DOI, which is stable across versions).
+   GitHub validates the file on push and shows an error in the "Cite this
+   repository" widget if it is malformed
+4. Install dependencies: `npm install`
+5. Build the frontend: `npm run build`
+6. Ensure that:
     - `public/build/` exists (**ignored by git**)
     - and contains the compiled files (`build.iife.js` and `build.css`)
-6. [Test](https://github.com/codecheckers/ojs-codecheck/?tab=readme-ov-file#testing) the plugin ([Frontend Component Tests](https://github.com/codecheckers/ojs-codecheck/?tab=readme-ov-file#frontend-component-tests) and [PHP Unit Tests](https://github.com/codecheckers/ojs-codecheck/?tab=readme-ov-file#frontend-component-tests))
-7. Create release tag
+7. [Test](https://github.com/codecheckers/ojs-codecheck/?tab=readme-ov-file#testing) the plugin ([Frontend Component Tests](https://github.com/codecheckers/ojs-codecheck/?tab=readme-ov-file#frontend-component-tests) and [PHP Unit Tests](https://github.com/codecheckers/ojs-codecheck/?tab=readme-ov-file#frontend-component-tests))
+8. Create release tag
     - `git commit -am "Release x.y.z.0"`
     - `git tag -a vx.y.z.0 -m "Release x.y.z.0"`
-8. Push the branch
+9. Push the branch
     - `git push --set-upstream origin release-x_y_z-0`
-9. Push the tag
+10. Push the tag
     - `git push origin vx.y.z.0`
-10. Package the Plugin: *(ensure that `vx.y.z.0` matches the tag you pushed)*
+11. Package the Plugin: *(ensure that `vx.y.z.0` matches the tag you pushed)*
       ```bash
       sh package-plugin.sh --format tar.gz --version x.y.z.0
       ```
@@ -331,13 +337,13 @@ Both need `make serve` running in another terminal.
     - **installing from source.** Without `--prefer-dist`, composer leaves a
       `.git` directory in every package: 27 of them, and 39 MB of `vendor/` for
       about 4 MB of code.
-11. Double check that the package:
+12. Double check that the package:
     - **Includes**: a single top-level `codecheck/` directory holding
       `version.xml`, `vendor/`, `public/build/`, all PHP files, templates, locale
     - **Doesn't include**: `node_modules/`, `resources/` (Vue sources), `.env`,
       `tests/`, `cypress/`, `dev/`, `testData/`, `Makefile`, `CLAUDE.md` —
       `.gitattributes` keeps these out
-12. Create the Release in the [GitHub UI](https://github.com/codecheckers/ojs-codecheck/releases/new)
+13. Create the Release in the [GitHub UI](https://github.com/codecheckers/ojs-codecheck/releases/new)
     - **Tag [ <img src="assets/img/github-tag.png" width="10" height="10"> ]:** make sure to select the tag, which you just created (`vx.y.z.0`)
     - **Target [ <img src="assets/img/github-branch.png" width="10" height="10"> ]:** select your Release branch as a target (`"release-x_y_z-0"`)
     - **Title:** use both release number and a speaking title with terms like `"alpha"` or `"beta"` to communicate the development status
@@ -348,6 +354,7 @@ Both need `make serve` running in another terminal.
 ```bash
 codecheck/
 ├── CHANGELOG.md               # The projects Changelog with details for each version
+├── CITATION.cff               # How to cite the plugin; GitHub renders it as "Cite this repository"
 ├── CONTRIBUTING.md            # Contibution guidelines for this repo
 ├── CodecheckPlugin.php        # Main plugin class
 ├── LICENSE                    # License file
