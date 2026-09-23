@@ -208,8 +208,6 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 - The text shown in place of the badge, when a journal chooses "No badge", is
   configurable, as is the colour it is written in; cleared, the text falls back to
   "CODECHECK" and the colour to the CODECHECK green
-- The destructive "Clear / Reset DB" action sits at the very bottom of the settings
-  page instead of between the submission and GitHub settings
 - Setting listing which CODECHECK config versions codecheckers can choose from in the
   metadata form. Only the enabled versions are offered, and the selector is inactive
   when a journal has settled on a single version. Journals offer version 1.0 until
@@ -350,11 +348,6 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 - The CODECHECK config version is URL-encoded before it is put in the
   specification link. The version is stored as it arrives and the link is rendered
   with `v-html`, so a crafted value escaped the attribute (Issue #50)
-- The "Clear / Reset CODECHECK Metadata Database" action checks the CSRF token.
-  It drops every CODECHECK table; the settings template posted a token but nothing
-  validated it, and PKP's grid handler only checks CSRF when reordering rows, so a
-  manager who loaded an attacker's page lost the journal's whole CODECHECK record
-  (Issue #50)
 - Newlines are stripped from log messages. Values that reach the log come from
   requests, and a newline in one forged a line that looked like a genuine entry
   from this plugin (Issue #50)

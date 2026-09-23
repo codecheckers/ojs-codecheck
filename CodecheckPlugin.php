@@ -15,7 +15,6 @@ use APP\plugins\generic\codecheck\classes\Submission\SubmissionWizardHandler;
 use APP\plugins\generic\codecheck\classes\Orcid\OrcidAuthHandler;
 use APP\plugins\generic\codecheck\classes\Orcid\OrcidDepositService;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
-use Illuminate\Support\Facades\Schema as DBSchema;
 use PKP\plugins\GenericPlugin;
 use PKP\plugins\Hook;
 use PKP\components\forms\FieldOptions;
@@ -812,25 +811,6 @@ class CodecheckPlugin extends GenericPlugin
     public function isRegisterDepositEnabled(?int $contextId): bool
     {
         return (bool) $this->getSettingWithDefault($contextId, Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED);
-    }
-
-    /**
-     * Drop all CODECHECK tables and recreate them from scratch.
-     *
-     * This is a deliberate, admin-triggered destructive action exposed via
-     * the plugin settings UI ("Clear / Reset DB"). It is intentionally kept
-     * separate from the migration system, which never drops tables.
-     */
-    public function resetSchema(): void
-    {
-        // Drop in reverse dependency order — codecheck_status references codecheck_metadata.
-        DBSchema::dropIfExists('codecheck_status');
-        DBSchema::dropIfExists('codecheck_orcid_tokens');
-        DBSchema::dropIfExists('codecheck_issue_labels');
-        DBSchema::dropIfExists('codecheck_metadata');
-
-        // Recreate everything fresh via the install migration.
-        $this->getInstallMigration()->up();
     }
 }
 

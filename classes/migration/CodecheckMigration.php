@@ -39,7 +39,8 @@ abstract class CodecheckMigration extends Migration
 
     /**
      * Downgrade is not supported — dropping tables would destroy journal data.
-     * Use the "Clear / Reset DB" button in plugin settings for intentional resets.
+     * Nothing in the plugin drops a table at all: the settings form once
+     * offered a reset that did, and it was removed (#131).
      */
     public function down(): void
     {

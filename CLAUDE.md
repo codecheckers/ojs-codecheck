@@ -209,9 +209,10 @@ Migration structure (added for issue #94):
   and converts the old `repoWithCodecheckYaml` index into a `containsCodecheckYaml`
   flag on each entry. Its `convert()` is `public static` so the conversion is
   testable without a database
-- `CodecheckPlugin::setEnabled()` runs the install migration on enable;
-  `resetSchema()` (settings UI "Clear / Reset DB") drops and recreates — the only
-  destructive path.
+- `CodecheckPlugin::setEnabled()` runs the install migration on enable.
+  **Nothing in the plugin drops a table** — the settings form's "Clear / Reset
+  DB" button did, and was removed in #131; rebuild a development instance with
+  `make db-reset` instead.
 
 The migration is the single source of truth for this schema. A stale `schema.xml`
 and a dead `CodecheckMetadataDAO` used to describe two further, contradictory
@@ -323,6 +324,15 @@ not match `Constants::CODECHECK_STATUSES`.
 added to the form must be added in three places: `Constants`, `SettingsForm::initData()`
 + `readInputData()`, and the template. `SettingsForm::validate()` also warns when the
 configured register repo lacks a `register.csv`.
+
+**A verb added to `Manage::execute()` must bring its own CSRF check.** PKP's
+`manage` operation has none — `SettingsPluginGridHandler` authorises it (site
+admin or manager, `PluginAccessPolicy`), but unlike `enable`/`disable` it never
+calls `checkCSRF()`. The `settings` verb is covered because `SettingsForm`
+registers `FormValidatorPost` + `FormValidatorCSRF`, so the save is refused
+inside `validate()`. The `resetSchema` verb was the one that did not, and it
+dropped every CODECHECK table; it was removed entirely in #131, so today every
+verb there is covered — which is a property to keep, not one to rely on.
 
 Note the "three places" is really four for anything with a non-trivial default or a
 list of options: `fetch()` assigns the template variables the field renders from.

@@ -121,7 +121,7 @@ class CodecheckSchemaMigration extends CodecheckMigration
      * journals that had it before either existed.
      *
      * **Only journals where the plugin is enabled.** This runs from
-     * `setEnabled()`, from `resetSchema()` and from `Installer::postInstall`,
+     * `setEnabled()` and from `Installer::postInstall`,
      * so writing to every journal would put CODECHECK rows into journals that
      * never installed it — including on a plain upgrade of a site where it is
      * switched off everywhere. Writes only what is missing, so a journal that

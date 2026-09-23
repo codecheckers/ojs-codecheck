@@ -64,20 +64,6 @@
 	}
 
 	$(function () {
-		$('#resetSchema').on('click', function () {
-			if (!confirm('Are you sure, you want to permanently delete all records in the CODECHECK Metadata DB Table?')) {
-				return;
-			}
-			let resetSchemaUrl = $(this).data('url');
-			$.post(
-				resetSchemaUrl,
-				{ csrfToken: pkp.currentUser.csrfToken },
-				function(response) {
-					alert('Finished resetting the CODECHECK Metadata DB.');
-				}
-			);
-		});
-
 		$('#testOrcidSetup').on('click', function () {
 			const $btn    = $(this);
 			const $result = $('#orcidTestResult');
@@ -623,23 +609,6 @@
 					<span class="badge-height-unit">px</span>
 				</div>
 			{/fbvFormSection}
-		{/fbvFormSection}
-
-		{* Clear / Reset CODECHECK Metadata DB *}
-		{fbvFormSection
-			list=true
-		}
-			<div class="field-header">
-				<label class="pkp_form_label">Clear / Reset CODECHECK Metadata Database</label>
-			</div>
-			<button
-				type="button"
-				id="resetSchema"
-				class="pkpButton btn-remove"
-				data-url="{url router=$smarty.const.ROUTE_COMPONENT component='grid.settings.plugins.SettingsPluginGridHandler' op='manage' category='generic' plugin=$pluginName verb='resetSchema' save=true}"
-			>
-				Clear / Reset DB
-			</button>
 		{/fbvFormSection}
 
 		{* TODO: Add more settings in future development *}
