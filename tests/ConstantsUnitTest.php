@@ -135,6 +135,53 @@ class ConstantsUnitTest extends PKPTestCase
     }
 
     /**
+     * #178 left the badge height with two readers: the settings form stored
+     * `(int) ''` — zero — for a cleared field and showed that back, while the
+     * article page read `0 ?: 24`. The rule lives here now, and it judges the
+     * stored value rather than only its absence — which is why the height is
+     * deliberately *not* in the map: a stored `0` is what has to be caught,
+     * and a written row would make a later change to this pixel value need an
+     * upgrade migration.
+     */
+    public function testTheBadgeHeightDefaultIsNotWrittenIntoJournals()
+    {
+        $this->assertSame(24, Constants::CODECHECK_BADGE_HEIGHT_DEFAULT);
+        $this->assertArrayNotHasKey(
+            Constants::CODECHECK_BADGE_HEIGHT,
+            Constants::CODECHECK_SETTING_DEFAULTS
+        );
+    }
+
+    /**
+     * @param mixed $stored what a journal has in `plugin_settings`, or typed
+     *                      into the settings form
+     */
+    #[DataProvider('badgeHeightProvider')]
+    public function testNormalizeBadgeHeight(mixed $stored, int $expected)
+    {
+        $this->assertSame($expected, Constants::normalizeBadgeHeight($stored));
+    }
+
+    public static function badgeHeightProvider(): array
+    {
+        return [
+            'a plain number' => [40, 40],
+            'a number as a string, as plugin_settings stores it' => ['40', 40],
+            'nothing recorded' => [null, 24],
+            'the field cleared' => ['', 24],
+            'the zero a cleared field used to store' => [0, 24],
+            'the same zero as a string' => ['0', 24],
+            'a negative height' => [-10, 24],
+            'not a number at all' => ['tall', 24],
+            // The form's min/max is advisory — PKP posts the form itself — and
+            // the value lands in a style attribute on a public page.
+            'below what the form offers' => [4, 10],
+            'above what the form offers' => [100000, 200],
+            'the ends of the range themselves' => [200, 200],
+        ];
+    }
+
+    /**
      * A recorded default is *written* into a row, and the writers never
      * reconcile, so a setting whose default is expected to change must stay
      * out of the map: a journal enabled today would otherwise keep being

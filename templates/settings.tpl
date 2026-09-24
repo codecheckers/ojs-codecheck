@@ -603,8 +603,8 @@
 						name="codecheckBadgeHeight"
 						class="pkpFormField__input"
 						value="{$codecheckBadgeHeight|escape}"
-						min="10"
-						max="200"
+						min="{$codecheckBadgeHeightMin|escape}"
+						max="{$codecheckBadgeHeightMax|escape}"
 					/>
 					<span class="badge-height-unit">px</span>
 				</div>

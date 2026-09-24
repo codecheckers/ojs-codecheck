@@ -23,41 +23,6 @@ class CodecheckSubmissionDAO
 
         return null;
     }
-
-    /**
-     * Insert or update CODECHECK data
-     */
-    public function insertOrUpdate(int $submissionId, array $data): void
-    {
-        $existing = $this->getBySubmissionId($submissionId);
-
-        $recordData = [
-            'version' => $data['version'] ?? 'latest',
-            'publication_type' => $data['publication_type'] ?? 'doi',
-            'manifest' => isset($data['manifest']) ? json_encode($data['manifest']) : null,
-            'repository' => $data['repository'] ?? '',
-            'source' => $data['source'] ?? '',
-            'codecheckers' => isset($data['codecheckers']) ? json_encode($data['codecheckers']) : null,
-            'certificate' => $data['certificate'] ?? '',
-            'issueUrl' => $data['issueUrl'] ?? '',
-            'issueNumber' => $data['issueNumber'] ?? null,
-            'check_time' => $data['check_time'] ?? null,
-            'summary' => $data['summary'] ?? '',
-            'report' => $data['report'] ?? '',
-            'additional_content' => $data['additional_content'] ?? '',
-            'updated_at' => now(),
-        ];
-
-        if ($existing) {
-            DB::table('codecheck_metadata')
-                ->where('submission_id', $submissionId)
-                ->update($recordData);
-        } else {
-            $recordData['submission_id'] = $submissionId;
-            $recordData['created_at'] = now();
-            DB::table('codecheck_metadata')->insert($recordData);
-        }
-    }
 }
 
 /**
@@ -165,16 +130,6 @@ class CodecheckSubmission
     public function getCertificate(): string
     {
         return $this->data['certificate'] ?? '';
-    }
-
-    public function getIssueUrl(): string
-    {
-        return $this->data['issueUrl'] ?? '';
-    }
-
-    public function getIssueNumber(): string
-    {
-        return $this->data['issueNumber'] ?? '';
     }
 
     public function getCheckTime(): ?string

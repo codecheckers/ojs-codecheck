@@ -118,6 +118,50 @@ class Constants
     /** The green the badge text has always been rendered in. */
     public const CODECHECK_BADGE_TEXT_COLOR_DEFAULT = '#2d7f3e';
 
+    /** The height the badge image has always been rendered at, in pixels. */
+    public const CODECHECK_BADGE_HEIGHT_DEFAULT = 24;
+
+    /**
+     * What the settings form offers, and what `normalizeBadgeHeight()` holds a
+     * stored value to. The form renders these as the number field's `min` and
+     * `max`, which is presentation only: PKP posts the form through its own
+     * handler, so the browser never gets to refuse anything.
+     */
+    public const CODECHECK_BADGE_HEIGHT_MIN = 10;
+    public const CODECHECK_BADGE_HEIGHT_MAX = 200;
+
+    /**
+     * The badge height as a usable number of pixels.
+     *
+     * "Not a height" — nothing recorded, an emptied field, zero, negative, or
+     * not a number at all — is the default, and a number outside the range the
+     * form offers is the nearest end of it. This is the only place that says
+     * so, and it has to: the value is written into a `style` attribute on the
+     * article page and in the issue table of contents, and the `min`/`max` on
+     * the form field is advisory — PKP submits the form itself, so nothing
+     * stopped a journal from storing a height of 100000. Two readers used to answer differently: the settings form stored
+     * `(int) ''`, which is `0`, and showed that back, while the article page
+     * read `0 ?: 24` and rendered 24 (#178).
+     *
+     * It is applied on save and on read, as the badge text colour's rule is,
+     * rather than through `CODECHECK_SETTING_DEFAULTS`. A recorded default
+     * abolishes the *unset* state, which is not the problem here: a row written
+     * by an earlier version holds that `0`, so a reader has to judge the stored
+     * value whatever the map says — and a written row would make a later change
+     * to a cosmetic pixel value need an upgrade migration.
+     */
+    public static function normalizeBadgeHeight(mixed $height): int
+    {
+        if (!is_numeric($height) || (int) $height <= 0) {
+            return self::CODECHECK_BADGE_HEIGHT_DEFAULT;
+        }
+
+        return max(
+            self::CODECHECK_BADGE_HEIGHT_MIN,
+            min(self::CODECHECK_BADGE_HEIGHT_MAX, (int) $height)
+        );
+    }
+
     public const CODECHECK_SHOW_DASHBOARD_COLUMN = 'showDashboardColumn';
 
     // Update Github Register Issue

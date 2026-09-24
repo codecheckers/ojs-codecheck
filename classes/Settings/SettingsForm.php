@@ -188,7 +188,9 @@ class SettingsForm extends Form
 
         $this->setData(
             Constants::CODECHECK_BADGE_HEIGHT,
-            $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_HEIGHT) ?? '24'
+            Constants::normalizeBadgeHeight(
+                $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_HEIGHT)
+            )
         );
 
         $this->setData(
@@ -362,7 +364,9 @@ class SettingsForm extends Form
             $this->getData(Constants::CODECHECK_BADGE_TEXT_COLOR) ?: Constants::CODECHECK_BADGE_TEXT_COLOR_DEFAULT
         );
         $templateMgr->assign('codecheckBadgeCustomUrl', $this->getData(Constants::CODECHECK_BADGE_CUSTOM_URL) ?? '');
-        $templateMgr->assign('codecheckBadgeHeight', $this->getData(Constants::CODECHECK_BADGE_HEIGHT) ?? '24');
+        $templateMgr->assign('codecheckBadgeHeight', $this->getData(Constants::CODECHECK_BADGE_HEIGHT));
+        $templateMgr->assign('codecheckBadgeHeightMin', Constants::CODECHECK_BADGE_HEIGHT_MIN);
+        $templateMgr->assign('codecheckBadgeHeightMax', Constants::CODECHECK_BADGE_HEIGHT_MAX);
 
         $templateMgr->assign(
             'showDashboardColumn',
@@ -577,7 +581,9 @@ class SettingsForm extends Form
         $this->plugin->updateSetting(
             $context->getId(),
             Constants::CODECHECK_BADGE_HEIGHT,
-            (int) ($this->getData(Constants::CODECHECK_BADGE_HEIGHT) ?? 24)
+            // Clearing the field stores the default rather than the `0` an
+            // empty string casts to — see Constants::normalizeBadgeHeight().
+            Constants::normalizeBadgeHeight($this->getData(Constants::CODECHECK_BADGE_HEIGHT))
         );
 
         $this->plugin->updateSetting(

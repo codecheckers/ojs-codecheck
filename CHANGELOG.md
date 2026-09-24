@@ -224,6 +224,20 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 
 #### Under the hood
 
+- What counts as a badge height is decided in one place. Clearing the field on
+  the settings form stored a height of zero, which the form then showed back
+  while the article page rendered 24 — the two disagreed about what an emptied
+  field means. Nothing recorded, emptied, zero, negative or not a number is a
+  height now, anywhere: it resolves to 24 on save and on read, so a journal
+  sees the height its articles actually use. A height outside the 10–200px
+  range the form offers is held to it, which the form field's own `min` and
+  `max` never did — OJS submits the form itself, so the browser never refused
+  anything (Issue #178)
+- Removed a second, unused way to write a CODECHECK record. It bypassed both
+  rules the real write paths enforce — that a repository address is a web
+  address, and that a hidden repository cannot be the one holding the
+  `codecheck.yml` — and named two columns the database has never had
+
 - A coding standard that a tool checks: PHP-CS-Fixer with PSR-12 plus PKP's own
   additions (the rule set OJS core itself uses), driven by `make lint` and
   `make lint-fix`, by a git pre-commit hook (`make hooks`), by the recommended

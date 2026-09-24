@@ -246,7 +246,23 @@ Migration structure (added for issue #94):
 
 The migration is the single source of truth for this schema. A stale `schema.xml`
 and a dead `CodecheckMetadataDAO` used to describe two further, contradictory
-shapes; both were removed. `CodecheckSubmissionDAO` is the only DAO.
+shapes; both were removed. `CodecheckSubmissionDAO` is the only DAO, and it **reads**:
+`getBySubmissionId()` is all it does. It used to carry an `insertOrUpdate()`
+that no production code called, wrote `issueUrl` and `issueNumber` columns the
+schema has never had (the schema has one `issue` JSON column), and set
+`repository` to whatever string it was handed — past `Constants::isWebUrl()`
+and past the hidden/`containsCodecheckYaml` rule alike. Writes go through
+`CodecheckMetadataHandler::saveMetadata()` and `CodecheckAuthorMetadata`, which
+enforce both; a second write path that did not is worse than none, so it was
+removed rather than taught the rules — teaching it would have made a third
+writer of the shape that #154 and #169 came from.
+
+**That does not make the DAO a gate.** It reads `codecheck_metadata` with the
+query builder, and so do `CodecheckMetadataHandler`, `CodecheckAuthorMetadata`,
+the API controller, the ORCID services and the register comment — there is no
+single owner of this table, only two write paths that happen to hold the
+invariants. Routing those queries through the DAO so the rules have one home is
+the larger change nobody has made.
 
 **Which repository holds the `codecheck.yml` is recorded on the repository entry,
 never as a position in the list.** It was an index (`repoWithCodecheckYaml`), and
@@ -431,13 +447,30 @@ dashboard view. It once injected for `op == 'editorial'` alone, and
 same bundle, so the JS default decided there — showing the column to authors and
 reviewers in a journal that had switched it off (#178).
 
+**`CODECHECK_BADGE_HEIGHT` deliberately did not join the map either, and for
+the opposite reason to the config versions**: the map abolishes the *unset*
+state, and unset was never this setting's problem. The form stored `(int) ''` —
+zero — for a cleared field and showed that back, while `Badge.php` read
+`0 ?: 24` and rendered 24, so the disagreement was about a value that is
+*stored*. A reader therefore has to judge the stored value whatever the map
+says, and a written row would make a later change to a cosmetic pixel value
+need an upgrade migration. `Constants::normalizeBadgeHeight()` is that judgment
+and the only place it is spelled out — nothing recorded, emptied, zero,
+negative or non-numeric is not a height, and anything outside
+`CODECHECK_BADGE_HEIGHT_MIN`/`_MAX` is held to that range — applied on save in
+`SettingsForm::execute()` and on read in `Badge::getStyle()`, as the badge text
+colour's rule is. **The `min`/`max` on the form field is presentation**, drawn
+from the same two constants: PKP submits the settings form through its own
+handler, so the browser never refuses a value, and the height goes into a
+`style` attribute on the article page and the issue TOC. The rule of thumb: **the map for a setting whose absence is
+the ambiguity, a normaliser for one whose stored value can be nonsense.**
+
 The settings below are **not** in the map. The two bullets cannot be, their
 default being a localised string rather than a value a constant can hold; the
 rest simply have not been migrated yet and still carry the two-reader shape that
 produced #177 — `CODECHECK_MODE` (`'opt-in'`), `ORCID_API_TYPE`
-(`ORCID_API_TYPE_SANDBOX`, six readers), `CODECHECK_BADGE_TYPE` (`'codeworks'`)
-and `CODECHECK_BADGE_HEIGHT` (`24`, where `Badge.php`'s `?: 24` and
-`SettingsForm`'s `?? '24'` already disagree about a stored empty string):
+(`ORCID_API_TYPE_SANDBOX`, six readers) and `CODECHECK_BADGE_TYPE`
+(`'codeworks'`):
 
 - `CODECHECK_AVAILABILITY_STATEMENT_HEADING` falls back to the localised
   `plugins.generic.codecheck.dataSoftwareAvailability` when cleared, so the article
@@ -1206,7 +1239,8 @@ them.
 - `public/build/` gitignored but required — rebuild after pulling or after JS edits
 - `vendor/` required at file-scope `require` — `composer install` before anything PHP
 - `registry/uiLocaleKeysBackend.json` is generated — never hand-edit
-- `CodecheckSubmissionDAO` is the only DAO; the migration defines the schema
+- `CodecheckSubmissionDAO` is the only DAO, and it only reads; the migration
+  defines the schema
 - Hook argument arrays carry **references** (`[&$page, &$op, …]`). Writing through
   `$args[n]` propagates to the caller even though `$args` itself is by-value — unit
   tests must build the array with references to model this (see
