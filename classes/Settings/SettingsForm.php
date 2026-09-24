@@ -176,8 +176,9 @@ class SettingsForm extends Form
         // rather than an empty string.
         $this->setData(
             Constants::CODECHECK_BADGE_TEXT_COLOR,
-            $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_TEXT_COLOR)
-                ?: Constants::CODECHECK_BADGE_TEXT_COLOR_DEFAULT
+            Constants::normalizeBadgeTextColor(
+                $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_TEXT_COLOR)
+            )
         );
 
         $this->setData(
@@ -358,10 +359,7 @@ class SettingsForm extends Form
             'codecheckBadgeLinkTarget',
             $this->getData(Constants::CODECHECK_BADGE_LINK_TARGET) ?: Constants::CODECHECK_BADGE_LINK_TARGET_REGISTER
         );
-        $templateMgr->assign(
-            'codecheckBadgeTextColor',
-            $this->getData(Constants::CODECHECK_BADGE_TEXT_COLOR) ?: Constants::CODECHECK_BADGE_TEXT_COLOR_DEFAULT
-        );
+        $templateMgr->assign('codecheckBadgeTextColor', $this->getData(Constants::CODECHECK_BADGE_TEXT_COLOR));
         $templateMgr->assign('codecheckBadgeCustomUrl', $this->getData(Constants::CODECHECK_BADGE_CUSTOM_URL) ?? '');
         $templateMgr->assign('codecheckBadgeHeight', $this->getData(Constants::CODECHECK_BADGE_HEIGHT));
         $templateMgr->assign('codecheckBadgeHeightMin', Constants::CODECHECK_BADGE_HEIGHT_MIN);
@@ -561,14 +559,11 @@ class SettingsForm extends Form
         );
 
         // Store only a real hex colour, so nothing else can end up in a style
-        // attribute on the article page.
-        $badgeTextColor = trim((string) $this->getData(Constants::CODECHECK_BADGE_TEXT_COLOR));
+        // attribute on the article page — see Constants::normalizeBadgeTextColor().
         $this->plugin->updateSetting(
             $context->getId(),
             Constants::CODECHECK_BADGE_TEXT_COLOR,
-            preg_match('/^#[0-9a-fA-F]{6}$/', $badgeTextColor)
-                ? $badgeTextColor
-                : Constants::CODECHECK_BADGE_TEXT_COLOR_DEFAULT
+            Constants::normalizeBadgeTextColor($this->getData(Constants::CODECHECK_BADGE_TEXT_COLOR))
         );
 
         $this->plugin->updateSetting(

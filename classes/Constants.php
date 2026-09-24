@@ -131,6 +131,27 @@ class Constants
     public const CODECHECK_BADGE_HEIGHT_MAX = 200;
 
     /**
+     * The badge text colour as a colour that may be rendered.
+     *
+     * Anything that is not a six-digit hex colour is the default, and this is
+     * the only place that says so. The value is written into a `style`
+     * attribute on the article page and in the issue table of contents, so it
+     * is judged on save and on read alike, the way OJS's own theme colour
+     * option guards itself (pkp/pkp-lib#11974). The rule was spelled out four
+     * times — twice as this pattern and twice as a weaker `?:` fallback that
+     * disagreed with it about a stored non-colour — for one value that reaches
+     * a public page.
+     */
+    public static function normalizeBadgeTextColor(mixed $color): string
+    {
+        $color = trim((string) $color);
+
+        return preg_match('/^#[0-9a-fA-F]{6}$/', $color)
+            ? $color
+            : self::CODECHECK_BADGE_TEXT_COLOR_DEFAULT;
+    }
+
+    /**
      * The badge height as a usable number of pixels.
      *
      * "Not a height" — nothing recorded, an emptied field, zero, negative, or

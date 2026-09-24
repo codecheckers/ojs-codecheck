@@ -135,6 +135,39 @@ class ConstantsUnitTest extends PKPTestCase
     }
 
     /**
+     * The colour reaches a `style` attribute on a public page, and the rule
+     * for it used to be written out four times — two copies of this pattern
+     * and two weaker `?:` fallbacks that disagreed with them about a stored
+     * value that is not a colour.
+     *
+     * @param mixed $stored what a journal has in `plugin_settings`
+     */
+    #[DataProvider('badgeTextColorProvider')]
+    public function testNormalizeBadgeTextColor(mixed $stored, string $expected)
+    {
+        $this->assertSame($expected, Constants::normalizeBadgeTextColor($stored));
+    }
+
+    public static function badgeTextColorProvider(): array
+    {
+        $default = Constants::CODECHECK_BADGE_TEXT_COLOR_DEFAULT;
+
+        return [
+            'a hex colour' => ['#123abc', '#123abc'],
+            'upper case' => ['#12AB34', '#12AB34'],
+            'surrounding whitespace' => ['  #123abc  ', '#123abc'],
+            'nothing recorded' => [null, $default],
+            'the field cleared' => ['', $default],
+            'a colour name' => ['red', $default],
+            'three-digit shorthand' => ['#abc', $default],
+            'too few digits' => ['#12345', $default],
+            'too many digits' => ['#1234567', $default],
+            'not hex digits' => ['#12g456', $default],
+            'something that closes the attribute' => ['green; content:"x"', $default],
+        ];
+    }
+
+    /**
      * #178 left the badge height with two readers: the settings form stored
      * `(int) ''` — zero — for a cleared field and showed that back, while the
      * article page read `0 ?: 24`. The rule lives here now, and it judges the

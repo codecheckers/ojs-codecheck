@@ -66,18 +66,10 @@ class Badge
             : __('plugins.generic.codecheck.badge.textOnly');
     }
 
-    /**
-     * The colour that text is written in. Anything that is not a hex colour
-     * falls back to the default rather than reaching a style attribute, the
-     * way OJS's own theme colour option guards itself (pkp/pkp-lib#11974).
-     */
+    /** The colour that text is written in — see Constants::normalizeBadgeTextColor(). */
     public function getTextColor(): string
     {
-        $color = trim((string) $this->getSetting(Constants::CODECHECK_BADGE_TEXT_COLOR));
-
-        return preg_match('/^#[0-9a-fA-F]{6}$/', $color)
-            ? $color
-            : Constants::CODECHECK_BADGE_TEXT_COLOR_DEFAULT;
+        return Constants::normalizeBadgeTextColor($this->getSetting(Constants::CODECHECK_BADGE_TEXT_COLOR));
     }
 
     /**

@@ -224,6 +224,12 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 
 #### Under the hood
 
+- What counts as a badge text colour is decided in one place, as the badge
+  height now is. The rule was written out four times — twice as a hex check and
+  twice as a weaker fallback that disagreed with it — for a value that is
+  rendered into a `style` attribute on the article page and in the issue table
+  of contents (Issue #178)
+
 - What counts as a badge height is decided in one place. Clearing the field on
   the settings form stored a height of zero, which the form then showed back
   while the article page rendered 24 — the two disagreed about what an emptied

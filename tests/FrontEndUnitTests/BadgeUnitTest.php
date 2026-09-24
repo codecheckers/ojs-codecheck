@@ -74,15 +74,15 @@ class BadgeUnitTest extends PKPTestCase
 
     public function testAnythingThatIsNotAHexColourFallsBackToTheDefault()
     {
-        // The value ends up inside a style attribute on a public page, so a
-        // stored value that is not a colour must never reach it.
-        foreach (['', '   ', 'red', '#12345', '#1234567', 'green; content:"x"', '#12g456'] as $stored) {
-            $this->assertSame(
-                Constants::CODECHECK_BADGE_TEXT_COLOR_DEFAULT,
-                $this->badgeWithSettings([Constants::CODECHECK_BADGE_TEXT_COLOR => $stored])->getTextColor(),
-                'stored value: ' . var_export($stored, true)
-            );
-        }
+        // What is not a colour is decided in Constants and pinned there; here
+        // it only has to be reached, because the value ends up inside a style
+        // attribute on a public page.
+        $this->assertSame(
+            Constants::CODECHECK_BADGE_TEXT_COLOR_DEFAULT,
+            $this->badgeWithSettings([
+                Constants::CODECHECK_BADGE_TEXT_COLOR => 'green; content:"x"',
+            ])->getTextColor()
+        );
     }
 
     public function testTheBadgeLinksToTheRegisterUntilTheJournalChoosesOtherwise()

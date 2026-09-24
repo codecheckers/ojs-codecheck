@@ -484,7 +484,9 @@ produced #177 — `CODECHECK_MODE` (`'opt-in'`), `ORCID_API_TYPE`
   `CODECHECK_BADGE_TEXT_COLOR_DEFAULT` for anything that is not a six-digit hex
   colour — it is written into a `style` attribute on a public page, so it is
   validated both on save and on read, as OJS's own theme colour option is
-  (pkp/pkp-lib#11974)
+  (pkp/pkp-lib#11974). That rule is `Constants::normalizeBadgeTextColor()`, the
+  same shape as the height's: it was four copies — this pattern twice and a
+  weaker `?:` fallback twice, which disagreed about a stored non-colour
 
 `CODECHECK_ENABLED_CONFIG_VERSIONS` defaults to `CODECHECK_DEFAULT_CONFIG_VERSIONS`
 — `1.0` alone, not every known version — so a journal that has not chosen records
@@ -1127,6 +1129,19 @@ So anything that needs to outlive this working copy has to leave it:
 earlier point-in-time reviews rather than plans. Several of their findings are
 now fixed and at least one is stale — check against the code before acting on
 them.
+
+### Keep content changes and formatting in separate commits
+
+**A commit that changes behaviour must not also reformat.** When a change ends
+up carrying both — a rename that the formatter then re-wraps, a lint fix noticed
+on the way, an empty docblock the sweep left behind — stage and propose them one
+after the other: the behaviour first, then the formatting on top. A reviewer can
+then read the first commit without hunting for the two real lines among fifty
+re-indented ones, and `git log -p` on a file still answers what changed and why.
+
+This is how `9435bd7` and `efd9ad2` were split by hand after being handed over
+as one changeset. Since only one changeset can be staged at a time, hand over
+the behaviour commit, and say what the follow-up formatting commit will contain.
 
 ### Run `/simplify` and `/code-review` on non-trivial changes
 
