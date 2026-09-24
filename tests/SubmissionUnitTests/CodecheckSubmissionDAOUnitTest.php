@@ -43,7 +43,7 @@ class CodecheckSubmissionDAOUnitTest extends PKPTestCase
     {
         $mockData = (object)[
             'submission_id' => 123,
-            'version' => 'latest',
+            'spec_version' => 'latest',
             'publication_type' => 'doi',
             'manifest' => '[]',
             'repository' => json_encode([

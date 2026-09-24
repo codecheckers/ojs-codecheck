@@ -28,6 +28,7 @@ namespace APP\plugins\generic\codecheck\classes\migration\install;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\classes\migration\CodecheckMigration;
 use APP\plugins\generic\codecheck\classes\migration\upgrade\I154_MoveCodecheckYamlFlagOntoRepository;
+use APP\plugins\generic\codecheck\classes\migration\upgrade\I93_RenameVersionToSpecVersion;
 use APP\plugins\generic\codecheck\classes\migration\upgrade\I94_AddMissingColumns;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -40,7 +41,10 @@ class CodecheckSchemaMigration extends CodecheckMigration
         if (!Schema::hasTable('codecheck_metadata')) {
             Schema::create('codecheck_metadata', function (Blueprint $table) {
                 $table->bigInteger('submission_id')->primary();
-                $table->string('version', 50)->default('latest');
+                // The CODECHECK configuration specification this check was
+                // recorded against — see Constants::getConfigSpecUrl(). It was
+                // `version`, which read as a version of the record (#93).
+                $table->string('spec_version', 50)->default('latest');
                 $table->string('publication_type', 50)->default('doi');
                 $table->text('manifest')->nullable();
                 // A JSON list of repository entries, not one address — see
@@ -110,6 +114,7 @@ class CodecheckSchemaMigration extends CodecheckMigration
         // on both fresh installs and existing ones. Add new migrations here.
         (new I94_AddMissingColumns())->up();
         (new I154_MoveCodecheckYamlFlagOntoRepository())->up();
+        (new I93_RenameVersionToSpecVersion())->up();
     }
 
     /**

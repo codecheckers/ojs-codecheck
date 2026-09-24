@@ -562,7 +562,7 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
     private function buildYamlMetadata(string $version): object
     {
         return (object) [
-            'version' => $version,
+            'spec_version' => $version,
             'publication_type' => 'doi',
             'manifest' => '[]',
             'repository' => '{"repositories":null}',
@@ -584,7 +584,7 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $publication->method('getStoredPubId')->willReturn(null);
 
         $metadata = (object) [
-            'version' => 'latest',
+            'spec_version' => 'latest',
             'publication_type' => 'doi',
             'manifest' => '[]',
             'repository' => json_encode([
@@ -616,7 +616,7 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $publication->method('getStoredPubId')->willReturn(null);
 
         $metadata = (object) [
-            'version' => 'latest',
+            'spec_version' => 'latest',
             'publication_type' => 'doi',
             'manifest' => '[]',
             'repository' => json_encode([
@@ -713,7 +713,7 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
     private function buildYamlMetadataWithRepositories(array $repositories): object
     {
         return (object) [
-            'version' => 'latest',
+            'spec_version' => 'latest',
             'publication_type' => 'doi',
             'manifest' => '[]',
             'repository' => json_encode([
