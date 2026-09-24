@@ -20,10 +20,8 @@ use PKP\linkAction\request\AjaxModal;
 
 class Actions
 {
-    /**  */
     public CodecheckPlugin $plugin;
 
-    /**  */
     public function __construct(CodecheckPlugin &$plugin)
     {
         $this->plugin = &$plugin;

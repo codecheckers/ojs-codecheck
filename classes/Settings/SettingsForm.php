@@ -26,7 +26,6 @@ use PKP\form\validation\FormValidatorPost;
 
 class SettingsForm extends Form
 {
-    /**  */
     public CodecheckPlugin $plugin;
 
     /**

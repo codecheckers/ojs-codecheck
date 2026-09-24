@@ -113,6 +113,5 @@ class CertificateIdentifier
     {
         // pad with leading zeros (3 digits) in case number doesn't have 3 digits already
         return $this->year . '-' . str_pad($this->number, 3, '0', STR_PAD_LEFT);
-        ;
     }
 }

@@ -19,10 +19,8 @@ use PKP\core\JSONMessage;
 
 class Manage
 {
-    /**  */
     public CodecheckPlugin $plugin;
 
-    /**  */
     public function __construct(CodecheckPlugin &$plugin)
     {
         $this->plugin = &$plugin;

@@ -59,6 +59,7 @@ jobs:
         run: |
           find . -name '*.php' \
             -not -path './vendor/*' \
+            -not -path './dev/tools/vendor/*' \
             -not -path './node_modules/*' \
             -not -path './public/*' \
             -print0 | xargs -0 -n1 -P4 php -l > /dev/null

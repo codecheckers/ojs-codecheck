@@ -19,10 +19,8 @@ use APP\plugins\generic\codecheck\CodecheckPlugin;
 
 class ArticleAvailability
 {
-    /**  */
     public CodecheckPlugin $plugin;
 
-    /**  */
     public function __construct(CodecheckPlugin &$plugin)
     {
         $this->plugin = &$plugin;

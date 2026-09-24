@@ -21,10 +21,8 @@ use APP\plugins\generic\codecheck\CodecheckPlugin;
 
 class ArticleDetails
 {
-    /**  */
     public CodecheckPlugin $plugin;
 
-    /**  */
     public function __construct(CodecheckPlugin &$plugin)
     {
         $this->plugin = &$plugin;

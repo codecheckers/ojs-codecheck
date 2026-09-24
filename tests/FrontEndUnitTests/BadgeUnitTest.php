@@ -28,7 +28,6 @@ class BadgeUnitTest extends PKPTestCase
         $plugin->method('getSetting')->willReturnCallback(
             fn ($contextId, $name) => $settings[$name] ?? null
         );
-
         return new Badge($plugin, self::CONTEXT_ID);
     }
 
@@ -183,10 +182,12 @@ class BadgeUnitTest extends PKPTestCase
             $this->badgeWithSettings([Constants::CODECHECK_BADGE_HEIGHT => '40'])->getStyle()
         );
 
-        // A height cleared to an empty string is not a height of zero.
+        // The rule for what is not a height lives in Constants and is pinned
+        // there; here it only has to be reached. A row written before #178
+        // holds the zero a cleared field used to store.
         $this->assertSame(
             'height:24px; width:auto;',
-            $this->badgeWithSettings([Constants::CODECHECK_BADGE_HEIGHT => ''])->getStyle()
+            $this->badgeWithSettings([Constants::CODECHECK_BADGE_HEIGHT => 0])->getStyle()
         );
     }
 }

@@ -24,7 +24,6 @@ use APP\plugins\generic\codecheck\CodecheckPlugin;
 
 class Badge
 {
-    /**  */
     private CodecheckPlugin $plugin;
 
     private int $contextId;
@@ -127,7 +126,7 @@ class Badge
     /** The height the image is rendered at, as a ready-made style attribute. */
     public function getStyle(): string
     {
-        $height = (int) ($this->getSetting(Constants::CODECHECK_BADGE_HEIGHT) ?: 24);
+        $height = Constants::normalizeBadgeHeight($this->getSetting(Constants::CODECHECK_BADGE_HEIGHT));
 
         return 'height:' . $height . 'px; width:auto;';
     }
