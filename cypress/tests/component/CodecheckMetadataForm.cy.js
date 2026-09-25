@@ -47,16 +47,32 @@ const interceptMetadata = (overrides = {}, alias = 'loadMetadata') =>
     body: { ...metadataResponseBody(), ...overrides }
   }).as(alias);
 
-/**
- * Mounts the form and clicks "reserve automatically", which needs a label
- * selected first — the form refuses the request otherwise.
- */
+/** Serve a successful reservation of 2025-042. */
+const interceptReservation = (submissionId = 1) =>
+  cy.intercept('POST', `**/codecheck/identifier?submissionId=${submissionId}`, {
+    statusCode: 200,
+    body: {
+      success: true,
+      identifier: '2025-042',
+      issueUrl: 'https://github.com/codecheckers/register/issues/42',
+      issueNumber: 42
+    }
+  }).as('reserveIdentifier');
+
+/** One of the buttons beside the certificate identifier, by its label key. */
+const identifierButton = (key) =>
+  cy.get('.certificate-identifier-button').contains(`plugins.generic.codecheck.identifier.${key}`);
+
 /** Answers the modal's yes/no question, which is OJS's own dialog, not the browser's. */
 const answerModal = (answer) =>
   cy.get('.pkp-mock-modal__action')
     .contains(answer === 'yes' ? 'plugins.generic.codecheck.yes' : 'plugins.generic.codecheck.no')
     .click();
 
+/**
+ * Mounts the form and clicks "reserve automatically", which needs a label
+ * selected first — the form refuses the request otherwise.
+ */
 const mountAndReserve = (submissionId = 1) => {
   cy.mount(CodecheckMetadataForm, {
     props: {
@@ -71,9 +87,7 @@ const mountAndReserve = (submissionId = 1) => {
   cy.get('.dropdown-content').invoke('show');
   cy.get('.dropdown-checkbox-input input[type="checkbox"]').first().check();
 
-  cy.get('.certificate-identifier-button').contains(
-    'plugins.generic.codecheck.identifier.reserve.withApi'
-  ).click();
+  identifierButton('reserve.withApi').click();
 };
 
 describe('CodecheckMetadataForm Component', () => {
@@ -533,15 +547,7 @@ describe('CodecheckMetadataForm Component', () => {
   it('can reserve certificate identifier', () => {
     const submissionId = 1;
 
-    cy.intercept('POST', `**/codecheck/identifier?submissionId=${submissionId}`, {
-      statusCode: 200,
-      body: {
-        success: true,
-        identifier: '2025-042',
-        issueUrl: 'https://github.com/codecheckers/register/issues/42',
-        issueNumber: 42
-      }
-    }).as('reserveIdentifier');
+    interceptReservation(submissionId);
 
     mountAndReserve(submissionId);
 
@@ -552,6 +558,47 @@ describe('CodecheckMetadataForm Component', () => {
 
     cy.get('.certificate-identifier-input')
       .should('have.value', '2025-042');
+  });
+
+  /**
+   * Removing forgets the register issue along with the identifier: a
+   * reservation made afterwards must not carry the old issue number, which
+   * would point the update at the issue of the identifier just removed.
+   */
+  it('removes a reserved identifier once the editor confirms', () => {
+    interceptReservation();
+
+    mountAndReserve();
+    cy.wait('@reserveIdentifier');
+
+    identifierButton('reserve.withApi').should('be.disabled');
+
+    identifierButton('remove').click();
+    cy.get('.pkp-mock-modal__title')
+      .should('have.text', 'plugins.generic.codecheck.identifier.remove.modal.title');
+    answerModal('yes');
+
+    cy.get('.pkp-mock-modal').should('not.exist');
+    cy.get('.certificate-identifier-input').should('have.value', '');
+    identifierButton('reserve.withApi').should('not.be.disabled').click();
+
+    cy.wait('@reserveIdentifier').then((interception) => {
+      expect(interception.request.body.issue).to.include({ url: '', number: null });
+    });
+  });
+
+  it('keeps the identifier when the removal is not confirmed', () => {
+    interceptReservation();
+
+    mountAndReserve();
+    cy.wait('@reserveIdentifier');
+
+    identifierButton('remove').click();
+    answerModal('no');
+
+    cy.get('.pkp-mock-modal').should('not.exist');
+    cy.get('.certificate-identifier-input').should('have.value', '2025-042');
+    identifierButton('reserve.withApi').should('be.disabled');
   });
 
   /**

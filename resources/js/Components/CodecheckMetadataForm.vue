@@ -386,7 +386,7 @@
               <button
                 type="button"
                 class="pkpButton codecheck-btn pkpButton--isWarnable codecheck-btn-warning certificate-identifier-button"
-                @click="showRemoveIdentifierModal"
+                @click="confirmRemoveIdentifier"
               >
                 {{ t('plugins.generic.codecheck.identifier.remove') }}
               </button>
@@ -946,28 +946,13 @@ export default {
       });
     },
 
-    canUsePkpModal() {
-      return typeof pkp !== 'undefined' && pkp.modules && pkp.modules.useModal;
-    },
-
     /**
      * Asks a yes/no question through OJS's own modal, so a confirmation in this
-     * form looks and behaves like every other one in the workflow. The
-     * browser's dialog remains the fallback for a page where the modal is not
-     * available, as it is for the other modals here.
+     * form looks and behaves like every other one in the workflow.
      *
      * @param {object} options title, question, onConfirm and optional onCancel
      */
     askForConfirmation({ title, question, onConfirm, onCancel = () => {} }) {
-      if (!this.canUsePkpModal()) {
-        if (confirm(question)) {
-          onConfirm();
-        } else {
-          onCancel();
-        }
-        return;
-      }
-
       const { useModal } = pkp.modules.useModal;
       const { openDialog } = useModal();
 
@@ -1001,14 +986,6 @@ export default {
     },
 
     showRepositoryInfoModal() {
-      if (this.canUsePkpModal()) {
-        this.showPkpRepositoryInfoModal();
-      } else {
-        this.showFallbackRepositoryInfoModal();
-      }
-    },
-
-    showPkpRepositoryInfoModal() {
       const { useModal } = pkp.modules.useModal;
       const { openDialog } = useModal();
 
@@ -1038,30 +1015,7 @@ export default {
       });
     },
 
-    /**
-     * The no-modal fallback for the repository help text. It asked for input
-     * with `prompt()` to show text, and put HTML markup in a dialog that
-     * renders none, so the link came out as its own tag.
-     */
-    showFallbackRepositoryInfoModal() {
-      alert([
-        this.t('plugins.generic.codecheck.repositories.infoTextOne'),
-        this.t('plugins.generic.codecheck.repositories.infoTextTwo'),
-        this.t('plugins.generic.codecheck.repositories.infoTextNote'),
-        this.t('plugins.generic.codecheck.repositories.infoTextMoreInformation'),
-        this.t('plugins.generic.codecheck.repositories.infoTextLinkToAllowedRepositories')
-      ].join('\n\n'));
-    },
-
     showCodecheckerModal() {
-      if (this.canUsePkpModal()) {
-        this.showPkpCodecheckerModal();
-      } else {
-        this.showFallbackCodecheckerModal();
-      }
-    },
-
-    showPkpCodecheckerModal() {
       const { useModal } = pkp.modules.useModal;
       const { openDialog } = useModal();
 
@@ -1105,17 +1059,6 @@ export default {
           }
         ]
       });
-    },
-
-    showFallbackCodecheckerModal() {
-      const name = prompt(this.t('plugins.generic.codecheck.codecheckers.enterName'));
-      if (name && name.trim()) {
-        const orcid = prompt(this.t('plugins.generic.codecheck.codecheckers.enterOrcid'));
-        this.metadata.codecheckers.push({
-          name: name.trim(),
-          orcid: orcid ? orcid.trim() : ''
-        });
-      }
     },
 
     removeCodechecker(index) {
@@ -1257,12 +1200,7 @@ export default {
           return;
         }
 
-        if (this.canUsePkpModal()) {
-          this.showYamlModal(yamlContent);
-        } else {
-          this.showYamlFallback(yamlContent);
-        }
-        
+        this.showYamlModal(yamlContent);
       } catch (error) {
         console.error('Preview error:', error);
         this.showMessage(`${this.t('plugins.generic.codecheck.yamlPreviewFailed')}\n${error}`, 'error');
@@ -1310,53 +1248,6 @@ export default {
           }
         ]
       });
-    },
-
-    showYamlFallback(yamlContent) {
-      const win = window.open('', '_blank');
-      const escapedYaml = this.escapeHtml(yamlContent);
-      // JSON.stringify does not escape `<`, so YAML containing a closing
-      // script tag would close the block below and run whatever followed. The popup is
-      // same-origin with the OJS backend, so that is an XSS between editors.
-      const yamlJson = JSON.stringify(yamlContent).replace(/</g, '\\u003c');
-      
-      const html = '<!DOCTYPE html>' +
-        '<html>' +
-        '<head>' +
-        '<title>CODECHECK Metadata Preview</title>' +
-        '<style>' +
-        'body { font-family: "Courier New", monospace; padding: 20px; background: #f5f5f5; }' +
-        '.container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }' +
-        'h2 { color: #007ab2; margin-top: 0; }' +
-        'pre { background: #2d2d2d; color: #f8f8f2; padding: 20px; border-radius: 4px; overflow-x: auto; line-height: 1.6; }' +
-        '.actions { margin-top: 20px; display: flex; gap: 10px; }' +
-        'button { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px; }' +
-        '.download-btn { background: #007ab2; color: white; }' +
-        '.download-btn:hover { background: #005a87; }' +
-        '.close-btn { background: #dc3545; color: white; }' +
-        '.close-btn:hover { background: #c82333; }' +
-        '</style>' +
-        '</head>' +
-        '<body>' +
-        '<div class="container">' +
-        '<h2>📄 CODECHECK Metadata Preview</h2>' +
-        '<pre>' + escapedYaml + '</pre>' +
-        '</div>' +
-        '<script>' +
-        'function downloadYaml() {' +
-        '  const blob = new Blob([' + yamlJson + '], { type: "text/yaml" });' +
-        '  const url = URL.createObjectURL(blob);' +
-        '  const a = document.createElement("a");' +
-        '  a.href = url;' +
-        '  a.download = "codecheck.yml";' +
-        '  a.click();' +
-        '  URL.revokeObjectURL(url);' +
-        '}' +
-        '<\\/script>' +
-        '</body>' +
-        '</html>';
-      
-      win.document.write(html);
     },
 
     async getCodecheckIssueLabels() {
@@ -1564,58 +1455,23 @@ export default {
       }
     },
 
-    removeIdentifier(close) {
+    removeIdentifier() {
       this.metadata.certificate = '';
       this.certificateIdentifier.issue.url = '';
+      this.certificateIdentifier.issue.number = null;
       this.certificateIdentifier.isReserved = false;
       this.certificateIdentifier.isLinked = false;
       this.$emit('update', this.metadata.certificate);
 
       this.triggerRegisterIssueDisplayUpdateEvent();
-
-      close();
     },
 
-    showRemoveIdentifierModal() {
-      if (!this.canUsePkpModal()) {
-        this.fallbackRemoveIdentifierModal();
-        return;
-      }
-
-      const { useModal } = pkp.modules.useModal;
-      const { openDialog } = useModal();
-
-      openDialog({
+    confirmRemoveIdentifier() {
+      this.askForConfirmation({
         title: this.t('plugins.generic.codecheck.identifier.remove.modal.title'),
-        message: `
-          <div class="modal-form">
-            <div class="modal-field">
-              <label for="repo-url" class="modal-label">${this.t('plugins.generic.codecheck.identifier.remove.modal.areYouSureYouWantToRemoveTheIdentifier')}</label>
-            </div>
-          </div>
-        `,
-        actions: [
-          {
-            label: this.t('plugins.generic.codecheck.no'),
-            callback: (close) => close()
-          },
-          {
-            label: this.t('plugins.generic.codecheck.yes'),
-            isPrimary: true,
-            callback: (close) => {
-              this.removeIdentifier(close);
-            }
-          }
-        ]
+        question: this.t('plugins.generic.codecheck.identifier.remove.modal.areYouSureYouWantToRemoveTheIdentifier'),
+        onConfirm: () => this.removeIdentifier()
       });
-    },
-
-    fallbackRemoveIdentifierModal() {
-      if(confirm(this.t('plugins.generic.codecheck.identifier.remove.modal.areYouSureYouWantToRemoveTheIdentifier'))) {
-        this.metadata.certificate = '';
-        this.certificateIdentifier.issue.url = '';
-        this.$emit('update', this.metadata.certificate);
-      }
     },
 
     escapeHtml(text) {

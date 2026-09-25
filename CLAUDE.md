@@ -611,7 +611,7 @@ cypress/
                                this first in every component spec
   support/e2e.js               cy.ojsLogin(), cy.getCsrfToken(), swallow uncaught exceptions
   support/component-index.html
-  tests/component/*.cy.js      6 specs, 79 tests
+  tests/component/*.cy.js      6 specs, 84 tests
   tests/e2e/*.cy.js            11 specs, 63 tests
                                yaml-generation, article-sidebar-setting,
                                issue-toc-setting, issue-toc-badge,
@@ -626,11 +626,11 @@ dev/
 ### Component tests (the reliable suite)
 
 `npm run test:component` — **passes locally with no OJS, no database, no build step**
-(79/79, ~20 s). Cypress mounts the `.vue` sources directly through Vite and stubs the
+(84/84, ~45 s). Cypress mounts the `.vue` sources directly through Vite and stubs the
 API with `cy.intercept`.
 
 Covered: metadata form load/render, manifest files add/remove/comment, repository list
-add/remove + private flag, certificate identifier reservation + labels, required-field
+add/remove + private flag, certificate identifier reservation, removal + labels, required-field
 validation, YAML preview gating, codechecker modal, review display states, data &
 software availability field, the config version selector and the author's availability
 statement in the read-only panel.
@@ -652,14 +652,16 @@ Keys outside `plugins.generic.codecheck.` come from OJS's own locale files
 `.pkp-mock-modal` with one `.pkp-mock-modal__action` button per action — so a
 confirmation can be answered in a spec rather than stubbed. It used to answer
 only the first half of `const {useModal} = pkp.modules.useModal`, which made
-`canUsePkpModal()` true and every modal path throw, so no spec could reach one.
+every modal path throw, so no spec could reach one.
 `cypress/support/component.js` clears leftover dialogs between tests, because
 `mount()` does not clear `document.body`.
 
 Confirmations in `CodecheckMetadataForm.vue` go through
 `askForConfirmation({title, question, onConfirm, onCancel})`, which uses that
-modal and falls back to the browser's dialog where it is unavailable. A new
-`confirm()` in this component is a bug, not a shortcut.
+modal. There is no fallback to the browser's `alert()`/`confirm()`/`prompt()`:
+the component only ever runs inside OJS's backend, where `pkp.modules.useModal`
+always exists, so a fallback is code no editor can reach and no test runs. A new
+browser dialog in this component is a bug, not a shortcut.
 
 Not covered: `CodecheckStatusForm.vue`, `CodecheckGithubIssueDisplay.vue`, the
 `storeExtend` wiring in `main.js` (menu injection, dashboard column, file-manager

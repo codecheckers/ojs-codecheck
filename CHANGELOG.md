@@ -202,6 +202,8 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   so, instead of answering a bare server error (#129)
 - Linking an existing certificate identifier reports the register issue it
   linked, instead of an identifier and issue nobody had opened (#130)
+- Removing a certificate identifier also forgets its register issue, so an
+  identifier reserved afterwards no longer updates the removed one's issue
 - Errors from the register and from CODECHECK metadata import are reported as
   errors: they carried a status that is not an HTTP status, which left the
   browser with an empty server error and no reason to show (#130)
