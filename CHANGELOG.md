@@ -22,6 +22,8 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   issues (#26)
 - `CITATION.cff`, so the plugin can be cited and GitHub renders a "Cite this
   repository" entry. The Zenodo DOI follows the beta release (#24, #8)
+- What a repository used as the CODECHECK register has to provide, and which
+  access the personal access token needs, in [README.md](README.md) (#129)
 
 #### Submission
 
@@ -38,7 +40,11 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   manifest, repositories, summary, report and certificate (#64)
 - Certificate identifiers are reserved from the CODECHECK register, which opens a
   register issue (#11, #48). The issue is kept up to date as the check progresses,
-  and each journal chooses which parts are updated (#132)
+  and each journal chooses which parts are updated (#132). A register holding no
+  identifier yet is asked about before its first issue is opened, and one that
+  cannot be read — no `id assigned` label, no readable identifiers in its issue
+  titles, or unreachable — is refused with the reason, since reserving there
+  would duplicate an identifier already recorded (#129, #130)
 - CODECHECK status with a full history per submission, editable by role (#61,
   #141, #142). Each status change is also commented under the register issue (#150)
 - Several repositories per submission, one of them marked as holding the
@@ -88,7 +94,9 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   labels, author anonymity in register issues, and the statuses that permit
   publication
 - Register deposit switch, with a warning when the configured repository has no
-  `register.csv` (#156)
+  `register.csv` (#156), one when it has no `id assigned` label — the label
+  certificate identifiers are found by — and one when it cannot be read at all
+  (#129)
 - The CODECHECK config versions codecheckers may choose from. Journals offer
   version 1.0 until they choose otherwise, and the generated `codecheck.yml`
   declares the version recorded for the check
@@ -183,6 +191,15 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   return leg was a bare 404 (#176)
 - Reserving a certificate identifier works when the journal keeps its authors
   anonymous, which is the default (#150)
+- Reserving a certificate identifier automatically works at all, and a register
+  that holds no identifier yet no longer answers a bare server error (#130)
+- Reserving before the register organisation and repository are configured says
+  so, instead of answering a bare server error (#129)
+- Linking an existing certificate identifier reports the register issue it
+  linked, instead of an identifier and issue nobody had opened (#130)
+- Errors from the register and from CODECHECK metadata import are reported as
+  errors: they carried a status that is not an HTTP status, which left the
+  browser with an empty server error and no reason to show (#130)
 - Reserving an identifier by opening a new register issue no longer answers a
   server error, and a journal with the deposit enabled but no GitHub credentials
   skips it with a log line instead of abandoning the publication hook (#177)

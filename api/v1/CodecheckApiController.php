@@ -629,7 +629,7 @@ class CodecheckApiController extends PKPBaseController
             return response()->json([
                 'success' => false,
                 'error' => $e->getMessage(),
-            ], $e->getCode());
+            ], JsonResponse::errorStatus($e));
         }
         $now = strtotime(date('Y-m-d H:i:s'));
         $timeDifferenceInHours = round(($now - $issueLabelsLastUpdated) / 3600);
@@ -647,7 +647,7 @@ class CodecheckApiController extends PKPBaseController
                 return response()->json([
                     'success' => false,
                     'error' => $e->getMessage(),
-                ], $e->getCode());
+                ], JsonResponse::errorStatus($e));
             }
         }
 
@@ -759,9 +759,13 @@ class CodecheckApiController extends PKPBaseController
         $reserveIdentifierMode = $postParams['reserveIdentifierMode'];
 
         $context = $request->getContext();
-        $githubPersonalAccessToken = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN);
-        $githubRegisterOrganization = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION);
-        $githubRegisterRepository = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY);
+        // Cast, because a journal that has not filled the settings form in has
+        // no row at all and the client's constructor takes strings — a null
+        // there was a TypeError outside the try below, so the most ordinary
+        // misconfiguration answered a bare 500 (#129).
+        $githubPersonalAccessToken = (string) $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN);
+        $githubRegisterOrganization = (string) $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION);
+        $githubRegisterRepository = (string) $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY);
 
         $authorString = $this->getAuthorStringBasedOnAuthorAnonymity();
 
@@ -769,6 +773,13 @@ class CodecheckApiController extends PKPBaseController
             return response()->json([
                 'success' => false,
                 'error' => 'An unexpected mode for the reservation of the Certificate Identifier was given: ' . $reserveIdentifierMode,
+            ], 400);
+        }
+
+        if ($githubRegisterOrganization === '' || $githubRegisterRepository === '') {
+            return response()->json([
+                'success' => false,
+                'error' => __('plugins.generic.codecheck.identifier.reserve.register.notConfigured'),
             ], 400);
         }
 
@@ -789,7 +800,8 @@ class CodecheckApiController extends PKPBaseController
                     $codecheckGithubRegisterApiClient,
                     CertificateIdentifier::fromStr($identifierStr)
                 );
-                $this->linkExistingIdentifier($identifierStr, $certificateIdentifierList);
+                // The linking attempt's answer is this request's answer (#130)
+                return $this->linkExistingIdentifier($identifierStr, $certificateIdentifierList);
             }
 
             $certificateIdentifierList = CertificateIdentifierList::fromApi(
@@ -800,6 +812,24 @@ class CodecheckApiController extends PKPBaseController
             $certificateIdentifierList->sortDesc();
             // create the new unique Identifier
             $newIdentifier = CertificateIdentifier::newUniqueIdentifier($certificateIdentifierList);
+
+            // Nothing in the register to continue from, which is either a
+            // register with no identifier yet or one that could not be read
+            // properly — and only the first of those may be reserved into (#130).
+            if ($certificateIdentifierList->isEmpty()) {
+                $answer = $this->answerForEmptyRegister(
+                    $codecheckGithubRegisterApiClient,
+                    $githubRegisterOrganization,
+                    $githubRegisterRepository,
+                    $newIdentifier,
+                    $reserveIdentifierMode,
+                    $postParams
+                );
+
+                if ($answer !== null) {
+                    return $answer;
+                }
+            }
             // create the CODECHECK Issue Labels with the selected issue labels
             $codecheckIssueLabels = new CodecheckIssueLabels($issueLabelArray);
 
@@ -832,7 +862,7 @@ class CodecheckApiController extends PKPBaseController
             return response()->json([
                 'success' => false,
                 'error' => $e->getMessage(),
-            ], $e->getCode());
+            ], JsonResponse::errorStatus($e));
         }
 
         return response()->json([
@@ -869,7 +899,7 @@ class CodecheckApiController extends PKPBaseController
         $githubPersonalAccessToken = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN);
         $githubRegisterOrganization = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION);
         $githubRegisterRepository = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY);
-        $updateInformation = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_FIELDS);
+        $updateInformation = $this->issueUpdateInformation();
 
         $authorString = $this->getAuthorStringBasedOnAuthorAnonymity();
 
@@ -907,7 +937,7 @@ class CodecheckApiController extends PKPBaseController
                 'success' => false,
                 'identifier' => $identifier->toStr(),
                 'error' => $e->getMessage()
-            ], $e->getCode());
+            ], JsonResponse::errorStatus($e));
         }
     }
 
@@ -963,7 +993,7 @@ class CodecheckApiController extends PKPBaseController
             return response()->json([
                 'success' => false,
                 'error' => $e->getMessage(),
-            ], $e->getCode());
+            ], JsonResponse::errorStatus($e));
         }
 
         CodecheckLogger::info('The generated YAML content is structurally valid');
@@ -1001,6 +1031,26 @@ class CodecheckApiController extends PKPBaseController
         ], 200);
     }
 
+    /**
+     * Which parts of a register issue this journal keeps up to date.
+     *
+     * The context is read through the application rather than taken as a
+     * parameter, because these helpers are called from methods that do not
+     * carry it — reading it from a `$request` that was never in scope made
+     * every reservation through the API fatal (#50, #130).
+     */
+    private function issueUpdateInformation(): array
+    {
+        $context = Application::get()->getRequest()->getContext();
+
+        $updateFields = $this->plugin->getSetting(
+            $context->getId(),
+            Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_FIELDS
+        );
+
+        return is_array($updateFields) ? $updateFields : [];
+    }
+
     private function getAuthorStringBasedOnAuthorAnonymity(): string
     {
         $postParams = json_decode(file_get_contents('php://input'), true);
@@ -1022,6 +1072,89 @@ class CodecheckApiController extends PKPBaseController
     }
 
     /**
+     * What to answer when the register produced no certificate identifier.
+     *
+     * An empty identifier list has four causes, and only one of them may be
+     * reserved into. Reserving in any of the others would put a duplicate
+     * identifier into the public register, because the identifiers that are
+     * already there were simply not seen:
+     *
+     * - labelled issues exist but none carries a readable `YYYY-NNN` title:
+     *   the register is not empty, so this is refused
+     * - the `id assigned` label is missing: nothing can be found by it, and an
+     *   issue opened now would not be found either. Refused, with the label to
+     *   create — this is the warning #130 asks for
+     * - the register could not be read at all: refused, because "nothing found"
+     *   is not a fact here
+     * - the register really is empty: the editor is asked, and confirms by
+     *   sending the flag back with the identifier they were shown. Only the
+     *   `api` mode asks, because it is the only one that writes to the register
+     *   itself; `newIssueUrl` hands the editor a prefilled GitHub form and
+     *   writes nothing
+     *
+     * @return ?\Illuminate\Http\JsonResponse The answer, or `null` to carry on reserving
+     */
+    private function answerForEmptyRegister(
+        CodecheckGithubRegisterApiClient $codecheckGithubRegisterApiClient,
+        string $organization,
+        string $repository,
+        CertificateIdentifier $newIdentifier,
+        string $reserveIdentifierMode,
+        array $postParams
+    ): ?\Illuminate\Http\JsonResponse {
+        $messageParams = ['organization' => $organization, 'repository' => $repository];
+
+        if ($codecheckGithubRegisterApiClient->hasSeenLabelledIssues()) {
+            return response()->json([
+                'success' => false,
+                'error' => __('plugins.generic.codecheck.identifier.reserve.firstIdentifier.refused.unreadableTitles', $messageParams),
+            ], 409);
+        }
+
+        $hasLabel = $codecheckGithubRegisterApiClient->registerHasIdAssignedLabel();
+
+        if ($hasLabel === null) {
+            return response()->json([
+                'success' => false,
+                'error' => __('plugins.generic.codecheck.identifier.reserve.firstIdentifier.refused.unreadableRegister', $messageParams),
+            ], 502);
+        }
+
+        if ($hasLabel === false) {
+            return response()->json([
+                'success' => false,
+                'error' => __('plugins.generic.codecheck.identifier.reserve.firstIdentifier.refused.missingLabel', $messageParams + [
+                    'label' => Constants::CODECHECK_REGISTER_ID_ASSIGNED_LABEL,
+                ]),
+            ], 409);
+        }
+
+        if ($reserveIdentifierMode !== 'api') {
+            return null;
+        }
+
+        // The confirmation is for the identifier the editor was shown. Anything
+        // that reached the register in the meantime changes the answer, so the
+        // question is asked again rather than the consent reused.
+        $confirmed = ($postParams['confirmFirstIdentifier'] ?? null) === true;
+        $confirmedIdentifier = $postParams['confirmedIdentifier'] ?? null;
+        $identifierStillStands = !is_string($confirmedIdentifier)
+            || $confirmedIdentifier === $newIdentifier->toStr();
+
+        if ($confirmed && $identifierStillStands) {
+            return null;
+        }
+
+        return response()->json([
+            'success' => false,
+            'confirmFirstIdentifier' => true,
+            'identifier' => $newIdentifier->toStr(),
+            'organization' => $organization,
+            'repository' => $repository,
+        ], 200);
+    }
+
+    /**
      * This reserves a new Identifier with the GitHub New Issue Url
      *
      */
@@ -1035,13 +1168,11 @@ class CodecheckApiController extends PKPBaseController
         array $codecheckers,
         array $repositories
     ): string {
-        // Not a parameter and not a property: this method was extracted for #50
-        // without it, so every call fatalled on "Call to a member function
-        // getContext() on null". `reserveIdentifier()` gets it the same way.
-        $request = Application::get()->getRequest();
-        $context = $request->getContext();
+        // The request is neither a parameter nor a property here: it is read
+        // through the application, as issueUpdateInformation() does (#50).
+        $context = Application::get()->getRequest()->getContext();
         $journalName = $context?->getLocalizedName() ?? 'Unknown Journal';
-        $updateInformation = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_FIELDS);
+        $updateInformation = $this->issueUpdateInformation();
         $codecheckIssue = new CodecheckGithubRegisterIssue(
             $githubRegisterOrganization,
             $githubRegisterRepository,
@@ -1072,7 +1203,7 @@ class CodecheckApiController extends PKPBaseController
         array $codecheckers,
         array $repositories
     ): array {
-        $updateInformation = $this->plugin->getSetting($request->getContext()->getId(), Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_FIELDS);
+        $updateInformation = $this->issueUpdateInformation();
         // Add the new issue to the CODECHECK GtiHub Register
         $issue = $codecheckGithubRegisterApiClient->addIssue(
             $identifier,
@@ -1128,7 +1259,7 @@ class CodecheckApiController extends PKPBaseController
         if (!Schema::hasTable('codecheck_issue_labels')) {
             // The issue labels table doesn't exist
             CodecheckLogger::error("CODECHECK API: The Issue Label table doesn't exist");
-            throw new Exception("The table 'codecheck_issue_labels' doesn't exist.", 500);
+            throw new \Exception("The table 'codecheck_issue_labels' doesn't exist.", 500);
         }
 
         $labelsLastUpdated = DB::table('codecheck_issue_labels')

@@ -70,6 +70,12 @@ describe('Live: the register issue', () => {
         headers: { 'X-Csrf-Token': csrfToken, 'Content-Type': 'application/json' },
         body: {
           reserveIdentifierMode: 'api',
+          // A register with no identifier yet is answered with a confirmation
+          // request rather than a reservation, and the testing register starts
+          // out that way. Confirming blind is deliberate here: no
+          // confirmedIdentifier is sent, so whatever the server computes is
+          // accepted (#130).
+          confirmFirstIdentifier: true,
           issue: { url: null, number: null, labelsSelected: [] },
           submission: {
             title: `Live test from the CODECHECK OJS plugin (submission ${SUBMISSION})`,

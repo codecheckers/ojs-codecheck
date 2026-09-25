@@ -185,6 +185,12 @@ class Constants
 
     public const CODECHECK_SHOW_DASHBOARD_COLUMN = 'showDashboardColumn';
 
+    // Register issues are found by filtering on the 'id assigned' label, and
+    // every issue the plugin opens carries it — see the register requirements
+    // in README.md (#129). Neither label is ever chosen by hand.
+    public const CODECHECK_REGISTER_ID_ASSIGNED_LABEL = 'id assigned';
+    public const CODECHECK_REGISTER_DEVELOPMENT_LABEL = 'development';
+
     // Update Github Register Issue
     public const CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_FIELDS = 'codecheckGithubUpdateFields';
     public const CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE = 'updateTitle';

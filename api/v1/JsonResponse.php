@@ -18,6 +18,21 @@ class JsonResponse
     }
 
     /**
+     * The HTTP status to answer a caught exception with.
+     *
+     * An exception code is not an HTTP status code: most of the plugin's own
+     * exceptions carry 0, which Symfony refuses outright, so building the
+     * response fatalled and the client got a bare 500 with no body to report.
+     * Anything that is not a real error status becomes a 500 (#130).
+     */
+    public static function errorStatus(\Throwable $e): int
+    {
+        $code = (int) $e->getCode();
+
+        return ($code >= 400 && $code <= 599) ? $code : 500;
+    }
+
+    /**
      * Returns the Payload of the JSON Response
      */
     public function getPayload(): string

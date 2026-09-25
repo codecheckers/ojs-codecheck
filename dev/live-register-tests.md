@@ -135,9 +135,17 @@ Two things worth fixing that this run exposed and that are not yet filed:
   `register.csv` terms.
 - **Unauthenticated GitHub calls are rate limited to 60/hour per IP**, which is
   easy to exhaust while iterating. The plugin's settings-form validation also
-  reaches GitHub unauthenticated (`SettingsForm::validateRegisterFileExists()`),
-  which is why it only fires when the organisation or repository actually
-  changes.
+  reaches GitHub unauthenticated (`SettingsForm::checkRegisterRepository()`,
+  two requests: `register.csv` and the `id assigned` label), which is why it
+  only fires when the organisation or repository actually changes.
+- **A register with no identifier yet answers with a question, not a
+  reservation.** `POST identifier` returns `confirmFirstIdentifier` and reserves
+  nothing until the editor agrees, so the spec sends `confirmFirstIdentifier:
+  true` in its body. It does not send `confirmedIdentifier`, which the UI uses
+  to have a stale confirmation refused — the spec accepts whatever identifier
+  the server computes. A register whose `id assigned` label is missing, or that
+  cannot be read, is **refused** rather than asked about (409 / 502), because
+  reserving there would duplicate an identifier already recorded (#129, #130).
 - **`php -S` is single-threaded.** `make serve` sets `PHP_CLI_SERVER_WORKERS=8`;
   without it a request that calls back into OJS deadlocks and Cypress hangs
   rather than failing.

@@ -570,7 +570,7 @@ class CodecheckMetadataHandler
                 'success' => false,
                 'error' => $e->getMessage(),
                 'repository' => $repository
-            ], $e->getCode());
+            ], JsonResponse::errorStatus($e));
         }
     }
 
@@ -617,7 +617,7 @@ class CodecheckMetadataHandler
                 'success' => false,
                 'error' => $e->getMessage(),
                 'repository' => $repository,
-            ], $e->getCode());
+            ], JsonResponse::errorStatus($e));
         }
     }
 }

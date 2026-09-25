@@ -1328,7 +1328,16 @@ export default {
       }
     },
 
-    async reserveIdentifier(reserveIdentifierMode) {
+    /**
+     * Reserves a certificate identifier in the configured register repository.
+     *
+     * `confirmedIdentifier` is the identifier the editor agreed to when the
+     * server reported that the register holds none yet — reserving the first
+     * one opens the register's very first issue, which is not done unasked.
+     * It is sent back so the server can refuse a consent that has meanwhile
+     * gone stale (#130).
+     */
+    async reserveIdentifier(reserveIdentifierMode, confirmedIdentifier = null) {
       if (
         (this.certificateIdentifier.issue.labelsSelected.length === 0)
         &&
@@ -1354,6 +1363,8 @@ export default {
               },
               body: JSON.stringify({
                 reserveIdentifierMode: reserveIdentifierMode,
+                confirmFirstIdentifier: confirmedIdentifier !== null,
+                confirmedIdentifier: confirmedIdentifier,
                 issue: this.certificateIdentifier.issue,
                 submission: {
                   authorString: authorString,
@@ -1366,6 +1377,38 @@ export default {
               }),
           });
           const data = await response.json();
+
+          // The register holds no identifier to continue from, so the server
+          // asks before the plugin opens its very first issue. Guarded on the
+          // local argument, not on the server's flag, so the exchange is one
+          // round trip whatever comes back.
+          if (data.confirmFirstIdentifier && confirmedIdentifier === null) {
+            const question = this.t('plugins.generic.codecheck.identifier.reserve.firstIdentifier.confirm', {
+              identifier: data.identifier,
+              organization: data.organization,
+              repository: data.repository,
+            });
+
+            if (!confirm(question)) {
+              this.showMessage(this.t('plugins.generic.codecheck.identifier.reserve.firstIdentifier.cancelled'), 'warning');
+              return;
+            }
+
+            return this.reserveIdentifier(reserveIdentifierMode, data.identifier);
+          }
+
+          // Asked again although this request carried the answer: something
+          // reached the register while the question was open, so the identifier
+          // the editor agreed to is no longer the one that would be reserved.
+          if (data.confirmFirstIdentifier) {
+            this.showMessage(
+              this.t('plugins.generic.codecheck.identifier.reserve.firstIdentifier.changed', {
+                identifier: confirmedIdentifier,
+              }),
+              'warning'
+            );
+            return;
+          }
 
           if (reserveIdentifierMode == 'api') {
             if (data.success) {
@@ -2126,6 +2169,12 @@ export default {
   background: #f8d7da;
   color: #721c24;
   border: 1px solid #f5c6cb;
+}
+
+.codecheck-metadata-form .save-message.warning {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeeba;
 }
 
 .codecheck-metadata-form .codecheck-btn {

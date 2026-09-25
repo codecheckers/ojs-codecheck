@@ -8,7 +8,6 @@ use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegis
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckIssueLabels;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\DataStructures\UniqueArray;
-use APP\plugins\generic\codecheck\classes\Exceptions\NoMatchingIssuesFoundException;
 use PKP\tests\PKPTestCase;
 
 /**
@@ -222,7 +221,11 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
         );
     }
 
-    public function testFetchIssuesThrowsNoMatchingIssuesFoundException()
+    /**
+     * A register repository with no matching issue is a state, not an error:
+     * the reservation asks the editor whether to open the first one (#130).
+     */
+    public function testFetchNewestIssuesLeavesTheIssueListEmptyWhenTheRegisterHasNone()
     {
         $issueApiMock = $this->createMock(\Github\Api\Issue::class);
         $issueApiMock->method('all')->willReturn([]);
@@ -239,9 +242,194 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
             $clientMock
         );
 
-        $this->expectException(NoMatchingIssuesFoundException::class);
-        $this->expectExceptionMessage("There was no open or closed issue found with the label 'id assigned' in the GitHub Codecheck Register.");
+        $parser->fetchNewestIssues();
+
+        $this->assertSame([], $parser->getIssues());
+    }
+
+    /** Paging stops at the first empty page. */
+    public function testFetchNewestIssuesStopsPagingWhenNoIssueCarriesAnIdentifier()
+    {
+        $issueApiMock = $this->createMock(\Github\Api\Issue::class);
+        $issueApiMock->expects($this->exactly(2))
+            ->method('all')
+            ->willReturnOnConsecutiveCalls(
+                [['title' => 'Issue without a certificate Identifier']],
+                []
+            );
+
+        $clientMock = $this->createMock(\Github\Client::class);
+        $clientMock->method('api')->with('issue')->willReturn($issueApiMock);
+
+        $parser = new CodecheckGithubRegisterApiClient(
+            $this->githubPAT,
+            $this->githubRegisterOrganization,
+            $this->githubRegisterRepository,
+            $this->submissionId,
+            $this->journal,
+            $clientMock
+        );
 
         $parser->fetchNewestIssues();
+
+        $this->assertSame([], $parser->getIssues());
+    }
+
+    public function testRegisterHasIdAssignedLabelWhenTheLabelExists()
+    {
+        $labelsApiMock = $this->createMock(\Github\Api\Issue\Labels::class);
+        $labelsApiMock->expects($this->once())
+            ->method('show')
+            ->with(
+                $this->githubRegisterOrganization,
+                $this->githubRegisterRepository,
+                Constants::CODECHECK_REGISTER_ID_ASSIGNED_LABEL
+            )
+            ->willReturn(['name' => Constants::CODECHECK_REGISTER_ID_ASSIGNED_LABEL]);
+
+        $issueApiMock = $this->createMock(\Github\Api\Issue::class);
+        $issueApiMock->method('labels')->willReturn($labelsApiMock);
+        $clientMock = $this->createMock(\Github\Client::class);
+        $clientMock->method('api')->with('issue')->willReturn($issueApiMock);
+
+        $parser = new CodecheckGithubRegisterApiClient(
+            $this->githubPAT,
+            $this->githubRegisterOrganization,
+            $this->githubRegisterRepository,
+            $this->submissionId,
+            $this->journal,
+            $clientMock
+        );
+
+        $this->assertTrue($parser->registerHasIdAssignedLabel());
+    }
+
+    public function testRegisterHasIdAssignedLabelWhenTheLabelIsMissing()
+    {
+        $parser = $this->clientWhoseLabelProbeThrows(new \Exception('Not Found', 404));
+
+        $this->assertFalse($parser->registerHasIdAssignedLabel());
+    }
+
+    /**
+     * Only a 404 means the label is absent. A spent rate limit or an
+     * unreachable repository must not be reported as a missing label, because
+     * reserving "the first" identifier there would duplicate one that already
+     * exists (#129, #130).
+     */
+    public function testRegisterHasIdAssignedLabelIsUnknownWhenTheRepositoryCannotBeRead()
+    {
+        $this->assertNull(
+            $this->clientWhoseLabelProbeThrows(new \Exception('API rate limit exceeded', 403))
+                ->registerHasIdAssignedLabel()
+        );
+        $this->assertNull(
+            $this->clientWhoseLabelProbeThrows(new \Exception('no route to host'))
+                ->registerHasIdAssignedLabel()
+        );
+    }
+
+    /**
+     * An empty identifier list is only an empty register when no issue carried
+     * the label at all — labelled issues whose titles hold no readable
+     * identifier are a register that must not be reserved into (#130).
+     */
+    public function testLabelledIssuesAreSeenEvenWhenNoTitleCarriesAnIdentifier()
+    {
+        $issueApiMock = $this->createMock(\Github\Api\Issue::class);
+        $issueApiMock->method('all')->willReturnOnConsecutiveCalls(
+            [['title' => 'Community codecheck 2026-001'], ['title' => 'needs codechecker']],
+            []
+        );
+
+        $clientMock = $this->createMock(\Github\Client::class);
+        $clientMock->method('api')->with('issue')->willReturn($issueApiMock);
+
+        $parser = new CodecheckGithubRegisterApiClient(
+            $this->githubPAT,
+            $this->githubRegisterOrganization,
+            $this->githubRegisterRepository,
+            $this->submissionId,
+            $this->journal,
+            $clientMock
+        );
+
+        $parser->fetchNewestIssues();
+
+        $this->assertSame([], $parser->getIssues());
+        $this->assertTrue($parser->hasSeenLabelledIssues());
+    }
+
+    public function testAnEmptyRegisterHasSeenNoLabelledIssues()
+    {
+        $issueApiMock = $this->createMock(\Github\Api\Issue::class);
+        $issueApiMock->method('all')->willReturn([]);
+
+        $clientMock = $this->createMock(\Github\Client::class);
+        $clientMock->method('api')->with('issue')->willReturn($issueApiMock);
+
+        $parser = new CodecheckGithubRegisterApiClient(
+            $this->githubPAT,
+            $this->githubRegisterOrganization,
+            $this->githubRegisterRepository,
+            $this->submissionId,
+            $this->journal,
+            $clientMock
+        );
+
+        $parser->fetchNewestIssues();
+
+        $this->assertFalse($parser->hasSeenLabelledIssues());
+    }
+
+    /**
+     * Only the remote end decides when the pages run out, so a server that
+     * ignores `page` — a caching proxy, a captive portal — would be walked for
+     * ever. The walk is capped instead.
+     */
+    public function testFetchNewestIssuesStopsWalkingAServerThatRepeatsItself()
+    {
+        $issueApiMock = $this->createMock(\Github\Api\Issue::class);
+        $issueApiMock->expects($this->atMost(50))
+            ->method('all')
+            ->willReturn([['title' => 'the same page for every query']]);
+
+        $clientMock = $this->createMock(\Github\Client::class);
+        $clientMock->method('api')->with('issue')->willReturn($issueApiMock);
+
+        $parser = new CodecheckGithubRegisterApiClient(
+            $this->githubPAT,
+            $this->githubRegisterOrganization,
+            $this->githubRegisterRepository,
+            $this->submissionId,
+            $this->journal,
+            $clientMock
+        );
+
+        $parser->fetchNewestIssues();
+
+        $this->assertSame([], $parser->getIssues());
+        $this->assertTrue($parser->hasSeenLabelledIssues());
+    }
+
+    /** A client whose label probe fails with the given exception. */
+    private function clientWhoseLabelProbeThrows(\Throwable $e): CodecheckGithubRegisterApiClient
+    {
+        $labelsApiMock = $this->createMock(\Github\Api\Issue\Labels::class);
+        $labelsApiMock->method('show')->willThrowException($e);
+
+        $issueApiMock = $this->createMock(\Github\Api\Issue::class);
+        $issueApiMock->method('labels')->willReturn($labelsApiMock);
+        $clientMock = $this->createMock(\Github\Client::class);
+        $clientMock->method('api')->with('issue')->willReturn($issueApiMock);
+
+        return new CodecheckGithubRegisterApiClient(
+            $this->githubPAT,
+            $this->githubRegisterOrganization,
+            $this->githubRegisterRepository,
+            $this->submissionId,
+            $this->journal,
+            $clientMock
+        );
     }
 }

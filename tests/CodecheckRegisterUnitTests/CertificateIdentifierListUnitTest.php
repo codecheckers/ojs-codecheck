@@ -149,6 +149,22 @@ class CertificateIdentifierListUnitTest extends PKPTestCase
         );
     }
 
+    public function testEmptyCertificateIdentifierListIsEmptyAndHasNoNewestIdentifier()
+    {
+        $identifierList = new CertificateIdentifierList();
+
+        $this->assertTrue($identifierList->isEmpty());
+        $this->assertNull($identifierList->getNewestIdentifier());
+    }
+
+    public function testFilledCertificateIdentifierListIsNotEmpty()
+    {
+        $identifierList = new CertificateIdentifierList();
+        $identifierList->appendToCertificateIdList('2024-012', ['html_url' => 'something', 'number' => 1]);
+
+        $this->assertFalse($identifierList->isEmpty());
+    }
+
     public function testFilledCertificateIdentifierListGetNewestIdentifier()
     {
         $identifierList = new CertificateIdentifierList();

@@ -105,6 +105,67 @@ This plugin follows the CODECHECK brand guidelines and integrates with OJS desig
 1. **View certificates**: Explore CODECHECK certificates on published articles
 1. **Access materials**: Links to computational materials and repositories
 
+## CODECHECK register repository
+
+CODECHECK certificates are recorded in a GitHub repository — the *register*. The
+plugin reads it to find existing certificate identifiers, opens one issue per
+CODECHECK in it, and, when register deposits are enabled, adds a row to its
+`register.csv` through a pull request. Which repository is used is configured in
+the plugin settings (*GitHub Repository used as the CODECHECK register*); the
+default is [codecheckers/register](https://github.com/codecheckers/register).
+
+A repository used as a register has to meet the following requirements.
+
+| Requirement | Why |
+|---|---|
+| Public repository | The plugin reads issues and labels without authenticating; register entries are public by design |
+| Issues enabled | One issue per CODECHECK is created in the register |
+| A label named `id assigned` | Certificate identifiers are found by filtering issues on this label. Without it the plugin finds no identifiers at all |
+| Issue titles ending in `… \| YYYY-NNN` | The identifier is read from the part after the last `\|`. A range, `YYYY-NNN/YYYY-NNN`, is also accepted; anything else is ignored |
+| `register.csv` at the repository root, with a header row | Register deposits append a row to it. Only needed when deposits are enabled |
+
+The settings form checks two of these — the `id assigned` label and
+`register.csv` — when the configured organisation or repository changes, and
+warns about whatever is missing, or that the repository could not be read at
+all. It does not check on every save, because the requests count against
+GitHub's unauthenticated rate limit.
+
+**A new, empty register is supported.** When the register holds no issue
+carrying the `id assigned` label, the plugin asks whether to reserve the first
+identifier of the current year (`YYYY-001`) and open the register's first issue,
+rather than failing.
+
+**Anything else that yields no identifier is refused**, with the reason, because
+reserving would then duplicate an identifier the register already holds without
+the plugin being able to see it:
+
+- the `id assigned` label does not exist — create it first
+- issues carry the label but no title ends in a readable identifier such as
+  `Author et al. | 2026-001`
+- the repository could not be read: check the setting, that it is public, and
+  GitHub's rate limit
+
+### Personal access token
+
+Creating and updating register issues and depositing into `register.csv` are
+authenticated with the personal access token from the plugin settings. A
+*fine-grained* token scoped to the register repository alone is enough:
+
+| Resource | Access |
+|---|---|
+| Issues | Read and write |
+| Contents | Read and write |
+| Pull requests | Read and write |
+
+Issues read/write opens and updates the register issue and its status comments.
+Contents read lets the plugin see `register.csv`; the deposit also commits the
+updated file to a branch of its own, which needs write — with read alone
+reservations and status comments work and only the deposit fails, and because
+it never blocks publication that shows up as a log line and a missing register
+row. Pull requests read/write opens the deposit pull request. A token for a
+journal that keeps register deposits switched off needs Contents read only. A classic token with `public_repo` also works,
+but grants access to every public repository the holder can push to.
+
 ## CODECHECK Status System
 
 The plugin tracks CODECHECK progress through a status system displayed in the review workflow.

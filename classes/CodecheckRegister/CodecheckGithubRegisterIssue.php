@@ -126,7 +126,7 @@ class CodecheckGithubRegisterIssue
     private function fillLabels(
         CodecheckIssueLabels $codecheckIssueLabels
     ): array {
-        $labels = ['id assigned'];
+        $labels = [Constants::CODECHECK_REGISTER_ID_ASSIGNED_LABEL];
         $labels = array_merge($labels, $codecheckIssueLabels->get()->toArray());
 
         return $labels;

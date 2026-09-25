@@ -147,4 +147,48 @@ class IdentifierParameterValidatorUnitTest extends PKPTestCase
 
         $this->assertNull(IdentifierParameterValidator::forReserveIdentifier($body));
     }
+
+    /**
+     * The two keys that answer "the register holds no identifier yet, reserve
+     * the first?" are optional, but a truthy non-boolean would silently fail to
+     * confirm anything, so the shape is reported rather than ignored (#130).
+     */
+    public function testConfirmingTheFirstIdentifierIsOptionalButMustBeABoolean()
+    {
+        $this->assertNull(IdentifierParameterValidator::forReserveIdentifier($this->validBody()));
+
+        $body = $this->validBody();
+        $body['confirmFirstIdentifier'] = true;
+        $body['confirmedIdentifier'] = '2026-001';
+        $this->assertNull(IdentifierParameterValidator::forReserveIdentifier($body));
+
+        $body = $this->validBody();
+        $body['confirmFirstIdentifier'] = true;
+        $body['confirmedIdentifier'] = null;
+        $this->assertNull(
+            IdentifierParameterValidator::forReserveIdentifier($body),
+            'no identifier to hold the confirmation to is allowed, for a scripted reservation'
+        );
+
+        $body = $this->validBody();
+        $body['confirmFirstIdentifier'] = 1;
+        $this->assertSame(
+            "Parameter 'confirmFirstIdentifier' must be a boolean.",
+            IdentifierParameterValidator::forReserveIdentifier($body)
+        );
+
+        $body = $this->validBody();
+        $body['confirmFirstIdentifier'] = 'true';
+        $this->assertSame(
+            "Parameter 'confirmFirstIdentifier' must be a boolean.",
+            IdentifierParameterValidator::forReserveIdentifier($body)
+        );
+
+        $body = $this->validBody();
+        $body['confirmedIdentifier'] = 2026;
+        $this->assertSame(
+            "Parameter 'confirmedIdentifier' must be a string.",
+            IdentifierParameterValidator::forReserveIdentifier($body)
+        );
+    }
 }

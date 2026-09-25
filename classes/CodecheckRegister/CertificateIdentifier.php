@@ -79,6 +79,9 @@ class CertificateIdentifier
     /**
      * Factory Method for a new unique Identifier
      *
+     * An empty list means the register holds no identifier yet, so the first
+     * certificate of the current year is the new one (#130).
+     *
      * @param CertificateIdentifierList $certificateIdentifierList The list of all Certificate Identifiers
      *
      * @return CertificateIdentifier A new unique Certificate Identifier
@@ -87,6 +90,11 @@ class CertificateIdentifier
     {
         $latest_identifier = $certificateIdentifierList->getNewestIdentifier();
         $current_year = (int) date('Y');
+
+        // nothing in the register to continue from -> the first identifier of this year
+        if ($latest_identifier === null) {
+            return new CertificateIdentifier($current_year, 1);
+        }
 
         // different year, so this is the first CODECHECK certificate of the year -> id 001
         if ($current_year != $latest_identifier->getYear()) {

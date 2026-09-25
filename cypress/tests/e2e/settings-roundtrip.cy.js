@@ -14,8 +14,8 @@
  * would prove very little: most settings are empty in the test dataset, and
  * "empty survived the save" is true whether or not the field round-trips.
  *
- * Note: saving calls SettingsForm::validateRegisterFileExists(), which makes a
- * live GitHub API call, so saves are kept to what these assertions need.
+ * Note: saving calls SettingsForm::checkRegisterRepository(), which makes live
+ * GitHub API calls, so saves are kept to what these assertions need.
  */
 
 const JOURNAL = 'codecheck';

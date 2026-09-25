@@ -455,7 +455,6 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
     public function testImportMetadataFromOsfCurlReadException()
     {
         $curlHandle = curl_init();
-        $errorCode = curl_errno($curlHandle);
         $errorMessage = curl_error($curlHandle);
         $osfNodeId = 'ymc3t';
         $repository = "https://osf.io/{$osfNodeId}/";
@@ -469,7 +468,9 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
         $response = $this->handler->importMetadataFromRepository($osfNodeId);
         $actualMetadataReturnArray = json_decode($response->getPayload(), true);
-        $this->assertEquals($errorCode, $response->getHttpResponseCode());
+        // A cURL error number is not an HTTP status, so the response carries
+        // a 500 rather than the code the exception happened to have (#130).
+        $this->assertEquals(500, $response->getHttpResponseCode());
         $this->assertCount(3, $actualMetadataReturnArray);
         $this->assertFalse($actualMetadataReturnArray['success']);
         $this->assertEquals($repository, $actualMetadataReturnArray['repository']);
@@ -519,7 +520,6 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
     {
         $repository = 'https://gitlab.com/cdchck/community-codechecks/2022-svaRetro-svaNUMT';
         $curlHandle = curl_init();
-        $errorCode = curl_errno($curlHandle);
         $errorMessage = curl_error($curlHandle);
         $client = $this->createMock(\Github\Client::class);
         $request = new Request();
@@ -530,7 +530,9 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
         $response = $this->handler->importMetadataFromRepository($repository);
         $actualMetadataReturnArray = json_decode($response->getPayload(), true);
-        $this->assertEquals($errorCode, $response->getHttpResponseCode());
+        // A cURL error number is not an HTTP status, so the response carries
+        // a 500 rather than the code the exception happened to have (#130).
+        $this->assertEquals(500, $response->getHttpResponseCode());
         $this->assertCount(3, $actualMetadataReturnArray);
         $this->assertFalse($actualMetadataReturnArray['success']);
         $this->assertEquals($repository, $actualMetadataReturnArray['repository']);

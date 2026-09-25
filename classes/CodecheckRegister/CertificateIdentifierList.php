@@ -216,15 +216,25 @@ class CertificateIdentifierList
     }
 
     /**
+     * Whether the list holds no Certificate Identifier at all
+     *
+     * @return bool Returns `true` when the list is empty
+     */
+    public function isEmpty(): bool
+    {
+        return $this->getNumberOfIdentifiers() === 0;
+    }
+
+    /**
      * Get the latest/ newest Certificate Identifier
      *
-     * @return CertificateIdentifier Returns the newest Certificate Identifier
+     * @return ?CertificateIdentifier Returns the newest Certificate Identifier, or `null` when the list is empty
      */
-    public function getNewestIdentifier(): CertificateIdentifier
+    public function getNewestIdentifier(): ?CertificateIdentifier
     {
         $this->sortDesc();
         // get first element of sort descending -> newest element
-        return $this->uniqueIdentifierArray->at(0)['identifier'];
+        return $this->uniqueIdentifierArray->at(0)['identifier'] ?? null;
     }
 
     /**

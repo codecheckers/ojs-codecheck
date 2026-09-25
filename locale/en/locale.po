@@ -123,7 +123,7 @@ msgid "plugins.generic.codecheck.settings.github.registerRepository"
 msgstr "GitHub Repository used as the CODECHECK register"
 
 msgid "plugins.generic.codecheck.settings.github.registerRepository.description"
-msgstr "default: https://github.com/codecheckers/register"
+msgstr "The public GitHub repository holding the CODECHECK register (default: https://github.com/codecheckers/register). It must have issues enabled, a label “id assigned” — which is how certificate identifiers are found — and a register.csv at its root for register deposits."
 
 msgid "plugins.generic.codecheck.settings.github.labels"
 msgstr "GitHub Register Labels"
@@ -424,6 +424,27 @@ msgstr "You have reserved the Certificate Identifier"
 
 msgid "plugins.generic.codecheck.identifier.reserve.fail.message"
 msgstr "Error while reserving the Certificate Identifier"
+
+msgid "plugins.generic.codecheck.identifier.reserve.firstIdentifier.confirm"
+msgstr "No CODECHECK certificate identifier was found in the register repository {$organization}/{$repository}, so {$identifier} and its register issue would be the first ones recorded there. Reserve it?"
+
+msgid "plugins.generic.codecheck.identifier.reserve.firstIdentifier.cancelled"
+msgstr "No certificate identifier was reserved and nothing was added to the register repository."
+
+msgid "plugins.generic.codecheck.identifier.reserve.firstIdentifier.changed"
+msgstr "The register repository changed while the question was open, so {$identifier} was not reserved. Try again to see which identifier is next."
+
+msgid "plugins.generic.codecheck.identifier.reserve.firstIdentifier.refused.missingLabel"
+msgstr "The register repository {$organization}/{$repository} has no label “{$label}”, which is the label certificate identifiers are found by. Create it there first: until it exists, identifiers already in the register cannot be found and a new one would duplicate them."
+
+msgid "plugins.generic.codecheck.identifier.reserve.firstIdentifier.refused.unreadableTitles"
+msgstr "The register repository {$organization}/{$repository} holds issues carrying the certificate identifier label, but none of their titles ends in a readable identifier such as “Author et al. | 2026-001”. No identifier was reserved, because a new one could duplicate an identifier already recorded there."
+
+msgid "plugins.generic.codecheck.identifier.reserve.firstIdentifier.refused.unreadableRegister"
+msgstr "The register repository {$organization}/{$repository} could not be read, so it is not known which certificate identifiers it already holds. No identifier was reserved. Check the register repository setting, that the repository is public, and try again later — GitHub limits how often it may be read."
+
+msgid "plugins.generic.codecheck.identifier.reserve.register.notConfigured"
+msgstr "No CODECHECK register repository is configured. Set the register organisation and repository in the CODECHECK plugin settings first."
 
 msgid "plugins.generic.codecheck.identifier.remove"
 msgstr "Remove Identifier"
@@ -938,6 +959,12 @@ msgstr "This repository will not be shown on the article landing page, not inclu
 
 msgid "plugins.generic.codecheck.settings.github.registerRepository.missingCsvWarning"
 msgstr "Warning: no register.csv was found at the root of {$organization}/{$repository}. Register deposits will fail until this file exists there."
+
+msgid "plugins.generic.codecheck.settings.github.registerRepository.missingLabelWarning"
+msgstr "Warning: the repository {$organization}/{$repository} has no label “{$label}”. Certificate identifiers are found by this label, so it has to be created there before identifiers can be reserved or found reliably."
+
+msgid "plugins.generic.codecheck.settings.github.registerRepository.unreadableWarning"
+msgstr "Warning: the repository {$organization}/{$repository} could not be read, so it is not known whether it can be used as a CODECHECK register. Check the spelling and that the repository is public, and note that GitHub limits how often it may be read."
 
 msgid "plugins.generic.codecheck.settings.registerDeposit.title"
 msgstr "Register Deposit"

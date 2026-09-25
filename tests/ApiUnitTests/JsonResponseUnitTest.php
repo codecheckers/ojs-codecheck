@@ -48,6 +48,26 @@ class JsonResponseUnitTest extends PKPTestCase
         $this->assertSame(500, $response->getHttpResponseCode());
     }
 
+    /**
+     * Exception codes are not HTTP statuses: the plugin's own exceptions carry
+     * 0 and a cURL error carries its error number, and passing either on made
+     * the response itself fatal (#130).
+     */
+    public function testAnExceptionCodeThatIsNoHttpStatusBecomesAServerError()
+    {
+        $this->assertSame(500, JsonResponse::errorStatus(new \Exception('no code')));
+        $this->assertSame(500, JsonResponse::errorStatus(new \Exception('cURL 7', 7)));
+        $this->assertSame(500, JsonResponse::errorStatus(new \Exception('created', 201)));
+        $this->assertSame(500, JsonResponse::errorStatus(new \Exception('nonsense', 99999)));
+    }
+
+    public function testARealErrorStatusIsKept()
+    {
+        $this->assertSame(404, JsonResponse::errorStatus(new \Exception('Not Found', 404)));
+        $this->assertSame(403, JsonResponse::errorStatus(new \Exception('Forbidden', 403)));
+        $this->assertSame(502, JsonResponse::errorStatus(new \Exception('Bad Gateway', 502)));
+    }
+
     public function testNestedAndUnicodePayloadsSurviveTheRoundTrip()
     {
         $payload = [

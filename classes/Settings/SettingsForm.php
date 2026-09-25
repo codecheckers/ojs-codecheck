@@ -16,7 +16,9 @@ namespace APP\plugins\generic\codecheck\classes\Settings;
 use APP\core\Application;
 use APP\notification\Notification;
 use APP\notification\NotificationManager;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
 use APP\plugins\generic\codecheck\classes\Constants;
+use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
 use APP\template\TemplateManager;
 use Github\Client;
@@ -508,12 +510,12 @@ class SettingsForm extends Form
         $registerChanged = $organization !== $previousOrganization
             || $repository !== $previousRepository;
 
-        $registerWarning = $registerChanged
-            ? $this->validateRegisterFileExists($organization, $repository)
-            : null;
+        $registerWarnings = $registerChanged
+            ? $this->checkRegisterRepository($organization, $repository)
+            : [];
 
-        if ($registerWarning !== null) {
-            $notificationMgr = new NotificationManager();
+        $notificationMgr = new NotificationManager();
+        foreach ($registerWarnings as $registerWarning) {
             $notificationMgr->createTrivialNotification(
                 Application::get()->getRequest()->getUser()->getId(),
                 Notification::NOTIFICATION_TYPE_WARNING,
@@ -645,25 +647,65 @@ class SettingsForm extends Form
     }
 
     /**
-     * Checks whether `register.csv` exists at the root of the configured
-     * GitHub register repository, so a misconfigured target is caught at
-     * settings-save time instead of silently failing on the next publish.
+     * Checks what the configured GitHub register repository has to carry, so a
+     * misconfigured target is caught at settings-save time instead of silently
+     * failing on the next publish or reservation: `register.csv` at its root
+     * for register deposits, and the `id assigned` label, which is what
+     * certificate identifiers are found by (#129).
+     *
+     * The two requests are unauthenticated and count against GitHub's 60/hour
+     * per-IP limit, so this runs only when the register actually changed —
+     * see the caller.
+     *
+     * @return string[] One warning per missing requirement, or a single warning
+     *                  when the repository could not be read at all; empty when
+     *                  it carries both.
      */
-    private function validateRegisterFileExists(string $organization, string $repository): ?string
+    private function checkRegisterRepository(string $organization, string $repository): array
     {
         if (empty($organization) || empty($repository)) {
-            return null; // nothing to check yet
+            return []; // nothing to check yet
+        }
+
+        $messageParams = ['organization' => $organization, 'repository' => $repository];
+
+        // The same probe the reservation uses, so the two cannot disagree about
+        // whether the register is usable. Building the client can fail on its own
+        // — an incomplete `vendor/` leaves php-http with no discoverable client —
+        // and that must warn rather than abandon the whole settings save.
+        try {
+            $client = new Client();
+            $hasLabel = CodecheckGithubRegisterApiClient::repositoryHasLabel(
+                $organization,
+                $repository,
+                Constants::CODECHECK_REGISTER_ID_ASSIGNED_LABEL,
+                $client
+            );
+        } catch (\Throwable $e) {
+            CodecheckLogger::warning('Could not check the register repository: ' . $e->getMessage());
+            $hasLabel = null;
+        }
+
+        // Nothing could be read, so neither requirement can be reported as
+        // missing: one honest warning rather than two wrong ones.
+        if ($hasLabel === null) {
+            return [__('plugins.generic.codecheck.settings.github.registerRepository.unreadableWarning', $messageParams)];
+        }
+
+        $warnings = [];
+
+        if ($hasLabel === false) {
+            $warnings[] = __('plugins.generic.codecheck.settings.github.registerRepository.missingLabelWarning', $messageParams + [
+                'label' => Constants::CODECHECK_REGISTER_ID_ASSIGNED_LABEL,
+            ]);
         }
 
         try {
-            $client = new Client();
             $client->api('repo')->contents()->show($organization, $repository, 'register.csv');
-            return null; // found, no warning needed
         } catch (\Throwable $e) {
-            return __('plugins.generic.codecheck.settings.github.registerRepository.missingCsvWarning', [
-                'organization' => $organization,
-                'repository' => $repository,
-            ]);
+            $warnings[] = __('plugins.generic.codecheck.settings.github.registerRepository.missingCsvWarning', $messageParams);
         }
+
+        return $warnings;
     }
 }

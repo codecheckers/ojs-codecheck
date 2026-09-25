@@ -10,13 +10,17 @@ use APP\plugins\generic\codecheck\classes\Exceptions\ApiCreateException;
 use APP\plugins\generic\codecheck\classes\Exceptions\ApiFetchException;
 use APP\plugins\generic\codecheck\classes\Exceptions\ApiUpdateException;
 use APP\plugins\generic\codecheck\classes\Exceptions\GithubUrlParseException;
-use APP\plugins\generic\codecheck\classes\Exceptions\NoMatchingIssuesFoundException;
+use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use Github\Client;
 
 // api client
 class CodecheckGithubRegisterApiClient
 {
+    /** How many pages of register issues one fetch will walk at most. */
+    private const MAX_ISSUE_PAGES = 50;
+
     private $issues = [];
+    private int $labelledIssuesSeen = 0;
     private UniqueArray $labels;
     private $client;
     private string $githubPAT;
@@ -82,6 +86,12 @@ class CodecheckGithubRegisterApiClient
 
     /**
      * Fetches only the first newest Issues from the CODECHECK GitHub Register
+     *
+     * An empty result is a state and not an error — a register with no issue
+     * carrying the `id assigned` label simply has no identifiers — so the issue
+     * list is left empty and the caller decides (#130). `hasSeenLabelledIssues()`
+     * is how the caller tells that apart from a register whose labelled issues
+     * carry no readable identifier, which is not an empty register at all.
      */
     public function fetchNewestIssues(): void
     {
@@ -93,7 +103,7 @@ class CodecheckGithubRegisterApiClient
             try {
                 $allissues = $this->client->api('issue')->all($this->githubRegisterOrganization, $this->githubRegisterRepository, [
                     'state' => 'all',          // 'open', 'closed', or 'all'
-                    'labels' => 'id assigned',  // select only issues where there is an id assigned
+                    'labels' => Constants::CODECHECK_REGISTER_ID_ASSIGNED_LABEL, // select only issues where there is an id assigned
                     'sort' => 'updated',
                     'direction' => 'desc',
                     'per_page' => $issuesToFetchPerPage, // issues that will be fetched per page
@@ -103,20 +113,88 @@ class CodecheckGithubRegisterApiClient
                 throw new ApiFetchException("Failed fetching the GitHub Issues\n" . $e->getMessage());
             }
 
-            // stop looping if no more issues exist and we haven't yet found a matching issue
-            if (empty($allissues) && empty($this->issues)) {
-                throw new NoMatchingIssuesFoundException("There was no open or closed issue found with the label 'id assigned' in the GitHub Codecheck Register.");
+            // no more pages to walk: whatever was collected so far is all there is
+            if (empty($allissues)) {
+                break;
             }
 
-            foreach ($allissues as $issue) {
-                if (strpos($issue['title'], '|') !== false) {
-                    $this->issues[] = $issue;
-                    $fetchedMatchingIssue = true;
-                }
-            }
+            $this->labelledIssuesSeen += count($allissues);
+
+            $collectedBefore = count($this->issues);
+            $this->collectIssuesCarryingAnIdentifier($allissues);
+            $fetchedMatchingIssue = count($this->issues) > $collectedBefore;
 
             $issuePage++;
-        } while (!$fetchedMatchingIssue);
+            // Only the remote end decides when the pages run out, and a server
+            // that ignores `page` — a caching proxy, a captive portal — answers
+            // the same body for ever. The walk is bounded here instead.
+        } while (!$fetchedMatchingIssue && $issuePage <= self::MAX_ISSUE_PAGES);
+    }
+
+    /**
+     * Whether the register held any issue carrying the `id assigned` label,
+     * whatever its title.
+     *
+     * An empty identifier list plus labelled issues means the register is not
+     * empty — its titles do not carry a readable `YYYY-NNN` — and reserving
+     * "the first" identifier there would duplicate one that already exists.
+     */
+    public function hasSeenLabelledIssues(): bool
+    {
+        return $this->labelledIssuesSeen > 0;
+    }
+
+    /**
+     * Whether the configured register repository carries the `id assigned`
+     * label — `null` when that could not be established (#129, #130).
+     */
+    public function registerHasIdAssignedLabel(): ?bool
+    {
+        return self::repositoryHasLabel(
+            $this->githubRegisterOrganization,
+            $this->githubRegisterRepository,
+            Constants::CODECHECK_REGISTER_ID_ASSIGNED_LABEL,
+            $this->client
+        );
+    }
+
+    /**
+     * Whether a GitHub repository carries a label, in one request.
+     *
+     * The one place this question is asked, so the reservation and the settings
+     * form cannot come to disagree about whether a register is usable. The
+     * request is unauthenticated, like every other register read.
+     *
+     * Three answers, not two: only a 404 means the label is absent. A spent
+     * rate limit, a private repository or a mistyped name answers `null`,
+     * because "we could not read the repository" must not be reported to
+     * anyone as "the label is missing".
+     *
+     * @param ?Client $client A client to reuse; a new one is built otherwise
+     *
+     * @return ?bool `true` present, `false` absent, `null` could not be established
+     */
+    public static function repositoryHasLabel(
+        string $organization,
+        string $repository,
+        string $label,
+        ?Client $client = null
+    ): ?bool {
+        try {
+            ($client ?? new Client())->api('issue')->labels()->show($organization, $repository, $label);
+            return true;
+        } catch (\Throwable $e) {
+            if ((int) $e->getCode() === 404) {
+                return false;
+            }
+
+            CodecheckLogger::warning(
+                "Could not establish whether {$organization}/{$repository} has the '{$label}' label: "
+                . $e->getMessage()
+            );
+
+            return null;
+        }
     }
 
     /**
@@ -130,16 +208,7 @@ class CodecheckGithubRegisterApiClient
             throw new ApiFetchException("Failed fetching the GitHub Issues\n" . $e->getMessage());
         }
 
-        foreach ($allissues['items'] as $issue) {
-            if (strpos($issue['title'], '|') !== false) {
-                $this->issues[] = $issue;
-            }
-        }
-
-        // stop if no issues exist and we haven't yet found any matching issue
-        if (empty($allissues) && empty($this->issues)) {
-            throw new NoMatchingIssuesFoundException("There was no open or closed issue found with the label 'id assigned' in the GitHub Codecheck Register.");
-        }
+        $this->collectIssuesCarryingAnIdentifier($allissues['items'] ?? []);
     }
 
     /**
@@ -154,15 +223,19 @@ class CodecheckGithubRegisterApiClient
             throw new ApiFetchException("Failed fetching the GitHub Issues\n" . $e->getMessage());
         }
 
-        foreach ($allissues['items'] as $issue) {
-            if (strpos($issue['title'], '|') !== false) {
+        $this->collectIssuesCarryingAnIdentifier($allissues['items'] ?? []);
+    }
+
+    /**
+     * Keeps the issues whose title carries a certificate identifier, which is
+     * the part after the last `|` — see CertificateIdentifierList.
+     */
+    private function collectIssuesCarryingAnIdentifier(array $issues): void
+    {
+        foreach ($issues as $issue) {
+            if (strpos($issue['title'] ?? '', '|') !== false) {
                 $this->issues[] = $issue;
             }
-        }
-
-        // stop if no issues exist and we haven't yet found any matching issue
-        if (empty($allissues) && empty($this->issues)) {
-            throw new NoMatchingIssuesFoundException("There was no open or closed issue found with the label 'id assigned' in the GitHub Codecheck Register.");
         }
     }
 

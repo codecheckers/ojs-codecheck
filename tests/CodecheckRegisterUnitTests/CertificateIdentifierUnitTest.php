@@ -95,4 +95,24 @@ class CertificateIdentifierUnitTest extends PKPTestCase
 
         $this->assertSame("{$currentYear}-001", $newUniqueIdentifier->toStr());
     }
+
+    /**
+     * An empty register — no issue in it yet, or no `id assigned` label to find
+     * one by — yields the first identifier of the current year rather than
+     * failing on a list with nothing to continue from (#130).
+     */
+    public function testIdentifierNewUniqueIdentifierFromEmptyIdentifierList()
+    {
+        $apiParser = $this->createMock(CodecheckGithubRegisterApiClient::class);
+        $apiParser->expects($this->once())
+            ->method('fetchNewestIssues');
+        $apiParser->method('getIssues')->willReturn([]);
+
+        $identifierList = CertificateIdentifierList::fromApi($apiParser, true);
+        $newUniqueIdentifier = CertificateIdentifier::newUniqueIdentifier($identifierList);
+        $currentYear = (int) date('Y');
+
+        $this->assertTrue($identifierList->isEmpty());
+        $this->assertSame("{$currentYear}-001", $newUniqueIdentifier->toStr());
+    }
 }

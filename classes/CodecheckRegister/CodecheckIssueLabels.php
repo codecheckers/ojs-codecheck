@@ -2,6 +2,7 @@
 
 namespace APP\plugins\generic\codecheck\classes\CodecheckRegister;
 
+use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\DataStructures\UniqueArray;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitException;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
@@ -48,7 +49,8 @@ class CodecheckIssueLabels
             $label = $venue['Issue label'];
             // If a Label is "id assigned" or "development" it automatically gets assigned
             // Therefore this Label has to be skipped here, as it shouldn't be selected manually by the user
-            if ($label == 'id assigned' || $label == 'development') {
+            if ($label == Constants::CODECHECK_REGISTER_ID_ASSIGNED_LABEL
+                || $label == Constants::CODECHECK_REGISTER_DEVELOPMENT_LABEL) {
                 continue;
             }
             // add Label to Venue Names

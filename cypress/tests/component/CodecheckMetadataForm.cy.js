@@ -47,6 +47,29 @@ const interceptMetadata = (overrides = {}, alias = 'loadMetadata') =>
     body: { ...metadataResponseBody(), ...overrides }
   }).as(alias);
 
+/**
+ * Mounts the form and clicks "reserve automatically", which needs a label
+ * selected first — the form refuses the request otherwise.
+ */
+const mountAndReserve = (submissionId = 1) => {
+  cy.mount(CodecheckMetadataForm, {
+    props: {
+      submission: { id: submissionId },
+      canEdit: true
+    }
+  });
+
+  cy.wait('@loadMetadata');
+  cy.wait('@loadLabelData');
+
+  cy.get('.dropdown-content').invoke('show');
+  cy.get('.dropdown-checkbox-input input[type="checkbox"]').first().check();
+
+  cy.get('.certificate-identifier-button').contains(
+    'plugins.generic.codecheck.identifier.reserve.withApi'
+  ).click();
+};
+
 describe('CodecheckMetadataForm Component', () => {
   beforeEach(() => {
     interceptMetadata();
@@ -497,14 +520,7 @@ describe('CodecheckMetadataForm Component', () => {
   });
 
   it('can reserve certificate identifier', () => {
-    cy.mount(CodecheckMetadataForm, {
-      props: {
-        submission: { id: 1 },
-        canEdit: true
-      }
-    });
-
-    let submissionId = 1;
+    const submissionId = 1;
 
     cy.intercept('POST', `**/codecheck/identifier?submissionId=${submissionId}`, {
       statusCode: 200,
@@ -516,24 +532,7 @@ describe('CodecheckMetadataForm Component', () => {
       }
     }).as('reserveIdentifier');
 
-    cy.mount(CodecheckMetadataForm, {
-      props: {
-        submission: { id: 1 },
-        canEdit: true
-      }
-    });
-    
-    cy.wait('@loadMetadata');
-    cy.wait('@loadLabelData');
-    
-    // Open dropdown and select a label first, otherwise the guard blocks the request
-    cy.get('.dropdown-content').invoke('show');
-    cy.get('.dropdown-content').should('be.visible');
-    cy.get('.dropdown-checkbox-input input[type="checkbox"]').first().check();
-
-    cy.get('.certificate-identifier-button').contains(
-      'plugins.generic.codecheck.identifier.reserve.withApi'
-    ).click();
+    mountAndReserve(submissionId);
 
     cy.wait('@reserveIdentifier').then((interception) => {
       expect(interception.request.body).to.have.property('reserveIdentifierMode', 'api');
@@ -542,6 +541,124 @@ describe('CodecheckMetadataForm Component', () => {
 
     cy.get('.certificate-identifier-input')
       .should('have.value', '2025-042');
+  });
+
+  /**
+   * The register holds no identifier yet: the server answers with what it
+   * found instead of reserving, and the reservation is repeated only once the
+   * editor has agreed to the register's first issue being opened (#130).
+   */
+  it('asks before reserving the first identifier of an empty register', () => {
+    const submissionId = 1;
+    let call = 0;
+
+    cy.intercept('POST', `**/codecheck/identifier?submissionId=${submissionId}`, (req) => {
+      call++;
+      if (call === 1) {
+        req.reply({
+          statusCode: 200,
+          body: {
+            success: false,
+            confirmFirstIdentifier: true,
+            identifier: '2026-001',
+            organization: 'codecheckers',
+            repository: 'testing-dev-register'
+          }
+        });
+        return;
+      }
+      req.reply({
+        statusCode: 200,
+        body: {
+          success: true,
+          identifier: '2026-001',
+          issueUrl: 'https://github.com/codecheckers/testing-dev-register/issues/1',
+          issueNumber: 1
+        }
+      });
+    }).as('reserveIdentifier');
+
+    cy.on('window:confirm', () => true);
+
+    mountAndReserve(submissionId);
+
+    cy.wait('@reserveIdentifier').then((interception) => {
+      expect(interception.request.body).to.have.property('confirmFirstIdentifier', false);
+    });
+
+    // the confirmation carries the identifier the editor was shown, so the
+    // server can refuse a consent that has gone stale
+    cy.wait('@reserveIdentifier').then((interception) => {
+      expect(interception.request.body).to.have.property('confirmFirstIdentifier', true);
+      expect(interception.request.body).to.have.property('confirmedIdentifier', '2026-001');
+    });
+
+    cy.get('.certificate-identifier-input').should('have.value', '2026-001');
+  });
+
+  it('reserves nothing when the first identifier is not confirmed', () => {
+    const submissionId = 1;
+
+    cy.intercept('POST', `**/codecheck/identifier?submissionId=${submissionId}`, {
+      statusCode: 200,
+      body: {
+        success: false,
+        confirmFirstIdentifier: true,
+        identifier: '2026-001',
+        organization: 'codecheckers',
+        repository: 'testing-dev-register'
+      }
+    }).as('reserveIdentifier');
+
+    const questions = [];
+    cy.on('window:confirm', (text) => {
+      questions.push(text);
+      return false;
+    });
+
+    mountAndReserve(submissionId);
+
+    cy.wait('@reserveIdentifier');
+
+    // asked once, declined, and nothing reserved — in particular no second POST
+    cy.wrap(questions).should('have.length', 1);
+    cy.wrap(questions).its(0).should('contain', '2026-001');
+    cy.get('.save-message.warning').should('be.visible');
+    cy.get('.certificate-identifier-input').should('have.value', '');
+  });
+
+  /**
+   * A register that cannot be read, or whose issues carry no readable
+   * identifier, is refused by the server rather than offered for confirmation —
+   * reserving there would duplicate an identifier that is already recorded. The
+   * form shows the reason and asks nothing (#130).
+   */
+  it('shows the reason and asks nothing when the register is refused', () => {
+    const submissionId = 1;
+
+    cy.intercept('POST', `**/codecheck/identifier?submissionId=${submissionId}`, {
+      statusCode: 409,
+      body: {
+        success: false,
+        error: 'The register repository codecheckers/testing-dev-register has no label “id assigned”.'
+      }
+    }).as('reserveIdentifier');
+
+    const questions = [];
+    cy.on('window:confirm', (text) => {
+      questions.push(text);
+      return true;
+    });
+
+    mountAndReserve(submissionId);
+
+    cy.wait('@reserveIdentifier');
+
+    cy.wrap(questions).should('have.length', 0);
+    cy.get('.save-message.error')
+      .should('be.visible')
+      .and('contain', 'id assigned');
+    cy.get('.certificate-identifier-input').should('have.value', '');
   });
 
   it('disables preview button when requirements not met', () => {

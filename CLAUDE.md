@@ -368,8 +368,9 @@ not match `Constants::CODECHECK_STATUSES`.
 `classes/Settings/{Actions,Manage,SettingsForm}.php` + `templates/settings.tpl`
 (Smarty/FBV form, not a Vue form). All keys are in `classes/Constants.php`. Anything
 added to the form must be added in three places: `Constants`, `SettingsForm::initData()`
-+ `readInputData()`, and the template. `SettingsForm::validate()` also warns when the
-configured register repo lacks a `register.csv`.
++ `readInputData()`, and the template. `SettingsForm::execute()` also warns when the
+configured register repo lacks a `register.csv` or the `id assigned` label, and
+says so as one "could not be read" warning when the repository answers neither.
 
 **A verb added to `Manage::execute()` must bring its own CSRF check.** PKP's
 `manage` operation has none — `SettingsPluginGridHandler` authorises it (site
@@ -519,9 +520,13 @@ is missing, because a badge linking nowhere is worse than one linking to the
 second choice.
 
 `SettingsForm::execute()` reaches out to GitHub through
-`validateRegisterFileExists()` — but only when the register organisation or
-repository actually changed. The request is unauthenticated and counts against
-GitHub's 60/hour per-IP limit, so do not move that call back onto every save.
+`checkRegisterRepository()` — but only when the register organisation or
+repository actually changed. It makes **two** unauthenticated requests, for
+`register.csv` and for the `id assigned` label, and they count against GitHub's
+60/hour per-IP limit, so do not move that call back onto every save. The label
+probe is `CodecheckGithubRegisterApiClient::repositoryHasLabel()`, the same one
+the reservation uses, so the settings form and the reservation cannot come to
+disagree about whether a register is usable (#129).
 
 ### Logging
 

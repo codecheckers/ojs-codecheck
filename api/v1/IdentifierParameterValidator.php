@@ -63,6 +63,17 @@ class IdentifierParameterValidator
         if ($postParams['reserveIdentifierMode'] === 'linkExistingIdentifier' && !is_string($postParams['identifier'] ?? null)) {
             return "Parameter 'identifier' must be a string when using mode 'linkExistingIdentifier'.";
         }
+        // Both optional — they answer the question the server asks when the
+        // register holds no identifier yet (#130) — but a `1` or a `"true"`
+        // would silently fail to confirm anything, so the shape is reported.
+        if (array_key_exists('confirmFirstIdentifier', $postParams) && !is_bool($postParams['confirmFirstIdentifier'])) {
+            return "Parameter 'confirmFirstIdentifier' must be a boolean.";
+        }
+        if (array_key_exists('confirmedIdentifier', $postParams)
+            && !is_null($postParams['confirmedIdentifier'])
+            && !is_string($postParams['confirmedIdentifier'])) {
+            return "Parameter 'confirmedIdentifier' must be a string.";
+        }
 
         return null;
     }
