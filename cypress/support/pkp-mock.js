@@ -99,9 +99,35 @@ if (typeof window !== 'undefined') {
           localize: (obj) => obj
         })
       },
-      useModal: () => ({
-        openDialog: () => {}
-      })
+      // The shape the components read: `const { useModal } = pkp.modules.useModal`
+      // and then `useModal().openDialog(...)`. A stub that only answered the
+      // first destructuring left every modal path throwing here, so nothing in
+      // the component suite could reach one.
+      useModal: {
+        useModal: () => ({
+          openDialog: ({ title, message, actions = [] }) => {
+            const dialog = document.createElement('div');
+            dialog.className = 'pkp-mock-modal';
+            dialog.innerHTML =
+              '<h2 class="pkp-mock-modal__title"></h2>' +
+              '<div class="pkp-mock-modal__message">' + (message ?? '') + '</div>';
+            dialog.querySelector('.pkp-mock-modal__title').textContent = title ?? '';
+
+            const close = () => dialog.remove();
+
+            actions.forEach((action) => {
+              const button = document.createElement('button');
+              button.type = 'button';
+              button.className = 'pkp-mock-modal__action';
+              button.textContent = action.label;
+              button.addEventListener('click', () => action.callback(close));
+              dialog.appendChild(button);
+            });
+
+            document.body.appendChild(dialog);
+          }
+        })
+      }
     },
     const: {
       WORKFLOW_STAGE_ID_EXTERNAL_REVIEW: 3

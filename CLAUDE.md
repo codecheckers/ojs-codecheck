@@ -648,6 +648,19 @@ behaves in two ways on purpose:
 Keys outside `plugins.generic.codecheck.` come from OJS's own locale files
 (`common.loading`), so they are passed through unchecked.
 
+**The mock's `useModal` renders a real dialog into the document** —
+`.pkp-mock-modal` with one `.pkp-mock-modal__action` button per action — so a
+confirmation can be answered in a spec rather than stubbed. It used to answer
+only the first half of `const {useModal} = pkp.modules.useModal`, which made
+`canUsePkpModal()` true and every modal path throw, so no spec could reach one.
+`cypress/support/component.js` clears leftover dialogs between tests, because
+`mount()` does not clear `document.body`.
+
+Confirmations in `CodecheckMetadataForm.vue` go through
+`askForConfirmation({title, question, onConfirm, onCancel})`, which uses that
+modal and falls back to the browser's dialog where it is unavailable. A new
+`confirm()` in this component is a bug, not a shortcut.
+
 Not covered: `CodecheckStatusForm.vue`, `CodecheckGithubIssueDisplay.vue`, the
 `storeExtend` wiring in `main.js` (menu injection, dashboard column, file-manager
 columns), and the wizard DOM-scraping classes.

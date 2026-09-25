@@ -401,6 +401,9 @@ msgstr "Error while updating the GitHub Issue"
 msgid "plugins.generic.codecheck.identifier.reserve.linkExistingIdentifier"
 msgstr "Link Existing Identifier"
 
+msgid "plugins.generic.codecheck.identifier.labels.required"
+msgstr "Select at least one GitHub issue label before reserving a certificate identifier."
+
 msgid "plugins.generic.codecheck.identifier.reserve.withApi"
 msgstr "Reserve Identifier Automatically"
 
@@ -424,6 +427,9 @@ msgstr "You have reserved the Certificate Identifier"
 
 msgid "plugins.generic.codecheck.identifier.reserve.fail.message"
 msgstr "Error while reserving the Certificate Identifier"
+
+msgid "plugins.generic.codecheck.identifier.reserve.firstIdentifier.modal.title"
+msgstr "Reserve the register's first certificate identifier"
 
 msgid "plugins.generic.codecheck.identifier.reserve.firstIdentifier.confirm"
 msgstr "No CODECHECK certificate identifier was found in the register repository {$organization}/{$repository}, so {$identifier} and its register issue would be the first ones recorded there. Reserve it?"
@@ -618,6 +624,9 @@ msgstr "Complete the following fields to document the CODECHECK process."
 msgid "plugins.generic.codecheck.manifest.emptyState"
 msgstr "No manifest files added yet. Click \"+ Add File\" to add files."
 
+msgid "plugins.generic.codecheck.manifest.remove.modal.title"
+msgstr "Remove manifest file"
+
 msgid "plugins.generic.codecheck.manifest.removeConfirm"
 msgstr "Remove this file from the manifest?"
 
@@ -632,6 +641,9 @@ msgstr "Enter codechecker name:"
 
 msgid "plugins.generic.codecheck.codecheckers.enterOrcid"
 msgstr "Enter ORCID (optional):"
+
+msgid "plugins.generic.codecheck.codecheckers.remove.modal.title"
+msgstr "Remove codechecker"
 
 msgid "plugins.generic.codecheck.codecheckers.removeConfirm"
 msgstr "Remove this codechecker?"
@@ -704,6 +716,9 @@ msgstr "More Information: "
 
 msgid "plugins.generic.codecheck.repositories.infoTextLinkToAllowedRepositories"
 msgstr "https://github.com/codecheckers/register/blob/master/README.md#editing-the-register"
+
+msgid "plugins.generic.codecheck.repositories.remove.modal.title"
+msgstr "Remove repository"
 
 msgid "plugins.generic.codecheck.repositories.removeConfirm"
 msgstr "Remove this repository?"

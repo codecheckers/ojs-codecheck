@@ -118,8 +118,6 @@ class CodecheckGithubRegisterApiClient
                 break;
             }
 
-            $this->labelledIssuesSeen += count($allissues);
-
             $collectedBefore = count($this->issues);
             $this->collectIssuesCarryingAnIdentifier($allissues);
             $fetchedMatchingIssue = count($this->issues) > $collectedBefore;
@@ -133,7 +131,7 @@ class CodecheckGithubRegisterApiClient
 
     /**
      * Whether the register held any issue carrying the `id assigned` label,
-     * whatever its title.
+     * whatever its title — the register's own development issues aside.
      *
      * An empty identifier list plus labelled issues means the register is not
      * empty — its titles do not carry a readable `YYYY-NNN` — and reserving
@@ -229,14 +227,43 @@ class CodecheckGithubRegisterApiClient
     /**
      * Keeps the issues whose title carries a certificate identifier, which is
      * the part after the last `|` — see CertificateIdentifierList.
+     *
+     * The register's own development issues are left out, whatever their
+     * title: they are not certificates, so an identifier written in one must
+     * not be taken for the register's newest.
      */
     private function collectIssuesCarryingAnIdentifier(array $issues): void
     {
         foreach ($issues as $issue) {
+            if (self::isDevelopmentIssue($issue)) {
+                continue;
+            }
+
+            $this->labelledIssuesSeen++;
+
             if (strpos($issue['title'] ?? '', '|') !== false) {
                 $this->issues[] = $issue;
             }
         }
+    }
+
+    /**
+     * Whether a register issue is one of the register's own development issues.
+     *
+     * GitHub hands labels back as objects, and a search result occasionally as
+     * bare names, so both shapes are read.
+     */
+    private static function isDevelopmentIssue(array $issue): bool
+    {
+        foreach ($issue['labels'] ?? [] as $label) {
+            $name = is_array($label) ? ($label['name'] ?? '') : $label;
+
+            if ($name === Constants::CODECHECK_REGISTER_DEVELOPMENT_LABEL) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

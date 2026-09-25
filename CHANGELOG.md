@@ -44,7 +44,8 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   identifier yet is asked about before its first issue is opened, and one that
   cannot be read — no `id assigned` label, no readable identifiers in its issue
   titles, or unreachable — is refused with the reason, since reserving there
-  would duplicate an identifier already recorded (#129, #130)
+  would duplicate an identifier already recorded (#129, #130). The register's own
+  development issues are not read as certificates (#130)
 - CODECHECK status with a full history per submission, editable by role (#61,
   #141, #142). Each status change is also commented under the register issue (#150)
 - Several repositories per submission, one of them marked as holding the
@@ -64,6 +65,10 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   codechecker needs no editorial access (#16)
 - Editors can correct the data and software availability statement on the
   publication Metadata form (#167)
+- Confirmations in the CODECHECK form — removing a manifest file, a repository or
+  a codechecker, and reserving the register's first certificate identifier — use
+  OJS's own dialog rather than the browser's, and the label reminder beside them
+  is translatable (#130)
 
 #### Publication
 

@@ -51,6 +51,12 @@ const interceptMetadata = (overrides = {}, alias = 'loadMetadata') =>
  * Mounts the form and clicks "reserve automatically", which needs a label
  * selected first — the form refuses the request otherwise.
  */
+/** Answers the modal's yes/no question, which is OJS's own dialog, not the browser's. */
+const answerModal = (answer) =>
+  cy.get('.pkp-mock-modal__action')
+    .contains(answer === 'yes' ? 'plugins.generic.codecheck.yes' : 'plugins.generic.codecheck.no')
+    .click();
+
 const mountAndReserve = (submissionId = 1) => {
   cy.mount(CodecheckMetadataForm, {
     props: {
@@ -342,11 +348,11 @@ describe('CodecheckMetadataForm Component', () => {
     
     cy.get('input.file-name').should('have.value', 'test.csv');
     
-    // Remove file
+    // Remove file, which asks first through OJS's own modal
     cy.get('.pkpButton--close').first().click();
-    
-    cy.on('window:confirm', () => true);
-    
+
+    answerModal('yes');
+
     // File should be removed (or empty state shown)
     cy.get('.manifest-table').should('not.exist');
   });
@@ -412,10 +418,15 @@ describe('CodecheckMetadataForm Component', () => {
     cy.get('.repository-item input[type="url"]')
       .type('https://github.com/example/repo');
     
-    // Remove repository
+    // Remove repository, which asks first through OJS's own modal
     cy.get('.repository-item .pkpButton--close').click();
-    
-    cy.on('window:confirm', () => true);
+
+    answerModal('no');
+    cy.get('.repository-item').should('have.length', 1);
+
+    cy.get('.repository-item .pkpButton--close').click();
+    answerModal('yes');
+    cy.get('.repository-item').should('not.exist');
   });
 
   it('validates required fields before saving', () => {
@@ -578,13 +589,14 @@ describe('CodecheckMetadataForm Component', () => {
       });
     }).as('reserveIdentifier');
 
-    cy.on('window:confirm', () => true);
-
     mountAndReserve(submissionId);
 
     cy.wait('@reserveIdentifier').then((interception) => {
       expect(interception.request.body).to.have.property('confirmFirstIdentifier', false);
     });
+
+    cy.get('.pkp-mock-modal__message').should('contain', '2026-001');
+    answerModal('yes');
 
     // the confirmation carries the identifier the editor was shown, so the
     // server can refuse a consent that has gone stale
@@ -610,19 +622,15 @@ describe('CodecheckMetadataForm Component', () => {
       }
     }).as('reserveIdentifier');
 
-    const questions = [];
-    cy.on('window:confirm', (text) => {
-      questions.push(text);
-      return false;
-    });
-
     mountAndReserve(submissionId);
 
     cy.wait('@reserveIdentifier');
 
     // asked once, declined, and nothing reserved — in particular no second POST
-    cy.wrap(questions).should('have.length', 1);
-    cy.wrap(questions).its(0).should('contain', '2026-001');
+    cy.get('.pkp-mock-modal__message').should('contain', '2026-001');
+    answerModal('no');
+
+    cy.get('.pkp-mock-modal').should('not.exist');
     cy.get('.save-message.warning').should('be.visible');
     cy.get('.certificate-identifier-input').should('have.value', '');
   });
@@ -644,17 +652,11 @@ describe('CodecheckMetadataForm Component', () => {
       }
     }).as('reserveIdentifier');
 
-    const questions = [];
-    cy.on('window:confirm', (text) => {
-      questions.push(text);
-      return true;
-    });
-
     mountAndReserve(submissionId);
 
     cy.wait('@reserveIdentifier');
 
-    cy.wrap(questions).should('have.length', 0);
+    cy.get('.pkp-mock-modal').should('not.exist');
     cy.get('.save-message.error')
       .should('be.visible')
       .and('contain', 'id assigned');

@@ -412,6 +412,74 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
         $this->assertTrue($parser->hasSeenLabelledIssues());
     }
 
+    /**
+     * The register's own development issues are not certificates. One carrying
+     * an identifier in its title must not be taken for the register's newest,
+     * which would hand the next reservation the wrong number to continue from.
+     */
+    public function testDevelopmentIssuesAreLeftOutOfTheIdentifiers()
+    {
+        $issueApiMock = $this->createMock(\Github\Api\Issue::class);
+        $issueApiMock->method('all')->willReturn([
+            [
+                'title' => 'Test the register workflow | 2099-999',
+                'labels' => [['name' => 'id assigned'], ['name' => 'development']],
+            ],
+            [
+                'title' => 'Alice | 2025-001',
+                'labels' => [['name' => 'id assigned']],
+            ],
+        ]);
+
+        $clientMock = $this->createMock(\Github\Client::class);
+        $clientMock->method('api')->with('issue')->willReturn($issueApiMock);
+
+        $parser = new CodecheckGithubRegisterApiClient(
+            $this->githubPAT,
+            $this->githubRegisterOrganization,
+            $this->githubRegisterRepository,
+            $this->submissionId,
+            $this->journal,
+            $clientMock
+        );
+
+        $parser->fetchNewestIssues();
+        $issues = $parser->getIssues();
+
+        $this->assertCount(1, $issues);
+        $this->assertSame('Alice | 2025-001', $issues[0]['title']);
+    }
+
+    /**
+     * A register holding nothing but development issues has no certificate to
+     * continue from, so it is an empty register rather than an unreadable one.
+     */
+    public function testARegisterOfOnlyDevelopmentIssuesCountsAsEmpty()
+    {
+        $issueApiMock = $this->createMock(\Github\Api\Issue::class);
+        $issueApiMock->method('all')->willReturnOnConsecutiveCalls(
+            [['title' => 'Register tooling | 2099-999', 'labels' => [['name' => 'development']]]],
+            []
+        );
+
+        $clientMock = $this->createMock(\Github\Client::class);
+        $clientMock->method('api')->with('issue')->willReturn($issueApiMock);
+
+        $parser = new CodecheckGithubRegisterApiClient(
+            $this->githubPAT,
+            $this->githubRegisterOrganization,
+            $this->githubRegisterRepository,
+            $this->submissionId,
+            $this->journal,
+            $clientMock
+        );
+
+        $parser->fetchNewestIssues();
+
+        $this->assertSame([], $parser->getIssues());
+        $this->assertFalse($parser->hasSeenLabelledIssues());
+    }
+
     /** A client whose label probe fails with the given exception. */
     private function clientWhoseLabelProbeThrows(\Throwable $e): CodecheckGithubRegisterApiClient
     {

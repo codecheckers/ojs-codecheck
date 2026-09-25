@@ -921,9 +921,11 @@ export default {
       if (this.metadata.manifest[index]?.providedByAuthor) {
         return;
       }
-      if (confirm(this.t('plugins.generic.codecheck.manifest.removeConfirm'))) {
-        this.metadata.manifest.splice(index, 1);
-      }
+      this.askForConfirmation({
+        title: this.t('plugins.generic.codecheck.manifest.remove.modal.title'),
+        question: this.t('plugins.generic.codecheck.manifest.removeConfirm'),
+        onConfirm: () => this.metadata.manifest.splice(index, 1)
+      });
     },
 
     addRepository() {
@@ -935,15 +937,67 @@ export default {
       if (this.repositories[index]?.providedByAuthor) {
         return;
       }
-      if (confirm(this.t('plugins.generic.codecheck.repositories.removeConfirm'))) {
+      this.askForConfirmation({
+        title: this.t('plugins.generic.codecheck.repositories.remove.modal.title'),
+        question: this.t('plugins.generic.codecheck.repositories.removeConfirm'),
         // The codecheck.yml flag travels with the entry, so removing one cannot
         // leave it pointing at a different repository (Issue #154).
-        this.repositories.splice(index, 1);
-      }
+        onConfirm: () => this.repositories.splice(index, 1)
+      });
     },
 
     canUsePkpModal() {
       return typeof pkp !== 'undefined' && pkp.modules && pkp.modules.useModal;
+    },
+
+    /**
+     * Asks a yes/no question through OJS's own modal, so a confirmation in this
+     * form looks and behaves like every other one in the workflow. The
+     * browser's dialog remains the fallback for a page where the modal is not
+     * available, as it is for the other modals here.
+     *
+     * @param {object} options title, question, onConfirm and optional onCancel
+     */
+    askForConfirmation({ title, question, onConfirm, onCancel = () => {} }) {
+      if (!this.canUsePkpModal()) {
+        if (confirm(question)) {
+          onConfirm();
+        } else {
+          onCancel();
+        }
+        return;
+      }
+
+      const { useModal } = pkp.modules.useModal;
+      const { openDialog } = useModal();
+
+      openDialog({
+        title: title,
+        message: `
+          <div class="modal-form">
+            <div class="modal-field">
+              <label class="modal-label">${this.escapeHtml(question)}</label>
+            </div>
+          </div>
+        `,
+        actions: [
+          {
+            label: this.t('plugins.generic.codecheck.no'),
+            callback: (close) => {
+              close();
+              onCancel();
+            }
+          },
+          {
+            label: this.t('plugins.generic.codecheck.yes'),
+            isPrimary: true,
+            callback: (close) => {
+              close();
+              onConfirm();
+            }
+          }
+        ]
+      });
     },
 
     showRepositoryInfoModal() {
@@ -984,16 +1038,19 @@ export default {
       });
     },
 
+    /**
+     * The no-modal fallback for the repository help text. It asked for input
+     * with `prompt()` to show text, and put HTML markup in a dialog that
+     * renders none, so the link came out as its own tag.
+     */
     showFallbackRepositoryInfoModal() {
-      prompt(
-        this.t('plugins.generic.codecheck.repositories.infoTextOne') +
-        this.t('plugins.generic.codecheck.repositories.infoTextTwo') +
-        this.t('plugins.generic.codecheck.repositories.infoTextNote') +
-        this.t('plugins.generic.codecheck.repositories.infoTextMoreInformation') +
-        '<a href="' + this.t('plugins.generic.codecheck.repositories.infoTextLinkToAllowedRepositories') + '">' +
-          this.t('plugins.generic.codecheck.repositories.infoTextLinkToAllowedRepositories') +
-        '</a>'
-      );
+      alert([
+        this.t('plugins.generic.codecheck.repositories.infoTextOne'),
+        this.t('plugins.generic.codecheck.repositories.infoTextTwo'),
+        this.t('plugins.generic.codecheck.repositories.infoTextNote'),
+        this.t('plugins.generic.codecheck.repositories.infoTextMoreInformation'),
+        this.t('plugins.generic.codecheck.repositories.infoTextLinkToAllowedRepositories')
+      ].join('\n\n'));
     },
 
     showCodecheckerModal() {
@@ -1062,9 +1119,11 @@ export default {
     },
 
     removeCodechecker(index) {
-      if (confirm(this.t('plugins.generic.codecheck.codecheckers.removeConfirm'))) {
-        this.metadata.codecheckers.splice(index, 1);
-      }
+      this.askForConfirmation({
+        title: this.t('plugins.generic.codecheck.codecheckers.remove.modal.title'),
+        question: this.t('plugins.generic.codecheck.codecheckers.removeConfirm'),
+        onConfirm: () => this.metadata.codecheckers.splice(index, 1)
+      });
     },
 
     triggerRegisterIssueDisplayUpdateEvent() {
@@ -1343,7 +1402,7 @@ export default {
         &&
         reserveIdentifierMode != 'linkExistingIdentifier'
       ) {
-        alert('Please select at least one GitHub Issue Label.');
+        this.showMessage(this.t('plugins.generic.codecheck.identifier.labels.required'), 'error');
         return;
       }
 
@@ -1383,18 +1442,20 @@ export default {
           // local argument, not on the server's flag, so the exchange is one
           // round trip whatever comes back.
           if (data.confirmFirstIdentifier && confirmedIdentifier === null) {
-            const question = this.t('plugins.generic.codecheck.identifier.reserve.firstIdentifier.confirm', {
-              identifier: data.identifier,
-              organization: data.organization,
-              repository: data.repository,
+            this.askForConfirmation({
+              title: this.t('plugins.generic.codecheck.identifier.reserve.firstIdentifier.modal.title'),
+              question: this.t('plugins.generic.codecheck.identifier.reserve.firstIdentifier.confirm', {
+                identifier: data.identifier,
+                organization: data.organization,
+                repository: data.repository,
+              }),
+              onConfirm: () => this.reserveIdentifier(reserveIdentifierMode, data.identifier),
+              onCancel: () => this.showMessage(
+                this.t('plugins.generic.codecheck.identifier.reserve.firstIdentifier.cancelled'),
+                'warning'
+              )
             });
-
-            if (!confirm(question)) {
-              this.showMessage(this.t('plugins.generic.codecheck.identifier.reserve.firstIdentifier.cancelled'), 'warning');
-              return;
-            }
-
-            return this.reserveIdentifier(reserveIdentifierMode, data.identifier);
+            return;
           }
 
           // Asked again although this request carried the answer: something
