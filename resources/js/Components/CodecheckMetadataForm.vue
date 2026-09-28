@@ -1297,9 +1297,7 @@ export default {
         return;
       }
 
-      const authorString = this.submissionData.authors.length > 1
-        ? this.submissionData.authors[0].name + ' et al.'
-        : this.submissionData.authors[0].name;
+      const authorString = this.registerAuthorString();
 
       const submissionId = this.submission.id;
       let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
@@ -1414,10 +1412,23 @@ export default {
       }
     },
 
+    /**
+     * The authors as the register issue names them: the first one, "et al."
+     * when there are more. A submission with no authors gives '' — the server
+     * turns that into the issue's placeholder title, so the public register
+     * does not depend on the editor's interface language (#130).
+     */
+    registerAuthorString() {
+      const authors = this.submissionData.authors ?? [];
+      const first = authors[0]?.name ?? '';
+      if (first === '') {
+        return '';
+      }
+      return authors.length > 1 ? first + ' et al.' : first;
+    },
+
     async updateGithubIssueContents() {
-      const authorString = this.submissionData.authors.length > 1
-        ? this.submissionData.authors[0].name + ' et al.'
-        : this.submissionData.authors[0].name;
+      const authorString = this.registerAuthorString();
 
       const submissionId = this.submission.id;
       let apiUrl = pkp.context.apiBaseUrl + 'codecheck';

@@ -602,6 +602,25 @@ describe('CodecheckMetadataForm Component', () => {
   });
 
   /**
+   * A submission may have no authors yet. The empty string is the server's to
+   * turn into the issue's placeholder title, so the request carries no
+   * translated stand-in (#130).
+   */
+  it('reserves an identifier for a submission without authors', () => {
+    interceptMetadata({
+      submission: { ...metadataResponseBody().submission, authors: [] }
+    });
+    interceptReservation();
+
+    mountAndReserve();
+
+    cy.wait('@reserveIdentifier').then((interception) => {
+      expect(interception.request.body.submission.authorString).to.equal('');
+    });
+    cy.get('.certificate-identifier-input').should('have.value', '2025-042');
+  });
+
+  /**
    * The register holds no identifier yet: the server answers with what it
    * found instead of reserving, and the reservation is repeated only once the
    * editor has agreed to the register's first issue being opened (#130).
