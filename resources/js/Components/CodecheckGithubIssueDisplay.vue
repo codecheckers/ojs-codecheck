@@ -60,6 +60,8 @@
 </template>
 
 <script>
+import { escapeHtml } from '../escapeHtml.js';
+
 const { useLocalize } = pkp.modules.useLocalize;
 
 export default {
@@ -176,7 +178,8 @@ export default {
 
       const modalHtml = '<div class="modal-form">' +
         '<div class="modal-field">' +
-        '<label for="checker-name" class="modal-label">' + message + '</label>'
+        '<label class="modal-label">' + escapeHtml(message) + '</label>' +
+        '</div>' +
         '</div>';
 
       openDialog({

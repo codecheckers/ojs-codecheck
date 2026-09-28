@@ -625,6 +625,29 @@ describe('CodecheckMetadataForm Component', () => {
    * found instead of reserving, and the reservation is repeated only once the
    * editor has agreed to the register's first issue being opened (#130).
    */
+  /**
+   * OJS renders a dialog's message as markup. What the server names — here the
+   * register repository — has to arrive as text.
+   */
+  it('shows what the server names in a dialog as text, not markup', () => {
+    cy.intercept('POST', '**/codecheck/identifier?submissionId=1', {
+      statusCode: 200,
+      body: {
+        success: false,
+        confirmFirstIdentifier: true,
+        identifier: '2026-001',
+        organization: 'codecheckers',
+        repository: '<img src=x class="injected">'
+      }
+    }).as('reserveIdentifier');
+
+    mountAndReserve();
+    cy.wait('@reserveIdentifier');
+
+    cy.get('.pkp-mock-modal__message').should('contain', '<img src=x class="injected">');
+    cy.get('.pkp-mock-modal__message img').should('not.exist');
+  });
+
   it('asks before reserving the first identifier of an empty register', () => {
     const submissionId = 1;
     let call = 0;

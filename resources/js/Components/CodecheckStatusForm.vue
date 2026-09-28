@@ -67,6 +67,8 @@
 </template>
 
 <script>
+import { escapeHtml } from '../escapeHtml.js';
+
 const { useLocalize } = pkp.modules.useLocalize;
 
 export default {
@@ -169,16 +171,11 @@ export default {
         return this.t(this.statusData.status);
     },
     getStatusSelect() {
-        let statusSelectString = '<select id="codecheck-status-select">';
-        this.allStatuses.forEach(element => {
-            if(element === this.statusData.status) {
-                statusSelectString += '<option value="' + element + '" selected>' + this.t(element) + '</option>';
-            } else {
-                statusSelectString += '<option value="' + element + '">' + this.t(element) + '</option>';
-            }
+        const options = this.allStatuses.map((status) => {
+            const selected = status === this.statusData.status ? ' selected' : '';
+            return '<option value="' + escapeHtml(status) + '"' + selected + '>' + escapeHtml(this.t(status)) + '</option>';
         });
-        statusSelectString += '</select>';
-        return statusSelectString;
+        return '<select id="codecheck-status-select">' + options.join('') + '</select>';
     },
     async showStatusModal() {
       const { useModal } = pkp.modules.useModal;
@@ -186,8 +183,9 @@ export default {
 
       const modalHtml = '<div class="modal-form">' +
         '<div class="modal-field">' +
-        '<label for="checker-name" class="modal-label">' + this.t('plugins.generic.codecheck.status.modal.label') + '</label>' +
+        '<label for="codecheck-status-select" class="modal-label">' + escapeHtml(this.t('plugins.generic.codecheck.status.modal.label')) + '</label>' +
         this.getStatusSelect() +
+        '</div>' +
         '</div>';
 
       openDialog({
@@ -241,20 +239,23 @@ export default {
         let statusHistoryRows = "";
         for (const element of statusHistory) {
             const user = await this.getUser(element.user_id);
+            // getUser() answers undefined, or an error body, for a user it cannot read
+            const name = escapeHtml(user?.fullName ?? element.user_id);
+            const userCell = user?.email ? `<a href="mailto:${escapeHtml(user.email)}">${name}</a>` : name;
             statusHistoryRows += `
                 <tr class="border-separate border ${mostRecentStatus ? "padding-mostRecentStatus" : "border-light"} even:bg-tertiary">
                     <td scope="false" class="border-b ${mostRecentStatus ? "border-mostRecentStatus-vertical border-mostRecentStatus-left" : "border-light first:border-s last:border-e"} px-2 py-2 text-start text-base-normal first:ps-3 last:pe-3">
                         <div class="flex items-center">
-                            <span class="text-base-normal text-default">${mostRecentStatus ? "<span style='font-weight:bold'>Current Status</span><br>" : ""}${element.timestamp}</span>
+                            <span class="text-base-normal text-default">${mostRecentStatus ? "<span style='font-weight:bold'>Current Status</span><br>" : ""}${escapeHtml(element.timestamp)}</span>
                         </div>
                     </td>
                     <td scope="false" class="border-b ${mostRecentStatus ? "border-mostRecentStatus-vertical" : "border-light first:border-s last:border-e"} px-2 py-2 text-start text-base-normal first:ps-3 last:pe-3 whitespace-nowrap">
                         <span class="pkpBadge ${mostRecentStatus ? "pkpBadge--isPrimary" : "codecheckBadge--isInvisible"}">
-                            <div class="flex items-center justify-center">${this.t(element.status)}</div>
+                            <div class="flex items-center justify-center">${escapeHtml(this.t(element.status))}</div>
                         </span>
                     </td>
                     <td scope="false" class="border-b ${mostRecentStatus ? "border-mostRecentStatus-vertical border-mostRecentStatus-right" : "border-light first:border-s last:border-e"} px-2 py-2 text-start text-base-normal first:ps-3 last:pe-3 whitespace-nowrap">
-                        <span class="text-base-normal text-default">${user.email === null ? user.fullName : "<a href='mailto:" + user.email + "'>" + user.fullName + "</a>"}</span>
+                        <span class="text-base-normal text-default">${userCell}</span>
                     </td>
                 </tr>
             `;
@@ -270,13 +271,13 @@ export default {
                 <thead>
                     <tr class="bg bg-default">
                         <th scope="col" class="whitespace-nowrap border-b border-t border-light px-2 py-4 text-start text-base-normal uppercase text-heading first:border-s first:ps-3 last:border-e last:pe-3">
-                            <span>${this.t('plugins.generic.codecheck.status.history.timestamp')}</span>
+                            <span>${escapeHtml(this.t('plugins.generic.codecheck.status.history.timestamp'))}</span>
                         </th>
                         <th scope="col" class="whitespace-nowrap border-b border-t border-light px-2 py-4 text-start text-base-normal uppercase text-heading first:border-s first:ps-3 last:border-e last:pe-3">
-                            <span>${this.t('plugins.generic.codecheck.status')}</span>
+                            <span>${escapeHtml(this.t('plugins.generic.codecheck.status'))}</span>
                         </th>
                         <th scope="col" class="whitespace-nowrap border-b border-t border-light px-2 py-4 text-start text-base-normal uppercase text-heading first:border-s first:ps-3 last:border-e last:pe-3">
-                            <span>${this.t('plugins.generic.codecheck.status.history.user')}</span>
+                            <span>${escapeHtml(this.t('plugins.generic.codecheck.status.history.user'))}</span>
                         </th>
                     </tr>
                 </thead>
@@ -287,7 +288,8 @@ export default {
             <tbody>
                 ${await this.getStatusHistoryTableRows(statusHistory, tableTop)}
             </tbody>
-        </table>`
+        </table>
+        </div>`
         
         return table;
     },

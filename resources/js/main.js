@@ -2,6 +2,7 @@ import { createApp, reactive } from 'vue';
 import CodecheckManifestFiles from "./Components/CodecheckManifestFiles.vue";
 import CodecheckRepositoryList from "./Components/CodecheckRepositoryList.vue";
 import { authorProvidedLines } from "./authorEntries.js";
+import { escapeHtml } from "./escapeHtml.js";
 import CodecheckReviewDisplay from "./Components/CodecheckReviewDisplay.vue";
 import CodecheckDataAndSoftwareAvailability from "./Components/CodecheckDataAndSoftwareAvailability.vue";
 import CodecheckOrcidSection from "./Components/CodecheckOrcidSection.vue";
@@ -182,7 +183,7 @@ pkp.registry.storeExtend("fileManager_SUBMISSION_FILES", (piniaContext) => {
 
             openDialog({
               title: t("plugins.generic.codecheck.markAsOutputTitle"),
-              message: t("plugins.generic.codecheck.markAsOutputConfirm", { fileName: localize(file.name) }),
+              message: escapeHtml(t("plugins.generic.codecheck.markAsOutputConfirm", { fileName: localize(file.name) })),
               actions: [
                 {
                   label: t("common.yes"),
@@ -513,9 +514,9 @@ class CodecheckReviewRefresher {
       if (repositories.length) {
         body.innerHTML += `
           <div class="submissionWizard__reviewPanel__item">
-            <h4>${this.escapeHtml(t('plugins.generic.codecheck.repositories.label'))}</h4>
+            <h4>${escapeHtml(t('plugins.generic.codecheck.repositories.label'))}</h4>
             <div class="review-value">
-              <p>${repositories.map(r => this.escapeHtml(r.url)).join('<br>')}</p>
+              <p>${repositories.map(r => escapeHtml(r.url)).join('<br>')}</p>
             </div>
           </div>
         `;
@@ -524,9 +525,9 @@ class CodecheckReviewRefresher {
       if (manifest.length) {
         body.innerHTML += `
           <div class="submissionWizard__reviewPanel__item">
-            <h4>${this.escapeHtml(t('plugins.generic.codecheck.manifestFiles.label'))}</h4>
+            <h4>${escapeHtml(t('plugins.generic.codecheck.manifestFiles.label'))}</h4>
             <div class="review-value">
-              <pre>${manifest.map(m => this.escapeHtml(m.file)).join('\n')}</pre>
+              <pre>${manifest.map(m => escapeHtml(m.file)).join('\n')}</pre>
             </div>
           </div>
         `;
@@ -535,9 +536,9 @@ class CodecheckReviewRefresher {
       if (availability) {
         body.innerHTML += `
           <div class="submissionWizard__reviewPanel__item">
-            <h4>${this.escapeHtml(t('plugins.generic.codecheck.dataAvailability'))}</h4>
+            <h4>${escapeHtml(t('plugins.generic.codecheck.dataAvailability'))}</h4>
             <div class="review-value">
-              <div>${this.escapeHtml(availability)}</div>
+              <div>${escapeHtml(availability)}</div>
             </div>
           </div>
         `;
@@ -547,7 +548,7 @@ class CodecheckReviewRefresher {
         body.innerHTML = `
           <div class="submissionWizard__reviewPanel__item">
             <p class="description" style="color: #d00a0a;">
-              <em>${this.escapeHtml(t('plugins.generic.codecheck.noDataFound'))}</em>
+              <em>${escapeHtml(t('plugins.generic.codecheck.noDataFound'))}</em>
             </p>
           </div>
         `;
@@ -555,13 +556,6 @@ class CodecheckReviewRefresher {
     } catch (error) {
       console.error('CODECHECK: Failed to refresh review data', error);
     }
-  }
-
-  escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
   }
 
   getSubmissionId() {

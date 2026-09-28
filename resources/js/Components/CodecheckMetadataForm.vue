@@ -425,6 +425,9 @@
 </template>
 
 <script>
+import { escapeHtml } from '../escapeHtml.js';
+import { isWebUrl } from '../isWebUrl.js';
+
 const { useLocalize } = pkp.modules.useLocalize;
 
 // Mirrors Constants::CODECHECK_CONFIG_SPEC_URL / getConfigSpecUrl() on the PHP side.
@@ -509,10 +512,15 @@ export default {
      * https://docs.pkp.sfu.ca/translating-guide/en/coders#semantics
      */
     introText() {
-      const link = '<a href="' + this.specUrl + '" target="_blank" rel="noopener noreferrer">'
-        + this.t('plugins.generic.codecheck.form.intro.specLinkLabel')
+      const link = '<a href="' + escapeHtml(this.specUrl) + '" target="_blank" rel="noopener noreferrer">'
+        + escapeHtml(this.t('plugins.generic.codecheck.form.intro.specLinkLabel'))
         + '</a>';
-      return this.t('plugins.generic.codecheck.form.intro', {specLink: link});
+      // The sentence is escaped as text and the link put in afterwards, so the
+      // only markup in the result is the markup built here. A marker stands in
+      // for the link, since escaping would otherwise reach the link as well.
+      const marker = '\u0000specLink\u0000';
+      return escapeHtml(this.t('plugins.generic.codecheck.form.intro', {specLink: marker}))
+        .replace(marker, link);
     },
 
     /**
@@ -961,7 +969,7 @@ export default {
         message: `
           <div class="modal-form">
             <div class="modal-field">
-              <label class="modal-label">${this.escapeHtml(question)}</label>
+              <label class="modal-label">${escapeHtml(question)}</label>
             </div>
           </div>
         `,
@@ -989,18 +997,23 @@ export default {
       const { useModal } = pkp.modules.useModal;
       const { openDialog } = useModal();
 
+      // The address is a translation, so it is checked like any other address
+      // before it becomes a link.
+      const address = this.t('plugins.generic.codecheck.repositories.infoTextLinkToAllowedRepositories');
+      const link = isWebUrl(address)
+        ? '<a href="' + escapeHtml(address) + '">' + escapeHtml(address) + '</a>'
+        : escapeHtml(address);
+
       const modalHtml = '<div class="modal-form">' +
         '<div class="modal-field">' +
-        '<label class="modal-label">' + this.t('plugins.generic.codecheck.repositories.infoTextOne') + '</label><br>' +
-        '<label class="modal-label">' + this.t('plugins.generic.codecheck.repositories.infoTextTwo') + '</label><br>' +
-        '<label class="modal-label text-bold text-pink">' + this.t('plugins.generic.codecheck.repositories.infoTextNote') + '</label><br>' +
+        '<label class="modal-label">' + escapeHtml(this.t('plugins.generic.codecheck.repositories.infoTextOne')) + '</label><br>' +
+        '<label class="modal-label">' + escapeHtml(this.t('plugins.generic.codecheck.repositories.infoTextTwo')) + '</label><br>' +
+        '<label class="modal-label text-bold text-pink">' + escapeHtml(this.t('plugins.generic.codecheck.repositories.infoTextNote')) + '</label><br>' +
         '<label class="modal-label">' +
-          this.t('plugins.generic.codecheck.repositories.infoTextMoreInformation') +
-          '<a href="' + this.t('plugins.generic.codecheck.repositories.infoTextLinkToAllowedRepositories') + '">'
-            + this.t('plugins.generic.codecheck.repositories.infoTextLinkToAllowedRepositories') +
-          '</a>' +
+          escapeHtml(this.t('plugins.generic.codecheck.repositories.infoTextMoreInformation')) +
+          link +
         '</label>' +
-        '</div>'
+        '</div>' +
         '</div>';
 
       openDialog({
@@ -1019,13 +1032,16 @@ export default {
       const { useModal } = pkp.modules.useModal;
       const { openDialog } = useModal();
 
+      const enterName = escapeHtml(this.t('plugins.generic.codecheck.codecheckers.enterName'));
+      const enterOrcid = escapeHtml(this.t('plugins.generic.codecheck.codecheckers.enterOrcid'));
+
       const modalHtml = '<div class="modal-form">' +
         '<div class="modal-field">' +
-        '<label for="checker-name" class="modal-label">' + this.t('plugins.generic.codecheck.codecheckers.enterName') + '</label>' +
-        '<input type="text" id="checker-name" class="modal-input" placeholder="' + this.t('plugins.generic.codecheck.codecheckers.enterName') + '" />' +
+        '<label for="checker-name" class="modal-label">' + enterName + '</label>' +
+        '<input type="text" id="checker-name" class="modal-input" placeholder="' + enterName + '" />' +
         '</div>' +
         '<div class="modal-field">' +
-        '<label for="checker-orcid" class="modal-label">' + this.t('plugins.generic.codecheck.codecheckers.enterOrcid') + '</label>' +
+        '<label for="checker-orcid" class="modal-label">' + enterOrcid + '</label>' +
         '<input type="text" id="checker-orcid" class="modal-input" placeholder="0000-0000-0000-0000" />' +
         '</div>' +
         '</div>';
@@ -1223,7 +1239,7 @@ export default {
       };
 
       const modalHtml = '<div class="yaml-modal-container">' +
-        '<pre class="yaml-preview-content">' + this.escapeHtml(yamlContent) + '</pre>' +
+        '<pre class="yaml-preview-content">' + escapeHtml(yamlContent) + '</pre>' +
         '</div>';
 
       openDialog({
@@ -1483,12 +1499,6 @@ export default {
         question: this.t('plugins.generic.codecheck.identifier.remove.modal.areYouSureYouWantToRemoveTheIdentifier'),
         onConfirm: () => this.removeIdentifier()
       });
-    },
-
-    escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
     },
 
     validateForm() {
