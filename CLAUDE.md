@@ -322,6 +322,64 @@ Register deposit fires on `Publication::publish`, is gated by
 flagged as containing `codecheck.yml`, re-verifies the `codecheck.yml` is fetchable, and
 **never blocks publication on failure** (logged only).
 
+`CodecheckStatusRegisterUpdate` carries a recorded status change to the register
+issue: a comment on its timeline (#150) and the labels that say where the check
+stands (#174). Both halves need the same four things resolved — the journal's
+`updateStatus` choice, the credentials, the register and the issue number — which
+is why they share a class rather than a second resolver, and each is attempted
+independently so a refused comment still brings the labels.
+
+**The labels are changed one at a time, never replaced — on every path.** A
+register issue carries labels nobody here owns — the venue, `check-nl`,
+`buddy exchange`, `help welcome`, `metadata pending` — and writing the whole
+list wipes all of them. `updateIssue()` did exactly that: it sent `labels` in
+its `PATCH`, built from `id assigned` plus what the form had selected, so an
+editor pressing "update issue" undid the status labels and every human one. It
+now adds them instead, which makes the form's label selection **add-only** —
+deselecting a venue label no longer takes it off the issue. That consequence is
+currently unreachable through the UI: the label checkboxes sit in a `fieldset`
+that is disabled once an identifier is reserved, so the selection cannot be
+changed after the issue exists. Whether the form should be able to remove the
+labels it offers is open; doing so means a second managed set, not a wholesale
+write. `Constants::CODECHECK_REGISTER_MANAGED_LABELS` is the whole set the plugin
+will ever **remove** (`needs codechecker`, `work in progress`) — it adds outside
+it, namely `id assigned` and the venue labels the form offers — and
+`CODECHECK_REGISTER_STATUS_LABELS` maps each status to the ones that belong on
+the issue; `labelChanges()` diffs that against what the issue carries, and is
+pure so the rule is unit tested without GitHub. A status missing from the map
+changes nothing, because "unknown" is not a state to write into someone else's
+repository. `id assigned` is deliberately not managed: it is set when the issue
+is opened and never withdrawn, or the identifier could not be found again.
+Stalled keeps `work in progress` — the comment says it stalled and who it waits
+on, which labels are too coarse to carry — and `work in progress` comes off at
+*completed*, published or not. These were the repository owner's decisions.
+
+Three properties of the sync that are easy to undo by accident:
+
+- **Every label write stands alone.** One `try` around the batch meant the first
+  refusal abandoned the rest, leaving an issue saying both that it needs a
+  codechecker and that one is working on it — the state #174 is about. Removals
+  run first, so a half-done sync says too little rather than two things at once.
+- **A removal GitHub answers 404 for has already happened.** Reporting it as a
+  failure made the sync depend on nobody else having touched the issue.
+- **The labels follow the *current* status, not the one being recorded**, so two
+  recordings that interleave settle on the newest row rather than on whichever
+  request finished last. The comment says what was recorded; the labels say
+  where the check stands.
+
+**A recorded issue number is only an address together with its repository.** A
+journal that moves from a testing register to the production one keeps the old
+numbers on its submissions, and that number in the new register is somebody
+else's check — so the stored `issue.url` is compared against the configured
+register before anything is written, and a record from before the URL was stored
+is accepted (`issueUrlIsInRegister()`). The settings form checks that the
+register carries every label the plugin needs, because **GitHub creates an
+unknown label when an issue is given one** — without the check the plugin would
+invent labels in someone else's repository. And `CodecheckIssueLabels` keeps all
+of them out of the list the form offers
+(`isAssignedByThePlugin()`), or the form would add what a status change had just
+removed.
+
 ### Publication validation
 
 **`Publication::validatePublish` is not on every publishing path.** The REST
@@ -582,7 +640,7 @@ README.md; keep `css/codecheck.css` and inline component styles consistent.
 ### Layout
 
 ```
-tests/                       PHPUnit (31 files, 276 tests)
+tests/                       PHPUnit (33 test classes, 341 tests)
   bootstrap.php              PKP_STRICT_MODE + BASE_SYS_DIR (OJS_ROOT or ../../../..)
   PKPTestCase.php            local stub extending PHPUnit TestCase
   FakeTranslator.php         minimal translator so __() works without booting OJS
@@ -603,7 +661,7 @@ tests/                       PHPUnit (31 files, 276 tests)
   SubmissionUnitTests/         AvailabilityStatementField, CodecheckRepositories,
                                CodecheckSubmissionDAO, CodecheckSubmission, Schema
   WorkflowUnitTests/           CodecheckMetadataHandler, CodecheckPublicationValidator,
-                               CodecheckYamlValidator
+                               CodecheckStatusRegisterUpdate, CodecheckYamlValidator
 
 cypress/
   support/component.js         mounts via @cypress/vue, imports css/codecheck.css
@@ -759,7 +817,7 @@ Still uncovered: opt-in, the submission wizard, and register deposit.
 
 ### PHPUnit tests
 
-`make test-php` — 276 tests, green, none skipped.
+`make test-php` — 341 tests, green, none skipped.
 
 PHPUnit needs an OJS installation: the tests load OJS classes and the runner uses the
 PHPUnit shipped in `lib/pkp`. Both `runTests.sh` and `bootstrap.php` honour `OJS_ROOT`,

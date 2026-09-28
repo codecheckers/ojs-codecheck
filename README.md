@@ -121,11 +121,11 @@ A repository used as a register has to meet the following requirements.
 | Public repository | The plugin reads issues and labels without authenticating; register entries are public by design |
 | Issues enabled | One issue per CODECHECK is created in the register |
 | A label named `id assigned` | Certificate identifiers are found by filtering issues on this label. Without it the plugin finds no identifiers at all |
+| Labels named `needs codechecker` and `work in progress` | A CODECHECK status change moves these two, and only these two, on the register issue. GitHub invents a label that does not exist when an issue is given one, so a register spelling them differently would collect invented labels |
 | Issue titles ending in `… \| YYYY-NNN` | The identifier is read from the part after the last `\|`. A range, `YYYY-NNN/YYYY-NNN`, is also accepted; anything else is ignored |
 | `register.csv` at the repository root, with a header row | Register deposits append a row to it. Only needed when deposits are enabled |
 
-The settings form checks two of these — the `id assigned` label and
-`register.csv` — when the configured organisation or repository changes, and
+The settings form checks the labels and `register.csv` — when the configured organisation or repository changes, and
 warns about whatever is missing, or that the repository could not be read at
 all. It does not check on every save, because the requests count against
 GitHub's unauthenticated rate limit.

@@ -191,6 +191,50 @@ class Constants
     public const CODECHECK_REGISTER_ID_ASSIGNED_LABEL = 'id assigned';
     public const CODECHECK_REGISTER_DEVELOPMENT_LABEL = 'development';
 
+    // The two register labels that say where a check stands (#174).
+    public const CODECHECK_REGISTER_NEEDS_CODECHECKER_LABEL = 'needs codechecker';
+    public const CODECHECK_REGISTER_WORK_IN_PROGRESS_LABEL = 'work in progress';
+
+    /**
+     * The register labels the plugin maintains, and the only ones it will ever
+     * remove from a register issue.
+     *
+     * A register issue carries labels nobody here owns — the venue, `check-nl`,
+     * `buddy exchange`, `help welcome`, `metadata pending`, and whatever else a
+     * human added — so the labels are changed one at a time against this list.
+     * Writing the whole list instead would wipe all of them, which is what #174
+     * is about. `id assigned` is deliberately absent: it is set when the issue
+     * is opened and never withdrawn, or the identifier could not be found again.
+     */
+    public const CODECHECK_REGISTER_MANAGED_LABELS = [
+        self::CODECHECK_REGISTER_NEEDS_CODECHECKER_LABEL,
+        self::CODECHECK_REGISTER_WORK_IN_PROGRESS_LABEL,
+    ];
+
+    /**
+     * Which of the managed labels belong on the register issue at each status.
+     *
+     * Decided with the register in mind (#174): a check that has no codechecker
+     * says so, a check that has one is in progress, a stalled check is still in
+     * progress — the comment on the issue says it stalled and who it waits on,
+     * which the labels are too coarse to carry — and a completed check is no
+     * longer in progress, whether or not its certificate is published yet.
+     *
+     * A status that is not listed here leaves every label alone, because
+     * "unknown" is not a state to write into someone else's repository.
+     */
+    public const CODECHECK_REGISTER_STATUS_LABELS = [
+        self::CODECHECK_STATUS_NEEDS_CODECHECKER => [self::CODECHECK_REGISTER_NEEDS_CODECHECKER_LABEL],
+        self::CODECHECK_STATUS_ASSIGNED_CODECHECKER => [self::CODECHECK_REGISTER_WORK_IN_PROGRESS_LABEL],
+        self::CODECHECK_STATUS_STALLED_AUTHOR => [self::CODECHECK_REGISTER_WORK_IN_PROGRESS_LABEL],
+        self::CODECHECK_STATUS_STALLED_CODECHECKER => [self::CODECHECK_REGISTER_WORK_IN_PROGRESS_LABEL],
+        self::CODECHECK_STATUS_COMPLETED_UNSUCCESSFUL => [],
+        self::CODECHECK_STATUS_COMPLETED_PARTIAL_REPRODUCTION => [],
+        self::CODECHECK_STATUS_COMPLETED_FULL_REPRODUCTION => [],
+        self::CODECHECK_STATUS_PUBLISHED_PARTIAL_REPRODUCTION => [],
+        self::CODECHECK_STATUS_PUBLISHED_FULL_REPRODUCTION => [],
+    ];
+
     // Update Github Register Issue
     public const CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_FIELDS = 'codecheckGithubUpdateFields';
     public const CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE = 'updateTitle';

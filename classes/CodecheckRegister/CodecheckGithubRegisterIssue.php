@@ -6,6 +6,7 @@ use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckRepositories;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckStatusHandler;
+use APP\plugins\generic\codecheck\classes\Workflow\CodecheckStatusRegisterUpdate;
 
 class CodecheckGithubRegisterIssue
 {
@@ -123,13 +124,31 @@ class CodecheckGithubRegisterIssue
         . $statusInformation;
     }
 
+    /**
+     * The labels the issue carries: the identifier label, the ones the status
+     * asks for, and the venue labels the editor chose.
+     *
+     * The status labels belong here as well as on a later status change (#174),
+     * because the ordinary order of work records a status *before* an identifier
+     * is reserved — so the issue would otherwise be opened without
+     * `needs codechecker`, which is exactly the label someone looking for work
+     * in the register filters on, and no later change would add it.
+     */
     private function fillLabels(
         CodecheckIssueLabels $codecheckIssueLabels
     ): array {
         $labels = [Constants::CODECHECK_REGISTER_ID_ASSIGNED_LABEL];
+
+        if ($this->updateStatus) {
+            $labels = array_merge(
+                $labels,
+                CodecheckStatusRegisterUpdate::wantedLabels($this->codecheckStatus) ?? []
+            );
+        }
+
         $labels = array_merge($labels, $codecheckIssueLabels->get()->toArray());
 
-        return $labels;
+        return array_values(array_unique($labels));
     }
 
     private function getFormattedLabelsForUrl(): string

@@ -8,6 +8,7 @@ use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegis
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckIssueLabels;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\DataStructures\UniqueArray;
+use APP\plugins\generic\codecheck\classes\Exceptions\ApiUpdateException;
 use PKP\tests\PKPTestCase;
 
 /**
@@ -480,12 +481,180 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
         $this->assertFalse($parser->hasSeenLabelledIssues());
     }
 
-    /** A client whose label probe fails with the given exception. */
-    private function clientWhoseLabelProbeThrows(\Throwable $e): CodecheckGithubRegisterApiClient
+    /**
+     * Read off the issue rather than from the labels endpoint, which answers one
+     * unpaginated page — where "absent" and "not on this page" read alike.
+     */
+    public function testGetIssueLabelsReadsTheNamesOffTheIssue()
+    {
+        $issueApiMock = $this->createMock(\Github\Api\Issue::class);
+        $issueApiMock->expects($this->once())
+            ->method('show')
+            ->with($this->githubRegisterOrganization, $this->githubRegisterRepository, 190)
+            ->willReturn([
+                'number' => 190,
+                'labels' => [
+                    ['name' => 'id assigned'],
+                    ['name' => 'work in progress'],
+                    ['name' => 'journal'],
+                ],
+            ]);
+
+        $clientMock = $this->createMock(\Github\Client::class);
+        $clientMock->method('api')->with('issue')->willReturn($issueApiMock);
+
+        $parser = new CodecheckGithubRegisterApiClient(
+            $this->githubPAT,
+            $this->githubRegisterOrganization,
+            $this->githubRegisterRepository,
+            $this->submissionId,
+            $this->journal,
+            $clientMock
+        );
+
+        $this->assertSame(
+            ['id assigned', 'work in progress', 'journal'],
+            $parser->getIssueLabels(190)
+        );
+    }
+
+    /**
+     * Adding is not replacing: a register issue carries labels nobody here owns,
+     * and `replace` would wipe them (#174).
+     */
+    public function testAddLabelsToIssueAddsAndNeverReplaces()
     {
         $labelsApiMock = $this->createMock(\Github\Api\Issue\Labels::class);
-        $labelsApiMock->method('show')->willThrowException($e);
+        $labelsApiMock->expects($this->once())
+            ->method('add')
+            ->with(
+                $this->githubRegisterOrganization,
+                $this->githubRegisterRepository,
+                190,
+                ['work in progress']
+            );
+        $labelsApiMock->expects($this->never())->method('replace');
+        $labelsApiMock->expects($this->never())->method('clear');
 
+        $this->clientWithLabelsApi($labelsApiMock)->addLabelsToIssue(190, ['work in progress']);
+    }
+
+    public function testAddLabelsToIssueDoesNothingWithoutLabels()
+    {
+        $labelsApiMock = $this->createMock(\Github\Api\Issue\Labels::class);
+        $labelsApiMock->expects($this->never())->method('add');
+
+        $this->clientWithLabelsApi($labelsApiMock)->addLabelsToIssue(190, []);
+    }
+
+    public function testRemoveLabelFromIssueRemovesThatOneLabel()
+    {
+        $labelsApiMock = $this->createMock(\Github\Api\Issue\Labels::class);
+        $labelsApiMock->expects($this->once())
+            ->method('remove')
+            ->with(
+                $this->githubRegisterOrganization,
+                $this->githubRegisterRepository,
+                190,
+                'needs codechecker'
+            );
+        $labelsApiMock->expects($this->never())->method('clear');
+
+        $this->clientWithLabelsApi($labelsApiMock)->removeLabelFromIssue(190, 'needs codechecker');
+    }
+
+    public function testALabelChangeGitHubRefusesIsReportedAsAnUpdateFailure()
+    {
+        $labelsApiMock = $this->createMock(\Github\Api\Issue\Labels::class);
+        $labelsApiMock->method('remove')->willThrowException(new \Exception('Forbidden', 403));
+
+        $this->expectException(ApiUpdateException::class);
+
+        $this->clientWithLabelsApi($labelsApiMock)->removeLabelFromIssue(190, 'needs codechecker');
+    }
+
+    /**
+     * GitHub answers 404 when the label is not on the issue, which is the state
+     * the removal asked for. Treating that as a failure would make the sync
+     * depend on nobody else having touched the issue meanwhile (#174).
+     */
+    public function testRemovingALabelThatIsNotThereIsNotAFailure()
+    {
+        $labelsApiMock = $this->createMock(\Github\Api\Issue\Labels::class);
+        $labelsApiMock->expects($this->once())
+            ->method('remove')
+            ->willThrowException(new \Exception('Label does not exist', 404));
+
+        // The assertion is that this does not throw.
+        $this->clientWithLabelsApi($labelsApiMock)->removeLabelFromIssue(190, 'needs codechecker');
+    }
+
+    /**
+     * Updating a register issue must not write the `labels` array: that replaced
+     * everything on the issue, so pressing "update issue" wiped the status
+     * labels, `buddy exchange`, `help welcome` and anything else a human had
+     * added. The labels the form offers are added instead (#174).
+     */
+    public function testUpdatingAnIssueAddsLabelsAndNeverReplacesThem()
+    {
+        $certMock = $this->createMock(CertificateIdentifier::class);
+        $certMock->method('toStr')->willReturn('2025-001');
+
+        $collectionMock = $this->createMock(UniqueArray::class);
+        $collectionMock->method('toArray')->willReturn(['institution', 'check-nl']);
+        $issueLabelsMock = $this->createMock(CodecheckIssueLabels::class);
+        $issueLabelsMock->method('get')->willReturn($collectionMock);
+
+        $labelsApiMock = $this->createMock(\Github\Api\Issue\Labels::class);
+        $labelsApiMock->expects($this->once())
+            ->method('add')
+            ->with(
+                $this->githubRegisterOrganization,
+                $this->githubRegisterRepository,
+                190,
+                ['id assigned', 'institution', 'check-nl']
+            );
+        $labelsApiMock->expects($this->never())->method('replace');
+
+        $issueApiMock = $this->createMock(\Github\Api\Issue::class);
+        $issueApiMock->method('labels')->willReturn($labelsApiMock);
+        $issueApiMock->expects($this->once())
+            ->method('update')
+            ->with(
+                $this->githubRegisterOrganization,
+                $this->githubRegisterRepository,
+                190,
+                $this->callback(fn ($contents) => !array_key_exists('labels', $contents))
+            )
+            ->willReturn(['html_url' => 'https://github.com/x/y/issues/190', 'number' => 190]);
+
+        $clientMock = $this->createMock(\Github\Client::class);
+        $clientMock->method('api')->with('issue')->willReturn($issueApiMock);
+
+        $parser = new CodecheckGithubRegisterApiClient(
+            $this->githubPAT,
+            $this->githubRegisterOrganization,
+            $this->githubRegisterRepository,
+            $this->submissionId,
+            $this->journal,
+            $clientMock
+        );
+
+        $parser->updateIssue(
+            $this->updateInformation,
+            190,
+            $certMock,
+            $issueLabelsMock,
+            'Some Paper',
+            'Daniel Nüst et al.',
+            [],
+            []
+        );
+    }
+
+    /** A client whose issue-labels API is the given mock. */
+    private function clientWithLabelsApi(\Github\Api\Issue\Labels $labelsApiMock): CodecheckGithubRegisterApiClient
+    {
         $issueApiMock = $this->createMock(\Github\Api\Issue::class);
         $issueApiMock->method('labels')->willReturn($labelsApiMock);
         $clientMock = $this->createMock(\Github\Client::class);
@@ -499,5 +668,14 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
             $this->journal,
             $clientMock
         );
+    }
+
+    /** A client whose label probe fails with the given exception. */
+    private function clientWhoseLabelProbeThrows(\Throwable $e): CodecheckGithubRegisterApiClient
+    {
+        $labelsApiMock = $this->createMock(\Github\Api\Issue\Labels::class);
+        $labelsApiMock->method('show')->willThrowException($e);
+
+        return $this->clientWithLabelsApi($labelsApiMock);
     }
 }

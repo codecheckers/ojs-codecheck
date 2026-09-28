@@ -249,21 +249,39 @@ class CodecheckGithubRegisterApiClient
 
     /**
      * Whether a register issue is one of the register's own development issues.
-     *
-     * GitHub hands labels back as objects, and a search result occasionally as
-     * bare names, so both shapes are read.
      */
     private static function isDevelopmentIssue(array $issue): bool
     {
-        foreach ($issue['labels'] ?? [] as $label) {
-            $name = is_array($label) ? ($label['name'] ?? '') : $label;
+        return in_array(
+            Constants::CODECHECK_REGISTER_DEVELOPMENT_LABEL,
+            self::labelNames($issue['labels'] ?? []),
+            true
+        );
+    }
 
-            if ($name === Constants::CODECHECK_REGISTER_DEVELOPMENT_LABEL) {
-                return true;
+    /**
+     * The names of a set of labels as GitHub handed them over.
+     *
+     * They arrive as objects, and a search result occasionally as bare names,
+     * so both shapes are read here rather than at each of the three call sites.
+     *
+     * @param mixed $labels What GitHub answered where a list of labels belongs
+     *
+     * @return string[]
+     */
+    private static function labelNames(mixed $labels): array
+    {
+        $names = [];
+
+        foreach (is_array($labels) ? $labels : [] as $label) {
+            $name = is_array($label) ? ($label['name'] ?? null) : $label;
+
+            if (is_string($name) && $name !== '') {
+                $names[] = $name;
             }
         }
 
-        return false;
+        return $names;
     }
 
     /**
@@ -277,8 +295,8 @@ class CodecheckGithubRegisterApiClient
             throw new ApiFetchException("Failed fetching the GitHub Issue Labels for the Venue Names\n" . $e->getMessage());
         }
 
-        foreach ($fetchedLabels as $label) {
-            $this->labels->add($label['name']);
+        foreach (self::labelNames($fetchedLabels) as $name) {
+            $this->labels->add($name);
         }
     }
 
@@ -332,6 +350,117 @@ class CodecheckGithubRegisterApiClient
         }
 
         return $issue;
+    }
+
+    /**
+     * The labels currently on a register issue.
+     *
+     * Read before changing any, so a label is neither added twice nor removed
+     * when it is not there — and so the log can say what actually changed.
+     *
+     * @return string[] The label names, in the order GitHub returns them
+     */
+    public function getIssueLabels(int $issueNumber): array
+    {
+        $this->client->authenticate($this->githubPAT, null, Client::AUTH_ACCESS_TOKEN);
+
+        try {
+            // The issue carries its whole label set inline. The labels endpoint
+            // would answer one unpaginated page of 30, where "absent" and "not
+            // on this page" read the same — and a register issue can hold more.
+            $issue = $this->client->api('issue')->show(
+                $this->githubRegisterOrganization,
+                $this->githubRegisterRepository,
+                $issueNumber
+            );
+
+            return self::labelNames(is_array($issue) ? ($issue['labels'] ?? []) : []);
+        } catch (\Throwable $e) {
+            throw new ApiFetchException(
+                "Failed fetching the labels of register issue #{$issueNumber}\n" . $e->getMessage(),
+                (int) $e->getCode()
+            );
+        }
+    }
+
+    /**
+     * Add labels to a register issue, leaving the ones already on it alone.
+     *
+     * Adding is deliberately not replacing: the register issue carries labels
+     * nobody here owns, and replacing the list would wipe them (#174).
+     *
+     * @param string[] $labels
+     *
+     * @throws ApiUpdateException when GitHub refuses the change.
+     */
+    public function addLabelsToIssue(int $issueNumber, array $labels): void
+    {
+        if (empty($labels)) {
+            return;
+        }
+
+        $this->client->authenticate($this->githubPAT, null, Client::AUTH_ACCESS_TOKEN);
+
+        try {
+            $this->client->api('issue')->labels()->add(
+                $this->githubRegisterOrganization,
+                $this->githubRegisterRepository,
+                $issueNumber,
+                $labels
+            );
+        } catch (\Throwable $e) {
+            throw new ApiUpdateException(
+                'Could not add the labels ' . implode(', ', $labels)
+                . " to register issue #{$issueNumber}: " . $e->getMessage(),
+                (int) $e->getCode()
+            );
+        }
+    }
+
+    /**
+     * Remove one label from a register issue.
+     *
+     * @throws ApiUpdateException when GitHub refuses the change.
+     */
+    public function removeLabelFromIssue(int $issueNumber, string $label): void
+    {
+        $this->client->authenticate($this->githubPAT, null, Client::AUTH_ACCESS_TOKEN);
+
+        try {
+            $this->client->api('issue')->labels()->remove(
+                $this->githubRegisterOrganization,
+                $this->githubRegisterRepository,
+                $issueNumber,
+                $label
+            );
+        } catch (\Throwable $e) {
+            // GitHub answers 404 when the label is not on the issue, which is
+            // the state the removal was asking for. Reporting that as a failure
+            // would make the sync depend on nobody else having touched the
+            // issue — the same rule as repositoryHasLabel()'s.
+            if ((int) $e->getCode() === 404) {
+                return;
+            }
+
+            throw new ApiUpdateException(
+                "Could not remove the label '{$label}' from register issue #{$issueNumber}: " . $e->getMessage(),
+                (int) $e->getCode()
+            );
+        }
+    }
+
+    /**
+     * A register issue as GitHub holds it.
+     */
+    private function showIssue(int $issueNumber): array
+    {
+        $issue = $this->client->api('issue')->show(
+            $this->githubRegisterOrganization,
+            $this->githubRegisterRepository,
+            $issueNumber
+        );
+
+        return is_array($issue) ? $issue : [];
     }
 
     /**
@@ -413,19 +542,40 @@ class CodecheckGithubRegisterApiClient
             $issueContents['body'] = $codecheckIssue->getBody();
         }
 
-        if (!empty($codecheckIssueLabels->get()->toArray())) {
-            $issueContents['labels'] = $codecheckIssue->getLabels();
-        }
-
         try {
-            $issue = $this->client->api('issue')->update(
-                $this->githubRegisterOrganization,
-                $this->githubRegisterRepository,
-                $issueNumber,
-                $issueContents,
-            );
+            $issue = empty($issueContents)
+                // Nothing the journal asked to keep up to date, so nothing to send.
+                ? $this->showIssue($issueNumber)
+                : $this->client->api('issue')->update(
+                    $this->githubRegisterOrganization,
+                    $this->githubRegisterRepository,
+                    $issueNumber,
+                    $issueContents,
+                );
         } catch (\Throwable $e) {
             throw new ApiUpdateException("Error while updating GitHub issue #{$issueNumber} with the Certificate Identifier: " . $certificateIdentifier->toStr() . "\n" . $e->getMessage(), $e->getCode());
+        }
+
+        // The labels the form offers are **added**, never written as the whole
+        // list. Sending `labels` in the PATCH above replaced everything on the
+        // issue, so pressing "update issue" wiped the status labels the plugin
+        // had just set, along with `buddy exchange`, `help welcome`,
+        // `metadata pending` and anything else a human had added (#174).
+        //
+        // Best-effort, and deliberately after the update: the title and body
+        // have already landed, so a refused label must not be reported to the
+        // editor as the whole update failing — they would press save again and
+        // rewrite what already succeeded.
+        $selectedLabels = $codecheckIssueLabels->get()->toArray();
+
+        if (!empty($selectedLabels)) {
+            try {
+                $this->addLabelsToIssue($issueNumber, $codecheckIssue->getLabels());
+            } catch (\Throwable $e) {
+                CodecheckLogger::warning(
+                    "Updated register issue #{$issueNumber}, but could not add its labels: " . $e->getMessage()
+                );
+            }
         }
 
         return $issue;

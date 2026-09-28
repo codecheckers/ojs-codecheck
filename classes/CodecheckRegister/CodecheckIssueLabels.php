@@ -47,10 +47,8 @@ class CodecheckIssueLabels
 
         foreach ($data as $venue) {
             $label = $venue['Issue label'];
-            // If a Label is "id assigned" or "development" it automatically gets assigned
-            // Therefore this Label has to be skipped here, as it shouldn't be selected manually by the user
-            if ($label == Constants::CODECHECK_REGISTER_ID_ASSIGNED_LABEL
-                || $label == Constants::CODECHECK_REGISTER_DEVELOPMENT_LABEL) {
+
+            if (self::isAssignedByThePlugin($label)) {
                 continue;
             }
             // add Label to Venue Names
@@ -128,7 +126,38 @@ class CodecheckIssueLabels
 
     public function addLabelArray(array $labels): void
     {
-        $this->uniqueArray->addArray($labels);
+        // A journal's own labels go through the same filter as the venue ones:
+        // a label the plugin assigns itself must not also be offered as a
+        // checkbox, or the form would add what a status change had just removed
+        // and the two would fight over it (#174).
+        $this->uniqueArray->addArray(array_values(array_filter(
+            $labels,
+            fn ($label) => !self::isAssignedByThePlugin($label)
+        )));
+    }
+
+    /**
+     * Whether the plugin assigns this label itself, which is what makes it none
+     * of the editor's business.
+     *
+     * `id assigned` marks a register issue as carrying an identifier and
+     * `development` belongs to the register's own issues; the rest follow the
+     * CODECHECK status (#174). Offering any of them as a checkbox would make the
+     * form a second writer of a label the plugin already maintains.
+     */
+    public static function isAssignedByThePlugin(string $label): bool
+    {
+        return in_array(
+            $label,
+            array_merge(
+                [
+                    Constants::CODECHECK_REGISTER_ID_ASSIGNED_LABEL,
+                    Constants::CODECHECK_REGISTER_DEVELOPMENT_LABEL,
+                ],
+                Constants::CODECHECK_REGISTER_MANAGED_LABELS
+            ),
+            true
+        );
     }
 
     /**

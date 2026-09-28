@@ -27,6 +27,20 @@ const SUBMISSION = Cypress.env('liveSubmissionId') || 8;
 
 const api = (path) => `/index.php/${JOURNAL}/api/v1/codecheck/${path}`;
 
+/** A read of the real register, which is what a live test is for. */
+const readRegister = (path) =>
+  cy.request({
+    method: 'GET',
+    url: `https://api.github.com/repos/${registerOrganization()}/${registerRepository()}/${path}`,
+    headers: {
+      Authorization: `Bearer ${Cypress.env('githubToken')}`,
+      'User-Agent': 'codecheck-ojs-live-test',
+    },
+  });
+
+const registerOrganization = () => Cypress.env('registerOrganization') || 'codecheckers';
+const registerRepository = () => Cypress.env('registerRepository') || 'testing-dev-register';
+
 describe('Live: the register issue', () => {
   before(function () {
     if (!Cypress.env('live')) {
@@ -132,27 +146,54 @@ describe('Live: the register issue', () => {
     });
   });
 
-  it('records a status, which comments on that issue', () => {
+  /**
+   * Two statuses, in the order a check really goes through them, because the
+   * removal is the half that only a real register can prove: recording
+   * "codechecker assigned" has to take `needs codechecker` **off** the issue,
+   * and a test that starts from an issue without it would pass whether or not
+   * the DELETE was ever sent (#174).
+   */
+  it('records a status, which comments on that issue and moves its labels', () => {
+    const recordStatus = (status) =>
+      cy.getCsrfToken().then((csrfToken) =>
+        cy
+          .request({
+            method: 'POST',
+            url: api(`status/update?submissionId=${SUBMISSION}`),
+            headers: { 'X-Csrf-Token': csrfToken, 'Content-Type': 'application/json' },
+            // The endpoint takes the user id from the payload, not the session.
+            body: { submissionId: SUBMISSION, status, userId: 1 },
+            failOnStatusCode: false,
+            timeout: 60000,
+          })
+          .then((response) => {
+            expect(response.status, `the status ${status} was recorded`).to.eq(200);
+          })
+      );
+
     cy.getCsrfToken().then((csrfToken) => {
       cy.request({
-        method: 'POST',
-        url: api(`status/update?submissionId=${SUBMISSION}`),
-        headers: { 'X-Csrf-Token': csrfToken, 'Content-Type': 'application/json' },
-        body: {
-          submissionId: SUBMISSION,
-          status: 'plugins.generic.codecheck.status.assignedCodechecker',
-          // The endpoint takes the user id from the payload, not the session.
-          userId: 1,
-        },
-        failOnStatusCode: false,
-        timeout: 60000,
+        method: 'GET',
+        url: api(`metadata?submissionId=${SUBMISSION}`),
+        headers: { 'X-Csrf-Token': csrfToken },
       }).then((response) => {
-        expect(response.status, 'the status was recorded').to.eq(200);
+        const issueNumber = response.body?.codecheck?.issue?.number;
+        expect(issueNumber, 'the submission records a register issue').to.exist;
+
+        recordStatus('plugins.generic.codecheck.status.needsCodechecker');
+
+        readRegister(`issues/${issueNumber}`).then((registerIssue) => {
+          const labels = registerIssue.body.labels.map((label) => label.name);
+          cy.log(`after needsCodechecker: ${labels.join(', ')}`);
+          expect(labels, 'the check asks for a codechecker').to.include('needs codechecker');
+        });
+
+        recordStatus('plugins.generic.codecheck.status.assignedCodechecker');
       });
     });
   });
 
-  it('shows the issue and its comment in the register', () => {
+  it('shows the issue, its comment and its moved labels in the register', () => {
     // Read back what the plugin stored, then look at the real issue. The
     // assertion is on the register, not on the plugin's own answer: the point of
     // a live test is that the other end actually received it.
@@ -166,23 +207,31 @@ describe('Live: the register issue', () => {
         expect(issue, 'the submission records a register issue').to.exist;
         expect(issue.number, 'the issue has a number').to.exist;
 
-        const token = Cypress.env('githubToken');
-        expect(token, 'CYPRESS_githubToken must be set to read the register back').to.be.a('string');
+        expect(
+          Cypress.env('githubToken'),
+          'CYPRESS_githubToken must be set to read the register back'
+        ).to.be.a('string');
 
-        const organization = Cypress.env('registerOrganization') || 'codecheckers';
-        const repository = Cypress.env('registerRepository') || 'testing-dev-register';
-
-        cy.request({
-          method: 'GET',
-          url: `https://api.github.com/repos/${organization}/${repository}/issues/${issue.number}/comments`,
-          headers: { Authorization: `Bearer ${token}`, 'User-Agent': 'codecheck-ojs-live-test' },
-        }).then((comments) => {
+        readRegister(`issues/${issue.number}/comments`).then((comments) => {
           const bodies = comments.body.map((c) => c.body).join('\n');
           cy.log(`issue #${issue.number}: ${comments.body.length} comment(s)`);
           expect(bodies, 'the status change was commented on the issue').to.contain('CODECHECK status');
         });
 
-        cy.log(`Register issue: https://github.com/${organization}/${repository}/issues/${issue.number}`);
+        // The other half of the same idea (#174): the labels say where the check
+        // stands, and the status recorded above is "codechecker assigned".
+        readRegister(`issues/${issue.number}`).then((registerIssue) => {
+          const labels = registerIssue.body.labels.map((label) => label.name);
+          cy.log(`issue #${issue.number} labels: ${labels.join(', ')}`);
+
+          expect(labels, 'the check is marked as in progress').to.include('work in progress');
+          expect(labels, 'the check no longer asks for a codechecker').to.not.include('needs codechecker');
+          expect(labels, 'the identifier label is left in place').to.include('id assigned');
+        });
+
+        cy.log(
+          `Register issue: https://github.com/${registerOrganization()}/${registerRepository()}/issues/${issue.number}`
+        );
       });
     });
   });

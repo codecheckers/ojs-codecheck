@@ -48,6 +48,10 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   development issues are not read as certificates (#130)
 - CODECHECK status with a full history per submission, editable by role (#61,
   #141, #142). Each status change is also commented under the register issue (#150)
+  and moves its labels: a check with a codechecker stops asking for one, and a
+  completed check is no longer marked as in progress. The issue is opened with
+  the label its status asks for, and only those two labels are ever touched, so
+  venue and other labels on the issue are left as they are (#174)
 - Several repositories per submission, one of them marked as holding the
   `codecheck.yml` (#146)
 - Existing CODECHECK metadata can be imported from GitHub, GitLab, Zenodo or OSF,
@@ -194,10 +198,17 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   codechecker's record (#175)
 - The ORCID authorisation round trip completes on a journal-scoped install; the
   return leg was a bare 404 (#176)
+- Updating a register issue no longer replaces its labels, which removed the
+  ones saying where the check stood along with any a human had added. The labels
+  the form offers are added instead (#174)
+- A journal that changes its register repository no longer comments on, or
+  labels, whichever issue happens to carry the same number there (#174)
 - Reserving a certificate identifier works when the journal keeps its authors
   anonymous, which is the default (#150)
 - Reserving a certificate identifier automatically works at all, and a register
   that holds no identifier yet no longer answers a bare server error (#130)
+- Reserving a certificate identifier or updating its register issue works for a
+  submission that has no authors yet (#130)
 - Reserving before the register organisation and repository are configured says
   so, instead of answering a bare server error (#129)
 - Linking an existing certificate identifier reports the register issue it
@@ -218,6 +229,9 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   addresses are refused with the reason under the field, and only an address a save
   introduces is judged (#170)
 - Saving the CODECHECK metadata without a repository list no longer empties it
+- User names, file names and translations in the CODECHECK dialogs and the status
+  history are shown as text: they were inserted as markup, so a name could run
+  script in an editor's browser. Several dialogs also lost a closing tag
 - Which repository holds the `codecheck.yml` is recorded on the repository itself.
   As a position in the list it silently moved to a repository nobody chose, which
   decides what the article page shows, what validation fetches and what is

@@ -138,6 +138,12 @@ Two things worth fixing that this run exposed and that are not yet filed:
   reaches GitHub unauthenticated (`SettingsForm::checkRegisterRepository()`,
   two requests: `register.csv` and the `id assigned` label), which is why it
   only fires when the organisation or repository actually changes.
+- **The labels are asserted against the register, not against the plugin.** The
+  third test reads the issue back and expects `work in progress` present,
+  `needs codechecker` absent and `id assigned` untouched, for the
+  *codechecker assigned* status the second test records (#174). The register must
+  therefore carry `work in progress` and `needs codechecker` —
+  `codecheckers/testing-dev-register` does, as does the real register.
 - **A register with no identifier yet answers with a question, not a
   reservation.** `POST identifier` returns `confirmFirstIdentifier` and reserves
   nothing until the editor agrees, so the spec sends `confirmFirstIdentifier:

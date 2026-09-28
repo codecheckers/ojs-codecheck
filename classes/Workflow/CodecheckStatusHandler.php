@@ -47,8 +47,8 @@ class CodecheckStatusHandler
 
         // Every recorded status passes through here, so the register issue hears
         // about all of them — from the workflow form and from the automatic
-        // update alike. Best-effort: it never fails the status change (#150).
-        CodecheckStatusRegisterComment::post($submissionId, $status);
+        // update alike. Best-effort: it never fails the status change (#150, #174).
+        CodecheckStatusRegisterUpdate::apply($submissionId, $status);
 
         return CodecheckStatusHandler::getCurrentStatusData($submissionId);
     }

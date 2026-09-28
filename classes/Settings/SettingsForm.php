@@ -649,13 +649,17 @@ class SettingsForm extends Form
     /**
      * Checks what the configured GitHub register repository has to carry, so a
      * misconfigured target is caught at settings-save time instead of silently
-     * failing on the next publish or reservation: `register.csv` at its root
-     * for register deposits, and the `id assigned` label, which is what
-     * certificate identifiers are found by (#129).
+     * failing on the next publish, reservation or status change: `register.csv`
+     * at its root for register deposits, the `id assigned` label, which is what
+     * certificate identifiers are found by (#129), and the labels a status
+     * change moves (#174). A missing label is not harmless: GitHub creates an
+     * unknown label when an issue is given one, so the plugin would otherwise
+     * invent labels in someone else's repository.
      *
-     * The two requests are unauthenticated and count against GitHub's 60/hour
-     * per-IP limit, so this runs only when the register actually changed —
-     * see the caller.
+     * The requests are unauthenticated and count against GitHub's 60/hour
+     * per-IP limit — one per required label plus one for the file, so four — and
+     * this therefore runs only when the register actually changed; see the
+     * caller.
      *
      * @return string[] One warning per missing requirement, or a single warning
      *                  when the repository could not be read at all; empty when
@@ -669,34 +673,51 @@ class SettingsForm extends Form
 
         $messageParams = ['organization' => $organization, 'repository' => $repository];
 
-        // The same probe the reservation uses, so the two cannot disagree about
+        // The labels the plugin needs: the one it finds identifiers by, and the
+        // ones it moves as a check progresses (#174). Probed with the same call
+        // the reservation and the status sync use, so they cannot disagree about
         // whether the register is usable. Building the client can fail on its own
         // — an incomplete `vendor/` leaves php-http with no discoverable client —
         // and that must warn rather than abandon the whole settings save.
+        $requiredLabels = array_merge(
+            [Constants::CODECHECK_REGISTER_ID_ASSIGNED_LABEL],
+            Constants::CODECHECK_REGISTER_MANAGED_LABELS
+        );
+
+        $missingLabels = [];
+
         try {
             $client = new Client();
-            $hasLabel = CodecheckGithubRegisterApiClient::repositoryHasLabel(
-                $organization,
-                $repository,
-                Constants::CODECHECK_REGISTER_ID_ASSIGNED_LABEL,
-                $client
-            );
+
+            foreach ($requiredLabels as $label) {
+                $hasLabel = CodecheckGithubRegisterApiClient::repositoryHasLabel(
+                    $organization,
+                    $repository,
+                    $label,
+                    $client
+                );
+
+                // Nothing could be read, so no requirement can be reported as
+                // missing: one honest warning rather than several wrong ones.
+                if ($hasLabel === null) {
+                    return [__('plugins.generic.codecheck.settings.github.registerRepository.unreadableWarning', $messageParams)];
+                }
+
+                if ($hasLabel === false) {
+                    $missingLabels[] = $label;
+                }
+            }
         } catch (\Throwable $e) {
             CodecheckLogger::warning('Could not check the register repository: ' . $e->getMessage());
-            $hasLabel = null;
-        }
 
-        // Nothing could be read, so neither requirement can be reported as
-        // missing: one honest warning rather than two wrong ones.
-        if ($hasLabel === null) {
             return [__('plugins.generic.codecheck.settings.github.registerRepository.unreadableWarning', $messageParams)];
         }
 
         $warnings = [];
 
-        if ($hasLabel === false) {
+        foreach ($missingLabels as $label) {
             $warnings[] = __('plugins.generic.codecheck.settings.github.registerRepository.missingLabelWarning', $messageParams + [
-                'label' => Constants::CODECHECK_REGISTER_ID_ASSIGNED_LABEL,
+                'label' => $label,
             ]);
         }
 
