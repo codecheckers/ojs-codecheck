@@ -19,6 +19,10 @@
 const JOURNAL = 'codecheck';
 const BADGE = '.codecheck-badge';
 
+// The text is per language (#164), and the form's multilingual field gets a
+// generated id, so it is found by name.
+const BADGE_TEXT_EN = '[name="codecheckBadgeText[en]"]';
+
 function visitAnIssue() {
   cy.visit(`/index.php/${JOURNAL}/issue/archive`);
   cy.get('a[href*="/issue/view/"]').first().click();
@@ -66,7 +70,7 @@ describe('Issue table of contents badge', () => {
     cy.ojsLogin('admin', 'admin');
     setBadgeFields({
       '#badgeCodeworks': true,
-      '#codecheckBadgeText': '',
+      [BADGE_TEXT_EN]: '',
       '#codecheckBadgeTextColor': '#2d7f3e',
       '#codecheckBadgeLinkTarget': 'register',
     });
@@ -112,7 +116,7 @@ describe('Issue table of contents badge', () => {
   it('renders the configured text and colour when the journal shows no image', () => {
     setBadgeFields({
       '#badgeNone': true,
-      '#codecheckBadgeText': 'CODE WORKS',
+      [BADGE_TEXT_EN]: 'CODE WORKS',
       '#codecheckBadgeTextColor': '#b5121b',
     });
 
@@ -128,7 +132,7 @@ describe('Issue table of contents badge', () => {
   });
 
   it('falls back to the default wording when the text is cleared', () => {
-    setBadgeFields({ '#badgeNone': true, '#codecheckBadgeText': '' });
+    setBadgeFields({ '#badgeNone': true, [BADGE_TEXT_EN]: '' });
 
     visitAnIssue();
     cy.get(`${BADGE}.codecheck-badge--text`).first().should('contain', 'CODECHECK');

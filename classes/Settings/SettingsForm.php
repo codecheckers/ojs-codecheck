@@ -83,14 +83,12 @@ class SettingsForm extends Form
             )
         );
 
-        // Empty means "use the localised default", which the article page
-        // substitutes rather than rendering an empty heading.
+        // Per locale (#164). A locale with nothing in it means "use the
+        // primary locale's, else the localised default", which the article
+        // page substitutes rather than rendering an empty heading.
         $this->setData(
             Constants::CODECHECK_AVAILABILITY_STATEMENT_HEADING,
-            $this->plugin->getSetting(
-                $context->getId(),
-                Constants::CODECHECK_AVAILABILITY_STATEMENT_HEADING
-            ) ?? ''
+            $this->inFormLocales($this->plugin->getSetting($context->getId(), Constants::CODECHECK_AVAILABILITY_STATEMENT_HEADING))
         );
 
         // The versions on offer, asked of the plugin so the form cannot show a
@@ -161,11 +159,11 @@ class SettingsForm extends Form
             $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_TYPE) ?? 'codeworks'
         );
 
-        // Empty means "use the localised default", which the badge substitutes
-        // rather than rendering nothing where the image would be.
+        // Per locale, like the heading: a locale with nothing in it falls
+        // back rather than rendering nothing where the image would be.
         $this->setData(
             Constants::CODECHECK_BADGE_TEXT,
-            $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_TEXT) ?? ''
+            $this->inFormLocales($this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_TEXT))
         );
 
         $this->setData(
@@ -324,6 +322,29 @@ class SettingsForm extends Form
     }
 
     /**
+     * A journal-worded text for the languages this form offers — the
+     * journal's form locales — and no others; see Constants::cleanLocalizedText().
+     */
+    private function inFormLocales(mixed $text): array
+    {
+        return Constants::cleanLocalizedText($text, array_keys($this->supportedLocales));
+    }
+
+    /**
+     * What a save stores for a journal-worded text: what the form posted for
+     * its languages, and what was stored for any other. A journal's reader
+     * languages need not be form languages, and a save must not drop wording
+     * the form never showed.
+     */
+    private function localizedTextToSave(int $contextId, string $name): array
+    {
+        $stored = $this->plugin->getSetting($contextId, $name);
+        $notOffered = is_array($stored) ? array_diff_key($stored, $this->supportedLocales) : [];
+
+        return array_merge($notOffered, $this->inFormLocales($this->getData($name)));
+    }
+
+    /**
      * Fetch any additional data needed for your form.
      *
      * Data assigned to the form using $this->setData() during the
@@ -347,7 +368,6 @@ class SettingsForm extends Form
         ]);
 
         $templateMgr->assign('codecheckBadgeType', $this->getData(Constants::CODECHECK_BADGE_TYPE) ?? 'codeworks');
-        $templateMgr->assign('codecheckBadgeText', $this->getData(Constants::CODECHECK_BADGE_TEXT) ?? '');
 
         // The select renders label => value pairs, like the CODECHECK mode above.
         $templateMgr->assign('codecheckBadgeLinkTargets', array_combine(
@@ -433,7 +453,7 @@ class SettingsForm extends Form
         $this->plugin->updateSetting(
             $context->getId(),
             Constants::CODECHECK_AVAILABILITY_STATEMENT_HEADING,
-            trim((string) $this->getData(Constants::CODECHECK_AVAILABILITY_STATEMENT_HEADING))
+            $this->localizedTextToSave($context->getId(), Constants::CODECHECK_AVAILABILITY_STATEMENT_HEADING)
         );
 
         $this->plugin->updateSetting(
@@ -547,7 +567,7 @@ class SettingsForm extends Form
         $this->plugin->updateSetting(
             $context->getId(),
             Constants::CODECHECK_BADGE_TEXT,
-            trim((string) $this->getData(Constants::CODECHECK_BADGE_TEXT))
+            $this->localizedTextToSave($context->getId(), Constants::CODECHECK_BADGE_TEXT)
         );
 
         // Only one of the two known targets is ever stored.

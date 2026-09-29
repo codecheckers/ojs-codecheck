@@ -43,7 +43,7 @@ class IssueTOC
             return false;
         }
 
-        $badge = new Badge($this->plugin, $context->getId());
+        $badge = new Badge($this->plugin, $context);
 
         $badgeTemplateManager = TemplateManager::getManager($request);
         $badgeTemplateManager->assign([

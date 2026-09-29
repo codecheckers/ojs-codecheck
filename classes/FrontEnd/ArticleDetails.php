@@ -81,7 +81,7 @@ class ArticleDetails
     {
         $request = Application::get()->getRequest();
         $context = $request->getContext();
-        $badge = new Badge($this->plugin, $context->getId());
+        $badge = new Badge($this->plugin, $context);
 
         $templateMgr->assign([
             'badgeLink' => $badge->getCertificateUrl(

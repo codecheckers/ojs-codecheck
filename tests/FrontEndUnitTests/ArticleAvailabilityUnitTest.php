@@ -2,6 +2,7 @@
 
 namespace APP\plugins\generic\codecheck\tests\FrontEndUnitTests;
 
+use APP\journal\Journal;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\FrontEnd\ArticleAvailability;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
@@ -98,18 +99,33 @@ class ArticleAvailabilityUnitTest extends PKPTestCase
 
     public function testHeadingFallsBackToTheLocalisedDefaultWhenCleared()
     {
-        foreach ([[], [Constants::CODECHECK_AVAILABILITY_STATEMENT_HEADING => '  ']] as $settings) {
+        foreach ([[], [Constants::CODECHECK_AVAILABILITY_STATEMENT_HEADING => ['en' => '  ']]] as $settings) {
             $this->assertSame(
                 'plugins.generic.codecheck.dataSoftwareAvailability',
-                $this->availabilityWithSettings($settings)->getHeading(self::CONTEXT_ID)
+                $this->availabilityWithSettings($settings)->getHeading($this->englishJournal(), 'en')
             );
         }
+    }
 
-        $this->assertSame(
-            'Data availability',
-            $this->availabilityWithSettings([
-                Constants::CODECHECK_AVAILABILITY_STATEMENT_HEADING => 'Data availability',
-            ])->getHeading(self::CONTEXT_ID)
-        );
+    public function testHeadingIsInTheReadersLanguageThenThePrimaryOne()
+    {
+        $availability = $this->availabilityWithSettings([
+            Constants::CODECHECK_AVAILABILITY_STATEMENT_HEADING => [
+                'en' => 'Data availability',
+                'de' => 'Datenverfügbarkeit',
+            ],
+        ]);
+
+        $this->assertSame('Datenverfügbarkeit', $availability->getHeading($this->englishJournal(), 'de'));
+        $this->assertSame('Data availability', $availability->getHeading($this->englishJournal(), 'fr'));
+    }
+
+    private function englishJournal(): Journal
+    {
+        $journal = new Journal();
+        $journal->setId(self::CONTEXT_ID);
+        $journal->setData('primaryLocale', 'en');
+
+        return $journal;
     }
 }

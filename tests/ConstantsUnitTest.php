@@ -215,6 +215,45 @@ class ConstantsUnitTest extends PKPTestCase
     }
 
     /**
+     * #164: a journal's own wording is stored per locale, and a reader whose
+     * language has none gets the primary language's before the plugin's.
+     *
+     * @param mixed $stored what a journal has in `plugin_settings`
+     */
+    #[DataProvider('localizedTextProvider')]
+    public function testLocalizedText(mixed $stored, ?string $expected)
+    {
+        $this->assertSame($expected, Constants::localizedText($stored, 'de', 'en'));
+    }
+
+    public static function localizedTextProvider(): array
+    {
+        return [
+            "the reader's language" => [['en' => 'Availability', 'de' => 'Verfügbarkeit'], 'Verfügbarkeit'],
+            'surrounding whitespace' => [['de' => '  Verfügbarkeit '], 'Verfügbarkeit'],
+            'the primary language when the reader\'s has none' => [['en' => 'Availability'], 'Availability'],
+            'the primary language when the reader\'s is blank' => [['en' => 'Availability', 'de' => '  '], 'Availability'],
+            'neither language' => [['fr' => 'Disponibilité'], null],
+            'nothing recorded' => [null, null],
+            'an empty list' => [[], null],
+            'the unreleased single-language shape' => ['Availability', null],
+            'not a string' => [['de' => ['x'], 'en' => 42], null],
+        ];
+    }
+
+    /** What is saved: trimmed, the form's languages only, empty ones dropped. */
+    public function testCleanLocalizedTextKeepsOnlyTheFormsLanguagesWithText()
+    {
+        $this->assertSame(
+            ['en' => 'Availability'],
+            Constants::cleanLocalizedText(
+                ['en' => ' Availability ', 'de' => '  ', 'fr' => 'Disponibilité'],
+                ['en', 'de']
+            )
+        );
+    }
+
+    /**
      * A recorded default is *written* into a row, and the writers never
      * reconcile, so a setting whose default is expected to change must stay
      * out of the map: a journal enabled today would otherwise keep being

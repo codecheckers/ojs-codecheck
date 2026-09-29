@@ -237,9 +237,9 @@
 				<label class="description">{translate key="plugins.generic.codecheck.settings.availabilityStatementHeading.description"}</label>
 				{fbvElement
 					type="text"
+					multilingual=true
 					id="availabilityStatementHeading"
 					value=$availabilityStatementHeading
-					placeholder="plugins.generic.codecheck.dataSoftwareAvailability"
 				}
 			{/fbvFormSection}
 		{/fbvFormSection}
@@ -539,16 +539,14 @@
 					</div>
 
 					<div id="badgeTextSection" class="badge-dependent-field"{if $codecheckBadgeType != 'none'} style="display:none"{/if}>
-						<label class="pkp_form_label" for="codecheckBadgeText">{translate key="plugins.generic.codecheck.settings.badge.text.label"}</label>
+						<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.badge.text.label"}</label>
 						<label class="description">{translate key="plugins.generic.codecheck.settings.badge.text.description"}</label>
-						<input
+						{fbvElement
 							type="text"
+							multilingual=true
 							id="codecheckBadgeText"
-							name="codecheckBadgeText"
-							class="pkpFormField__input"
-							value="{$codecheckBadgeText|escape}"
-							placeholder="{translate key="plugins.generic.codecheck.badge.textOnly"}"
-						/>
+							value=$codecheckBadgeText
+						}
 
 						<label class="pkp_form_label" for="codecheckBadgeTextColor">{translate key="plugins.generic.codecheck.settings.badge.textColor.label"}</label>
 						<label class="description">{translate key="plugins.generic.codecheck.settings.badge.textColor.description"}</label>

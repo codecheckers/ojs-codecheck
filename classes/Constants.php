@@ -183,6 +183,39 @@ class Constants
         );
     }
 
+    /**
+     * A journal's own wording for a text readers see (#164): the reader's
+     * locale, then the journal's primary one, then null for the caller's
+     * localised default. Anything but a locale-keyed array is nothing stored.
+     */
+    public static function localizedText(mixed $stored, string $locale, string $primaryLocale): ?string
+    {
+        return array_values(self::cleanLocalizedText($stored, [$locale, $primaryLocale]))[0] ?? null;
+    }
+
+    /**
+     * A multilingual text as it is stored: trimmed, only for the given
+     * locales, and without the empty ones, so a cleared language falls back.
+     *
+     * @param string[] $locales
+     *
+     * @return array<string, string>
+     */
+    public static function cleanLocalizedText(mixed $posted, array $locales): array
+    {
+        $cleaned = [];
+
+        foreach ($locales as $locale) {
+            $text = is_array($posted) && is_string($posted[$locale] ?? null) ? trim($posted[$locale]) : '';
+
+            if ($text !== '') {
+                $cleaned[$locale] = $text;
+            }
+        }
+
+        return $cleaned;
+    }
+
     public const CODECHECK_SHOW_DASHBOARD_COLUMN = 'showDashboardColumn';
 
     // Register issues are found by filtering on the 'id assigned' label, and

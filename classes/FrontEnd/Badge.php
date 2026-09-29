@@ -21,6 +21,8 @@ namespace APP\plugins\generic\codecheck\classes\FrontEnd;
 use APP\core\Application;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
+use PKP\context\Context;
+use PKP\facades\Locale;
 
 class Badge
 {
@@ -28,10 +30,19 @@ class Badge
 
     private int $contextId;
 
-    public function __construct(CodecheckPlugin $plugin, int $contextId)
+    private string $primaryLocale;
+
+    private string $locale;
+
+    /**
+     * @param string|null $locale the reader's; the current one unless given
+     */
+    public function __construct(CodecheckPlugin $plugin, Context $context, ?string $locale = null)
     {
         $this->plugin = $plugin;
-        $this->contextId = $contextId;
+        $this->contextId = (int) $context->getId();
+        $this->primaryLocale = (string) $context->getPrimaryLocale();
+        $this->locale = $locale ?? Locale::getLocale();
     }
 
     /**
@@ -54,16 +65,13 @@ class Badge
 
     /**
      * What is written where the image would be. Journals name the CODECHECK
-     * differently, so the wording is theirs to set; cleared falls back to the
-     * localised default rather than rendering nothing at all.
+     * differently, so the wording is theirs to set, per language — see
+     * Constants::localizedText() — and the localised default otherwise.
      */
     public function getText(): string
     {
-        $text = trim((string) $this->getSetting(Constants::CODECHECK_BADGE_TEXT));
-
-        return $text !== ''
-            ? $text
-            : __('plugins.generic.codecheck.badge.textOnly');
+        return Constants::localizedText($this->getSetting(Constants::CODECHECK_BADGE_TEXT), $this->locale, $this->primaryLocale)
+            ?? __('plugins.generic.codecheck.badge.textOnly');
     }
 
     /** The colour that text is written in — see Constants::normalizeBadgeTextColor(). */

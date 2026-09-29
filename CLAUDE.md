@@ -634,6 +634,50 @@ produced #177 — `CODECHECK_MODE` (`'opt-in'`), `ORCID_API_TYPE`
   same shape as the height's: it was four copies — this pattern twice and a
   weaker `?:` fallback twice, which disagreed about a stored non-colour
 
+**Those two texts are stored per locale** (#164), as an array keyed by locale
+from a `multilingual=true` FBV field, so a multilingual journal is not made to
+pick one language for every reader. `Constants::localizedText()` is the one
+reader rule: the reader's locale, then the journal's primary locale, then
+`null` for the caller to replace with its `__()` default. That is the first two
+steps of PKP's `getLocalizedData()` order and deliberately not its third ("any
+language that has a value"): a journal with no wording in its primary language
+gets the plugin's localised default, not a stray other language.
+`Constants::cleanLocalizedText()` is the write rule: trimmed, empty languages
+dropped so they fall back, and only the form's locales taken from the post.
+`SettingsForm::localizedTextToSave()` keeps what is stored for any *other*
+locale, because a reader language need not be a form language and a save must
+not drop wording the form never showed. **Anything but an array reads as
+nothing stored.** Both
+were a plain string until #164, but never in a release, so there is no migration
+and the old shape is deliberately not read — reading both would give one row two
+meanings, which is #154 again.
+
+The form offers exactly the journal's form languages: `PKP\form\Form` takes
+`Locale::getSupportedFormLocales()` unless told otherwise, and FBV renders a
+field for each, the non-primary ones in a popover. None is required. Readers'
+languages (`supportedLocales`) may be ones the form does not offer; the fallback
+covers them. `Badge` and `ArticleAvailability::getHeading()` take the journal's
+`Context` and an optional reader locale, falling back to `Locale::getLocale()`;
+unit tests always pass the locale, because the facade is not bound under the
+PHPUnit bootstrap.
+
+**A multilingual FBV field has no stable id.** FBV appends a generated suffix
+and, with several languages, the locale, so e2e specs find it by name —
+`[name="codecheckBadgeText[en]"]` — and a `<label for>` cannot point at it.
+**Nor give it a `placeholder`**: FBV writes ours into every language's input
+ahead of its own language-name placeholder, and the browser keeps the first, so
+the empty German field would announce the plugin default while a German reader
+actually gets the primary language's wording. The field's description says what
+the default is instead.
+
+**A new setting holding text a reader sees is multilingual from the start.**
+The audit for #164 found no other: the register labels, organisation and
+repository are identifiers in GitHub, `orcidCity` goes into an ORCID deposit
+that holds one city, and the rest are values. The one borderline case is
+`CODECHECK_BADGE_CUSTOM_URL` — OJS keeps its own logos per locale, and a badge
+image with words in it could want the same; left single-valued until someone
+asks.
+
 `CODECHECK_ENABLED_CONFIG_VERSIONS` defaults to `CODECHECK_DEFAULT_CONFIG_VERSIONS`
 — `1.0` alone, not every known version — so a journal that has not chosen records
 checks against the current stable specification rather than a moving target.

@@ -2,6 +2,7 @@
 
 namespace APP\plugins\generic\codecheck\tests\FrontEndUnitTests;
 
+use APP\journal\Journal;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\FrontEnd\Badge;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
@@ -21,14 +22,22 @@ class BadgeUnitTest extends PKPTestCase
 {
     private const CONTEXT_ID = 1;
 
-    /** Builds a badge whose plugin answers settings from $settings. */
-    private function badgeWithSettings(array $settings): Badge
+    /**
+     * Builds a badge whose plugin answers settings from $settings, for a
+     * reader in $locale of an English journal.
+     */
+    private function badgeWithSettings(array $settings, string $locale = 'en'): Badge
     {
         $plugin = $this->createMock(CodecheckPlugin::class);
         $plugin->method('getSetting')->willReturnCallback(
             fn ($contextId, $name) => $settings[$name] ?? null
         );
-        return new Badge($plugin, self::CONTEXT_ID);
+
+        $journal = new Journal();
+        $journal->setId(self::CONTEXT_ID);
+        $journal->setData('primaryLocale', 'en');
+
+        return new Badge($plugin, $journal, $locale);
     }
 
     public function testTheTypeDefaultsToTheCodeWorksBadge()
@@ -43,15 +52,15 @@ class BadgeUnitTest extends PKPTestCase
 
     public function testTheTextIsWhateverTheJournalSet()
     {
-        $this->assertSame(
-            'Reproducible',
-            $this->badgeWithSettings([Constants::CODECHECK_BADGE_TEXT => 'Reproducible'])->getText()
-        );
+        $settings = [Constants::CODECHECK_BADGE_TEXT => ['en' => 'Reproducible', 'de' => 'Reproduzierbar']];
+
+        $this->assertSame('Reproduzierbar', $this->badgeWithSettings($settings, 'de')->getText());
+        $this->assertSame('Reproducible', $this->badgeWithSettings($settings, 'fr')->getText());
     }
 
     public function testTheTextFallsBackToTheLocalisedDefaultWhenCleared()
     {
-        foreach ([[], [Constants::CODECHECK_BADGE_TEXT => '   ']] as $settings) {
+        foreach ([[], [Constants::CODECHECK_BADGE_TEXT => ['en' => '   ']]] as $settings) {
             $this->assertSame(
                 'plugins.generic.codecheck.badge.textOnly',
                 $this->badgeWithSettings($settings)->getText()

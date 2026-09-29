@@ -96,6 +96,9 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   with a height, a colour and a link target (#27)
 - The author's data and software availability statement below the abstract, with
   settings to hide it, rename its heading, or omit it where there is none (#152)
+- The availability statement heading and the text shown instead of a badge are
+  set per journal language; a language left empty uses the primary language's
+  wording, then the default (#164)
 
 #### Configuration
 

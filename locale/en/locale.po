@@ -90,7 +90,7 @@ msgid "plugins.generic.codecheck.settings.availabilityStatementHeading"
 msgstr "Heading for the availability statement"
 
 msgid "plugins.generic.codecheck.settings.availabilityStatementHeading.description"
-msgstr "The heading shown above the statement on published articles. Leave empty to use the default, \"Data and Software Availability\"."
+msgstr "The heading shown above the statement on published articles, in each of the journal's languages. A language left empty uses the primary language's heading, and then the default, \"Data and Software Availability\"."
 
 msgid "plugins.generic.codecheck.settings.configVersions"
 msgstr "Available CODECHECK config versions"
@@ -886,7 +886,7 @@ msgid "plugins.generic.codecheck.settings.badge.text.label"
 msgstr "Text shown instead of a badge"
 
 msgid "plugins.generic.codecheck.settings.badge.text.description"
-msgstr "The wording shown where the badge image would be. Leave empty to use the default, \"CODECHECK\"."
+msgstr "The wording shown where the badge image would be, in each of the journal's languages. A language left empty uses the primary language's wording, and then the default, \"CODECHECK\"."
 
 msgid "plugins.generic.codecheck.settings.badge.textColor.label"
 msgstr "Colour of the text"

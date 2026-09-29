@@ -16,6 +16,8 @@ namespace APP\plugins\generic\codecheck\classes\FrontEnd;
 use APP\core\Application;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
+use PKP\context\Context;
+use PKP\facades\Locale;
 
 class ArticleAvailability
 {
@@ -53,7 +55,7 @@ class ArticleAvailability
             return false;
         }
 
-        $heading = $this->getHeading($context->getId());
+        $heading = $this->getHeading($context);
         $statement = $this->resolveStatement(
             $publication->getData('dataAvailabilityStatement'),
             $heading,
@@ -128,18 +130,18 @@ class ArticleAvailability
     }
 
     /**
-     * The section heading, falling back to the localised default when the
-     * journal has cleared the field rather than rendering an empty heading.
+     * The section heading in the reader's language — see
+     * Constants::localizedText() — or the localised default, rather than an
+     * empty heading.
+     *
+     * @param string|null $locale the reader's; the current one unless given
      */
-    public function getHeading(int $contextId): string
+    public function getHeading(Context $context, ?string $locale = null): string
     {
-        $heading = trim((string) $this->plugin->getSetting(
-            $contextId,
-            Constants::CODECHECK_AVAILABILITY_STATEMENT_HEADING
-        ));
-
-        return $heading !== ''
-            ? $heading
-            : __('plugins.generic.codecheck.dataSoftwareAvailability');
+        return Constants::localizedText(
+            $this->plugin->getSetting((int) $context->getId(), Constants::CODECHECK_AVAILABILITY_STATEMENT_HEADING),
+            $locale ?? Locale::getLocale(),
+            (string) $context->getPrimaryLocale()
+        ) ?? __('plugins.generic.codecheck.dataSoftwareAvailability');
     }
 }

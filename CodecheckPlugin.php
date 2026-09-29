@@ -798,8 +798,8 @@ class CodecheckPlugin extends GenericPlugin
      * apart from a missing row, so an "empty means unset" rule here would
      * switch every default-on setting back on. A setting that must also fall
      * back on an empty value says so where the emptiness means something:
-     * `getEnabledConfigVersions()` does, after narrowing the list, and
-     * `CODECHECK_AVAILABILITY_STATEMENT_HEADING` where it is read, its default
+     * `getEnabledConfigVersions()` does, after narrowing the list, and the
+     * journal-worded texts through `Constants::localizedText()`, their default
      * being a localised string rather than a value a constant can hold.
      */
     public function getSettingWithDefault(?int $contextId, string $name): mixed
