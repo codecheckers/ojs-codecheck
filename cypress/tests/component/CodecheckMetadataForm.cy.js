@@ -66,8 +66,25 @@ const identifierButton = (key) =>
 /** Answers the modal's yes/no question, which is OJS's own dialog, not the browser's. */
 const answerModal = (answer) =>
   cy.get('.pkp-mock-modal__action')
-    .contains(answer === 'yes' ? 'plugins.generic.codecheck.yes' : 'plugins.generic.codecheck.no')
+    .contains(answer === 'yes' ? 'common.yes' : 'common.no')
     .click();
+
+/** Mounts the editorial form for an editor who may change it. */
+const mountForm = (submissionId = 1) =>
+  cy.mount(CodecheckMetadataForm, { props: { submission: { id: submissionId }, canEdit: true } });
+
+/** A dialog button by its label key. */
+const modalButton = (key) => cy.get('.pkp-mock-modal__action').contains(key);
+
+/**
+ * A button a dialog *body* draws — the dialogs that ask for something own
+ * theirs, because OJS disables its own after the first click (#180).
+ */
+const dialogSubmit = (key) => cy.contains('.pkp-mock-modal .modal-actions button', key);
+
+/** Opens the "add codechecker" dialog. */
+const addCodechecker = () =>
+  cy.contains('.field-label', /codechecker/i).parent().find('.btn-add').click();
 
 /**
  * Mounts the form and clicks "reserve automatically", which needs a label
@@ -782,6 +799,57 @@ describe('CodecheckMetadataForm Component', () => {
       .find('.btn-add')
       .should('exist')
       .and('not.be.disabled');
+  });
+
+  /**
+   * The dialog's body is a Vue component with its own fields (#180), so the
+   * form takes the codechecker from what the component answers rather than
+   * from `document.getElementById`.
+   */
+  it('adds the codechecker the dialog was filled in with', () => {
+    mountForm();
+    cy.wait('@loadMetadata');
+
+    addCodechecker();
+    cy.get('.pkp-mock-modal input[id^=codecheck-checker-name]').type('Ada Lovelace');
+    cy.get('.pkp-mock-modal input[id^=codecheck-checker-orcid]').type('0000-0002-1825-0097');
+    dialogSubmit('common.add').click();
+
+    cy.get('.pkp-mock-modal').should('not.exist');
+    cy.get('.codecheckers-list .item-name').should('have.text', 'Ada Lovelace');
+    cy.get('.codecheckers-list .item-orcid').should('contain', '0000-0002-1825-0097');
+  });
+
+  /**
+   * An empty name used to close the dialog and add nothing at all, so the
+   * editor was left believing the codechecker was on the record.
+   */
+  it('keeps the dialog open and adds nothing when the name is missing', () => {
+    mountForm();
+    cy.wait('@loadMetadata');
+
+    addCodechecker();
+    dialogSubmit('common.add').click();
+
+    cy.get('.pkp-mock-modal').should('exist');
+    cy.get('.pkp-mock-modal .modal-field-error')
+      .should('have.text', 'plugins.generic.codecheck.codecheckers.validation.nameRequired');
+    cy.get('.codecheckers-list').should('not.exist');
+  });
+
+  it('refuses an ORCID that is not one', () => {
+    mountForm();
+    cy.wait('@loadMetadata');
+
+    addCodechecker();
+    cy.get('.pkp-mock-modal input[id^=codecheck-checker-name]').type('Ada Lovelace');
+    cy.get('.pkp-mock-modal input[id^=codecheck-checker-orcid]').type('0000-0002-1825-0098');
+    dialogSubmit('common.add').click();
+
+    cy.get('.pkp-mock-modal').should('exist');
+    cy.get('.pkp-mock-modal .modal-field-error')
+      .should('have.text', 'plugins.generic.codecheck.codecheckers.validation.orcidInvalid');
+    cy.get('.codecheckers-list').should('not.exist');
   });
 
   it('can fill source field', () => {

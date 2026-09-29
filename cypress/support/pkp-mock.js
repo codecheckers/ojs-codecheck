@@ -1,5 +1,9 @@
 // This file mocks the OJS pkp global object for component tests
 import poSource from '../../locale/en/locale.po?raw';
+import { createApp } from 'vue';
+
+/** The dialogs this mock has open, newest last, so `closeDialog` can find one. */
+const openDialogs = new Set();
 
 /**
  * The message catalogue, read from the real `locale/en/locale.po` so the mock
@@ -105,7 +109,7 @@ if (typeof window !== 'undefined') {
       // the component suite could reach one.
       useModal: {
         useModal: () => ({
-          openDialog: ({ title, message, actions = [] }) => {
+          openDialog: ({ title, message, bodyComponent, bodyProps, actions = [] }) => {
             const dialog = document.createElement('div');
             dialog.className = 'pkp-mock-modal';
             dialog.innerHTML =
@@ -113,17 +117,48 @@ if (typeof window !== 'undefined') {
               '<div class="pkp-mock-modal__message">' + (message ?? '') + '</div>';
             dialog.querySelector('.pkp-mock-modal__title').textContent = title ?? '';
 
-            const close = () => dialog.remove();
+            // OJS 3.5 mounts `bodyComponent` inside the dialog with `bodyProps`
+            // spread onto it, which is how the dialogs that ask for something
+            // are built (#180).
+            let unmountBody = () => {};
+            if (bodyComponent) {
+              const body = dialog.querySelector('.pkp-mock-modal__message');
+              const app = createApp(bodyComponent, { ...(bodyProps ?? {}) });
+              app.mount(body);
+              unmountBody = () => app.unmount();
+            }
 
-            actions.forEach((action) => {
+            const close = () => {
+              unmountBody();
+              dialog.remove();
+              openDialogs.delete(dialog);
+            };
+
+            // **OJS disables every action for good on the first click** — its
+            // `Dialog` sets an internal flag and never resets it — and renders
+            // no close X while the dialog has actions. Modelled here, or a spec
+            // could assert that a dialog "stays open" and pass against a dialog
+            // nobody can use (#180).
+            let spent = false;
+            const buttons = actions.map((action) => {
               const button = document.createElement('button');
               button.type = 'button';
               button.className = 'pkp-mock-modal__action';
               button.textContent = action.label;
-              button.addEventListener('click', () => action.callback(close));
-              dialog.appendChild(button);
+              button.addEventListener('click', () => {
+                if (spent) {
+                  return;
+                }
+                spent = true;
+                buttons.forEach((other) => { other.disabled = true; });
+                action.callback(close);
+              });
+              return button;
             });
+            buttons.forEach((button) => dialog.appendChild(button));
 
+            openDialogs.add(dialog);
+            dialog.__close = close;
             document.body.appendChild(dialog);
           }
         })
@@ -135,7 +170,17 @@ if (typeof window !== 'undefined') {
     registry: {
       getPiniaStore: () => ({
         selectedMenuState: null
-      })
+      }),
+      // The modal store is not in `getPiniaStore`'s registry in OJS either —
+      // the plugin reaches it through the Pinia instance, and so does this.
+      _piniaInstance: {
+        _s: new Map([['modal', {
+          closeDialog: () => {
+            const [dialog] = [...openDialogs].slice(-1);
+            dialog?.__close();
+          }
+        }]])
+      }
     }
   };
 }

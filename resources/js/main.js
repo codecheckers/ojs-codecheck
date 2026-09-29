@@ -2,7 +2,8 @@ import { createApp, reactive } from 'vue';
 import CodecheckManifestFiles from "./Components/CodecheckManifestFiles.vue";
 import CodecheckRepositoryList from "./Components/CodecheckRepositoryList.vue";
 import { authorProvidedLines } from "./authorEntries.js";
-import { escapeHtml } from "./escapeHtml.js";
+import { html, raw, toHtml } from "./markup.js";
+import { askForConfirmation } from "./dialogs.js";
 import CodecheckReviewDisplay from "./Components/CodecheckReviewDisplay.vue";
 import CodecheckDataAndSoftwareAvailability from "./Components/CodecheckDataAndSoftwareAvailability.vue";
 import CodecheckOrcidSection from "./Components/CodecheckOrcidSection.vue";
@@ -177,29 +178,12 @@ pkp.registry.storeExtend("fileManager_SUBMISSION_FILES", (piniaContext) => {
           name: "markCodecheckOutput",
           icon: "CheckCircle",
           actionFn: ({ file }) => {
-            const { useModal } = pkp.modules.useModal;
-            const { openDialog } = useModal();
             const { localize } = useLocalize();
 
-            openDialog({
+            askForConfirmation({
               title: t("plugins.generic.codecheck.markAsOutputTitle"),
-              message: escapeHtml(t("plugins.generic.codecheck.markAsOutputConfirm", { fileName: localize(file.name) })),
-              actions: [
-                {
-                  label: t("common.yes"),
-                  isPrimary: true,
-                  callback: (close) => {
-                    console.log("Marking file as CODECHECK output:", file);
-                    close();
-                  },
-                },
-                {
-                  label: t("common.no"),
-                  callback: (close) => {
-                    close();
-                  },
-                },
-              ],
+              question: t("plugins.generic.codecheck.markAsOutputConfirm", { fileName: localize(file.name) }),
+              onConfirm: () => console.log("Marking file as CODECHECK output:", file),
             });
           },
         },
@@ -509,50 +493,52 @@ class CodecheckReviewRefresher {
       const manifest = (metadata?.codecheck?.manifest ?? []).filter(m => m && m.file);
       const availability = publication?.dataAvailabilityStatement;
 
-      body.innerHTML = '';
+      const sections = [];
 
       if (repositories.length) {
-        body.innerHTML += `
+        sections.push(html`
           <div class="submissionWizard__reviewPanel__item">
-            <h4>${escapeHtml(t('plugins.generic.codecheck.repositories.label'))}</h4>
+            <h4>${t('plugins.generic.codecheck.repositories.label')}</h4>
             <div class="review-value">
-              <p>${repositories.map(r => escapeHtml(r.url)).join('<br>')}</p>
+              <p>${repositories.map((r, index) => html`${index ? raw('<br>') : ''}${r.url}`)}</p>
             </div>
           </div>
-        `;
+        `);
       }
 
       if (manifest.length) {
-        body.innerHTML += `
+        sections.push(html`
           <div class="submissionWizard__reviewPanel__item">
-            <h4>${escapeHtml(t('plugins.generic.codecheck.manifestFiles.label'))}</h4>
+            <h4>${t('plugins.generic.codecheck.manifestFiles.label')}</h4>
             <div class="review-value">
-              <pre>${manifest.map(m => escapeHtml(m.file)).join('\n')}</pre>
+              <pre>${manifest.map((m, index) => html`${index ? '\n' : ''}${m.file}`)}</pre>
             </div>
           </div>
-        `;
+        `);
       }
 
       if (availability) {
-        body.innerHTML += `
+        sections.push(html`
           <div class="submissionWizard__reviewPanel__item">
-            <h4>${escapeHtml(t('plugins.generic.codecheck.dataAvailability'))}</h4>
+            <h4>${t('plugins.generic.codecheck.dataAvailability')}</h4>
             <div class="review-value">
-              <div>${escapeHtml(availability)}</div>
+              <div>${availability}</div>
             </div>
           </div>
-        `;
+        `);
       }
 
-      if (!repositories.length && !manifest.length && !availability) {
-        body.innerHTML = `
+      if (!sections.length) {
+        sections.push(html`
           <div class="submissionWizard__reviewPanel__item">
             <p class="description" style="color: #d00a0a;">
-              <em>${escapeHtml(t('plugins.generic.codecheck.noDataFound'))}</em>
+              <em>${t('plugins.generic.codecheck.noDataFound')}</em>
             </p>
           </div>
-        `;
+        `);
       }
+
+      body.innerHTML = toHtml(html`${sections}`);
     } catch (error) {
       console.error('CODECHECK: Failed to refresh review data', error);
     }

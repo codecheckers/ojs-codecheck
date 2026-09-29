@@ -60,7 +60,7 @@
 </template>
 
 <script>
-import { escapeHtml } from '../escapeHtml.js';
+import { showInformation } from '../dialogs.js';
 
 const { useLocalize } = pkp.modules.useLocalize;
 
@@ -169,29 +169,11 @@ export default {
         if(this.isConnected) {
             window.open(this.issue.url);
         } else {
-            await this.showErrorModal(this.t('plugins.generic.codecheck.github.issue.display.errorModal.title'), this.t('plugins.generic.codecheck.github.issue.display.errorModal.message'));
+            showInformation({
+                title: this.t('plugins.generic.codecheck.github.issue.display.errorModal.title'),
+                text: this.t('plugins.generic.codecheck.github.issue.display.errorModal.message')
+            });
         }
-    },
-    async showErrorModal(error, message) {
-      const { useModal } = pkp.modules.useModal;
-      const { openDialog } = useModal();
-
-      const modalHtml = '<div class="modal-form">' +
-        '<div class="modal-field">' +
-        '<label class="modal-label">' + escapeHtml(message) + '</label>' +
-        '</div>' +
-        '</div>';
-
-      openDialog({
-        title: error,
-        message: modalHtml,
-        actions: [
-          {
-            label: this.t('plugins.generic.codecheck.modal.close'),
-            callback: (close) => close()
-          },
-        ]
-      });
     },
   }
 }

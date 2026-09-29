@@ -598,9 +598,11 @@ class CodecheckApiController extends PKPBaseController
         $statusUpdate = CodecheckStatusHandler::updateStatus($submissionId, $status, $userId);
 
         if ($statusUpdate == false) {
+            // Answered 'success' => true with a fabricated record, which the
+            // editorial form reported back as a recorded change while the
+            // table still held the old status (#180).
             return response()->json([
-                'success' => true,
-                'statusRecord' => ['status' => $status, 'userId' => $userId],
+                'success' => false,
                 'allStatuses' => Constants::CODECHECK_STATUSES,
                 'error' => 'Inserting into the CODECHECK Status Database went wrong.',
             ], 500);

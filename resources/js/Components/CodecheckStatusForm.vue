@@ -67,7 +67,9 @@
 </template>
 
 <script>
-import { escapeHtml } from '../escapeHtml.js';
+import { html } from '../markup.js';
+import { askForInput, showInformation } from '../dialogs.js';
+import CodecheckStatusDialog from './CodecheckStatusDialog.vue';
 
 const { useLocalize } = pkp.modules.useLocalize;
 
@@ -170,42 +172,15 @@ export default {
     getStatusText() {
         return this.t(this.statusData.status);
     },
-    getStatusSelect() {
-        const options = this.allStatuses.map((status) => {
-            const selected = status === this.statusData.status ? ' selected' : '';
-            return '<option value="' + escapeHtml(status) + '"' + selected + '>' + escapeHtml(this.t(status)) + '</option>';
-        });
-        return '<select id="codecheck-status-select">' + options.join('') + '</select>';
-    },
     async showStatusModal() {
-      const { useModal } = pkp.modules.useModal;
-      const { openDialog } = useModal();
-
-      const modalHtml = '<div class="modal-form">' +
-        '<div class="modal-field">' +
-        '<label for="codecheck-status-select" class="modal-label">' + escapeHtml(this.t('plugins.generic.codecheck.status.modal.label')) + '</label>' +
-        this.getStatusSelect() +
-        '</div>' +
-        '</div>';
-
-      openDialog({
+      askForInput({
         title: this.t('plugins.generic.codecheck.status.modal.title'),
-        message: modalHtml,
-        actions: [
-          {
-            label: this.t('plugins.generic.codecheck.modal.cancel'),
-            callback: (close) => close()
-          },
-          {
-            label: this.t('plugins.generic.codecheck.modal.change'),
-            isPrimary: true,
-            callback: async (close) => {
-              const statusSelect = document.getElementById('codecheck-status-select');
-              await this.updateStatus(statusSelect.value, pkp.currentUser);
-              close();
-            }
-          }
-        ]
+        bodyComponent: CodecheckStatusDialog,
+        bodyProps: { statuses: this.allStatuses, currentStatus: this.statusData.status },
+        submitLabel: this.t('plugins.generic.codecheck.modal.change'),
+        // A refused update answers with its reason, which keeps the dialog open
+        // and shows it there rather than only in the console (#180).
+        onSubmit: (status) => this.updateStatus(status, pkp.currentUser)
       });
     },
     async getStatusHistory() {
@@ -235,88 +210,83 @@ export default {
             console.error('getStatus error:', error);
         }
     },
+    /**
+     * One row per recorded status. Built with `html`, so a name or an email
+     * address someone chose for themselves is text rather than markup — the
+     * status history is where that went wrong once (#179).
+     */
     async getStatusHistoryTableRows(statusHistory, mostRecentStatus) {
-        let statusHistoryRows = "";
+        const rows = [];
         for (const element of statusHistory) {
             const user = await this.getUser(element.user_id);
             // getUser() answers undefined, or an error body, for a user it cannot read
-            const name = escapeHtml(user?.fullName ?? element.user_id);
-            const userCell = user?.email ? `<a href="mailto:${escapeHtml(user.email)}">${name}</a>` : name;
-            statusHistoryRows += `
-                <tr class="border-separate border ${mostRecentStatus ? "padding-mostRecentStatus" : "border-light"} even:bg-tertiary">
-                    <td scope="false" class="border-b ${mostRecentStatus ? "border-mostRecentStatus-vertical border-mostRecentStatus-left" : "border-light first:border-s last:border-e"} px-2 py-2 text-start text-base-normal first:ps-3 last:pe-3">
+            const name = user?.fullName ?? element.user_id;
+            const userCell = user?.email ? html`<a href="mailto:${user.email}">${name}</a>` : html`${name}`;
+            const current = mostRecentStatus
+                ? html`<span class="current-status-label">${this.t('plugins.generic.codecheck.status.history.current')}</span><br>`
+                : '';
+
+            rows.push(html`
+                <tr class="border-separate border ${mostRecentStatus ? 'padding-mostRecentStatus' : 'border-light'} even:bg-tertiary">
+                    <td scope="false" class="border-b ${mostRecentStatus ? 'border-mostRecentStatus-vertical border-mostRecentStatus-left' : 'border-light first:border-s last:border-e'} px-2 py-2 text-start text-base-normal first:ps-3 last:pe-3">
                         <div class="flex items-center">
-                            <span class="text-base-normal text-default">${mostRecentStatus ? "<span style='font-weight:bold'>Current Status</span><br>" : ""}${escapeHtml(element.timestamp)}</span>
+                            <span class="text-base-normal text-default">${current}${element.timestamp}</span>
                         </div>
                     </td>
-                    <td scope="false" class="border-b ${mostRecentStatus ? "border-mostRecentStatus-vertical" : "border-light first:border-s last:border-e"} px-2 py-2 text-start text-base-normal first:ps-3 last:pe-3 whitespace-nowrap">
-                        <span class="pkpBadge ${mostRecentStatus ? "pkpBadge--isPrimary" : "codecheckBadge--isInvisible"}">
-                            <div class="flex items-center justify-center">${escapeHtml(this.t(element.status))}</div>
+                    <td scope="false" class="border-b ${mostRecentStatus ? 'border-mostRecentStatus-vertical' : 'border-light first:border-s last:border-e'} px-2 py-2 text-start text-base-normal first:ps-3 last:pe-3 whitespace-nowrap">
+                        <span class="pkpBadge ${mostRecentStatus ? 'pkpBadge--isPrimary' : 'codecheckBadge--isInvisible'}">
+                            <div class="flex items-center justify-center">${this.t(element.status)}</div>
                         </span>
                     </td>
-                    <td scope="false" class="border-b ${mostRecentStatus ? "border-mostRecentStatus-vertical border-mostRecentStatus-right" : "border-light first:border-s last:border-e"} px-2 py-2 text-start text-base-normal first:ps-3 last:pe-3 whitespace-nowrap">
+                    <td scope="false" class="border-b ${mostRecentStatus ? 'border-mostRecentStatus-vertical border-mostRecentStatus-right' : 'border-light first:border-s last:border-e'} px-2 py-2 text-start text-base-normal first:ps-3 last:pe-3 whitespace-nowrap">
                         <span class="text-base-normal text-default">${userCell}</span>
                     </td>
                 </tr>
-            `;
-        };
-        return statusHistoryRows;
+            `);
+        }
+        return rows;
     },
     async statusTableSegment(statusHistory, tableTop) {
-        let table = `<div class="modal-field ${tableTop ? "" : "status-table-wrapper"}">` +
-        '<table class="w-full max-w-full border-collapse border-spacing-0" aria-labelledby="v-25" aria-describedby="v-26">';
-        
-        if(tableTop) {
-            table += `
+        const head = tableTop ? html`
                 <thead>
                     <tr class="bg bg-default">
                         <th scope="col" class="whitespace-nowrap border-b border-t border-light px-2 py-4 text-start text-base-normal uppercase text-heading first:border-s first:ps-3 last:border-e last:pe-3">
-                            <span>${escapeHtml(this.t('plugins.generic.codecheck.status.history.timestamp'))}</span>
+                            <span>${this.t('plugins.generic.codecheck.status.history.timestamp')}</span>
                         </th>
                         <th scope="col" class="whitespace-nowrap border-b border-t border-light px-2 py-4 text-start text-base-normal uppercase text-heading first:border-s first:ps-3 last:border-e last:pe-3">
-                            <span>${escapeHtml(this.t('plugins.generic.codecheck.status'))}</span>
+                            <span>${this.t('plugins.generic.codecheck.status')}</span>
                         </th>
                         <th scope="col" class="whitespace-nowrap border-b border-t border-light px-2 py-4 text-start text-base-normal uppercase text-heading first:border-s first:ps-3 last:border-e last:pe-3">
-                            <span>${escapeHtml(this.t('plugins.generic.codecheck.status.history.user'))}</span>
+                            <span>${this.t('plugins.generic.codecheck.status.history.user')}</span>
                         </th>
                     </tr>
                 </thead>
-            `;
-        }
-        
-        table += `
-            <tbody>
-                ${await this.getStatusHistoryTableRows(statusHistory, tableTop)}
-            </tbody>
-        </table>
-        </div>`
-        
-        return table;
+            ` : '';
+
+        return html`
+            <div class="modal-field ${tableTop ? '' : 'status-table-wrapper'}">
+                <table class="w-full max-w-full border-collapse border-spacing-0">
+                    ${head}
+                    <tbody>
+                        ${await this.getStatusHistoryTableRows(statusHistory, tableTop)}
+                    </tbody>
+                </table>
+            </div>
+        `;
     },
     async buildStatusHistoryTable() {
-        if(this.hasStatusHistory) {
-            const statusHistory = await this.getStatusHistory();
-            const [currentStatus, ...statusRest] = statusHistory;
-            return await this.statusTableSegment([currentStatus], true) + await this.statusTableSegment(statusRest, false);
+        if (!this.hasStatusHistory) {
+            return '';
         }
+
+        const [currentStatus, ...statusRest] = await this.getStatusHistory();
+        return html`${await this.statusTableSegment([currentStatus], true)}${await this.statusTableSegment(statusRest, false)}`;
     },
     async showHistoryModal() {
-      const { useModal } = pkp.modules.useModal;
-      const { openDialog } = useModal();
-
-      const modalHtml = '<div class="modal-form">' +
-        await this.buildStatusHistoryTable() +
-        '</div>';
-
-      openDialog({
+      // The history is read-only, so its one button closes rather than cancels.
+      showInformation({
         title: this.t('plugins.generic.codecheck.status.history'),
-        message: modalHtml,
-        actions: [
-          {
-            label: this.t('plugins.generic.codecheck.modal.cancel'),
-            callback: (close) => close()
-          },
-        ]
+        body: await this.buildStatusHistoryTable()
       });
     },
     async automaticStatusUpdate() {
@@ -325,32 +295,54 @@ export default {
 
         await this.updateStatus(status, user);
     },
+    /**
+     * Records a status.
+     *
+     * Every way this can fail answers with a sentence the editor can read, so
+     * the dialog that asked can show it — a path that answered nothing would be
+     * indistinguishable from a recorded change (#180).
+     *
+     * @returns {Promise<string|null>} the reason it was refused, or null
+     */
     async updateStatus(status, user) {
-        if(this.userAllowedToAccess || user.id === -1) {
-            try {
-                if (!this.submission?.id) return;
-                const submissionId = this.submission.id;
-                let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
-                const response = await fetch(`${apiUrl}/status/update?submissionId=${submissionId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Csrf-Token': pkp.currentUser.csrfToken,
-                    },
-                    body: JSON.stringify({ status: status, userId: user.id }),
-                });
-                const data = await response.json();
+        if (!this.userAllowedToAccess && user.id !== -1) {
+            return this.t('plugins.generic.codecheck.status.update.notPermitted');
+        }
 
-                if (data.success) {
-                    console.log('Success:', data.statusRecord);
-                    this.statusData = data.statusRecord;
-                    this.allStatuses = data.allStatuses;
-                } else {
-                    console.error('Error:', data.error);
-                }
-            } catch (error) {
-                console.error('Failed to update Status: ', error);
+        if (!this.submission?.id) {
+            console.error('CODECHECK: no submission to record a status against');
+            return this.t('plugins.generic.codecheck.status.update.failed');
+        }
+
+        try {
+            const apiUrl = `${pkp.context.apiBaseUrl}codecheck/status/update?submissionId=${this.submission.id}`;
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Csrf-Token': pkp.currentUser.csrfToken,
+                },
+                body: JSON.stringify({ status: status, userId: user.id }),
+            });
+            const data = await response.json();
+
+            // The HTTP status is checked as well as the body's: an
+            // authorization refusal is PKP's own answer and carries no
+            // `success` at all.
+            if (!response.ok || !data.success) {
+                // `error` is the server's internal English; `errorMessage` is
+                // the translated one PKP sends with a refusal. Only the latter
+                // is fit to show.
+                console.error('CODECHECK: the status was not recorded', data.error ?? data.errorMessage);
+                return data.errorMessage || this.t('plugins.generic.codecheck.status.update.failed');
             }
+
+            this.statusData = data.statusRecord;
+            this.allStatuses = data.allStatuses;
+            return null;
+        } catch (error) {
+            console.error('CODECHECK: the status could not be recorded', error);
+            return this.t('plugins.generic.codecheck.status.update.failed');
         }
     },
     async getUser(userId) {
@@ -406,6 +398,10 @@ export default {
     height: 200px;
     overflow: auto;
     margin-top: 1rem;
+}
+
+.current-status-label {
+    font-weight: bold;
 }
 
 .status-table-wrapper table th {

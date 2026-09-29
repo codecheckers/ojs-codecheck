@@ -7,5 +7,13 @@ Cypress.Commands.add('mount', mount);
 // between tests — a dialog a test leaves open would otherwise still be found by
 // the next one.
 beforeEach(() => {
-  document.querySelectorAll('.pkp-mock-modal').forEach((dialog) => dialog.remove());
+  // Closed rather than detached, so the body component is unmounted the way a
+  // real close unmounts it.
+  document.querySelectorAll('.pkp-mock-modal').forEach((dialog) => {
+    if (dialog.__close) {
+      dialog.__close();
+    } else {
+      dialog.remove();
+    }
+  });
 });

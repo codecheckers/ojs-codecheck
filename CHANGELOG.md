@@ -138,6 +138,11 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 - `codecheck_metadata.version` is `spec_version`, which is what it holds (#93)
 - Removed an unused second way to write a CODECHECK record, which enforced neither
   of the rules the real write paths apply
+- Markup the plugin builds as a string — the dialogs, the status history and the
+  wizard's review panel — is escaped by default rather than call by call, and
+  every dialog is opened through one helper, so they ask the same way round with
+  the same labels. The two dialogs that ask for something are Vue components
+  rather than markup read back out of the page (#179, #180)
 
 ### Changed
 
@@ -228,6 +233,17 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   return, and is never emptied by a save that could not read it first. Invalid
   addresses are refused with the reason under the field, and only an address a save
   introduces is judged (#170)
+- Adding a codechecker without a name says so in the dialog and lets it be
+  corrected, instead of closing as if the codechecker had been added, and an
+  ORCID iD is checked before it is stored (#180)
+- A CODECHECK status change that is refused reports the reason in the dialog that
+  asked for it, and a status the server did not record is no longer shown as the
+  current one (#180)
+- Every CODECHECK confirmation offers the same buttons in the same order, and the
+  dialog buttons are translated in every language OJS has rather than only in
+  English (#179)
+- "Current status" in the CODECHECK status history is translated, and the
+  `codecheck.yml` preview is laid out like every other CODECHECK dialog (#179)
 - Saving the CODECHECK metadata without a repository list no longer empties it
 - User names, file names and translations in the CODECHECK dialogs and the status
   history are shown as text: they were inserted as markup, so a name could run

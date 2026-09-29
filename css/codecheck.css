@@ -425,3 +425,61 @@ textarea[name="dataAvailabilityStatement"] {
   font-size: 0.85em;
   color: #006629;
 }
+
+/* The CODECHECK dialogs. OJS mounts a dialog's body inside its own modal,
+   outside the component that opened it, so these rules live here rather than in
+   whichever component happens to be on the page — CodecheckMetadataForm.vue is
+   where they were, which left the dialogs opened from elsewhere looking right
+   only by accident. */
+.modal-form {
+  padding: 1rem 0;
+}
+
+.modal-field {
+  margin-bottom: 1rem;
+}
+
+.modal-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.modal-input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.modal-input:focus {
+  outline: none;
+  border-color: #007ab2;
+  box-shadow: 0 0 0 2px rgba(0, 122, 178, 0.2);
+}
+
+/* Both selectors, because `.modal-input:focus` above is more specific than a
+   single class and would otherwise paint the border blue exactly while the
+   editor is correcting the field the message complains about. */
+.modal-input--invalid,
+.modal-input--invalid:focus {
+  border-color: #d00a0a;
+}
+
+/* The dialogs that ask for something draw their own buttons — see
+   `askForInput()` for why they cannot use the dialog's. */
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+.modal-field-error {
+  margin-top: 0.25rem;
+  color: #d00a0a;
+  font-size: 14px;
+}

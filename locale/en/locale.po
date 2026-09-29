@@ -11,12 +11,6 @@ msgstr ""
 "PO-Revision-Date: 2025-01-30T00:00:00+00:00\n"
 "Language: en\n"
 
-msgid "plugins.generic.codecheck.yes"
-msgstr "Yes"
-
-msgid "plugins.generic.codecheck.no"
-msgstr "No"
-
 msgid "plugins.generic.codecheck.ok"
 msgstr "Ok"
 
@@ -494,6 +488,9 @@ msgstr "Status"
 msgid "plugins.generic.codecheck.status.history"
 msgstr "CODECHECK Status History"
 
+msgid "plugins.generic.codecheck.status.history.current"
+msgstr "Current status"
+
 msgid "plugins.generic.codecheck.status.history.timestamp"
 msgstr "Timestamp"
 
@@ -508,6 +505,18 @@ msgstr "History"
 
 msgid "plugins.generic.codecheck.status.modal.title"
 msgstr "Change CODECHECK Status"
+
+msgid "plugins.generic.codecheck.dialog.submitFailed"
+msgstr "Something went wrong and the dialog could not finish."
+
+msgid "plugins.generic.codecheck.status.update.noStatuses"
+msgstr "The list of CODECHECK statuses could not be loaded. Close this dialog and try again."
+
+msgid "plugins.generic.codecheck.status.update.failed"
+msgstr "The CODECHECK status could not be recorded."
+
+msgid "plugins.generic.codecheck.status.update.notPermitted"
+msgstr "You are not permitted to change the CODECHECK status of this submission."
 
 msgid "plugins.generic.codecheck.status.modal.label"
 msgstr "Select the new CODECHECK Status for this Submission"
@@ -684,6 +693,12 @@ msgstr "Failed to generate preview"
 msgid "plugins.generic.codecheck.yamlGenerationFailed"
 msgstr "Failed to generate YAML Content"
 
+msgid "plugins.generic.codecheck.codecheckers.validation.nameRequired"
+msgstr "Enter the codechecker's name."
+
+msgid "plugins.generic.codecheck.codecheckers.validation.orcidInvalid"
+msgstr "This is not an ORCID iD. Enter it as 0000-0000-0000-0000, or leave the field empty."
+
 msgid "plugins.generic.codecheck.validation.manifestRequired"
 msgstr "Please add at least one manifest file"
 
@@ -712,7 +727,7 @@ msgid "plugins.generic.codecheck.repositories.infoTextNote"
 msgstr "Note that loading the data from a remote repository will overwrite, but not save, the values in the current form."
 
 msgid "plugins.generic.codecheck.repositories.infoTextMoreInformation"
-msgstr "More Information: "
+msgstr "More information: {$link}"
 
 msgid "plugins.generic.codecheck.repositories.infoTextLinkToAllowedRepositories"
 msgstr "https://github.com/codecheckers/register/blob/master/README.md#editing-the-register"
@@ -729,20 +744,8 @@ msgstr "Remove this file from the manifest?"
 msgid "plugins.generic.codecheck.yaml.download"
 msgstr "Download"
 
-msgid "plugins.generic.codecheck.yaml.close"
-msgstr "Close"
-
 msgid "plugins.generic.codecheck.yaml.previewTitle"
 msgstr "CODECHECK metadata preview (codecheck.yml)"
-
-msgid "plugins.generic.codecheck.modal.close"
-msgstr "Close"
-
-msgid "plugins.generic.codecheck.modal.cancel"
-msgstr "Cancel"
-
-msgid "plugins.generic.codecheck.modal.add"
-msgstr "Add"
 
 msgid "plugins.generic.codecheck.modal.change"
 msgstr "Change"

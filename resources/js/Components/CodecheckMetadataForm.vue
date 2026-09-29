@@ -425,8 +425,10 @@
 </template>
 
 <script>
-import { escapeHtml } from '../escapeHtml.js';
+import { html, htmlSentence, MARKUP_PLACEHOLDER, toHtml } from '../markup.js';
 import { isWebUrl } from '../isWebUrl.js';
+import { askForConfirmation, askForInput, showInformation } from '../dialogs.js';
+import CodecheckCodecheckerDialog from './CodecheckCodecheckerDialog.vue';
 
 const { useLocalize } = pkp.modules.useLocalize;
 
@@ -512,15 +514,11 @@ export default {
      * https://docs.pkp.sfu.ca/translating-guide/en/coders#semantics
      */
     introText() {
-      const link = '<a href="' + escapeHtml(this.specUrl) + '" target="_blank" rel="noopener noreferrer">'
-        + escapeHtml(this.t('plugins.generic.codecheck.form.intro.specLinkLabel'))
-        + '</a>';
-      // The sentence is escaped as text and the link put in afterwards, so the
-      // only markup in the result is the markup built here. A marker stands in
-      // for the link, since escaping would otherwise reach the link as well.
-      const marker = '\u0000specLink\u0000';
-      return escapeHtml(this.t('plugins.generic.codecheck.form.intro', {specLink: marker}))
-        .replace(marker, link);
+      const link = html`<a href="${this.specUrl}" target="_blank" rel="noopener noreferrer">${this.t('plugins.generic.codecheck.form.intro.specLinkLabel')}</a>`;
+      return toHtml(htmlSentence(
+        this.t('plugins.generic.codecheck.form.intro', {specLink: MARKUP_PLACEHOLDER}),
+        link
+      ));
     },
 
     /**
@@ -616,6 +614,10 @@ export default {
     }
   },
   methods: {
+    // The shared helper, reachable as `this.askForConfirmation` from the six
+    // call sites below; it takes no component state.
+    askForConfirmation,
+
     async loadData() {
       this.loading = true;
       this.error = null;
@@ -954,126 +956,33 @@ export default {
       });
     },
 
-    /**
-     * Asks a yes/no question through OJS's own modal, so a confirmation in this
-     * form looks and behaves like every other one in the workflow.
-     *
-     * @param {object} options title, question, onConfirm and optional onCancel
-     */
-    askForConfirmation({ title, question, onConfirm, onCancel = () => {} }) {
-      const { useModal } = pkp.modules.useModal;
-      const { openDialog } = useModal();
-
-      openDialog({
-        title: title,
-        message: `
-          <div class="modal-form">
-            <div class="modal-field">
-              <label class="modal-label">${escapeHtml(question)}</label>
-            </div>
-          </div>
-        `,
-        actions: [
-          {
-            label: this.t('plugins.generic.codecheck.no'),
-            callback: (close) => {
-              close();
-              onCancel();
-            }
-          },
-          {
-            label: this.t('plugins.generic.codecheck.yes'),
-            isPrimary: true,
-            callback: (close) => {
-              close();
-              onConfirm();
-            }
-          }
-        ]
-      });
-    },
-
     showRepositoryInfoModal() {
-      const { useModal } = pkp.modules.useModal;
-      const { openDialog } = useModal();
-
       // The address is a translation, so it is checked like any other address
       // before it becomes a link.
       const address = this.t('plugins.generic.codecheck.repositories.infoTextLinkToAllowedRepositories');
-      const link = isWebUrl(address)
-        ? '<a href="' + escapeHtml(address) + '">' + escapeHtml(address) + '</a>'
-        : escapeHtml(address);
+      const link = isWebUrl(address) ? html`<a href="${address}">${address}</a>` : html`${address}`;
 
-      const modalHtml = '<div class="modal-form">' +
-        '<div class="modal-field">' +
-        '<label class="modal-label">' + escapeHtml(this.t('plugins.generic.codecheck.repositories.infoTextOne')) + '</label><br>' +
-        '<label class="modal-label">' + escapeHtml(this.t('plugins.generic.codecheck.repositories.infoTextTwo')) + '</label><br>' +
-        '<label class="modal-label text-bold text-pink">' + escapeHtml(this.t('plugins.generic.codecheck.repositories.infoTextNote')) + '</label><br>' +
-        '<label class="modal-label">' +
-          escapeHtml(this.t('plugins.generic.codecheck.repositories.infoTextMoreInformation')) +
-          link +
-        '</label>' +
-        '</div>' +
-        '</div>';
-
-      openDialog({
+      showInformation({
         title: this.t('plugins.generic.codecheck.repositories.infoTitle'),
-        message: modalHtml,
-        actions: [
-          {
-            label: this.t('plugins.generic.codecheck.modal.close'),
-            callback: (close) => close()
-          },
-        ]
+        body: html`
+          <div class="modal-field">
+            <label class="modal-label">${this.t('plugins.generic.codecheck.repositories.infoTextOne')}</label><br>
+            <label class="modal-label">${this.t('plugins.generic.codecheck.repositories.infoTextTwo')}</label><br>
+            <label class="modal-label text-bold text-pink">${this.t('plugins.generic.codecheck.repositories.infoTextNote')}</label><br>
+            <label class="modal-label">${htmlSentence(this.t('plugins.generic.codecheck.repositories.infoTextMoreInformation', {link: MARKUP_PLACEHOLDER}), link)}</label>
+          </div>
+        `
       });
     },
 
     showCodecheckerModal() {
-      const { useModal } = pkp.modules.useModal;
-      const { openDialog } = useModal();
-
-      const enterName = escapeHtml(this.t('plugins.generic.codecheck.codecheckers.enterName'));
-      const enterOrcid = escapeHtml(this.t('plugins.generic.codecheck.codecheckers.enterOrcid'));
-
-      const modalHtml = '<div class="modal-form">' +
-        '<div class="modal-field">' +
-        '<label for="checker-name" class="modal-label">' + enterName + '</label>' +
-        '<input type="text" id="checker-name" class="modal-input" placeholder="' + enterName + '" />' +
-        '</div>' +
-        '<div class="modal-field">' +
-        '<label for="checker-orcid" class="modal-label">' + enterOrcid + '</label>' +
-        '<input type="text" id="checker-orcid" class="modal-input" placeholder="0000-0000-0000-0000" />' +
-        '</div>' +
-        '</div>';
-
-      openDialog({
+      askForInput({
         title: this.t('plugins.generic.codecheck.codecheckers.addCodechecker'),
-        message: modalHtml,
-        actions: [
-          {
-            label: this.t('plugins.generic.codecheck.modal.cancel'),
-            callback: (close) => close()
-          },
-          {
-            label: this.t('plugins.generic.codecheck.modal.add'),
-            isPrimary: true,
-            callback: (close) => {
-              const nameInput = document.getElementById('checker-name');
-              const orcidInput = document.getElementById('checker-orcid');
-              
-              const name = nameInput?.value || '';
-              const orcid = orcidInput?.value || '';
-              
-              if (name.trim()) {
-                this.metadata.codecheckers.push({
-                  name: name.trim(),
-                  orcid: orcid.trim()
-                });
-              }
-              close();
-            }
-          }
-        ]
+        bodyComponent: CodecheckCodecheckerDialog,
+        submitLabel: this.t('common.add'),
+        onSubmit: (codechecker) => {
+          this.metadata.codecheckers.push(codechecker);
+        }
       });
     },
 
@@ -1224,45 +1133,27 @@ export default {
     },
     
     showYamlModal(yamlContent) {
-      const { useModal } = pkp.modules.useModal;
-      const { openDialog } = useModal();
-
-      const downloadFunc = 'downloadCodecheckYaml_' + Date.now();
-      window[downloadFunc] = function() {
-        const blob = new Blob([yamlContent], { type: 'text/yaml' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'codecheck.yml';
-        a.click();
-        URL.revokeObjectURL(url);
-      };
-
-      const modalHtml = '<div class="yaml-modal-container">' +
-        '<pre class="yaml-preview-content">' + escapeHtml(yamlContent) + '</pre>' +
-        '</div>';
-
-      openDialog({
+      // The download is a closure the button calls, not a function parked on
+      // `window` under a timestamped name and deleted again by whichever button
+      // was pressed (#179).
+      showInformation({
         title: this.t('plugins.generic.codecheck.yaml.previewTitle'),
-        message: modalHtml,
-        actions: [
-          {
-            label: this.t('plugins.generic.codecheck.yaml.download'),
-            isPrimary: true,
-            callback: (close) => {
-              window[downloadFunc]();
-              delete window[downloadFunc];
-              close();
-            }
-          },
-          {
-            label: this.t('plugins.generic.codecheck.yaml.close'),
-            callback: (close) => {
-              delete window[downloadFunc];
-              close();
-            }
-          }
-        ]
+        body: html`<div class="yaml-modal-container"><pre class="yaml-preview-content">${yamlContent}</pre></div>`,
+        actionLabel: this.t('plugins.generic.codecheck.yaml.download'),
+        onAction: () => {
+          const blob = new Blob([yamlContent], { type: 'text/yaml' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = 'codecheck.yml';
+          // Connected to the document before the click and revoked a tick
+          // later: a detached anchor does not download in every browser, and
+          // revoking in the same tick can abort the transfer.
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 0);
+        }
       });
     },
 
@@ -2173,36 +2064,6 @@ export default {
   border: 1px solid #f5c6cb;
   border-radius: 4px;
   margin: 2rem;
-}
-
-.modal-form {
-  padding: 1rem 0;
-}
-
-.modal-field {
-  margin-bottom: 1rem;
-}
-
-.modal-label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 600;
-  color: #333;
-}
-
-.modal-input {
-  width: 100%;
-  padding: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 3px;
-  font-size: 14px;
-  box-sizing: border-box;
-}
-
-.modal-input:focus {
-  outline: none;
-  border-color: #007ab2;
-  box-shadow: 0 0 0 2px rgba(0, 122, 178, 0.2);
 }
 
 .yaml-modal-container {

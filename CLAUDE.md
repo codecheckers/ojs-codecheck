@@ -160,7 +160,82 @@ Components (`resources/js/Components/`):
 `CodecheckMetadataForm.vue` (2.3k lines — the main editorial form),
 `CodecheckStatusForm.vue`, `CodecheckGithubIssueDisplay.vue`, `CodecheckReviewDisplay.vue`,
 `CodecheckRepositoryList.vue`, `CodecheckManifestFiles.vue`,
-`CodecheckDataAndSoftwareAvailability.vue`.
+`CodecheckDataAndSoftwareAvailability.vue`, and the two dialog bodies
+`CodecheckCodecheckerDialog.vue` / `CodecheckStatusDialog.vue`.
+
+### Markup and dialogs (`resources/js/markup.js`, `resources/js/dialogs.js`)
+
+`markup.js` is where a string of HTML is built: the `html` tagged template
+**escapes everything interpolated into it**, and markup the plugin wrote itself
+has to say so with `raw()`. `html` answers a marker rather than a string, so one
+`html` nests inside another for free and `raw()` stays rare enough that a
+`raw()` in a diff is the thing to look at twice; `toHtml()` is the single point
+where a marker becomes the string handed to `innerHTML` or to OJS. `escapeHtml`
+is still exported for the one caller that cannot use the template (the
+introduction sentence, whose link is substituted by `t()` inside the message).
+
+That is the reverse of the concatenation it replaced, where every new value had
+to remember `escapeHtml()` — the two defects #179 came from were a dropped
+closing tag and a user's name that ran as script in an editor's browser. Every
+markup builder now goes through it: the dialogs, the status history table and
+the submission wizard's review panel.
+
+**Every dialog the plugin opens goes through `dialogs.js`** — nothing else names
+`pkp.modules.useModal` (#179). It offers `askForConfirmation`, `showInformation`
+(with an optional second action, which is how the YAML preview offers its
+download) and `askForInput`, so a confirmation in the file manager and one in
+the editorial form ask the same way round, with the same labels.
+
+**The buttons are labelled from OJS's own `common.*` keys** — `common.yes`,
+`common.no`, `common.close`, `common.cancel`, `common.add`. PKP ships those
+translated in every locale it has, and the plugin ships only `locale/en`, so a
+plugin key would read "Yes" beside an OJS dialog reading "Ja". A label belongs
+to the plugin only where OJS has no word for it: the status dialog's "Change",
+because `common.change` does not exist. The plugin's own `yes`/`no`/`modal.close`
+/`modal.cancel`/`modal.add` entries were dropped when the dialogs stopped using
+them.
+
+**A dialog that asks for something is opened with no `actions`, and its body
+draws its own buttons.** OJS's `Dialog` is built for a question that is over
+once a button is pressed: the first click sets an internal flag that disables
+*every* action for good and puts a spinner beside them, and the close X is
+rendered only while the dialog has no actions. So a dialog that stays open to
+say why it refused — which is the whole of #180 — would stay open with nothing
+left to press, and only Escape would get the editor out, taking what they had
+typed with it. Every `bodyComponent` dialog OJS opens itself only displays
+something, which is why OJS has never met this. `resources/js/dialogForm.js` is
+the mixin those bodies share: the buttons, and what pressing the primary one
+means. A body implements `validate()` answering `{valid, value}`, brings its own
+`setup()` returning `t` (**Vue 3 does not call a mixin's `setup`**), and shows
+`error`, which holds whatever the caller refused the value with.
+
+Closing one is `closeDialog()` in `dialogs.js`: `useModal()` exposes no closer,
+and **`pkp.registry.getPiniaStore('modal')` throws** — that registry holds only
+OJS's own component stores — so it goes through `pkp.registry._piniaInstance._s`,
+as the rest of the plugin reaches the workflow store, and falls back to the
+`close-dialog-vue` event.
+
+None of this is reachable by the component suite on its own: the mock decides
+how a dialog behaves. `cypress/support/pkp-mock.js` therefore models the
+disabling, and `cypress/tests/e2e/codechecker-dialog.cy.js` drives the real one.
+
+**A dialog that asks for something is a Vue component, not a string** (#180).
+`askForInput({title, bodyComponent, bodyProps, submitLabel, onSubmit})` uses
+OJS 3.5's `bodyComponent`/`bodyProps`, which OJS itself uses for its invitation
+dialogs. The buttons belong to the dialog and the fields to the component, so
+the two meet through a plain `form` object `askForInput` passes in: the body
+registers `form.submit()`, which validates and answers `{valid, value}`, and
+`form.setError(message)`. An invalid answer leaves the dialog open — the
+component is already saying why beside the field — and so does an `onSubmit`
+that answers with a message, which is how a refused status update is reported in
+the dialog that caused it rather than only in the console.
+
+The fields used to be read back through `document.getElementById('checker-name')`,
+which meant an empty name closed the dialog having added nothing, the ORCID was
+stored unchecked, and a second copy of the form on the same page would answer
+for the first. `resources/js/orcid.js` is the ORCID check — format plus the
+ISO 7064 MOD 11-2 check digit — and it is only in JS: nothing on the server
+validates an ORCID iD before storing it.
 
 ### API (`api/v1/`)
 
@@ -669,8 +744,8 @@ cypress/
                                this first in every component spec
   support/e2e.js               cy.ojsLogin(), cy.getCsrfToken(), swallow uncaught exceptions
   support/component-index.html
-  tests/component/*.cy.js      6 specs, 84 tests
-  tests/e2e/*.cy.js            11 specs, 63 tests
+  tests/component/*.cy.js      10 specs, 128 tests
+  tests/e2e/*.cy.js            12 specs, 68 tests
                                yaml-generation, article-sidebar-setting,
                                issue-toc-setting, issue-toc-badge,
                                private-repository, publication-validation,
@@ -684,14 +759,16 @@ dev/
 ### Component tests (the reliable suite)
 
 `npm run test:component` — **passes locally with no OJS, no database, no build step**
-(84/84, ~45 s). Cypress mounts the `.vue` sources directly through Vite and stubs the
+(128/128, ~40 s). Cypress mounts the `.vue` sources directly through Vite and stubs the
 API with `cy.intercept`.
 
 Covered: metadata form load/render, manifest files add/remove/comment, repository list
 add/remove + private flag, certificate identifier reservation, removal + labels, required-field
 validation, YAML preview gating, codechecker modal, review display states, data &
 software availability field, the config version selector and the author's availability
-statement in the read-only panel.
+statement in the read-only panel; the escaping rules in `markup.js`, the ORCID
+check, and the two dialogs that ask for something — including that an empty name
+or a mistyped ORCID iD keeps the dialog open and adds nothing.
 
 `cypress/support/pkp-mock.js` reads the real `locale/en/locale.po` and its `t()`
 behaves in two ways on purpose:
@@ -707,27 +784,27 @@ Keys outside `plugins.generic.codecheck.` come from OJS's own locale files
 (`common.loading`), so they are passed through unchecked.
 
 **The mock's `useModal` renders a real dialog into the document** —
-`.pkp-mock-modal` with one `.pkp-mock-modal__action` button per action — so a
-confirmation can be answered in a spec rather than stubbed. It used to answer
-only the first half of `const {useModal} = pkp.modules.useModal`, which made
-every modal path throw, so no spec could reach one.
-`cypress/support/component.js` clears leftover dialogs between tests, because
-`mount()` does not clear `document.body`.
+`.pkp-mock-modal` with one `.pkp-mock-modal__action` button per action, and a
+`bodyComponent` mounted inside it with `bodyProps` spread on, as OJS does — so a
+confirmation can be answered, and a dialog with fields filled in, in a spec
+rather than stubbed. It used to answer only the first half of
+`const {useModal} = pkp.modules.useModal`, which made every modal path throw, so
+no spec could reach one. `cypress/support/component.js` clears leftover dialogs
+between tests, because `mount()` does not clear `document.body`.
 
-Confirmations in `CodecheckMetadataForm.vue` go through
-`askForConfirmation({title, question, onConfirm, onCancel})`, which uses that
-modal. There is no fallback to the browser's `alert()`/`confirm()`/`prompt()`:
-the component only ever runs inside OJS's backend, where `pkp.modules.useModal`
+There is no fallback to the browser's `alert()`/`confirm()`/`prompt()`: these
+components only ever run inside OJS's backend, where `pkp.modules.useModal`
 always exists, so a fallback is code no editor can reach and no test runs. A new
-browser dialog in this component is a bug, not a shortcut.
+browser dialog here is a bug, not a shortcut.
 
-Not covered: `CodecheckStatusForm.vue`, `CodecheckGithubIssueDisplay.vue`, the
-`storeExtend` wiring in `main.js` (menu injection, dashboard column, file-manager
-columns), and the wizard DOM-scraping classes.
+Not covered: `CodecheckGithubIssueDisplay.vue`, the `storeExtend` wiring in
+`main.js` (menu injection, dashboard column, file-manager columns), and the
+wizard DOM-scraping classes. `CodecheckStatusForm.vue` is covered only through
+its dialog body, `CodecheckStatusDialog.vue`.
 
 ### E2E tests
 
-`make test-e2e` — 63 tests across 11 specs, driving a real OJS instance.
+`make test-e2e` — 68 tests across 12 specs, driving a real OJS instance.
 
 **Several specs share submission fixtures, and each must restore what it
 changes.** Submissions 8 and 9 are written by `publication-validation`,
@@ -794,6 +871,11 @@ loads before concluding anything about the tests.
 - `settings-roundtrip.cy.js` — every field the settings form renders keeps its value
   across a save. Derives the field list from the rendered form, so a setting added
   without being wired into `readInputData()`/`execute()` fails here automatically
+- `codechecker-dialog.cy.js` — the "add codechecker" dialog against a real OJS:
+  that a refusal keeps it open **and usable**, that a mistyped ORCID iD is
+  refused and a pasted orcid.org address accepted, and that cancelling adds
+  nothing. It is here rather than only in the component suite because the mock
+  decides how a dialog behaves, and what this is about is how OJS's does
 - `availability-statement-editing.cy.js` — the availability statement on OJS's
   publication Metadata form: that the field reaches the form OJS serves to the
   workflow, sits in a group the renderer draws (a field whose `groupId` is not one
@@ -1058,6 +1140,18 @@ Notes that matter when touching this:
   quietly wrong rather than an error: a test written against worktree code fails
   against main's. Point the symlink at the worktree for the run and put it back
   afterwards. The same applies to `make serve` and everything e2e.
+- **Check where the symlink points before believing a green e2e or PHPUnit run.**
+  `ls -la ojs-350/plugins/generic/codecheck`. It is a single shared pointer, so a
+  worktree someone repointed it to stays the tested code until it is put back,
+  and the suites pass — against that worktree. A whole suite reported as
+  validating a change has already been run against somebody else's branch this
+  way.
+- **After repointing it, clear `cache/t_compile/` as well as `make clear-cache`.**
+  Smarty keeps compiled templates there and did not recompile `settings.tpl`
+  across the swap, so the settings form served was the previous target's — with
+  its fields, under its ids. `make clear-cache` empties `cache/opcache/` and
+  `cache/_db/` and does not touch it. The symptom is a settings e2e spec failing
+  to find a field that is plainly in `templates/settings.tpl`.
 - **The DB host must be `127.0.0.1`, not `localhost`** — mysqli reads
   `localhost` as a socket path.
 - **OJS release tarballs ship without PHPUnit** (`--no-dev`). `make ojs-install`
@@ -1386,6 +1480,11 @@ them.
   tests must build the array with references to model this (see
   `CodecheckPluginUnitTest::buildLoadHandlerArgs()`)
 - `stageId: 999` is a sentinel for the CODECHECK workflow menu item, not an OJS stage
+- Markup built as a string goes through `html` in `resources/js/markup.js`,
+  which escapes what it interpolates — markup the plugin wrote itself has to be
+  marked `raw()`. Concatenating instead puts the escaping back on the author,
+  which is where #179's two defects came from. A dialog is opened through
+  `resources/js/dialogs.js` and nothing else names `pkp.modules.useModal`
 - Three independent display switches: `plugin_settings.enabled` turns the plugin
   on, `showArticleSidebar` gates the article sidebar, `showInTOC` gates the issue
   TOC badge. The latter two default differently — see the dev-environment notes
