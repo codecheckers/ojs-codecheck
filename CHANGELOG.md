@@ -20,6 +20,29 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   repository's `plugins.xml` to `plugin_gallery_urls` in `config.inc.php`, from
   OJS 3.5.0-4 on (#157)
 
+#### Under the hood
+
+- A five-minute live demo walkthrough with its own dataset, loaded by
+  `make demo-db`, and screenshots of every view for backup slides, taken by
+  `make demo-screenshots`, in [dev/live-demo.md](dev/live-demo.md)
+
+### Changed
+
+- The editorial CODECHECK form saves an unfinished check: only an invalid
+  entry is refused, where a missing identifier, manifest or summary used to
+  block every save. The `codecheck.yml` preview still waits for a complete record
+
+### Fixed
+
+- The repositories and expected outputs an author enters in the submission
+  wizard are saved for a new submission; they were dropped until a CODECHECK
+  record existed (#170)
+- A comment on an expected output in the submission wizard is kept as the
+  comment, rather than stored as part of the file name, and survives reopening
+  the draft
+- A certificate identifier can be reserved before the CODECHECK settings have
+  ever been saved; the register's labels failed to load until then
+
 ## [0.1.0.0] - 2026-09-30
 
 ### Added
@@ -134,9 +157,6 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   and a GitHub Actions workflow that also runs `php -l` (#43)
 - `make test-e2e-shuffle` runs the e2e specs in a seeded random order, so a
   coupling between specs is caught and can be replayed
-- A five-minute live demo walkthrough with its own dataset, loaded by
-  `make demo-db`, and screenshots of every view for backup slides, taken by
-  `make demo-screenshots`, in [dev/live-demo.md](dev/live-demo.md)
 - Custom API under `api/v1/codecheck`, on a PKP controller with PKP's own
   authorization policies and CSRF middleware (#50)
 - Database schema managed by an install migration with versioned upgrade steps,

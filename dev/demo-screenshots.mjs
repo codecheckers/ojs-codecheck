@@ -14,10 +14,9 @@
  * --register also reserves a certificate identifier in the testing register
  * and captures the GitHub issue it opens. That creates a real issue and uses up
  * an identifier, so it is off unless asked for, and it needs the GitHub token
- * `make demo-db` stores. Without it, step 2 is captured up to
- * the reservation button: the form refuses to save without a certificate
- * identifier and its register issue, so the codechecker is added but not saved,
- * and the status views are taken from submission 9 instead.
+ * `make demo-db` stores. Without it, step 2 shows the reservation button
+ * and goes on to the codechecker and the statuses, which are then recorded on
+ * submission 11 alone.
  *
  * A view that cannot be captured is reported and skipped, so one changed
  * selector does not cost the rest of the set; the exit code is non-zero if any
@@ -161,8 +160,8 @@ await view('1c-codecheck-section-filled', async (capture) => {
   await urls.nth(0).fill('https://github.com/nuest/reproducible-research-giscience-longitudinal-study');
   await author.getByText('+ Add URL').click();
   await urls.nth(1).fill('https://doi.org/10.5281/zenodo.21097308');
-  // No comment: the plugin stores it as part of the file name for now.
   await author.fill('input[placeholder^="Filename"]', 'outputs/AGILE_pre_post.png');
+  await author.fill('input[placeholder^="Comment"]', 'Figure 1');
   await author.fill('textarea[placeholder^="Describe where"]',
     'Code and data are available on GitHub and archived on Zenodo.');
   await capture(author, { element: '#codecheck-submission-fields' });
@@ -219,8 +218,7 @@ if (withRegister) {
     }
     await editor.waitForSelector('text=View GitHub Issue', { timeout: 60000 });
     issueUrl = await editor.getByText('View GitHub Issue').first().getAttribute('href');
-    // The form saves nothing without a summary; saving records the first status.
-    await editor.locator('textarea[placeholder^="Successfully reproduced"]').fill('Check in progress.');
+    // Saving records the first status, which the register issue hears about.
     await saveForm(editor);
     await capture(editor, { element: '.certificate-identifier-section' });
   });
@@ -240,26 +238,18 @@ await view('2f-codechecker-added', async (capture) => {
   await dialog(editor).locator('input[id^=codecheck-checker-orcid]').fill('0000-0002-1825-0097');
   await dialog(editor).locator('.modal-actions button', { hasText: 'Add' }).click();
   await editor.waitForTimeout(800);
-  if (withRegister) {
-    await saveForm(editor);
-  }
+  await saveForm(editor);
   await capture(editor, { element: '.codecheck-metadata-form' });
 });
 
 await view('2g-status-change-dialog', async (capture) => {
-  // Without a reservation 11 could not be saved, so it has no status to change.
-  await openCodecheckTab(editor, withRegister ? 11 : 9);
+  await openCodecheckTab(editor, 11);
   await editor.getByRole('button', { name: 'Change', exact: true }).first().click();
   const select = dialog(editor).locator('select');
   await select.selectOption('plugins.generic.codecheck.status.stalled.author');
   await capture(editor, { element: '[data-cy=dialog]' });
-  if (withRegister) {
-    await dialog(editor).locator('.modal-actions button', { hasText: 'Change' }).click();
-    await settle(editor, 3000);
-  } else {
-    // 9 is only borrowed: its check stays running, which is what 3d refuses.
-    await closeDialog(editor);
-  }
+  await dialog(editor).locator('.modal-actions button', { hasText: 'Change' }).click();
+  await settle(editor, 3000);
 });
 
 await view('2h-status-history', async (capture) => {

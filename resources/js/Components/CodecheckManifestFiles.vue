@@ -45,10 +45,12 @@ onMounted(() => {
   if (props.value) {
     props.value.split('\n').forEach(line => {
       if (line.trim()) {
-        const parts = line.split(' - ');
-        files.value.push({ 
-          filename: parts[0]?.trim() || '', 
-          comment: parts[1]?.trim() || '' 
+        // Only the first separator divides them, as on the server
+        // (CodecheckAuthorMetadata::parseManifestLine): a comment may hold one.
+        const at = line.indexOf(' - ');
+        files.value.push({
+          filename: (at === -1 ? line : line.slice(0, at)).trim(),
+          comment: at === -1 ? '' : line.slice(at + 3).trim()
         });
       }
     });

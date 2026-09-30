@@ -49,10 +49,6 @@ INSERT INTO plugin_settings (plugin_name, context_id, setting_name, setting_valu
   ('codecheckplugin', 1, 'showInTOC', '1', 'bool'),
   ('codecheckplugin', 1, 'showDashboardColumn', '1', 'bool'),
   ('codecheckplugin', 1, 'showAvailabilityStatement', '1', 'bool'),
-  -- What saving the settings form writes. Unset, GET labels fails with a
-  -- TypeError, the form offers no labels, and no identifier can be reserved.
-  -- Remove this row once the plugin reads an unset value as no labels.
-  ('codecheckplugin', 1, 'githubCustomLabels', '[]', 'object'),
   -- Empty: the token is a secret. make demo-db writes it into this row, which
   -- the test dataset does not have.
   ('codecheckplugin', 1, 'githubPersonalAccessToken', '', 'string')
@@ -227,15 +223,9 @@ INSERT INTO submission_settings (submission_id, locale, setting_name, setting_va
   (11, '', 'codecheckOptIn', '1'),
   (12, '', 'codecheckOptIn', '1');
 
--- 11 gets an empty CODECHECK record. A real new submission has none, and then
--- the wizard never sends the author's repositories and expected outputs: it
--- waits for a record to have been read back before it will send anything
--- (resources/js/main.js, loadAuthorEntries), and with no record it never has.
--- Remove this row once that is fixed, so the demo shows the real path.
+-- 11 has no CODECHECK record yet: the wizard writes it when the author saves.
 -- 12 carries what its author entered in the wizard.
 INSERT INTO codecheck_metadata (submission_id, spec_version, publication_type, manifest, repository, source, codecheckers, certificate, issue, check_time, summary, report, additional_content, created_at, updated_at) VALUES
-  (11, '1.0', 'doi', '[]', '{"repositories":[]}', NULL, '[]', NULL, '{"url":null,"number":null,"labelsSelected":[]}', NULL, NULL, NULL, NULL,
-   '2026-09-29 16:40:00', '2026-09-29 16:40:00'),
   (12, '1.0', 'doi',
    '[{"file":"figure2_clockboard.png","comment":"Figure 2: the ClockBoard zoning system for London","hidden":false,"providedByAuthor":true},{"file":"figure3_doughnuts_segments.png","comment":"Figure 3: doughnut and segment zones","hidden":false,"providedByAuthor":true},{"file":"figure4_grid.png","comment":"Figure 4: comparison with a rectangular grid","hidden":false,"providedByAuthor":true}]',
    '{"repositories":[{"url":"https://github.com/zonebuilders/zonebuilder","hidden":false,"providedByAuthor":true,"containsCodecheckYaml":false}]}',

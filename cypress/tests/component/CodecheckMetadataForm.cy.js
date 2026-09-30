@@ -460,7 +460,12 @@ describe('CodecheckMetadataForm Component', () => {
     cy.get('.repository-item').should('not.exist');
   });
 
-  it('validates required fields before saving', () => {
+  /**
+   * An unfinished record saves: the identifier, the manifest and the summary
+   * arrive at different times, and requiring them held back every save until
+   * the last of them was there.
+   */
+  it('saves a record that is not complete yet', () => {
     cy.intercept('POST', '**/codecheck/metadata*', {
       statusCode: 200,
       body: { success: true }
@@ -472,14 +477,13 @@ describe('CodecheckMetadataForm Component', () => {
         canEdit: true
       }
     });
-    
+
     cy.wait('@loadMetadata');
-    
-    // Try to save without filling required fields
+
     cy.get('.footer-actions button').contains(/save/i).click();
-    
-    // Should show validation error
-    cy.get('.save-message.error').should('exist');
+
+    cy.wait('@saveMetadata');
+    cy.get('.save-message.error').should('not.exist');
   });
 
   it('can fill and save summary field', () => {

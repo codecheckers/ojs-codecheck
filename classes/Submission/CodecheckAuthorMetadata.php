@@ -36,6 +36,9 @@ class CodecheckAuthorMetadata
     private ?array $repositories = null;
     private ?array $manifestFiles = null;
 
+    /** The author's comment on each expected output, keyed by file name. */
+    private array $manifestComments = [];
+
     /** The stored row, loaded on first use by storedRecord(). */
     private ?object $existing = null;
 
@@ -53,11 +56,42 @@ class CodecheckAuthorMetadata
     }
 
     /**
-     * @param string[] $files one expected output file per entry
+     * @param string[] $lines one expected output per entry, as the wizard's
+     *                        field writes it: `file`, or `file - comment`
      */
-    public function setManifest(array $files): void
+    public function setManifest(array $lines): void
     {
-        $this->manifestFiles = $files;
+        $this->manifestFiles = [];
+        $this->manifestComments = [];
+
+        foreach ($lines as $line) {
+            ['file' => $file, 'comment' => $comment] = self::parseManifestLine($line);
+            if ($file === '') {
+                continue;
+            }
+            $this->manifestFiles[] = $file;
+            $this->manifestComments[$file] = $comment;
+        }
+    }
+
+    /**
+     * Split one line of the wizard's expected-output field into the file and
+     * the author's comment on it.
+     *
+     * The field writes `file - comment`, and the whole line used to be stored as
+     * the file name, so the comment was lost and the name no longer matched
+     * the file. The first ` - ` separates them, as the field reads it back.
+     *
+     * @return array{file: string, comment: string}
+     */
+    public static function parseManifestLine(string $line): array
+    {
+        $parts = explode(' - ', $line, 2);
+
+        return [
+            'file' => trim($parts[0]),
+            'comment' => trim($parts[1] ?? ''),
+        ];
     }
 
     /**
@@ -120,12 +154,13 @@ class CodecheckAuthorMetadata
             $current = json_decode($existing->manifest ?? '', true);
             $current = is_array($current) ? $current : [];
 
-            $update['manifest'] = json_encode($this->merge(
+            $manifest = $this->merge(
                 $current,
                 $this->manifestFiles,
                 'file',
                 fn ($file) => ['file' => $file, 'comment' => '', 'hidden' => false, 'providedByAuthor' => true]
-            ));
+            );
+            $update['manifest'] = json_encode($this->withAuthorComments($manifest));
         }
 
         if (!$update) {
@@ -148,6 +183,22 @@ class CodecheckAuthorMetadata
             'Saved author-provided CODECHECK metadata for submission #' . $this->submissionId
             . ' (' . implode(', ', array_keys($update)) . ')'
         );
+    }
+
+    /**
+     * Put the author's comments on their entries. An empty comment leaves the
+     * stored one alone, so a comment the codechecker wrote is not wiped by an
+     * author who left the field blank.
+     */
+    private function withAuthorComments(array $manifest): array
+    {
+        return array_map(function ($entry) {
+            $comment = $this->manifestComments[$entry['file'] ?? ''] ?? '';
+            if (!empty($entry['providedByAuthor']) && $comment !== '') {
+                $entry['comment'] = $comment;
+            }
+            return $entry;
+        }, $manifest);
     }
 
     /**

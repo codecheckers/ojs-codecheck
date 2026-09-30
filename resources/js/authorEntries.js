@@ -11,14 +11,23 @@
  * did before issue #170 — made every save look like the author had removed
  * everything they ever entered.
  *
+ * The manifest's lines carry the comment as well, `file - comment`, which is
+ * how the wizard's field writes and reads them; without it an author who
+ * reopened a draft found their comments gone.
+ *
  * @param {Array<object>|undefined} entries the stored entries
  * @param {string} key `url` for repositories, `file` for the manifest
+ * @param {string|null} commentKey `comment` for the manifest, else nothing
  * @returns {string} one value per line, ready for the textarea
  */
-export function authorProvidedLines(entries, key) {
+export function authorProvidedLines(entries, key, commentKey = null) {
   return (Array.isArray(entries) ? entries : [])
     .filter(entry => entry && entry.providedByAuthor)
-    .map(entry => String(entry[key] ?? '').trim())
+    .map(entry => {
+      const value = String(entry[key] ?? '').trim();
+      const comment = commentKey ? String(entry[commentKey] ?? '').trim() : '';
+      return value && comment ? `${value} - ${comment}` : value;
+    })
     .filter(value => value !== '')
     .join('\n');
 }

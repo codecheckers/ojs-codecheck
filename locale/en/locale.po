@@ -714,20 +714,8 @@ msgstr "Enter the codechecker's name."
 msgid "plugins.generic.codecheck.codecheckers.validation.orcidInvalid"
 msgstr "This is not an ORCID iD. Enter it as 0000-0000-0000-0000, or leave the field empty."
 
-msgid "plugins.generic.codecheck.validation.manifestRequired"
-msgstr "Please add at least one manifest file"
-
 msgid "plugins.generic.codecheck.validation.codecheckersRequired"
 msgstr "Please add at least one codechecker"
-
-msgid "plugins.generic.codecheck.validation.certificateRequired"
-msgstr "Please reserve/ input a Certificate Identifier"
-
-msgid "plugins.generic.codecheck.validation.githubIssueLinkRequired"
-msgstr "Please link the OJS form to the corresponding GitHub Issue with the same Certificate Identifier"
-
-msgid "plugins.generic.codecheck.validation.summaryRequired"
-msgstr "Please provide a summary"
 
 msgid "plugins.generic.codecheck.repositories.infoTitle"
 msgstr "Repositories Info"

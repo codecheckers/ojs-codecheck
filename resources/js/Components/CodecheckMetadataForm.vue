@@ -1396,23 +1396,16 @@ export default {
       });
     },
 
+    /**
+     * Whether the form may be saved. Only a record that is wrong is refused, not
+     * one that is unfinished: a check is recorded as it goes, so the manifest,
+     * the certificate identifier and the summary arrive at different times.
+     * Completeness is asked for where it matters — the YAML preview and the
+     * publication gate. Requiring all three here meant an editor could not save
+     * a codechecker, and so record a status, before reserving an identifier
+     * and writing a summary.
+     */
     validateForm() {
-      if (this.metadata.manifest.length === 0) {
-        this.showMessage(this.t('plugins.generic.codecheck.validation.manifestRequired'), 'error');
-        return false;
-      }
-      if (!this.metadata.certificate) {
-        this.showMessage(this.t('plugins.generic.codecheck.validation.certificateRequired'), 'error');
-        return false;
-      }
-      if(!this.certificateIdentifier.isLinked && !this.certificateIdentifier.issue.url && !this.certificateIdentifier.issue.number) {
-        this.showMessage(this.t('plugins.generic.codecheck.validation.githubIssueLinkRequired'), 'error');
-        return false;
-      };
-      if (!this.metadata.summary) {
-        this.showMessage(this.t('plugins.generic.codecheck.validation.summaryRequired'), 'error');
-        return false;
-      }
       // `toggleRepositoryHidden()` and `selectRepositoryWithCodecheckYaml()`
       // refuse to create this state, but a record saved before they did — or by
       // anything else posting to the API — can still arrive in it, and saving it

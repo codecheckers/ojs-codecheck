@@ -247,13 +247,19 @@ class CodecheckWizardManager {
       const data = await response.json();
       const codecheck = data?.codecheck;
 
-      if (!codecheck) return;
+      // A read that succeeded and found no record is a new submission: the
+      // author has no entries yet, which is known, not "not loaded". Returning
+      // here without the flag meant a new submission never sent any.
+      if (!codecheck) {
+        this.authorEntriesLoaded = true;
+        return;
+      }
 
       this.setTextareaValue(
         'repositories',
         authorProvidedLines(codecheck.repository?.repositories, 'url')
       );
-      this.setTextareaValue('manifestFiles', authorProvidedLines(codecheck.manifest, 'file'));
+      this.setTextareaValue('manifestFiles', authorProvidedLines(codecheck.manifest, 'file', 'comment'));
 
       // Only now may a save send these fields. Until the record has been read
       // back, an empty textarea is "not loaded", and sending it would be read

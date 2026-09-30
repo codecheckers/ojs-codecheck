@@ -655,8 +655,10 @@ class CodecheckApiController extends PKPBaseController
 
         // add the github custom labels specified in the plugin settings form to the Label Array returned back to the user
         $context = $request->getContext();
+        // Unset until the settings form is first saved, and unset means none:
+        // passing null on threw, so no identifier could be reserved at all.
         $githubCustomLabels = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_CUSTOM_LABELS);
-        $codecheckIssueLabels->addLabelArray($githubCustomLabels);
+        $codecheckIssueLabels->addLabelArray(is_array($githubCustomLabels) ? $githubCustomLabels : []);
 
         $codecheckStatuses = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_STATUS_KEYS_SELECTED);
         CodecheckLogger::debug('Selected status keys: ' . json_encode($codecheckStatuses));

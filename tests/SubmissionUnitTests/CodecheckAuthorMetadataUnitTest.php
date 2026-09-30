@@ -169,4 +169,75 @@ class CodecheckAuthorMetadataUnitTest extends PKPTestCase
 
         $this->assertSame(['https://github.com/a/b'], array_column($merged, 'url'));
     }
+
+    /**
+     * The wizard's expected-output field writes `file - comment`, and the whole
+     * line was stored as the file name.
+     */
+    public function testSplitsAManifestLineIntoFileAndComment()
+    {
+        $this->assertSame(
+            ['file' => 'outputs/figure1.png', 'comment' => 'Figure 1'],
+            CodecheckAuthorMetadata::parseManifestLine('outputs/figure1.png - Figure 1')
+        );
+    }
+
+    public function testReadsAManifestLineWithoutACommentAsTheFileAlone()
+    {
+        $this->assertSame(
+            ['file' => 'table1.csv', 'comment' => ''],
+            CodecheckAuthorMetadata::parseManifestLine('  table1.csv  ')
+        );
+    }
+
+    /** Only the first separator divides them; the comment may contain one. */
+    public function testKeepsAFurtherSeparatorInTheComment()
+    {
+        $this->assertSame(
+            ['file' => 'fig.png', 'comment' => 'left - right panels'],
+            CodecheckAuthorMetadata::parseManifestLine('fig.png - left - right panels')
+        );
+    }
+
+    private function withAuthorComments(array $lines, array $manifest): array
+    {
+        $metadata = new CodecheckAuthorMetadata(1);
+        $metadata->setManifest($lines);
+
+        $method = new ReflectionMethod(CodecheckAuthorMetadata::class, 'withAuthorComments');
+        $method->setAccessible(true);
+
+        return $method->invoke($metadata, $manifest);
+    }
+
+    public function testPutsTheAuthorsCommentOnTheirEntry()
+    {
+        $manifest = $this->withAuthorComments(
+            ['figure1.png - Figure 1'],
+            [['file' => 'figure1.png', 'comment' => '', 'hidden' => false, 'providedByAuthor' => true]]
+        );
+
+        $this->assertSame('Figure 1', $manifest[0]['comment']);
+    }
+
+    /** An author who left the comment blank does not wipe the codechecker's. */
+    public function testKeepsTheStoredCommentWhenTheAuthorGaveNone()
+    {
+        $manifest = $this->withAuthorComments(
+            ['figure2.png'],
+            [['file' => 'figure2.png', 'comment' => 'Figure 2 of the manuscript', 'providedByAuthor' => true]]
+        );
+
+        $this->assertSame('Figure 2 of the manuscript', $manifest[0]['comment']);
+    }
+
+    public function testLeavesTheCodecheckersEntriesAlone()
+    {
+        $manifest = $this->withAuthorComments(
+            ['figure1.png - Figure 1'],
+            [['file' => 'figure1.png', 'comment' => 'the codechecker\'s', 'providedByAuthor' => false]]
+        );
+
+        $this->assertSame('the codechecker\'s', $manifest[0]['comment']);
+    }
 }

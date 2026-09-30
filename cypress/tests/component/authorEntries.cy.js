@@ -44,6 +44,19 @@ describe('authorProvidedLines', () => {
     ).to.equal('figure2.png');
   });
 
+  it('writes a manifest comment the way the wizard field reads it back', () => {
+    expect(
+      authorProvidedLines(
+        [
+          {file: 'figure1.png', comment: 'Figure 1', providedByAuthor: true},
+          {file: 'table1.csv', comment: '', providedByAuthor: true},
+        ],
+        'file',
+        'comment'
+      )
+    ).to.equal('figure1.png - Figure 1\ntable1.csv');
+  });
+
   it('skips entries with no value rather than emitting a blank line', () => {
     expect(
       authorProvidedLines(

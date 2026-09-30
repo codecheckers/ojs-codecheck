@@ -95,10 +95,6 @@ password of every account is its username.
 | 12 | submitted by `seglen` | needs a codechecker, no identifier | the fallback for the register step |
 | 13 | submitted by `dnuest` | not opted in | a submission without CODECHECK: its tab says it has not opted in |
 
-Submission 11 carries an empty CODECHECK record. A real new submission has
-none, and then the wizard currently does not save the author's repositories and
-expected outputs. The record works around that until the plugin is fixed.
-
 Submissions 11 to 13 use the titles, authors and abstracts of real, openly
 published papers. The manuscript file of each is the dataset's sample PDF. The
 seed also sets these plugin settings:
@@ -144,8 +140,8 @@ In the author window, logged in as `fostermann`:
    - repositories, the second after **+ Add URL**:
      `https://github.com/nuest/reproducible-research-giscience-longitudinal-study`
      and `https://doi.org/10.5281/zenodo.21097308`
-   - an expected output file: `outputs/AGILE_pre_post.png`. Leave its comment
-     empty, because the plugin currently stores it as part of the file name
+   - an expected output: `outputs/AGILE_pre_post.png`, with the comment
+     `Figure 1`
    - an availability statement, for example
      `Code and data are available on GitHub and archived on Zenodo.`
 3. Continue to **Review**. The CODECHECK section is listed there with what was
@@ -169,10 +165,8 @@ In the editor window, logged in as `admin`:
 3. **Reserve the certificate identifier.** Under **Certificate Identifier**,
    choose a label under **GitHub Labels ⚙** (for example the venue type), then
    **Reserve Identifier Automatically**. The next free `YYYY-NNN` in the testing
-   register is filled in. Type a one-line **Summary** (`Check in progress.`),
-   then **Save**. The form saves nothing without a manifest, a certificate
-   identifier with its register issue, and a summary. Until it is saved, OJS
-   does not know the issue number, and nothing can comment on the issue.
+   register is filled in. Then **Save**: until the form is saved, OJS does not
+   know the issue number, and nothing can comment on the issue.
 4. Switch to the register tab and reload. A new issue carries the identifier,
    the journal name and the label `id assigned`. Saving recorded the status
    *needs codechecker*, so the issue also has a comment saying so and the label
@@ -255,9 +249,8 @@ to `5a-settings.png`).
   run `make demo-db FORCE=1` again before presenting.
 - **The register is optional.** `make demo-screenshots REGISTER=1` also
   reserves an identifier and captures the GitHub issue, and it costs a register
-  issue like a rehearsal does. Without it, step 2 stops at the reservation
-  button, because the form cannot be saved without an identifier. The status
-  views are then taken from submission 9.
+  issue like a rehearsal does. Without it, step 2 shows the reservation button
+  and carries on without the register.
 - **It reports what it could not capture.** Any view that fails is listed at
   the end and the others are still saved. A failure usually means the OJS
   markup changed.
