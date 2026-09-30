@@ -362,6 +362,7 @@ Useful targets:
 | `make test` | component tests + PHPUnit |
 | `make screenshots` | capture every plugin UI surface to `cypress/ui-screenshots/` |
 | `make inspect URL=…` | open one page and dump screenshot, HTML and console log |
+| `make social-preview` | render the repository's social preview image to `dev/out/` |
 
 Any value can be overridden, e.g. `make serve PORT=9000` or
 `make setup OJS_ROOT=/path/to/other/ojs`.
@@ -385,6 +386,21 @@ node dev/inspect.mjs <url> --selector '.codecheck-metadata-form' --headed
 ```
 
 Both need `make serve` running in another terminal.
+
+#### Social preview image
+
+The image GitHub shows when the repository is linked elsewhere is built from
+`dev/social-preview/social-preview.html`: the CODECHECK logo, the plugin name
+and a mock of an article page with the plugin's sidebar block. The article is
+written as markup rather than taken from a screenshot, so authors, abstract and
+status can be edited there.
+
+```bash
+make social-preview    # writes dev/out/social-preview.png (1280x640)
+```
+
+It needs no OJS. GitHub has no API for the setting, so upload the PNG by hand
+under the repository's **Settings → General → Social preview**.
 
 ### Creating a Release
 
@@ -469,7 +485,7 @@ codecheck/
 │       ├── component/*        # Vue component tests (no OJS needed)
 │       ├── e2e/*              # end-to-end tests (need a running OJS)
 │       └── visual/*           # screenshot pass over the plugin UI
-├── dev/*                      # Development helpers (schema repair, page inspector)
+├── dev/*                      # Development helpers (page inspector, social preview image)
 ├── locale/*                   # Internationalization (language localization strings)
 ├── Makefile                   # Local development environment automation
 ├── package-lock.json

@@ -42,7 +42,7 @@ export OJS_ROOT
         test-orcid-live \
         clear-cache serve test test-component test-e2e test-e2e-reverse test-e2e-shuffle \
         lint lint-deps lint-fix hooks \
-        test-php screenshots inspect \
+        test-php screenshots inspect social-preview \
         build watch check-ojs clean
 
 # --- Entry points -----------------------------------------------------------
@@ -76,6 +76,7 @@ help:
 	@echo "    make test-e2e-shuffle [SEED=n]  the same specs in a seeded random order"
 	@echo "    make screenshots     capture UI screenshots (needs 'make serve' running)"
 	@echo "    make inspect URL=... ad-hoc page inspection via Playwright"
+	@echo "    make social-preview  render the GitHub social preview to dev/out/"
 	@echo
 	@echo "  Code style"
 	@echo "    make lint            report PHP coding-standard violations (changes nothing)"
@@ -476,6 +477,10 @@ screenshots:
 URL ?= $(BASE_URL)/index.php/codecheck
 inspect:
 	node dev/inspect.mjs "$(URL)"
+
+# The repository's social preview image (#41). Static page, no OJS needed.
+social-preview:
+	node dev/social-preview/render.mjs
 
 clean:
 	rm -rf public/build cypress/screenshots cypress/ui-screenshots cypress/videos tests/results dev/out

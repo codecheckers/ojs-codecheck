@@ -765,6 +765,7 @@ cypress/
 
 dev/
   inspect.mjs                Playwright page inspector -> dev/out/
+  social-preview/            GitHub social preview image (#41) -> dev/out/
 ```
 
 ### Component tests (the reliable suite)
@@ -1242,6 +1243,17 @@ Two paths, both needing `make serve`:
   just a picture. Takes `--selector`, `--wait`, `--width`,
   `--height`, `--headed`, `--user`/`--pass`, `--no-login`. Falls back to the
   system Chrome when Playwright's bundled Chromium is missing or version-skewed.
+
+### Social preview image
+
+`make social-preview` renders `dev/social-preview/social-preview.html` to
+`dev/out/social-preview.png` at 1280x640, the size GitHub recommends (#41). The
+article page in it is **a hand-written mock of OJS's default theme, not a
+screenshot**, so the authors (Eglen, Nüst, Ostermann), the abstract (the
+CODECHECK paper's, Nüst & Eglen 2021) and the sidebar status are plain text in
+the file. The logo and badge are read from `assets/img/` by relative path. If
+the plugin's sidebar block changes appearance, the mock does not follow on its
+own. Uploading is manual (Settings → Social preview): GitHub has no API for it.
 
 Host toolchain: PHP 8.2.31 (+ xdebug, mysqli, intl, gd), Node 18.20.8,
 npm 10.8.2, Composer 2.8.12, MariaDB 10.6 on 3306, Docker 29.6 / Compose v5.2,

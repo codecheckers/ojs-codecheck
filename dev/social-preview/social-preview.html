@@ -1,0 +1,123 @@
+<!doctype html>
+<!--
+  Social preview image for the GitHub repository (Settings -> Social preview), #41.
+
+  1280x640, GitHub's recommended size. Render with `make social-preview`, which
+  writes dev/out/social-preview.png. The article page on the right is a mock of
+  OJS's default theme with the plugin's sidebar block, written as markup rather
+  than a screenshot so its text can be edited here.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CODECHECK social preview</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 1280px; height: 640px; overflow: hidden; position: relative;
+    font-family: "Noto Sans", "Roboto", sans-serif;
+    background: linear-gradient(135deg, #e8f5e8 0%, #ffffff 55%);
+  }
+  .stripe { position: absolute; left: 0; top: 0; bottom: 0; width: 14px; background: #008033; }
+
+  .intro {
+    position: absolute; left: 80px; top: 0; bottom: 0; width: 470px;
+    display: flex; flex-direction: column; justify-content: center; gap: 28px;
+  }
+  .intro .logo { width: 300px; }
+  .intro h1 { font-size: 54px; line-height: 1.05; color: #1a1a1a; font-weight: 800; letter-spacing: -0.5px; }
+  .intro h1 span { color: #008033; }
+  .intro p { font-size: 23px; line-height: 1.4; color: #3c3c3c; }
+  .tag {
+    display: inline-block; margin-right: 6px; padding: 4px 14px;
+    font-size: 17px; font-weight: 600; color: #006629;
+    border: 2px solid #008033; border-radius: 20px;
+  }
+
+  /* Browser window holding the article page mock */
+  .window {
+    position: absolute; right: -40px; top: 70px; width: 680px; height: 540px;
+    border-radius: 12px; overflow: hidden; background: #fff; transform: rotate(-2deg);
+    box-shadow: 0 24px 60px rgba(0, 60, 20, .28), 0 0 0 1px rgba(0, 0, 0, .08);
+  }
+  .window .bar {
+    position: relative; z-index: 1; height: 26px; background: #dfe5e1;
+    display: flex; gap: 7px; align-items: center; padding-left: 12px;
+  }
+  .window .bar i { width: 11px; height: 11px; border-radius: 50%; background: #b9c2bc; }
+
+  /* OJS default theme, drawn at page scale and shrunk to fit the window */
+  .page { width: 850px; transform: scale(.8); transform-origin: 0 0; color: rgba(0, 0, 0, .87); font-size: 14px; }
+  .page a { color: #1e6292; }
+  .crumbs { padding: 30px 30px 0; font-size: 13px; color: rgba(0, 0, 0, .54); }
+  .crumbs a { text-decoration: none; }
+  .crumbs .sep { margin: 0 8px; }
+  .page h2.title { padding: 26px 30px 30px; font-size: 25px; line-height: 1.25; font-weight: 700; }
+  .cols { display: flex; border-top: 1px solid #ddd; }
+  .main { width: 559px; padding: 30px; border-right: 1px solid #ddd; }
+  .author { margin-bottom: 14px; line-height: 1.8; }
+  .author strong { display: block; line-height: 1.2; }
+  .main h3 { margin: 40px 0 18px; font-size: 16px; font-weight: 700; }
+  .main p { line-height: 25px; }
+  .side { flex: 1; }
+  .side .item { padding: 20px 20px; border-bottom: 1px solid #ddd; }
+  .side .label { font-size: 13px; color: rgba(0, 0, 0, .54); margin-bottom: 6px; font-weight: 400; }
+  .side .value + .label { margin-top: 20px; }
+  .codecheck .badge { height: 24px; display: block; margin-bottom: 14px; }
+
+  /* Highlight around the plugin's badge */
+  .ring {
+    position: absolute; left: 447px; top: 358px; width: 128px; height: 40px;
+    border: 4px solid #008033; border-radius: 10px; box-shadow: 0 0 0 6px rgba(0, 128, 51, .18);
+  }
+</style>
+</head>
+<body>
+  <div class="stripe"></div>
+
+  <div class="intro">
+    <img class="logo" src="../../assets/img/codecheck_logo.svg" alt="CODECHECK">
+    <h1>CODECHECK plugin for <span>Open Journal Systems</span></h1>
+    <p>Reproducibility checks in the submission, review and publication workflow — with badges and certificates on the article page.</p>
+    <div><span class="tag">OJS 3.5</span><span class="tag">codecheck.org.uk</span></div>
+  </div>
+
+  <div class="window">
+    <div class="bar"><i></i><i></i><i></i></div>
+    <div class="page">
+      <nav class="crumbs">
+        <a href="#">Home</a><span class="sep">/</span><a href="#">Archives</a><span class="sep">/</span><a href="#">Vol. 1 No. 2 (2026): Issue 2</a><span class="sep">/</span>Articles
+      </nav>
+      <h2 class="title">CODECHECK: an Open Science initiative for the independent execution of computations underlying research articles during peer review to improve reproducibility</h2>
+      <div class="cols">
+        <div class="main">
+          <div class="author"><strong>Stephen J. Eglen</strong>Author</div>
+          <div class="author"><strong>Daniel Nüst</strong>Author</div>
+          <div class="author"><strong>Frank O. Ostermann</strong>Author</div>
+          <h3>Abstract</h3>
+          <!-- Nüst & Eglen (2021), F1000Research 10:253, https://doi.org/10.12688/f1000research.51738.2 -->
+          <p>The traditional scientific paper falls short of effectively communicating computational research. To help improve this situation, we propose a system by which the computational workflows underlying research articles are checked. The CODECHECK system uses open infrastructure and tools and can be integrated into review and publication processes in multiple ways. We describe these integrations along multiple dimensions (importance, who, openness, when). In collaboration with academic publishers and conferences, we demonstrate CODECHECK with 25 reproductions of diverse scientific publications. These CODECHECKs show that asking for reproducible workflows during a collaborative review can effectively improve executability. While CODECHECK has clear limitations, it may represent a building block in Open Science and publishing ecosystems for improving the reproducibility, appreciation, and, potentially, the quality of non-textual research artefacts. The CODECHECK website can be accessed here: https://codecheck.org.uk/.</p>
+        </div>
+        <div class="side">
+          <div class="item">
+            <h4 class="label">Published</h4>
+            <div class="value">2026-02-26</div>
+          </div>
+          <div class="item">
+            <h4 class="label">Issue</h4>
+            <div class="value"><a href="#">Vol. 1 No. 2 (2026): Issue 2</a></div>
+            <h4 class="label">Section</h4>
+            <div class="value">Articles</div>
+          </div>
+          <div class="item codecheck">
+            <img class="badge" src="../../assets/img/codeworks-badge.png" alt="CODE WORKS">
+            <h4 class="label">Pending</h4>
+            <div class="value">Code verification is currently in progress.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ring"></div>
+  </div>
+</body>
+</html>
