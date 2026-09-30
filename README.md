@@ -438,8 +438,7 @@ under the repository's **Settings → General → Social preview**.
     - please use the full OJS format, so `x.y.z.0`
     - set `<date>` to the release date
 3. Update `CITATION.cff` to match: `version` and `date-released` carry the same
-   two values, and this is where the Zenodo DOI goes under `identifiers` once
-   issue #8 mints one (use the *concept* DOI, which is stable across versions).
+   two values. The Zenodo DOI goes in after the release, in step 15.
    GitHub validates the file on push and shows an error in the "Cite this
    repository" widget if it is malformed
 4. Install dependencies: `npm install`
@@ -500,6 +499,12 @@ under the repository's **Settings → General → Social preview**.
     - **Append, never edit.** An earlier release stays as it is: its md5 pins a
       package journals may already have installed, so a broken package gets a
       new release rather than a replaced asset
+15. **Once only, after the first release Zenodo archives** (0.1.0.0 predates
+    the Zenodo integration, so the next release is the first): take the
+    *concept* DOI from the Zenodo record, the one that stays the same across
+    versions, not the DOI of this one version, and add it to `CITATION.cff`
+    under `identifiers` as `CLAUDE.md` shows, then commit that to `main` and
+    close #8's Zenodo part. Later releases change nothing here
 
 ### File Structure
 

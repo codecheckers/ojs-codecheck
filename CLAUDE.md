@@ -1690,7 +1690,10 @@ compare the newest release with `version.xml`, which runs ahead of the listing
 on a release branch.
 
 **The Zenodo DOI is not in the file yet, and this is where it goes.** Issue #8
-(beta release incl. Zenodo deposit) mints it. When it exists, add it to
+(beta release incl. Zenodo deposit) asks for it. The Zenodo GitHub integration
+was switched on after v0.1.0.0 was published, and Zenodo archives only releases
+made after that, so **the release after 0.1.0.0 is the first one with a DOI** —
+README's release step 15 is the reminder. Once it exists, add it to
 `CITATION.cff` as
 
 ```yaml
