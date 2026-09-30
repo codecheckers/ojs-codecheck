@@ -27,13 +27,12 @@
 			<institution>CODECHECK Initiative</institution>
 			<email>team@cdchck.science</email>
 		</maintainer>
-		<!-- Placeholder, deliberately invalid: the first release replaces this entry with the one package-plugin.sh prints. -->
-		<release date="YYYY-MM-DD" version="X.Y.Z.0" md5="release-md5-filled-at-release-time">
-			<package>https://github.com/codecheckers/ojs-codecheck/releases/download/vX.Y.Z.0/codecheck-X.Y.Z.0.tar.gz</package>
+		<release date="2026-09-30" version="0.1.0.0" md5="b23e536a1d2379a152ac758ee67b579c">
+			<package>https://github.com/codecheckers/ojs-codecheck/releases/download/v0.1.0.0/codecheck-0.1.0.0.tar.gz</package>
 			<compatibility application="ojs2">
 				<version>~3.5.0.0</version>
 			</compatibility>
-			<description locale="en">First release in the Plugin Gallery.</description>
+			<description locale="en">First beta release, not yet recommended for production journals.</description>
 		</release>
 	</plugin>
 </plugins>

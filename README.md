@@ -490,7 +490,6 @@ under the repository's **Settings → General → Social preview**.
     append the `<release>` block `package-plugin.sh` printed in step 11 to
     [`plugins.xml`](plugins.xml), write its one-line description, and commit it
     to `main`, the branch OJS reads the listing from. `make test-php` checks it.
-    The first release replaces the placeholder entry instead.
     - **Append, never edit.** An earlier release stays as it is: its md5 pins a
       package journals may already have installed, so a broken package gets a
       new release rather than a replaced asset

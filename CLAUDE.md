@@ -1549,8 +1549,7 @@ OJS does not validate the listing when it reads it, so `PluginsXmlUnitTest` is
 the only check: it validates against `lib/pkp/xml/schema/plugins.xsd` in
 `OJS_ROOT` and ties each package URL to its version. It deliberately does *not*
 compare the newest release with `version.xml`, which runs ahead of the listing
-on a release branch. Until the first release is recorded, the one `<release>`
-holds placeholders that fail the schema on purpose, and so does that test.
+on a release branch.
 
 **The Zenodo DOI is not in the file yet, and this is where it goes.** Issue #8
 (beta release incl. Zenodo deposit) mints it. When it exists, add it to
