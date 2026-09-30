@@ -1204,11 +1204,11 @@ Notes that matter when touching this:
   `spl_autoload_functions()` because `require_once` on the autoloader answers
   `true` once PHPUnit has already loaded it. A warning on stderr says so if the
   loader cannot be reached, rather than silently testing the wrong tree.
-- **In a worktree, pass `OJS_ROOT` to `make test-php` explicitly**:
-  `make test-php OJS_ROOT=/home/daniel/git/codecheck/ojs-350`. The Makefile's
-  default is `$(CURDIR)/../ojs-350`, relative to the checkout it runs in, so from
-  `.claude/worktrees/<name>/` it points into `.claude/worktrees/` and
-  `check-ojs` stops with "No OJS installation".
+- **The Makefile finds OJS beside the main checkout, from a worktree too.**
+  `OJS_ROOT` defaults to `../ojs-350` relative to git's common directory, not
+  to `$(CURDIR)`, which from `.claude/worktrees/<name>/` pointed into
+  `.claude/worktrees/` and made `check-ojs` stop with "No OJS installation".
+  `DATASET` stays relative to the checkout, so a worktree loads its own dump.
 - **After repointing it, clear `cache/t_compile/` as well as `make clear-cache`.**
   Smarty keeps compiled templates there, keyed by the *path* — which does not
   change across the swap — and invalidates them by comparing the source's mtime,

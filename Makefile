@@ -13,8 +13,12 @@
 
 # --- Configuration ----------------------------------------------------------
 
-# OJS installation the plugin is linked into.
-OJS_ROOT    ?= $(abspath $(CURDIR)/../ojs-350)
+# OJS installation the plugin is linked into: beside the main checkout. Found
+# through git's common directory rather than $(CURDIR), so that a linked
+# worktree (.claude/worktrees/<name>/) resolves the same install as the main
+# checkout; outside git (an unpacked package) it falls back to $(CURDIR).
+MAIN_CHECKOUT := $(abspath $(or $(dir $(shell git -C "$(CURDIR)" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)),$(CURDIR)))
+OJS_ROOT    ?= $(abspath $(MAIN_CHECKOUT)/../ojs-350)
 # Version fetched by `make ojs-install`.
 OJS_VERSION ?= 3.5.0-5
 
