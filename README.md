@@ -42,14 +42,14 @@ If you are interested in the changes made to this project and the different vers
 
 ### Version compatibility
 
-The `1.y.z` versions of this plugin are compatible with OJS `3.5.x`.
+The `0.y.z` versions of this plugin are compatible with OJS `3.5.x`. They are beta releases: in use for testing, not yet recommended for production journals.
 
 For the full features of each version, feel free to look into the [Changelog](#changelog).
 
 | Plugin Version | OJS Version | Status             |
 |----------------|-------------|--------------------|
 | `Unreleased`   | `3.5.0+`    | Active Development |
-| `1.y.z`        | `3.5.0+`    | Active Development |
+| `0.y.z`        | `3.5.0+`    | Beta               |
 
 ## Color scheme
 

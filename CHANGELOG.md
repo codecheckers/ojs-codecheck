@@ -12,6 +12,8 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 
 ## [Unreleased]
 
+## [0.1.0.0] - 2026-09-30
+
 ### Added
 
 #### Project
@@ -303,7 +305,5 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   never deposits to ORCID until someone asks it to
 - Manifest table rows line up again
 
-## [1.0.0] - 2025-??-??
-
-[unreleased]: https://github.com/codecheckers/ojs-codecheck/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/codecheckers/ojs-codecheck/v0.0.0...v1.0.0
+[unreleased]: https://github.com/codecheckers/ojs-codecheck/compare/v0.1.0.0...HEAD
+[0.1.0.0]: https://github.com/codecheckers/ojs-codecheck/releases/tag/v0.1.0.0
