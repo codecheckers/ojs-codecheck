@@ -24,6 +24,9 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   repository" entry. The Zenodo DOI follows the beta release (#24, #8)
 - What a repository used as the CODECHECK register has to provide, and which
   access the personal access token needs, in [README.md](README.md) (#129)
+- Installable and upgradable from OJS's Plugin Gallery by adding this
+  repository's `plugins.xml` to `plugin_gallery_urls` in `config.inc.php`, from
+  OJS 3.5.0-4 on (#157)
 
 #### Submission
 

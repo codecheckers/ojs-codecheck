@@ -61,6 +61,20 @@ if [ ! -f public/build/build.iife.js ] || [ ! -f public/build/build.css ]; then
   exit 1
 fi
 
+# The package is installed, and compared with the Plugin Gallery entry, by the
+# version.xml inside it, so the tag must say the version being packaged. A tag
+# made before version.xml was moved (v1.0.0.0 says 0.0.0.0) is refused here.
+TAG_VERSION_XML=$(git show "$TAG:version.xml") || {
+  echo "[Error] No version.xml at $TAG. Create and push the tag first."
+  exit 1
+}
+TAG_RELEASE=$(printf '%s\n' "$TAG_VERSION_XML" | sed -n 's:.*<release>\(.*\)</release>.*:\1:p')
+TAG_DATE=$(printf '%s\n' "$TAG_VERSION_XML" | sed -n 's:.*<date>\(.*\)</date>.*:\1:p')
+if [ "$TAG_RELEASE" != "$VERSION" ]; then
+  echo "[Error] version.xml at $TAG says release $TAG_RELEASE, not $VERSION."
+  exit 1
+fi
+
 # ---------------------------
 # Stage the package
 # ---------------------------
@@ -112,8 +126,35 @@ echo "Successfully created: $ARCHIVE"
 
 # The Plugin Gallery entry records the md5 of the published package, and the
 # package can never be changed afterwards without breaking it.
+MD5=""
 if command -v md5sum >/dev/null 2>&1; then
-  echo "md5: $(md5sum "$ARCHIVE" | cut -d' ' -f1)"
+  MD5=$(md5sum "$ARCHIVE" | cut -d' ' -f1)
 elif command -v md5 >/dev/null 2>&1; then
-  echo "md5: $(md5 -q "$ARCHIVE")"
+  MD5=$(md5 -q "$ARCHIVE")
+fi
+
+if [ -n "$MD5" ]; then
+  echo "md5: $MD5"
+elif [ "$FORMAT" = "tar.gz" ]; then
+  echo "[Error] Neither md5sum nor md5 is available, so the Plugin Gallery entry cannot be printed."
+  exit 1
+fi
+
+# The entry to append to plugins.xml, so that none of its values is copied by
+# hand into an entry that can never be edited once published. Version and date
+# are version.xml's at the tag, so the listing agrees with the package. Only the
+# description is left to write. The gallery lists tar.gz packages alone.
+if [ "$FORMAT" = "tar.gz" ]; then
+  echo "------"
+  echo "Append to plugins.xml once $ARCHIVE is uploaded to the $TAG release:"
+  echo
+  cat <<RELEASE
+		<release date="$TAG_DATE" version="$VERSION" md5="$MD5">
+			<package>https://github.com/codecheckers/ojs-codecheck/releases/download/$TAG/$ARCHIVE</package>
+			<compatibility application="ojs2">
+				<version>~3.5.0.0</version>
+			</compatibility>
+			<description locale="en">DESCRIBE THIS RELEASE IN ONE LINE</description>
+		</release>
+RELEASE
 fi

@@ -727,7 +727,7 @@ README.md; keep `css/codecheck.css` and inline component styles consistent.
 ### Layout
 
 ```
-tests/                       PHPUnit (34 test classes, 357 tests)
+tests/                       PHPUnit (35 test classes, 362 tests)
   bootstrap.php              PKP_STRICT_MODE + BASE_SYS_DIR (OJS_ROOT or ../../../..)
   PKPTestCase.php            local stub extending PHPUnit TestCase
   FakeTranslator.php         minimal translator so __() works without booting OJS
@@ -750,6 +750,7 @@ tests/                       PHPUnit (34 test classes, 357 tests)
                                CodecheckSubmissionDAO, CodecheckSubmission, Schema
   WorkflowUnitTests/           CodecheckMetadataHandler, CodecheckPublicationValidator,
                                CodecheckStatusRegisterUpdate, CodecheckYamlValidator
+  PluginsXmlUnitTest.php       the Plugin Gallery listing against OJS's plugins.xsd
 
 cypress/
   support/component.js         mounts via @cypress/vue, imports css/codecheck.css
@@ -925,7 +926,7 @@ Still uncovered: opt-in, the submission wizard, and register deposit.
 
 ### PHPUnit tests
 
-`make test-php` — 357 tests, green, none skipped.
+`make test-php` — 362 tests, none skipped.
 
 PHPUnit needs an OJS installation: the tests load OJS classes and the runner uses the
 PHPUnit shipped in `lib/pkp`. Both `runTests.sh` and `bootstrap.php` honour `OJS_ROOT`,
@@ -1203,6 +1204,11 @@ Notes that matter when touching this:
   `spl_autoload_functions()` because `require_once` on the autoloader answers
   `true` once PHPUnit has already loaded it. A warning on stderr says so if the
   loader cannot be reached, rather than silently testing the wrong tree.
+- **In a worktree, pass `OJS_ROOT` to `make test-php` explicitly**:
+  `make test-php OJS_ROOT=/home/daniel/git/codecheck/ojs-350`. The Makefile's
+  default is `$(CURDIR)/../ojs-350`, relative to the checkout it runs in, so from
+  `.claude/worktrees/<name>/` it points into `.claude/worktrees/` and
+  `check-ojs` stops with "No OJS installation".
 - **After repointing it, clear `cache/t_compile/` as well as `make clear-cache`.**
   Smarty keeps compiled templates there, keyed by the *path* — which does not
   change across the swap — and invalidates them by comparing the source's mtime,
@@ -1523,6 +1529,28 @@ check.
 `README.md` steps through `version.xml`; `CITATION.cff` carries the same two
 values (`version`, `date-released`) and is the one most easily forgotten,
 because nothing at runtime reads it and no test covers it.
+
+**`plugins.xml` is the Plugin Gallery listing, and it follows a release rather
+than being part of one** (#157). A journal adds its raw URL on `main` to
+`plugin_gallery_urls`, so a release is recorded there *after* its package is
+uploaded, on `main` — step 14 of the release procedure in `README.md`, which
+pastes the `<release>` block `package-plugin.sh` prints rather than copying
+values by hand. Three properties to keep:
+
+- **Releases are appended, never edited.** The `md5` pins the published
+  package; OJS refuses an install whose download does not match it, so editing
+  an entry or replacing an uploaded asset breaks every journal that installs it.
+- **The file is never moved or renamed.** OJS fetches every gallery URL to draw
+  the Plugin Gallery tab, and one that does not answer makes `loadXML('')` throw,
+  which breaks the whole tab — official plugins included — not just this entry.
+- **It is `export-ignore`d**: it describes packages and is never inside one.
+
+OJS does not validate the listing when it reads it, so `PluginsXmlUnitTest` is
+the only check: it validates against `lib/pkp/xml/schema/plugins.xsd` in
+`OJS_ROOT` and ties each package URL to its version. It deliberately does *not*
+compare the newest release with `version.xml`, which runs ahead of the listing
+on a release branch. Until the first release is recorded, the one `<release>`
+holds placeholders that fail the schema on purpose, and so does that test.
 
 **The Zenodo DOI is not in the file yet, and this is where it goes.** Issue #8
 (beta release incl. Zenodo deposit) mints it. When it exists, add it to

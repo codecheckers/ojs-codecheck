@@ -36,6 +36,27 @@ The ojs-codecheck plugin development was started as part of the [CHECK-PUB](http
 4. Find "CODECHECK" and click **Enable**
 5. Configure the plugin settings as needed
 
+### From the Plugin Gallery
+
+OJS can list the plugin in its **Plugin Gallery**, so that it is installed and
+upgraded from **Settings → Website → Plugins → Plugin Gallery** like any other
+plugin. This needs OJS 3.5.0-4 or later, which added a list of gallery sources
+([pkp/pkp-lib#12468](https://github.com/pkp/pkp-lib/issues/12468)). Add this
+repository's [`plugins.xml`](plugins.xml) to that list in the `[security]`
+section of `config.inc.php`:
+
+```ini
+[security]
+plugin_gallery_urls = '["https://pkp.sfu.ca/ojs/xml/plugins.xml","https://raw.githubusercontent.com/codecheckers/ojs-codecheck/main/plugins.xml"]'
+```
+
+- **Keep the official URL in the list.** The setting replaces OJS's default
+  rather than adding to it, so leaving it out empties the gallery of every
+  official plugin.
+- OJS caches each listing for 24 hours, so a new release can take up to a day to
+  appear in the gallery.
+- Then enable the plugin and configure it in its settings, as above.
+
 ## Changelog
 
 If you are interested in the changes made to this project and the different versions, feel free to view the projects [Changelog](CHANGELOG.md).
@@ -436,8 +457,10 @@ under the repository's **Settings → General → Social preview**.
     copies `public/build/` in from the working tree, runs
     `composer install --no-dev --prefer-dist`, strips each dependency's own
     tests, docs and examples, and writes everything under a single `codecheck/`
-    directory. It prints the md5 of the result, which the Plugin Gallery entry
-    has to record.
+    directory. It prints the md5 of the result and, for `tar.gz`, the
+    `<release>` entry for `plugins.xml` that step 14 records, with the version
+    and date taken from `version.xml` at the tag. It refuses a tag whose
+    `version.xml` names a different release.
 
     Do not assemble the archive by hand. Three things are easy to get wrong and
     all three have been:
@@ -462,6 +485,15 @@ under the repository's **Settings → General → Social preview**.
     - **Target [ <img src="assets/img/github-branch.png" width="10" height="10"> ]:** select your Release branch as a target (`"release-x_y_z-0"`)
     - **Title:** use both release number and a speaking title with terms like `"alpha"` or `"beta"` to communicate the development status
     - **Description:** detailed description on the new features and fixes, based on the entries from the [CHANGELOG.md](https://github.com/codecheckers/ojs-codecheck/blob/main/CHANGELOG.md)
+    - **Assets:** upload the `codecheck-x.y.z.0.tar.gz` built in step 11, unchanged
+14. Record the release in the Plugin Gallery listing, once the package is uploaded:
+    append the `<release>` block `package-plugin.sh` printed in step 11 to
+    [`plugins.xml`](plugins.xml), write its one-line description, and commit it
+    to `main`, the branch OJS reads the listing from. `make test-php` checks it.
+    The first release replaces the placeholder entry instead.
+    - **Append, never edit.** An earlier release stays as it is: its md5 pins a
+      package journals may already have installed, so a broken package gets a
+      new release rather than a replaced asset
 
 ### File Structure
 

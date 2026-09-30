@@ -24,6 +24,7 @@
 /package-lock.json       export-ignore
 /package-plugin.sh       export-ignore
 /package.json            export-ignore
+/plugins.xml             export-ignore
 /resources/              export-ignore
 /testData/               export-ignore
 /tests/                  export-ignore
