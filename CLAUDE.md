@@ -467,6 +467,8 @@ of them out of the list the form offers
 (`isAssignedByThePlugin()`), or the form would add what a status change had just
 removed.
 
+### ORCID deposit (`classes/Orcid/`)
+
 **Nothing in the ORCID deposit contacts ORCID until there is something to
 deposit** (#182). `OrcidDepositService::depositForSubmission()` registered the
 journal's peer-review group id first — two requests, since `createGroupId()`
@@ -824,7 +826,7 @@ README.md; keep `css/codecheck.css` and inline component styles consistent.
 ### Layout
 
 ```
-tests/                       PHPUnit (36 test classes, 369 tests)
+tests/                       PHPUnit (36 test classes, 380 tests)
   bootstrap.php              PKP_STRICT_MODE + BASE_SYS_DIR (OJS_ROOT or ../../../..)
   PKPTestCase.php            local stub extending PHPUnit TestCase
   FakeTranslator.php         minimal translator so __() works without booting OJS
@@ -1050,7 +1052,7 @@ Still uncovered: opt-in, the submission wizard, and register deposit.
 
 ### PHPUnit tests
 
-`make test-php` — 369 tests, green, none skipped.
+`make test-php` — 380 tests, green, none skipped.
 
 PHPUnit needs an OJS installation: the tests load OJS classes and the runner uses the
 PHPUnit shipped in `lib/pkp`. Both `runTests.sh` and `bootstrap.php` honour `OJS_ROOT`,
