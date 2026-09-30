@@ -284,6 +284,11 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 - The editorial metadata form shows the repository list the API returns
 - Saving the plugin settings only calls GitHub when the register organisation or
   repository changed
+- `make db-reset` and `make db-load` finish for a development install that has a
+  `.env`: they loaded the dataset and then failed while restoring the
+  credentials, so the journal came back without them. They restore the ORCID
+  credentials with ORCID itself switched off, so a rebuilt development database
+  never deposits to ORCID until someone asks it to
 - Manifest table rows line up again
 
 ## [1.0.0] - 2025-??-??

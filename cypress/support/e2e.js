@@ -28,6 +28,27 @@ Cypress.Commands.add('getCsrfToken', () => {
 });
 
 /**
+ * Read a CODECHECK plugin checkbox setting off the real settings form.
+ *
+ * For a spec that has to put a setting back the way it found it rather than
+ * assume a default — `orcidEnabled` is on or off depending on whether the
+ * developer has credentials in `.env`.
+ *
+ * @param {string} fieldId the checkbox id, e.g. 'orcidEnabled'
+ * @param {string} journal journal path, defaults to 'codecheck'
+ * @returns {Cypress.Chainable<boolean>} whether it is currently ticked
+ */
+Cypress.Commands.add('getCodecheckSetting', (fieldId, journal = 'codecheck') => {
+  cy.visit(`/index.php/${journal}/management/settings/website`);
+
+  cy.get('a[href*="verb=settings"][href*="plugin=codecheckplugin"]', { timeout: 20000 })
+    .first()
+    .click({ force: true });
+
+  return cy.get(`#${fieldId}`, { timeout: 20000 }).then(($checkbox) => $checkbox.is(':checked'));
+});
+
+/**
  * Set a CODECHECK plugin checkbox setting through the real settings form.
  *
  * Driving the form rather than writing the setting directly is deliberate: the

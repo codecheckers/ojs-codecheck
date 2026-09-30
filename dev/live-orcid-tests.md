@@ -61,6 +61,12 @@ ORCID_TEST_USER_ID=
 be rebuilt from scratch at any time without re-typing a secret.
 `make db-credentials-clear` takes them out again.
 
+**It leaves ORCID switched off, so tick "Enable ORCID" in the plugin settings
+before running a live test.** The credentials being on file is not the same
+decision as ORCID being on: enabling it makes publishing deposit to ORCID, which
+is right for a live test and wrong for every other test run, since the e2e suite
+publishes a submission and must make no external call.
+
 ### 2. The redirect URI, and why it is not localhost
 
 **ORCID's registration form refuses `localhost` as a redirect URI host** —

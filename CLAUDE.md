@@ -398,9 +398,11 @@ OJS's submission/publication settings via schema extension — a *separate* stor
 
 Credentials come from **plugin settings**
 (`Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN`, `…_REGISTER_ORGANIZATION`,
-`…_REGISTER_REPOSITORY`), not from `.env`. A vestigial
-`Dotenv::createImmutable()` call remains at
-`CodecheckGithubRegisterApiClient.php:20-21`; CI writes a dummy `.env` for it.
+`…_REGISTER_REPOSITORY`), not from `.env`. **Nothing at runtime reads an
+environment variable or parses `.env`** — the `Dotenv::createImmutable()` call
+this class used to make at file scope, and the dummy `.env` CI wrote for it,
+both went with #50. `.env` is now a development file only, read by
+`dev/db-credentials.php`.
 
 Register deposit fires on `Publication::publish`, is gated by
 `CODECHECK_REGISTER_DEPOSIT_ENABLED`, requires a reserved certificate and a repository
@@ -863,7 +865,16 @@ loads before concluding anything about the tests.
   Each variant is also captured to `cypress/screenshots/`, so the settings can be
   looked at rather than inferred
 - `publication-validation.cy.js` — the CODECHECK gate on publishing, driven
-  through the endpoint OJS publishes with. Most of it uses submission 8, in
+  through the endpoint OJS publishes with. **It switches both deposits off
+  around the one test that really publishes**: the register deposit reaches for
+  GitHub, and the ORCID deposit reaches for ORCID — asking it to register the
+  journal's group id *before* it checks whether there is anything to deposit, so
+  having no certificate and no codechecker token does not save you.
+  `make db-credentials` leaves ORCID switched off, so this is the backstop and
+  not the guarantee — it covers an instance where someone turned it on by hand.
+  `orcidEnabled` is read with `cy.getCodecheckSetting()` and put back.
+  **The e2e suite must make no external call** — anything new that fires on
+  `Publication::publish` belongs in that list. Most of it uses submission 8, in
   review with no issue, which OJS refuses whatever CODECHECK says, so those
   tests assert on which errors come back. One test is the other half: it
   unpublishes submission 5 — production stage, assigned to an issue, nothing for
@@ -970,8 +981,8 @@ instead.
 Three jobs on push/PR to `main`:
 
 1. **PHPUnit** — checks out `pkp/ojs@stable-3_5_0` + plugin into
-   `ojs/plugins/generic/codecheck`, MySQL 8 service, writes a dummy `.env`, runs
-   `runTests.sh` twice (plain + coverage), uploads `tests/results/`.
+   `ojs/plugins/generic/codecheck`, MySQL 8 service, runs `runTests.sh` twice
+   (plain + coverage), uploads `tests/results/`.
 2. **Cypress component** — plain `npm ci && npm run test:component`.
 3. **Cypress e2e** — full stack: OJS + `pkp/datasets` + this repo's
    `testData/stable-3_5_0-codecheck` dump, `loadfiles.sh`, OJS npm build, plugin npm
@@ -1056,13 +1067,35 @@ and `make db-credentials` writes it into the database — it is part of
 `db-load`, so a reset restores them by itself. `make db-credentials-clear`
 removes them again.
 
+**It applies the credentials and leaves ORCID switched off.** Having the secrets
+on file is what saves re-typing them after a reset; ORCID being *enabled* is a
+separate decision, and one that makes publishing deposit to ORCID, so a rebuilt
+database would have the e2e suite calling the ORCID sandbox. Every test run
+therefore starts with it off, and a live ORCID test begins by turning it on in
+the plugin settings (`dev/live-orcid-tests.md`). The script writes the switch
+with the values the settings form uses — `on` and the empty string, not `1` —
+so a setting written by either cannot be told from the other.
+
 `dev/db-credentials.php` does the reading and writing rather than the Makefile,
-for two reasons worth keeping: **phpdotenv parses the file**, the same parser
-`CodecheckGithubRegisterApiClient` already applies to `.env` at file scope, so
-one file cannot mean two things — and a malformed `.env` fails there with a
-message instead of later as a fatal on a register request. And **prepared
-statements write it**, because whether a backslash in a secret survives a
-hand-escaped SQL literal depends on the server's `sql_mode`.
+for two reasons worth keeping: **phpdotenv parses the file** rather than a
+second parser written in `sed`, so a quoted value, an escape or a `#` inside a
+password is read the way the format says and a malformed `.env` fails there with
+a message rather than halfway through writing; and **prepared statements write
+it**, because whether a backslash in a secret survives a hand-escaped SQL
+literal depends on the server's `sql_mode`.
+
+**That phpdotenv is the OJS installation's, not the plugin's.** It was a plugin
+dependency until #50 removed it — nothing at runtime reads `.env` any more — and
+the script went on requiring `vendor/autoload.php` for a class that was no
+longer there, so `make db-load` and `make db-reset` died at the credentials step
+for anyone who had a `.env`: the dataset loaded and then the target failed,
+which looked like a broken reset. Putting it back into the plugin's `require`
+would place a development-only package in the `vendor/` Composer registers
+*prepended* for every request that touches the plugin — the thing the
+coding-standard note above is about — so the script takes OJS's copy instead.
+`make db-credentials` already depends on `check-ojs`, and the Makefile passes
+`OJS_ROOT` through; the script also accepts it from the environment and falls
+back to the four-levels-up layout, as `tests/bootstrap.php` does.
 
 Do not source `.env` from shell: an apostrophe or `$` in a password is then
 executed rather than read.
@@ -1171,11 +1204,23 @@ Notes that matter when touching this:
   `true` once PHPUnit has already loaded it. A warning on stderr says so if the
   loader cannot be reached, rather than silently testing the wrong tree.
 - **After repointing it, clear `cache/t_compile/` as well as `make clear-cache`.**
-  Smarty keeps compiled templates there and did not recompile `settings.tpl`
-  across the swap, so the settings form served was the previous target's — with
-  its fields, under its ids. `make clear-cache` empties `cache/opcache/` and
-  `cache/_db/` and does not touch it. The symptom is a settings e2e spec failing
-  to find a field that is plainly in `templates/settings.tpl`.
+  Smarty keeps compiled templates there, keyed by the *path* — which does not
+  change across the swap — and invalidates them by comparing the source's mtime,
+  which does not change either. So the settings form served is the previous
+  target's, with its fields, under its ids, indefinitely. `make clear-cache`
+  empties `cache/opcache/` and `cache/_db/` and does not touch it.
+  `rm -rf ojs-350/cache/t_compile/* ojs-350/cache/t_cache/*`.
+
+  **It reads exactly like a coupling bug between specs.** Four specs failed in
+  `make test-e2e-reverse` and passed individually, which is the signature the
+  reverse target exists to detect — but the cause was a compiled `settings.tpl`
+  from another worktree, whose version of the field is multilingual, so
+  `#codecheckBadgeText` does not exist and `availabilityStatementHeading[en]`
+  posts an array that the save stores as the string `Array`. Before believing an
+  order-dependence failure, check
+  `grep -c "multilingual'=>true" ojs-350/cache/t_compile/*codecheck.settings.tpl.php`
+  — it should be 0 — and read the symlink again *after* the run as well as
+  before, because a session working in a worktree may repoint it mid-suite.
 - **The DB host must be `127.0.0.1`, not `localhost`** — mysqli reads
   `localhost` as a socket path.
 - **OJS release tarballs ship without PHPUnit** (`--no-dev`). `make ojs-install`

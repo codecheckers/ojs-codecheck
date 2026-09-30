@@ -248,19 +248,19 @@ CONTEXT_ID ?= 1
 
 # .env is read by phpdotenv and written with prepared statements, both in
 # dev/db-credentials.php — see the comment there for why neither is done in
-# make. A malformed .env fails here rather than later as a fatal inside
-# CodecheckGithubRegisterApiClient, which parses it at file scope.
+# make, and for why phpdotenv is taken from the OJS install rather than from the
+# plugin's vendor/. OJS_ROOT is passed for that reason.
 db-credentials: check-ojs
 	@if [ ! -f "$(ENV_FILE)" ]; then \
 		echo "No $(ENV_FILE); nothing to apply."; \
 		exit 0; \
 	fi
-	@php dev/db-credentials.php apply "$(DB_NAME)" "$(DB_USER)" "$(DB_PASS)" "$(DB_HOST)" "$(DB_PORT)" "$(CONTEXT_ID)"
+	@php dev/db-credentials.php apply "$(DB_NAME)" "$(DB_USER)" "$(DB_PASS)" "$(DB_HOST)" "$(DB_PORT)" "$(CONTEXT_ID)" "$(OJS_ROOT)"
 	@$(MAKE) --no-print-directory clear-cache >/dev/null
 
 # Take the credentials back out, leaving the journal as the dataset ships it.
 db-credentials-clear: check-ojs
-	@php dev/db-credentials.php clear "$(DB_NAME)" "$(DB_USER)" "$(DB_PASS)" "$(DB_HOST)" "$(DB_PORT)" "$(CONTEXT_ID)"
+	@php dev/db-credentials.php clear "$(DB_NAME)" "$(DB_USER)" "$(DB_PASS)" "$(DB_HOST)" "$(DB_PORT)" "$(CONTEXT_ID)" "$(OJS_ROOT)"
 	@$(MAKE) --no-print-directory clear-cache >/dev/null
 
 # --- Running ----------------------------------------------------------------

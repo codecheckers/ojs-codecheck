@@ -46,6 +46,12 @@ const PRIVATE_REPOSITORY_REFUSAL = 'name that repository in the public CODECHECK
 let originalRepositories = null;
 let originalMetadata = null;
 
+/**
+ * Whether the journal had ORCID switched on. It depends on whether the
+ * developer has credentials in `.env`, so it is read rather than assumed.
+ */
+let orcidWasEnabled = null;
+
 function api(method, path, body) {
   return cy.getCsrfToken().then((csrfToken) =>
     cy.request({
@@ -189,6 +195,10 @@ describe('CODECHECK publication validation', () => {
 
     cy.setCodecheckSetting('codecheckRegisterDepositEnabled', true);
 
+    if (orcidWasEnabled) {
+      cy.setCodecheckSetting('orcidEnabled', true);
+    }
+
     // Submission 8 is shared with other specs, and the repository test cannot
     // restore it itself: a failing assertion aborts the chain before any
     // command queued after it. Restoring here is also idempotent, which
@@ -247,7 +257,17 @@ describe('CODECHECK publication validation', () => {
     // The register deposit fires on Publication::publish and would reach for
     // GitHub, so it is switched off for the duration — this test is about
     // validation, not deposit.
+    //
+    // The ORCID deposit fires on the same hook and reaches for ORCID, and it
+    // asks ORCID to register the journal's group id *before* it checks whether
+    // there is anything to deposit. `make db-credentials` leaves ORCID switched
+    // off for that reason, so this is the backstop rather than the guarantee —
+    // it covers an instance where someone has turned it on by hand.
     cy.setCodecheckSetting('codecheckRegisterDepositEnabled', false);
+    cy.getCodecheckSetting('orcidEnabled').then((enabled) => {
+      orcidWasEnabled = enabled;
+      cy.setCodecheckSetting('orcidEnabled', false);
+    });
 
     ensurePublished(PUBLISHABLE_SUBMISSION).then((publicationId) => {
       unpublish(PUBLISHABLE_SUBMISSION, publicationId).then((response) => {
