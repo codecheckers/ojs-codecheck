@@ -693,6 +693,9 @@ msgstr "Failed to generate preview"
 msgid "plugins.generic.codecheck.yamlGenerationFailed"
 msgstr "Failed to generate YAML Content"
 
+msgid "plugins.generic.codecheck.codecheckers.invalidOrcid"
+msgstr "This is not an ORCID iD: {$orcid}. Enter it as 0000-0000-0000-0000, or leave the field empty."
+
 msgid "plugins.generic.codecheck.codecheckers.validation.nameRequired"
 msgstr "Enter the codechecker's name."
 

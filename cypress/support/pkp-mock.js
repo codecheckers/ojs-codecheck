@@ -109,7 +109,7 @@ if (typeof window !== 'undefined') {
       // the component suite could reach one.
       useModal: {
         useModal: () => ({
-          openDialog: ({ title, message, bodyComponent, bodyProps, actions = [] }) => {
+          openDialog: ({ title, message, bodyComponent, bodyProps, close: onClose, actions = [] }) => {
             const dialog = document.createElement('div');
             dialog.className = 'pkp-mock-modal';
             dialog.innerHTML =
@@ -128,7 +128,15 @@ if (typeof window !== 'undefined') {
               unmountBody = () => app.unmount();
             }
 
+            // OJS calls the `close` prop on *every* way out — an action's
+            // `close`, Escape, a click on the overlay — so this does too, or
+            // the guard that stops a confirmation answering twice would be
+            // untested. `__dismiss` is the Escape/overlay route, which a spec
+            // has no other way to reach.
             const close = () => {
+              if (onClose) {
+                onClose();
+              }
               unmountBody();
               dialog.remove();
               openDialogs.delete(dialog);
@@ -159,6 +167,7 @@ if (typeof window !== 'undefined') {
 
             openDialogs.add(dialog);
             dialog.__close = close;
+            dialog.__dismiss = close;
             document.body.appendChild(dialog);
           }
         })

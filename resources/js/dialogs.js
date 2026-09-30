@@ -40,24 +40,39 @@ function translate() {
 export function askForConfirmation({ title, question, onConfirm, onCancel = () => {} }) {
   const t = translate();
 
+  // **Escape and a click outside are answers too, and they mean No.** OJS calls
+  // the `close` prop on those as well as from an action, so the question is
+  // settled once and whichever call arrives second finds it answered: pressing
+  // No would otherwise run `onCancel` twice, and pressing Yes would run
+  // `onCancel` after `onConfirm`. Without the prop at all — how this started —
+  // dismissing the dialog ran neither, so an editor who pressed Escape on the
+  // "open the register's first issue?" question was not told that nothing had
+  // been reserved.
+  let settled = false;
+  const answerWith = (reply) => (close) => {
+    settled = true;
+    close();
+    reply();
+  };
+
   openDialog({
     title,
     message: html`<div class="modal-form"><div class="modal-field"><label class="modal-label">${question}</label></div></div>`,
+    close: () => {
+      if (!settled) {
+        settled = true;
+        onCancel();
+      }
+    },
     actions: [
       {
         label: t('common.no'),
-        callback: (close) => {
-          close();
-          onCancel();
-        }
+        callback: answerWith(onCancel)
       },
       {
         label: t('common.yes'),
         isPrimary: true,
-        callback: (close) => {
-          close();
-          onConfirm();
-        }
+        callback: answerWith(onConfirm)
       }
     ]
   });

@@ -11,6 +11,7 @@ use APP\plugins\generic\codecheck\api\v1\JsonResponse;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
+use APP\plugins\generic\codecheck\classes\Submission\CodecheckCodecheckers;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckRepositories;
 use Github\Client;
 use Illuminate\Support\Facades\DB;
@@ -150,6 +151,24 @@ class CodecheckMetadataHandler
             ];
         }
 
+        // The same rule, at the same boundary, for the ORCID iDs: they reach the
+        // generated `codecheck.yml`, the article page and the public register,
+        // and were stored exactly as typed. Only what this save introduces is
+        // judged, for the reason above.
+        $unusableOrcids = CodecheckCodecheckers::newUnusableOrcids(
+            $data['codecheckers'] ?? null,
+            $stored->codecheckers ?? null
+        );
+        if ($unusableOrcids !== []) {
+            return [
+                'success' => false,
+                'error' => __('plugins.generic.codecheck.codecheckers.invalidOrcid', [
+                    'orcid' => implode(', ', $unusableOrcids),
+                ]),
+                'status' => 400,
+            ];
+        }
+
         $metadataData = [
             'submission_id' => $submissionId,
             'spec_version' => $data['version'] ?? 'latest',
@@ -164,7 +183,7 @@ class CodecheckMetadataHandler
                 ? json_encode(CodecheckRepositories::withOneMarked($data['repository'] ?? ['repositories' => null]))
                 : ($stored->repository ?? json_encode(['repositories' => null])),
             'source' => $nullIfEmpty($data['source'] ?? null),
-            'codecheckers' => json_encode($data['codecheckers'] ?? []),
+            'codecheckers' => json_encode(CodecheckCodecheckers::withNormalizedOrcids($data['codecheckers'] ?? [])),
             'certificate' => $nullIfEmpty($data['certificate'] ?? null),
             'issue' => json_encode($data['issue'] ?? ['url' => null, 'number' => null, 'labelsSelected' => []]),
             'check_time' => $nullIfEmpty($data['check_time'] ?? null),
@@ -234,11 +253,18 @@ class CodecheckMetadataHandler
         }
 
         // Paper section
+        //
+        // The author's ORCID is normalised for the same reason the
+        // codechecker's below is: OJS stores an author's as the full
+        // `https://orcid.org/…` URI — its own templates use the stored value as
+        // an `href` — while a codechecker's is bare, so the generated file
+        // carried both forms at once, in two neighbouring sections.
         $authors = [];
         foreach ($this->getAuthors($publication) as $author) {
             $authorData = ['name' => $author['name']];
-            if (!empty($author['orcid'])) {
-                $authorData['ORCID'] = $author['orcid'];
+            $orcid = CodecheckCodecheckers::normalizeOrcid($author['orcid'] ?? '');
+            if ($orcid !== '') {
+                $authorData['ORCID'] = $orcid;
             }
             $authors[] = $authorData;
         }
@@ -270,8 +296,11 @@ class CodecheckMetadataHandler
         $codecheckerData = [];
         foreach ($codecheckers as $checker) {
             $checkerData = ['name' => $checker['name'] ?? ''];
-            if (!empty($checker['orcid'])) {
-                $checkerData['ORCID'] = $checker['orcid'];
+            // Normalised on read as well as on save, because a record written
+            // before the rule existed is never rewritten.
+            $orcid = CodecheckCodecheckers::normalizeOrcid($checker['orcid'] ?? '');
+            if ($orcid !== '') {
+                $checkerData['ORCID'] = $orcid;
             }
             $codecheckerData[] = $checkerData;
         }

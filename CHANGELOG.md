@@ -235,7 +235,14 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   introduces is judged (#170)
 - Adding a codechecker without a name says so in the dialog and lets it be
   corrected, instead of closing as if the codechecker had been added, and an
-  ORCID iD is checked before it is stored (#180)
+  ORCID iD is checked before it is stored — in the browser and again on the
+  server, so it holds however the record is saved (#180)
+- The generated `codecheck.yml` writes every ORCID iD the same way. An author's
+  came out as a web address and a codechecker's as the bare identifier, in
+  neighbouring sections of the same file (#180)
+- Answering a CODECHECK confirmation with Escape, or by clicking outside it,
+  counts as declining rather than as nothing at all — reserving the register's
+  first identifier said nothing either way (#179)
 - A CODECHECK status change that is refused reports the reason in the dialog that
   asked for it, and a status the server did not record is no longer shown as the
   current one (#180)

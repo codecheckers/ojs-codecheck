@@ -39,7 +39,45 @@ if (!file_exists($autoloader)) {
 define('BASE_SYS_DIR', $ojsRoot);
 
 // Load Composer autoloader
-require_once $autoloader;
+$classLoader = require_once $autoloader;
+
+/**
+ * Resolve the plugin's own classes to *this* checkout.
+ *
+ * OJS's autoloader maps `APP\plugins\generic\codecheck\…` through
+ * `<ojs>/plugins/generic/codecheck`, which is a symlink, and a single shared
+ * one: while it points at a git worktree, the tests in this directory run
+ * against that worktree's classes instead of the ones beside them. The failure
+ * is not an error but a wrong answer — a test written here fails against code
+ * it was never written for, and passes against code nobody is looking at.
+ *
+ * The tests in a checkout test that checkout, so its own directory is
+ * prepended. Nothing else changes: OJS's classes still come from `lib/pkp`.
+ */
+if (!$classLoader instanceof \Composer\Autoload\ClassLoader) {
+    // `require_once` answers true rather than the loader when something has
+    // already required it — which the PHPUnit in `lib/pkp` has, since that is
+    // how it was itself loaded. The registered autoloaders are then the only
+    // place the instance can be had.
+    foreach (spl_autoload_functions() ?: [] as $autoload) {
+        if (is_array($autoload) && ($autoload[0] ?? null) instanceof \Composer\Autoload\ClassLoader) {
+            $classLoader = $autoload[0];
+            break;
+        }
+    }
+}
+
+if ($classLoader instanceof \Composer\Autoload\ClassLoader) {
+    // A longer PSR-4 prefix than OJS's `APP\plugins\`, so it is tried first.
+    $classLoader->addPsr4('APP\\plugins\\generic\\codecheck\\', dirname(__DIR__), true);
+} else {
+    fwrite(
+        STDERR,
+        "Warning: could not reach Composer's class loader, so the plugin's own\n" .
+        "classes are resolved through <ojs>/plugins/generic/codecheck. If that\n" .
+        "symlink points elsewhere, these tests are running against other code.\n"
+    );
+}
 
 // Load our PKPTestCase stub
 require_once __DIR__ . '/PKPTestCase.php';

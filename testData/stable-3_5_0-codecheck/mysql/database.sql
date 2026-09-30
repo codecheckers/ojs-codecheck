@@ -283,7 +283,14 @@ INSERT INTO `author_settings` (`author_setting_id`, `author_id`, `locale`, `sett
 (147, 30, '', 'country', 'DE'),
 (148, 30, 'en', 'familyName', 'Timpf'),
 (149, 30, 'en', 'givenName', 'Sabine'),
-(150, 30, 'en', 'preferredPublicName', NULL);
+(150, 30, 'en', 'preferredPublicName', NULL),
+-- An author with an ORCID iD, which the dataset had none of. It is Josiah
+-- Carberry's — the identifier ORCID publishes for testing — and it is stored as
+-- the full `https://orcid.org/...` URI because that is the shape OJS stores and
+-- uses as an `href`, while a codechecker's is bare. The generated
+-- `codecheck.yml` has to reduce both to one shape, and without an author iD
+-- here nothing exercised that.
+(151, 4, '', 'orcid', 'https://orcid.org/0000-0002-1825-0097');
 
 -- --------------------------------------------------------
 
@@ -6607,7 +6614,7 @@ ALTER TABLE `author_affiliation_settings`
 -- AUTO_INCREMENT for table `author_settings`
 --
 ALTER TABLE `author_settings`
-  MODIFY `author_setting_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=151;
+  MODIFY `author_setting_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=152;
 
 --
 -- AUTO_INCREMENT for table `categories`

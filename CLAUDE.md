@@ -715,7 +715,7 @@ README.md; keep `css/codecheck.css` and inline component styles consistent.
 ### Layout
 
 ```
-tests/                       PHPUnit (33 test classes, 341 tests)
+tests/                       PHPUnit (34 test classes, 357 tests)
   bootstrap.php              PKP_STRICT_MODE + BASE_SYS_DIR (OJS_ROOT or ../../../..)
   PKPTestCase.php            local stub extending PHPUnit TestCase
   FakeTranslator.php         minimal translator so __() works without booting OJS
@@ -733,7 +733,8 @@ tests/                       PHPUnit (33 test classes, 341 tests)
   MigrationUnitTests/          I154_MoveCodecheckYamlFlagOntoRepository (the
                                index-to-flag conversion, tested without a database)
   SettingsUnitTests/           Actions, Manage
-  SubmissionUnitTests/         AvailabilityStatementField, CodecheckRepositories,
+  SubmissionUnitTests/         AvailabilityStatementField, CodecheckCodecheckers,
+                               CodecheckRepositories,
                                CodecheckSubmissionDAO, CodecheckSubmission, Schema
   WorkflowUnitTests/           CodecheckMetadataHandler, CodecheckPublicationValidator,
                                CodecheckStatusRegisterUpdate, CodecheckYamlValidator
@@ -745,7 +746,7 @@ cypress/
   support/e2e.js               cy.ojsLogin(), cy.getCsrfToken(), swallow uncaught exceptions
   support/component-index.html
   tests/component/*.cy.js      10 specs, 128 tests
-  tests/e2e/*.cy.js            12 specs, 68 tests
+  tests/e2e/*.cy.js            13 specs, 71 tests
                                yaml-generation, article-sidebar-setting,
                                issue-toc-setting, issue-toc-badge,
                                private-repository, publication-validation,
@@ -804,7 +805,7 @@ its dialog body, `CodecheckStatusDialog.vue`.
 
 ### E2E tests
 
-`make test-e2e` — 68 tests across 12 specs, driving a real OJS instance.
+`make test-e2e` — 71 tests across 13 specs, driving a real OJS instance.
 
 **Several specs share submission fixtures, and each must restore what it
 changes.** Submissions 8 and 9 are written by `publication-validation`,
@@ -871,6 +872,9 @@ loads before concluding anything about the tests.
 - `settings-roundtrip.cy.js` — every field the settings form renders keeps its value
   across a save. Derives the field list from the rendered form, so a setting added
   without being wired into `readInputData()`/`execute()` fails here automatically
+- `codechecker-orcid.cy.js` — the ORCID rule around the metadata endpoint: a
+  mistyped iD refused with a reason and nothing written, one pasted as an
+  address stored bare, and one shape of iD in the generated `codecheck.yml`
 - `codechecker-dialog.cy.js` — the "add codechecker" dialog against a real OJS:
   that a refusal keeps it open **and usable**, that a mistyped ORCID iD is
   refused and a pasted orcid.org address accepted, and that cancelling adds
@@ -899,7 +903,7 @@ Still uncovered: opt-in, the submission wizard, and register deposit.
 
 ### PHPUnit tests
 
-`make test-php` — 341 tests, green, none skipped.
+`make test-php` — 357 tests, green, none skipped.
 
 PHPUnit needs an OJS installation: the tests load OJS classes and the runner uses the
 PHPUnit shipped in `lib/pkp`. Both `runTests.sh` and `bootstrap.php` honour `OJS_ROOT`,
@@ -1140,12 +1144,21 @@ Notes that matter when touching this:
   quietly wrong rather than an error: a test written against worktree code fails
   against main's. Point the symlink at the worktree for the run and put it back
   afterwards. The same applies to `make serve` and everything e2e.
-- **Check where the symlink points before believing a green e2e or PHPUnit run.**
+- **Check where the symlink points before believing a green e2e run.**
   `ls -la ojs-350/plugins/generic/codecheck`. It is a single shared pointer, so a
   worktree someone repointed it to stays the tested code until it is put back,
-  and the suites pass — against that worktree. A whole suite reported as
+  and the suite passes — against that worktree. A whole suite reported as
   validating a change has already been run against somebody else's branch this
   way.
+- **PHPUnit is no longer affected by it.** `tests/bootstrap.php` prepends a PSR-4
+  prefix for `APP\plugins\generic\codecheck\` pointing at the checkout the
+  tests live in, so `make test-php` from here tests the classes beside it
+  whatever the symlink says. It still needs `OJS_ROOT` for everything under
+  `lib/pkp`. Two details: the prefix is longer than OJS's own `APP\plugins\`,
+  which is why Composer tries it first, and the loader has to be recovered from
+  `spl_autoload_functions()` because `require_once` on the autoloader answers
+  `true` once PHPUnit has already loaded it. A warning on stderr says so if the
+  loader cannot be reached, rather than silently testing the wrong tree.
 - **After repointing it, clear `cache/t_compile/` as well as `make clear-cache`.**
   Smarty keeps compiled templates there and did not recompile `settings.tpl`
   across the swap, so the settings form served was the previous target's — with
@@ -1501,6 +1514,20 @@ them.
   `CodecheckPublicationValidator` blocks publication, and the register deposit
   refuses. The form is where the mistake is made, so it is where the message
   belongs; the other two are backstops (#169)
+- An ORCID iD is checked where codecheckers are written, and the rule is
+  `CodecheckCodecheckers` (PHP) mirrored by `resources/js/orcid.js`. It
+  **computes the ISO 7064 MOD 11-2 check digit rather than calling
+  `PKP\validation\ValidatorORCID`**: that resolves Laravel's `validator` out of
+  the container, so it throws unless the application is fully booted and no test
+  in this suite can reach it, and it insists on the full `https://orcid.org/…`
+  form while the plugin stores the bare one. The class docblock has the whole
+  argument; the point to keep is that a dependency nothing can test was judged
+  the worse trade, not that duplication is fine.
+  **One shape reaches the `codecheck.yml`**: OJS stores an author's iD as the
+  URI (its own templates use the stored value as an `href`) and a codechecker's
+  is bare, so `buildYaml()` normalises both. The dataset gives author 4 of
+  submission 2 Josiah Carberry's iD — ORCID's published test identifier — stored
+  as the URI, which is the only reason that is observable.
 - A repository address is checked at both write boundaries — the editorial
   `saveMetadata()` and the author's wizard save — and the rule is
   `Constants::isWebUrl()`, mirrored in JS by `resources/js/isWebUrl.js`.
