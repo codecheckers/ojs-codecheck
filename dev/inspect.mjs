@@ -24,7 +24,7 @@
  * Requires the dev server to be running (`make serve`).
  */
 
-import { chromium } from 'playwright';
+import { commandLine, launchBrowser, login } from './browser.mjs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -37,14 +37,7 @@ if (!args.length || args[0].startsWith('-')) {
 
 const url = args[0];
 
-function flag(name) {
-  return args.includes(name);
-}
-
-function option(name, fallback) {
-  const i = args.indexOf(name);
-  return i !== -1 && args[i + 1] ? args[i + 1] : fallback;
-}
+const { flag, option } = commandLine(args);
 
 const user = option('--user', 'admin');
 const pass = option('--pass', 'admin');
@@ -63,27 +56,7 @@ await mkdir(outDir, { recursive: true });
 
 const headless = !flag('--headed');
 
-// Prefer Playwright's bundled Chromium, but fall back to the system Chrome so
-// this works without `npx playwright install` — the bundled build is version
-// locked to the playwright package and gets out of step after an upgrade.
-async function launchBrowser() {
-  try {
-    return await chromium.launch({ headless });
-  } catch (bundledError) {
-    for (const channel of ['chrome', 'chromium']) {
-      try {
-        const browser = await chromium.launch({ headless, channel });
-        console.log(`(using system ${channel}; run 'npx playwright install chromium' for the bundled build)`);
-        return browser;
-      } catch {
-        // try the next channel
-      }
-    }
-    throw bundledError;
-  }
-}
-
-const browser = await launchBrowser();
+const browser = await launchBrowser(headless);
 const context = await browser.newContext({
   viewport: {
     width: Number(option('--width', '1920')),
@@ -111,11 +84,7 @@ try {
     const journalMatch = new URL(url).pathname.match(/\/index\.php\/([^/]+)/);
     const journal = journalMatch ? journalMatch[1] : 'codecheck';
 
-    await page.goto(`${origin}/index.php/${journal}/login`, { waitUntil: 'domcontentloaded' });
-    await page.fill('input[name="username"]', user);
-    await page.fill('input[name="password"]', pass);
-    await page.click('button[type="submit"]');
-    await page.waitForLoadState('networkidle').catch(() => {});
+    await login(page, `${origin}/index.php/${journal}`, user, pass);
     console.log(`logged in as ${user}`);
   }
 
