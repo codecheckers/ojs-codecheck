@@ -379,6 +379,7 @@ Useful targets:
 |---|---|
 | `make db-load` | load the test dataset |
 | `make db-reset` | drop, recreate and reload from scratch |
+| `make demo-db` | the same, plus the live demo seed — see [Live demo](#live-demo) |
 | `make build` / `make watch` | rebuild the Vue bundle |
 | `make test` | component tests + PHPUnit |
 | `make screenshots` | capture every plugin UI surface to `cypress/ui-screenshots/` |
@@ -387,6 +388,12 @@ Useful targets:
 
 Any value can be overridden, e.g. `make serve PORT=9000` or
 `make setup OJS_ROOT=/path/to/other/ojs`.
+
+#### Live demo
+
+[dev/live-demo.md](dev/live-demo.md) is a five-minute walkthrough of the
+plugin, with the steps to set it up and to capture backup slides.
+`make demo-db` loads its dataset.
 
 #### Inspecting the UI without a browser
 

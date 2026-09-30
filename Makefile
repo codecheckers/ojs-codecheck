@@ -41,7 +41,7 @@ MYSQL := mysql -u$(DB_USER) -p$(DB_PASS) -h$(DB_HOST) -P$(DB_PORT)
 
 export OJS_ROOT
 
-.PHONY: help setup deps ojs-install ojs-link ojs-config db-create db-load db-reset \
+.PHONY: help setup deps ojs-install ojs-link ojs-config db-create db-load db-reset demo-db demo-screenshots \
         db-credentials db-credentials-clear tls-cert serve-tls serve-https \
         test-orcid-live \
         clear-cache serve test test-component test-e2e test-e2e-reverse test-e2e-shuffle \
@@ -69,6 +69,8 @@ help:
 	@echo "  Database"
 	@echo "    make db-load         load the test dataset"
 	@echo "    make db-reset        drop, recreate, reload"
+	@echo "    make demo-db         db-reset plus the live demo seed (dev/live-demo.md)"
+	@echo "    make demo-screenshots  play the demo and capture every view to dev/out/demo/"
 	@echo "    make db-credentials  write the secrets from .env into the database"
 	@echo
 	@echo "  Tests"
@@ -219,6 +221,42 @@ db-reset:
 	$(MYSQL) -e "DROP DATABASE IF EXISTS \`$(DB_NAME)\`;"
 	@$(MAKE) --no-print-directory db-load
 	@$(MAKE) --no-print-directory db-restore-token
+
+# The live demo: the test dataset plus testData/demo/seed.sql, which adds status
+# histories, a draft, a submission waiting for a codechecker and one that did not
+# opt in. See dev/live-demo.md. The e2e suites assert on the dataset as it ships,
+# so `make db-reset` before running them again.
+#
+# GITHUB_TOKEN in the environment (not on the make command line, where it would
+# be in the process list) stores the register PAT in TOKEN_STASH, as db-reset
+# does; without it the one already stashed is used, and without either the
+# register step of the walkthrough cannot run. db-reset asks before dropping. Compiled templates are dropped as well as
+# the caches, so a demo never shows a form compiled from another worktree.
+DEMO_SEED ?= $(CURDIR)/testData/demo/seed.sql
+
+demo-db: check-ojs
+	@$(MAKE) --no-print-directory db-reset FORCE=$(FORCE)
+	@echo "Applying the demo seed..."
+	$(MYSQL) $(DB_NAME) < "$(DEMO_SEED)"
+	@# Read from the environment by the shell, never expanded by make, so the
+	@# token stays out of every command line. After db-reset, which stashes the
+	@# token the old database held; the seed brings the row it is written into.
+	@if [ -n "$$GITHUB_TOKEN" ]; then \
+		umask 077 && printf '%s' "$$GITHUB_TOKEN" > "$(TOKEN_STASH)"; \
+	fi
+	@$(MAKE) --no-print-directory db-restore-token >/dev/null
+	@rm -rf "$(OJS_ROOT)/cache/t_compile/"* "$(OJS_ROOT)/cache/t_cache/"* 2>/dev/null || true
+	@$(MAKE) --no-print-directory clear-cache
+	@token=$$($(MYSQL) -N -B $(DB_NAME) -e "SELECT setting_value FROM plugin_settings WHERE plugin_name='codecheckplugin' AND context_id=$(CONTEXT_ID) AND setting_name='githubPersonalAccessToken';"); \
+	[ -n "$$token" ] || \
+		echo "[Warning] No GitHub PAT is set: the register step will fail. See dev/live-demo.md."
+	@echo "Demo ready: $(BASE_URL)/index.php/codecheck — walkthrough in dev/live-demo.md"
+
+# Play the demo in a browser and capture every view for backup slides. It
+# submits and records statuses, so load the demo afresh before and after.
+# REGISTER=1 also reserves an identifier in the testing register.
+demo-screenshots:
+	node dev/demo-screenshots.mjs --base $(BASE_URL) $(if $(REGISTER),--register)
 
 # Keep the live-test PAT across a reset rather than making someone paste it
 # again. It is written to a file outside the repository, readable only by its

@@ -1265,6 +1265,12 @@ This has already happened once. Commit `efaf1ed` removed the comma-separated
 — and that was the branch calling `CodecheckLogger::warning()`, which did not
 exist at the time, so viewing any seeded article page was fatal.
 
+**The live demo seed, `testData/demo/seed.sql`, follows the same rule.** It
+is applied on top of the dump by `make demo-db` (`dev/live-demo.md`) and writes
+`codecheck_metadata`, `codecheck_status` and whole OJS submissions by hand, so a
+change to either the CODECHECK schema or OJS's submission tables can break it.
+It is never loaded by a test suite, so nothing fails when it does.
+
 Columns are handled by upgrade migrations under `classes/migration/upgrade/`;
 the dump has no such mechanism, so it must be edited directly. After changing
 it, run `make db-reset && make test-e2e && make screenshots` and look at the

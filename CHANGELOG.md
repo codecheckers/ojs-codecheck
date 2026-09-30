@@ -134,6 +134,9 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   and a GitHub Actions workflow that also runs `php -l` (#43)
 - `make test-e2e-shuffle` runs the e2e specs in a seeded random order, so a
   coupling between specs is caught and can be replayed
+- A five-minute live demo walkthrough with its own dataset, loaded by
+  `make demo-db`, and screenshots of every view for backup slides, taken by
+  `make demo-screenshots`, in [dev/live-demo.md](dev/live-demo.md)
 - Custom API under `api/v1/codecheck`, on a PKP controller with PKP's own
   authorization policies and CSRF middleware (#50)
 - Database schema managed by an install migration with versioned upgrade steps,
