@@ -199,6 +199,13 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 
 - Publishing an article no longer fails for journals with ORCID enabled, and a
   failed ORCID deposit no longer logs a PHP warning (#175)
+- Publishing an article contacts ORCID only when there is something to deposit,
+  where a journal with ORCID enabled used to send its credentials and register a
+  peer-review group on every publish (#182)
+- A codechecker depositing their own activity to ORCID no longer finds that the
+  button does nothing (#182)
+- A deposit that is skipped, and a journal peer-review group ORCID refuses, now
+  say so in the workflow instead of only in the server log (#182)
 - Depositing one codechecker's activity to ORCID no longer rewrites every
   codechecker's record (#175)
 - The ORCID authorisation round trip completes on a journal-scoped install; the

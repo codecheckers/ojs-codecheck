@@ -467,6 +467,53 @@ of them out of the list the form offers
 (`isAssignedByThePlugin()`), or the form would add what a status change had just
 removed.
 
+**Nothing in the ORCID deposit contacts ORCID until there is something to
+deposit** (#182). `OrcidDepositService::depositForSubmission()` registered the
+journal's peer-review group id first — two requests, since `createGroupId()`
+begins by posting the client id and secret to `/oauth/token` — and only then
+looked for a certificate identifier or an authorised codechecker. So a journal
+with ORCID enabled and credentials configured made two calls to ORCID on every
+publish of an opted-in submission that could deposit nothing, once per article
+when an issue was published. The certificate check and `depositTargets()` now
+come first, and every request is reached from the private `deposit()`, which
+nothing enters without a target.
+
+**That last property is a convention, not a guarantee, and no test covers it.**
+`deposit()` being the only user of the client is what upholds it; an edit that
+calls `ensureGroupIdRegistered()` from anywhere else reintroduces #182 in
+silence. `depositForSubmission()` cannot be reached from PHPUnit — a journal
+context, `Repo::submission()` and the database come first — and the live ORCID
+test that would exercise it is blocked on Member API credentials
+(`dev/live-orcid-tests.md`), so `make test-php`, `make test-component` and
+`make test-e2e` would all stay green. What *is* pinned is `depositTargets()`,
+the rule that decides whether there is anything to deposit at all.
+
+`ensureGroupIdRegistered()` memoises per journal for the life of the process —
+one request under mod_php or FPM, which is what `IssueGridHandler::publishIssue()`
+needs, since it publishes every scheduled article of an issue in one request.
+(Not the `PublishSubmissions` scheduled task: that runs on the CLI, where
+`getContext()` is null and the plugin bails before the service is built.) **Only
+a resolved attempt is remembered** — memoising a failure looked like a saving,
+but one timeout on the first of twelve articles would stop the other eleven
+registering and each would then deposit against a group that does not exist. The
+key carries the journal and the API type, because every journal without an ISSN
+shares the `orcid-generated:codecheck-ojs` fallback. Nothing is remembered across
+processes: a stored flag that is wrong, because the record was deleted at ORCID
+or the journal's ISSN changed, is worse than a request ORCID answers 409 to,
+since nothing would ever try again. The memo is a static, because a service
+instance is built per publish and would memoise nothing across an issue; nothing
+resets it, which is a trap for the first test that reaches it.
+
+**The group id itself has one derivation**, `PeerReviewPayloadBuilder::groupIdFor()`.
+The payload cites it and the deposit service registers it, and they derived it
+separately — so a change to ISSN handling could have had the deposit cite a
+group nobody registered, which ORCID refuses, recording a reason that names the
+group rather than the drift. The group *name* still has several derivations, and
+`loadJournalInfo()`'s `onlineIssn ?? printIssn` falls through only on null, so a
+cleared online ISSN masks a print one and files the journal under the shared
+fallback; both are left alone deliberately, since ORCID answers 409 for a group
+that exists and would never take a correction.
+
 ### Publication validation
 
 **`Publication::validatePublish` is not on every publishing path.** The REST
@@ -727,7 +774,7 @@ README.md; keep `css/codecheck.css` and inline component styles consistent.
 ### Layout
 
 ```
-tests/                       PHPUnit (34 test classes, 357 tests)
+tests/                       PHPUnit (36 test classes, 369 tests)
   bootstrap.php              PKP_STRICT_MODE + BASE_SYS_DIR (OJS_ROOT or ../../../..)
   PKPTestCase.php            local stub extending PHPUnit TestCase
   FakeTranslator.php         minimal translator so __() works without booting OJS
@@ -745,6 +792,12 @@ tests/                       PHPUnit (34 test classes, 357 tests)
   MigrationUnitTests/          I154_MoveCodecheckYamlFlagOntoRepository (the
                                index-to-flag conversion, tested without a database)
   SettingsUnitTests/           Actions, Manage
+  OrcidUnitTests/              OrcidDepositService (which codecheckers a deposit
+                               run is for — the rule that stands between a
+                               publish and a request to ORCID, including the
+                               bare-versus-URI iD shapes), and
+                               PeerReviewPayloadBuilder (the group id the
+                               payload and the registration must agree on) — #182
   SubmissionUnitTests/         AvailabilityStatementField, CodecheckCodecheckers,
                                CodecheckRepositories,
                                CodecheckSubmissionDAO, CodecheckSubmission, Schema
@@ -925,7 +978,7 @@ Still uncovered: opt-in, the submission wizard, and register deposit.
 
 ### PHPUnit tests
 
-`make test-php` — 357 tests, green, none skipped.
+`make test-php` — 369 tests, green, none skipped.
 
 PHPUnit needs an OJS installation: the tests load OJS classes and the runner uses the
 PHPUnit shipped in `lib/pkp`. Both `runTests.sh` and `bootstrap.php` honour `OJS_ROOT`,
@@ -967,7 +1020,12 @@ migrations, `CodecheckPageHandler`. All of
 them reach the database, the network or a booted application in their first few lines,
 which is what makes them awkward rather than merely unwritten. `CodecheckStatusHandler`
 is the same shape — every line a database query — and is covered by
-`status-handler.cy.js` instead.
+`status-handler.cy.js` instead. `OrcidDepositService` is that shape too, and the
+way in was to make the one rule worth pinning pure: `depositTargets()` decides
+whether there is anything to deposit, which is what now stands between a publish
+and a request to ORCID (#182), and it is unit tested. **The ordering it enforces
+is covered by nothing** — the live ORCID test that would exercise it is blocked
+on Member API credentials, so do not read `dev/live-orcid-tests.md` as coverage.
 
 `IssueTOC` is covered up to the point where it needs the database: the setting and
 opt-in gates are unit tested with a stub application in `PKP\core\Registry`, and what
