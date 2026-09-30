@@ -17,6 +17,25 @@ use APP\submission\Submission;
 
 class PeerReviewPayloadBuilder
 {
+    /**
+     * The ORCID peer-review group id for a journal.
+     *
+     * One derivation, because two things need the same answer: the payload
+     * below cites the group id, and `OrcidDepositService` registers it. They
+     * were derived separately, so a change to either could have had the deposit
+     * cite a group nobody registered — which ORCID refuses, leaving the
+     * codechecker's item undeposited and the recorded reason naming the group
+     * rather than the disagreement (#182).
+     *
+     * Static and pure so it is testable beside the rest of the ORCID rules.
+     */
+    public static function groupIdFor(array $journal): string
+    {
+        $issn = trim((string) ($journal['issn'] ?? ''));
+
+        return $issn !== '' ? 'issn:' . $issn : 'orcid-generated:codecheck-ojs';
+    }
+
     public function build(Submission $submission, string $orcidId, array $meta, array $journal): array
     {
         $publication = $submission->getCurrentPublication();
@@ -39,12 +58,7 @@ class PeerReviewPayloadBuilder
         // linked back to the article (#175).
         $articleDoi = $publication?->getDoi();
 
-        $issn = !empty($journal['issn']) ? trim($journal['issn']) : '';
-        if (!empty($issn)) {
-            $groupId = 'issn:' . $issn;
-        } else {
-            $groupId = 'orcid-generated:codecheck-ojs';
-        }
+        $groupId = self::groupIdFor($journal);
 
         $payload = [
             'reviewer-role' => 'reviewer',
