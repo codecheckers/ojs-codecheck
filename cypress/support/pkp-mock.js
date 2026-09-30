@@ -109,13 +109,16 @@ if (typeof window !== 'undefined') {
       // the component suite could reach one.
       useModal: {
         useModal: () => ({
-          openDialog: ({ title, message, bodyComponent, bodyProps, close: onClose, actions = [] }) => {
+          openDialog: ({ title, message, bodyComponent, bodyProps, close: onClose, modalStyle, actions = [] }) => {
             const dialog = document.createElement('div');
             dialog.className = 'pkp-mock-modal';
             dialog.innerHTML =
               '<h2 class="pkp-mock-modal__title"></h2>' +
               '<div class="pkp-mock-modal__message">' + (message ?? '') + '</div>';
             dialog.querySelector('.pkp-mock-modal__title').textContent = title ?? '';
+            // OJS draws a negative border and icon from this; a spec can only
+            // see that it was asked for.
+            dialog.dataset.modalStyle = modalStyle ?? '';
 
             // OJS 3.5 mounts `bodyComponent` inside the dialog with `bodyProps`
             // spread onto it, which is how the dialogs that ask for something
@@ -152,6 +155,8 @@ if (typeof window !== 'undefined') {
               const button = document.createElement('button');
               button.type = 'button';
               button.className = 'pkp-mock-modal__action';
+              button.dataset.primary = action.isPrimary ? 'true' : 'false';
+              button.dataset.warnable = action.isWarnable ? 'true' : 'false';
               button.textContent = action.label;
               button.addEventListener('click', () => {
                 if (spent) {

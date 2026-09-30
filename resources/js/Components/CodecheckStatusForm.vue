@@ -216,9 +216,14 @@ export default {
      * status history is where that went wrong once (#179).
      */
     async getStatusHistoryTableRows(statusHistory, mostRecentStatus) {
+        // One request per distinct user, all at once. It was one request per
+        // row, awaited in turn, so a long history opened its own dialog slowly
+        // and asked for the same editor over and over.
+        const users = await this.getUsers(statusHistory.map((element) => element.user_id));
+
         const rows = [];
         for (const element of statusHistory) {
-            const user = await this.getUser(element.user_id);
+            const user = users.get(element.user_id);
             // getUser() answers undefined, or an error body, for a user it cannot read
             const name = user?.fullName ?? element.user_id;
             const userCell = user?.email ? html`<a href="mailto:${user.email}">${name}</a>` : html`${name}`;
@@ -344,6 +349,20 @@ export default {
             console.error('CODECHECK: the status could not be recorded', error);
             return this.t('plugins.generic.codecheck.status.update.failed');
         }
+    },
+    /**
+     * The users behind a list of ids, as a Map, asked for once each and in
+     * parallel.
+     *
+     * @param {Array} userIds may repeat
+     * @returns {Promise<Map>} id to user, or to undefined for one that could
+     *                         not be read
+     */
+    async getUsers(userIds) {
+        const distinct = [...new Set(userIds)];
+        const users = await Promise.all(distinct.map((userId) => this.getUser(userId)));
+
+        return new Map(distinct.map((userId, index) => [userId, users[index]]));
     },
     async getUser(userId) {
         // if the user is the Plugin itsself

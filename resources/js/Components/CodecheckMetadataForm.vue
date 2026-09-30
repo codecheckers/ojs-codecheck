@@ -934,6 +934,7 @@ export default {
       this.askForConfirmation({
         title: this.t('plugins.generic.codecheck.manifest.remove.modal.title'),
         question: this.t('plugins.generic.codecheck.manifest.removeConfirm'),
+        destructive: true,
         onConfirm: () => this.metadata.manifest.splice(index, 1)
       });
     },
@@ -950,6 +951,7 @@ export default {
       this.askForConfirmation({
         title: this.t('plugins.generic.codecheck.repositories.remove.modal.title'),
         question: this.t('plugins.generic.codecheck.repositories.removeConfirm'),
+        destructive: true,
         // The codecheck.yml flag travels with the entry, so removing one cannot
         // leave it pointing at a different repository (Issue #154).
         onConfirm: () => this.repositories.splice(index, 1)
@@ -990,6 +992,7 @@ export default {
       this.askForConfirmation({
         title: this.t('plugins.generic.codecheck.codecheckers.remove.modal.title'),
         question: this.t('plugins.generic.codecheck.codecheckers.removeConfirm'),
+        destructive: true,
         onConfirm: () => this.metadata.codecheckers.splice(index, 1)
       });
     },
@@ -1388,6 +1391,7 @@ export default {
       this.askForConfirmation({
         title: this.t('plugins.generic.codecheck.identifier.remove.modal.title'),
         question: this.t('plugins.generic.codecheck.identifier.remove.modal.areYouSureYouWantToRemoveTheIdentifier'),
+        destructive: true,
         onConfirm: () => this.removeIdentifier()
       });
     },

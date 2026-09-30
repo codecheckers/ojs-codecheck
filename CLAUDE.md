@@ -184,7 +184,17 @@ the submission wizard's review panel.
 `pkp.modules.useModal` (#179). It offers `askForConfirmation`, `showInformation`
 (with an optional second action, which is how the YAML preview offers its
 download) and `askForInput`, so a confirmation in the file manager and one in
-the editorial form ask the same way round, with the same labels.
+the editorial form ask the same way round, with the same labels. **The primary
+action is last in every one of them**, and a confirmation whose Yes removes
+something passes `destructive: true`, which is what forwards OJS's
+`modalStyle: 'negative'` and makes the confirm button warnable.
+
+**A dismissal is an answer.** OJS calls a dialog's `close` prop on Escape and on
+a click outside as well as from an action, so `askForConfirmation` forwards one
+and settles the question once: dismissing means No, and pressing a button must
+not also count as a dismissal. Passing no `close` at all — where this started —
+meant an editor who pressed Escape on "open the register's first issue?" was
+told nothing either way.
 
 **The buttons are labelled from OJS's own `common.*` keys** — `common.yes`,
 `common.no`, `common.close`, `common.cancel`, `common.add`. PKP ships those

@@ -249,6 +249,11 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 - Every CODECHECK confirmation offers the same buttons in the same order, and the
   dialog buttons are translated in every language OJS has rather than only in
   English (#179)
+- A confirmation that removes something — a repository, a manifest entry, a
+  codechecker, a reserved identifier — is marked as such, instead of looking
+  like every other question (#179)
+- The CODECHECK status history opens without asking the server for the same
+  editor once per row (#179)
 - "Current status" in the CODECHECK status history is translated, and the
   `codecheck.yml` preview is laid out like every other CODECHECK dialog (#179)
 - Saving the CODECHECK metadata without a repository list no longer empties it

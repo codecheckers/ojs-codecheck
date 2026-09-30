@@ -35,9 +35,11 @@ function translate() {
  * Asks a yes/no question, so that every confirmation in the plugin looks and
  * behaves alike — No first, Yes primary.
  *
- * @param {object} options title, question, onConfirm and optional onCancel
+ * @param {object} options title, question, onConfirm, and optionally onCancel
+ *                         and `destructive` for a question whose Yes cannot be
+ *                         undone
  */
-export function askForConfirmation({ title, question, onConfirm, onCancel = () => {} }) {
+export function askForConfirmation({ title, question, onConfirm, onCancel = () => {}, destructive = false }) {
   const t = translate();
 
   // **Escape and a click outside are answers too, and they mean No.** OJS calls
@@ -58,6 +60,10 @@ export function askForConfirmation({ title, question, onConfirm, onCancel = () =
   openDialog({
     title,
     message: html`<div class="modal-form"><div class="modal-field"><label class="modal-label">${question}</label></div></div>`,
+    // A question whose Yes removes something says so the way OJS says it: the
+    // negative border and icon, and a warnable confirm button. These were never
+    // passed on, so removing a repository looked like any other question.
+    ...(destructive ? { modalStyle: 'negative' } : {}),
     close: () => {
       if (!settled) {
         settled = true;
@@ -71,7 +77,8 @@ export function askForConfirmation({ title, question, onConfirm, onCancel = () =
       },
       {
         label: t('common.yes'),
-        isPrimary: true,
+        isPrimary: !destructive,
+        isWarnable: destructive,
         callback: answerWith(onConfirm)
       }
     ]
@@ -104,12 +111,14 @@ export function showInformation({ title, text, body, actionLabel, onAction }) {
   openDialog({
     title,
     message: html`<div class="modal-form">${content}</div>`,
+    // Close first and the primary action last, which is the order the
+    // confirmations use; this dialog had them the other way round.
     actions: [
-      ...action,
       {
         label: t('common.close'),
         callback: (close) => close()
-      }
+      },
+      ...action
     ]
   });
 }
