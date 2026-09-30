@@ -240,7 +240,7 @@ demo-db: check-ojs
 	$(MYSQL) $(DB_NAME) < "$(DEMO_SEED)"
 	@# Read from the environment by the shell, never expanded by make, so the
 	@# token stays out of every command line. After db-reset, which stashes the
-	@# token the old database held; the seed brings the row it is written into.
+	@# token the old database held.
 	@if [ -n "$$GITHUB_TOKEN" ]; then \
 		umask 077 && printf '%s' "$$GITHUB_TOKEN" > "$(TOKEN_STASH)"; \
 	fi
@@ -270,13 +270,22 @@ db-save-token:
 		echo "Kept the GitHub PAT in $(TOKEN_STASH) to put back after the reload."; \
 	fi
 
+# The dataset has no row for the token, so it is inserted, not updated: an
+# UPDATE matched nothing and the token was silently never restored. The SQL goes
+# in on stdin, keeping the token out of the process list, and a token is only a
+# word, so anything else is refused rather than quoted into SQL. $(MAKE) stays
+# off the line that writes: make runs such a line even under `make -n`.
 db-restore-token:
 	@if [ -s "$(TOKEN_STASH)" ]; then \
 		token=$$(cat "$(TOKEN_STASH)"); \
-		$(MYSQL) $(DB_NAME) -e "UPDATE plugin_settings SET setting_value='$$token' WHERE plugin_name='codecheckplugin' AND setting_name='githubPersonalAccessToken';"; \
-		$(MAKE) --no-print-directory clear-cache >/dev/null; \
+		case "$$token" in *[!A-Za-z0-9_]*) \
+			echo "[Error] $(TOKEN_STASH) does not hold a GitHub token; nothing restored."; exit 1;; \
+		esac; \
+		printf "INSERT INTO plugin_settings (plugin_name, context_id, setting_name, setting_value, setting_type) VALUES ('codecheckplugin', %s, 'githubPersonalAccessToken', '%s', 'string') ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value);\n" \
+			"$(CONTEXT_ID)" "$$token" | $(MYSQL) $(DB_NAME); \
 		echo "Restored the GitHub PAT from $(TOKEN_STASH)."; \
 	fi
+	@$(MAKE) --no-print-directory clear-cache >/dev/null
 
 # --- Credentials ------------------------------------------------------------
 

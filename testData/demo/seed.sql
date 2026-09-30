@@ -33,7 +33,8 @@ UPDATE journals SET enabled = 1 WHERE journal_id = 1;
 -- Plugin settings (journal 1)
 -- ---------------------------------------------------------------------------
 --
--- The register is the testing one.
+-- The register is the testing one. The PAT is not here: it is a secret, and
+-- `make demo-db` writes it from GITHUB_TOKEN or the stash db-reset keeps.
 --
 -- The register deposit is switched off, so publishing during the demo does not
 -- open a pull request against the testing register unannounced. Turn it on in
@@ -48,10 +49,7 @@ INSERT INTO plugin_settings (plugin_name, context_id, setting_name, setting_valu
   ('codecheckplugin', 1, 'showArticleSidebar', '1', 'bool'),
   ('codecheckplugin', 1, 'showInTOC', '1', 'bool'),
   ('codecheckplugin', 1, 'showDashboardColumn', '1', 'bool'),
-  ('codecheckplugin', 1, 'showAvailabilityStatement', '1', 'bool'),
-  -- Empty: the token is a secret. make demo-db writes it into this row, which
-  -- the test dataset does not have.
-  ('codecheckplugin', 1, 'githubPersonalAccessToken', '', 'string')
+  ('codecheckplugin', 1, 'showAvailabilityStatement', '1', 'bool')
 ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), setting_type = VALUES(setting_type);
 
 -- ---------------------------------------------------------------------------
