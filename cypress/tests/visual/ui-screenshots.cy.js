@@ -32,16 +32,9 @@ describe('CODECHECK UI surfaces', () => {
     // cy.session() restores cookies but does not navigate anywhere.
     cy.visit(`/index.php/${JOURNAL}/dashboard/editorial`);
 
-    cy.getCsrfToken().then((csrfToken) => {
-      cy.request({
-        method: 'GET',
-        url: `/index.php/${JOURNAL}/api/v1/submissions?status[]=3&count=1`,
-        headers: { 'X-Csrf-Token': csrfToken },
-        failOnStatusCode: false,
-      }).then((response) => {
-        publishedSubmissionId = response.body?.items?.[0]?.id ?? null;
-        cy.log(`published submission id: ${publishedSubmissionId ?? 'none found'}`);
-      });
+    cy.publishedArticleId().then((id) => {
+      publishedSubmissionId = id;
+      cy.log(`published submission id: ${id ?? 'none found'}`);
     });
   });
 

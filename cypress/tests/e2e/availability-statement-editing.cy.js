@@ -27,27 +27,15 @@ const EDITED = 'Code and data archived at https://doi.org/10.5281/zenodo.7777777
 let publicationId;
 let originalStatement;
 
-function api(method, path, body) {
-  return cy.getCsrfToken().then((csrfToken) =>
-    cy.request({
-      method,
-      url: `/index.php/${JOURNAL}/${path}`,
-      headers: { 'X-Csrf-Token': csrfToken },
-      body,
-      failOnStatusCode: false,
-    })
-  );
-}
-
 /** The Metadata form as OJS serves it to the workflow. */
 const metadataForm = () =>
-  api('GET', `api/v1/submissions/${SUBMISSION}/publications/${publicationId}/_components/metadata`);
+  cy.ojsApi('GET', `api/v1/submissions/${SUBMISSION}/publications/${publicationId}/_components/metadata`);
 
 const availabilityField = (response) =>
   response.body.fields.find((field) => field.name === FIELD);
 
 const setStatement = (statement) =>
-  api('PUT', `api/v1/submissions/${SUBMISSION}/publications/${publicationId}`, {
+  cy.ojsApi('PUT', `api/v1/submissions/${SUBMISSION}/publications/${publicationId}`, {
     [FIELD]: statement,
   });
 
@@ -56,7 +44,7 @@ describe('Editing the availability statement', () => {
     cy.ojsLogin('admin', 'admin');
     cy.visit(`/index.php/${JOURNAL}/dashboard/editorial`);
 
-    api('GET', `api/v1/submissions/${SUBMISSION}`).then((submission) => {
+    cy.ojsApi('GET', `api/v1/submissions/${SUBMISSION}`).then((submission) => {
       publicationId = submission.body.currentPublicationId;
       originalStatement = submission.body.publications.find(
         (publication) => publication.id === publicationId
@@ -66,7 +54,7 @@ describe('Editing the availability statement', () => {
 
   beforeEach(() => {
     cy.ojsLogin('admin', 'admin');
-    // cy.getCsrfToken() reads the token off the page's pkp object.
+    // cy.ojsApi() reads the token off the page's pkp object.
     cy.visit(`/index.php/${JOURNAL}/dashboard/editorial`);
   });
 
@@ -121,7 +109,7 @@ describe('Editing the availability statement', () => {
   it('does not add the field to the title and abstract form', () => {
     // ForTheEditors and the other publication forms extend or sit beside the
     // metadata form; the field belongs on exactly one of them.
-    api(
+    cy.ojsApi(
       'GET',
       `api/v1/submissions/${SUBMISSION}/publications/${publicationId}/_components/titleAbstract`
     ).then((response) => {

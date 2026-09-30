@@ -21,36 +21,23 @@ let originalLocales;
 let articleId;
 let issueId;
 
-/** Needs a backend page open, for the CSRF token. */
+/** Reads or writes the journal's languages; asserts the call succeeded. */
 function contextsApi(method, body) {
-  return cy.getCsrfToken().then((csrfToken) => cy.request({
-    method,
-    url: `/index.php/${JOURNAL}/api/v1/contexts/${CONTEXT_ID}`,
-    headers: { 'X-Csrf-Token': csrfToken },
-    body,
-  }));
-}
-
-function openSettings() {
-  cy.visit(`/index.php/${JOURNAL}/management/settings/website`);
-  cy.get('a[href*="verb=settings"][href*="plugin=codecheckplugin"]', { timeout: 20000 })
-    .first()
-    .click({ force: true });
-  cy.get('form#codecheckSettings', { timeout: 20000 }).should('exist');
+  return cy.ojsApi(method, `api/v1/contexts/${CONTEXT_ID}`, body).then((response) => {
+    expect(response.status, `${method} contexts/${CONTEXT_ID}`).to.eq(200);
+    return response;
+  });
 }
 
 /**
- * Fills multilingual fields by name — FBV gives them generated ids, and puts
- * the non-primary languages in a popover hidden until focus — and saves.
+ * Fills multilingual fields by name, since FBV gives them generated ids, and
+ * saves.
  */
 function setWording(values, badgeType = '#badgeNone') {
-  openSettings();
-  cy.get(badgeType).check({ force: true });
-  Object.entries(values).forEach(([name, value]) => {
-    cy.get(`form#codecheckSettings [name="${name}"]`).invoke('val', value);
+  cy.setCodecheckFields({
+    [badgeType]: true,
+    ...Object.fromEntries(Object.entries(values).map(([name, value]) => [`[name="${name}"]`, value])),
   });
-  cy.get('form#codecheckSettings').find('button[type="submit"]').first().click();
-  cy.get('form#codecheckSettings', { timeout: 20000 }).should('not.exist');
 }
 
 /** Every field in every language, set to the one value. */
@@ -77,14 +64,11 @@ describe('Journal wording per language', () => {
         supportedFormLocales: body.supportedFormLocales,
       };
     });
-    contextsApi('PUT', { supportedLocales: ['en', 'de'], supportedFormLocales: ['en', 'de'] })
-      .its('status').should('eq', 200);
+    contextsApi('PUT', { supportedLocales: ['en', 'de'], supportedFormLocales: ['en', 'de'] });
 
-    cy.getCsrfToken().then((csrfToken) => cy.request({
-      url: `/index.php/${JOURNAL}/api/v1/submissions?status[]=3&count=1`,
-      headers: { 'X-Csrf-Token': csrfToken },
-    })).then(({ body }) => {
-      articleId = body.items[0].id;
+    cy.publishedArticleId().then((id) => {
+      expect(id, 'a published submission to test against').to.exist;
+      articleId = id;
     });
 
     cy.visit(`/index.php/${JOURNAL}/issue/archive`);
@@ -99,17 +83,21 @@ describe('Journal wording per language', () => {
 
   after(() => {
     cy.ojsLogin('admin', 'admin');
+    // A test that failed with German withdrawn from the form would leave its
+    // fields unrendered, and clearing them would fail before the restore.
+    cy.visit(`/index.php/${JOURNAL}/management/settings/website`);
+    contextsApi('PUT', { supportedFormLocales: ['en', 'de'] });
     setWording(allWording(''), '#badgeCodeworks');
-    contextsApi('PUT', originalLocales).its('status').should('eq', 200);
+    contextsApi('PUT', originalLocales);
   });
 
   it('offers a field per journal language, and shows each reader theirs', () => {
-    openSettings();
+    cy.openCodecheckSettings();
     FIELDS.forEach((field) => {
-      cy.get(`form#codecheckSettings [name="${field}[en]"]`).should('exist');
-      cy.get(`form#codecheckSettings [name="${field}[de]"]`).should('exist');
+      cy.codecheckSettingsForm().find(`[name="${field}[en]"]`).should('exist');
+      cy.codecheckSettingsForm().find(`[name="${field}[de]"]`).should('exist');
       // Installed for no one, so not offered.
-      cy.get(`form#codecheckSettings [name="${field}[fr_FR]"]`).should('not.exist');
+      cy.codecheckSettingsForm().find(`[name="${field}[fr_FR]"]`).should('not.exist');
     });
 
     setWording({
@@ -142,13 +130,13 @@ describe('Journal wording per language', () => {
 
     // German stays a reader language but stops being a form language.
     cy.visit(`/index.php/${JOURNAL}/management/settings/website`);
-    contextsApi('PUT', { supportedFormLocales: ['en'] }).its('status').should('eq', 200);
+    contextsApi('PUT', { supportedFormLocales: ['en'] });
 
     setWording({ 'availabilityStatementHeading[en]': WORDING.heading.en });
 
     expectWordingIn('de', WORDING.heading.de, WORDING.badge.de);
 
     cy.visit(`/index.php/${JOURNAL}/management/settings/website`);
-    contextsApi('PUT', { supportedFormLocales: ['en', 'de'] }).its('status').should('eq', 200);
+    contextsApi('PUT', { supportedFormLocales: ['en', 'de'] });
   });
 });

@@ -16,38 +16,24 @@ describe('YAML Generation Consistency', () => {
     // Wait for form to load
     cy.get('.codecheck-metadata-form', { timeout: 10000 }).should('exist');
     
-    // Get CSRF token from the loaded page
-    cy.window().then((win) => {
-      const csrfToken = win.pkp?.currentUser?.csrfToken;
-      expect(csrfToken).to.exist;
-      
-      // Call PHP endpoint to get YAML (download)
-      cy.request({
-        method: 'GET',
-        url: `/index.php/codecheck/api/v1/codecheck/yaml?submissionId=${submissionId}`,
-        headers: { 
-          'X-Csrf-Token': csrfToken
-        }
-      }).then((response) => {
-        
-        expect(response.status).to.eq(200);
-        const downloadYaml = response.body.yaml;
-        
-        // Scroll to and click preview button
-        cy.get('[data-testid="preview-yaml-button"]', { timeout: 5000 })
-          .scrollIntoView()
-          .should('be.visible')
-          .click();
-        
-        // Wait for modal to appear
-        cy.get('.yaml-preview-content', { timeout: 5000 }).should('be.visible');
-        
-        // Extract YAML from preview
-        cy.get('.yaml-preview-content').invoke('text').then((previewYaml) => {
-          
-          // Both use PHP, should be exactly identical
-          expect(previewYaml.trim()).to.equal(downloadYaml.trim());
-        });
+    // Call PHP endpoint to get YAML (download)
+    cy.ojsApi('GET', `api/v1/codecheck/yaml?submissionId=${submissionId}`).then((response) => {
+      expect(response.status).to.eq(200);
+      const downloadYaml = response.body.yaml;
+
+      // Scroll to and click preview button
+      cy.get('[data-testid="preview-yaml-button"]', { timeout: 5000 })
+        .scrollIntoView()
+        .should('be.visible')
+        .click();
+
+      // Wait for modal to appear
+      cy.get('.yaml-preview-content', { timeout: 5000 }).should('be.visible');
+
+      // Extract YAML from preview
+      cy.get('.yaml-preview-content').invoke('text').then((previewYaml) => {
+        // Both use PHP, should be exactly identical
+        expect(previewYaml.trim()).to.equal(downloadYaml.trim());
       });
     });
   });
@@ -60,15 +46,11 @@ describe('YAML Generation Consistency', () => {
     const SUBMISSION_WITH_TWO_REPOSITORIES = 2;
 
     // cy.ojsLogin() restores a session without loading a page, and
-    // cy.getCsrfToken() reads the token off the current one, so a visit first.
+    // cy.ojsApi() reads the token off the current one, so a visit first.
     cy.visit('/index.php/codecheck/submissions');
 
-    cy.getCsrfToken().then((csrfToken) => {
-      cy.request({
-        method: 'GET',
-        url: `/index.php/codecheck/api/v1/codecheck/yaml?submissionId=${SUBMISSION_WITH_TWO_REPOSITORIES}`,
-        headers: { 'X-Csrf-Token': csrfToken },
-      }).then((response) => {
+    cy.ojsApi('GET', `api/v1/codecheck/yaml?submissionId=${SUBMISSION_WITH_TWO_REPOSITORIES}`)
+      .then((response) => {
         expect(response.status).to.eq(200);
 
         const yaml = response.body.yaml;
@@ -78,7 +60,6 @@ describe('YAML Generation Consistency', () => {
           /^repository:\s*\n\s*- https:\/\/github\.com\/IainDaviesMaths\/Reproduction-Hancock\s*\n\s*- https:\/\/github\.com\/codecheckers\/Reproduction-Hancock/
         );
       });
-    });
   });
 
   it('Preview button should be disabled when required fields are missing', () => {
@@ -86,21 +67,17 @@ describe('YAML Generation Consistency', () => {
     
     cy.get('.codecheck-metadata-form', { timeout: 10000 }).should('exist');
     
-    cy.window().then((win) => {
-      const csrfToken = win.pkp?.currentUser?.csrfToken;
-      
-      // Clear a required field (certificate)
-      cy.get('button').contains('Remove').then(($btn) => {
-        if ($btn.length > 0) {
-          cy.wrap($btn).click();
-          cy.get('button').contains('Yes').click({ force: true });
-          
-          // Preview button should be disabled
-          cy.get('[data-testid="preview-yaml-button"]')
-            .scrollIntoView()
-            .should('be.disabled');
-        }
-      });
+    // Clear a required field (certificate)
+    cy.get('button').contains('Remove').then(($btn) => {
+      if ($btn.length > 0) {
+        cy.wrap($btn).click();
+        cy.get('button').contains('Yes').click({ force: true });
+
+        // Preview button should be disabled
+        cy.get('[data-testid="preview-yaml-button"]')
+          .scrollIntoView()
+          .should('be.disabled');
+      }
     });
   });
 

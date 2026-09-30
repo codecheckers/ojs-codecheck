@@ -20,15 +20,9 @@ describe('Article sidebar display setting', () => {
     cy.ojsLogin('admin', 'admin');
     cy.visit(`/index.php/${JOURNAL}/dashboard/editorial`);
 
-    cy.getCsrfToken().then((csrfToken) => {
-      cy.request({
-        method: 'GET',
-        url: `/index.php/${JOURNAL}/api/v1/submissions?status[]=3&count=1`,
-        headers: { 'X-Csrf-Token': csrfToken },
-      }).then((response) => {
-        articleId = response.body?.items?.[0]?.id;
-        expect(articleId, 'a published submission to test against').to.exist;
-      });
+    cy.publishedArticleId().then((id) => {
+      expect(id, 'a published submission to test against').to.exist;
+      articleId = id;
     });
   });
 

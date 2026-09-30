@@ -27,17 +27,9 @@ const ADMIN_ID = 1;
 /** A user id the caller is not, posted to prove the body cannot set the actor. */
 const SOMEONE_ELSE = 4;
 
-const api = (path) => `/index.php/${JOURNAL}/api/v1/codecheck/${path}`;
-
-/** A POST that expects to be refused or allowed, without throwing on 4xx. */
-const post = (path, body, csrfToken) =>
-  cy.request({
-    method: 'POST',
-    url: api(path),
-    headers: { 'X-Csrf-Token': csrfToken, 'Content-Type': 'application/json' },
-    body,
-    failOnStatusCode: false,
-  });
+/** A plugin API call; a refusal is yielded as a response, not thrown. */
+const api = (method, path, body) => cy.ojsApi(method, `api/v1/codecheck/${path}`, body);
+const post = (path, body) => api('POST', path, body);
 
 /**
  * Put the two submissions back where the suite expects them.
@@ -56,13 +48,11 @@ const post = (path, body, csrfToken) =>
 function restoreStatuses() {
   cy.ojsLogin('admin', 'admin');
   cy.visit(`/index.php/${JOURNAL}/dashboard/editorial`);
-  cy.getCsrfToken().then((csrfToken) => {
-    [ASSIGNED, NOT_ASSIGNED].forEach((submissionId) => {
-      post(`status/update?submissionId=${submissionId}`, {
-        submissionId,
-        status: ASSIGNED_CODECHECKER,
-        userId: ADMIN_ID,
-      }, csrfToken);
+  [ASSIGNED, NOT_ASSIGNED].forEach((submissionId) => {
+    post(`status/update?submissionId=${submissionId}`, {
+      submissionId,
+      status: ASSIGNED_CODECHECKER,
+      userId: ADMIN_ID,
     });
   });
 }
@@ -76,81 +66,62 @@ describe('A reviewer assigned to a submission', () => {
   after(restoreStatuses);
 
   it('may record the check on the submission they are assigned to', () => {
-    cy.getCsrfToken().then((csrfToken) => {
-      post(`status/update?submissionId=${ASSIGNED}`, {
-        submissionId: ASSIGNED,
-        status: ASSIGNED_CODECHECKER,
-        // Deliberately not this caller: the actor is taken from the session,
-        // so what the body claims must make no difference.
-        userId: SOMEONE_ELSE,
-      }, csrfToken).then((response) => {
-        expect(response.status, 'the write is allowed').to.eq(200);
-        expect(response.body.success).to.eq(true);
-        expect(response.body.statusRecord.status).to.eq(ASSIGNED_CODECHECKER);
-        expect(
-          response.body.statusRecord.user_id,
-          'the reviewer who asked is recorded, not the id they sent'
-        ).to.eq(RREVIEWER_ID);
-      });
+    post(`status/update?submissionId=${ASSIGNED}`, {
+      submissionId: ASSIGNED,
+      status: ASSIGNED_CODECHECKER,
+      // Deliberately not this caller: the actor is taken from the session,
+      // so what the body claims must make no difference.
+      userId: SOMEONE_ELSE,
+    }).then((response) => {
+      expect(response.status, 'the write is allowed').to.eq(200);
+      expect(response.body.success).to.eq(true);
+      expect(response.body.statusRecord.status).to.eq(ASSIGNED_CODECHECKER);
+      expect(
+        response.body.statusRecord.user_id,
+        'the reviewer who asked is recorded, not the id they sent'
+      ).to.eq(RREVIEWER_ID);
     });
   });
 
   it('may not touch a submission they are not assigned to', () => {
-    cy.getCsrfToken().then((csrfToken) => {
-      post(`metadata?submissionId=${NOT_ASSIGNED}`, {
-        version: '1.0',
-        repository: { repositories: [] },
-      }, csrfToken).then((response) => {
-        // 401, not 403: the refusal now comes from PKP's SubmissionAccessPolicy
-        // (`user.authorization.roleBasedAccessDenied`) rather than the plugin's
-        // own check, which answered 403. The request is refused either way, and
-        // nothing in the UI branches on the code — but it is a visible change
-        // to what the API returns, so it is asserted rather than loosened.
-        expect(response.status).to.eq(401);
-        expect(response.body.error).to.eq('user.authorization.roleBasedAccessDenied');
-      });
+    post(`metadata?submissionId=${NOT_ASSIGNED}`, {
+      version: '1.0',
+      repository: { repositories: [] },
+    }).then((response) => {
+      // 401, not 403: the refusal now comes from PKP's SubmissionAccessPolicy
+      // (`user.authorization.roleBasedAccessDenied`) rather than the plugin's
+      // own check, which answered 403. The request is refused either way, and
+      // nothing in the UI branches on the code — but it is a visible change
+      // to what the API returns, so it is asserted rather than loosened.
+      expect(response.status).to.eq(401);
+      expect(response.body.error).to.eq('user.authorization.roleBasedAccessDenied');
     });
   });
 
   it('may not reserve a certificate identifier — that reaches the public register', () => {
-    cy.getCsrfToken().then((csrfToken) => {
-      post(`identifier?submissionId=${ASSIGNED}`, { submissionId: ASSIGNED }, csrfToken)
-        .then((response) => {
-          // 401 since the register routes moved to the PKP controller: the
-          // refusal is PKP's roleAuthorizer rather than the plugin's own role
-          // check, which answered 400 or 403. Still refused, and nothing in the
-          // UI branches on the code.
-          expect(response.status).to.eq(401);
-          expect(response.body.error).to.eq('user.authorization.roleBasedAccessDenied');
-        });
+    post(`identifier?submissionId=${ASSIGNED}`, { submissionId: ASSIGNED }).then((response) => {
+      // 401 since the register routes moved to the PKP controller: the
+      // refusal is PKP's roleAuthorizer rather than the plugin's own role
+      // check, which answered 400 or 403. Still refused, and nothing in the
+      // UI branches on the code.
+      expect(response.status).to.eq(401);
+      expect(response.body.error).to.eq('user.authorization.roleBasedAccessDenied');
     });
   });
 
   it('may not write the public register issue either', () => {
-    cy.getCsrfToken().then((csrfToken) => {
-      post(`issue?submissionId=${ASSIGNED}`, { submissionId: ASSIGNED }, csrfToken)
-        .then((response) => {
-          // 401 since the register routes moved to the PKP controller: the
-          // refusal is PKP's roleAuthorizer rather than the plugin's own role
-          // check, which answered 400 or 403. Still refused, and nothing in the
-          // UI branches on the code.
-          expect(response.status).to.eq(401);
-          expect(response.body.error).to.eq('user.authorization.roleBasedAccessDenied');
-        });
+    post(`issue?submissionId=${ASSIGNED}`, { submissionId: ASSIGNED }).then((response) => {
+      // 401 since the register routes moved to the PKP controller: the
+      // refusal is PKP's roleAuthorizer rather than the plugin's own role
+      // check, which answered 400 or 403. Still refused, and nothing in the
+      // UI branches on the code.
+      expect(response.status).to.eq(401);
+      expect(response.body.error).to.eq('user.authorization.roleBasedAccessDenied');
     });
   });
 
   it('may still read CODECHECK data — the reviewer tab shows it', () => {
-    cy.getCsrfToken().then((csrfToken) => {
-      cy.request({
-        method: 'GET',
-        url: api(`metadata?submissionId=${ASSIGNED}`),
-        headers: { 'X-Csrf-Token': csrfToken },
-        failOnStatusCode: false,
-      }).then((response) => {
-        expect(response.status).to.eq(200);
-      });
-    });
+    api('GET', `metadata?submissionId=${ASSIGNED}`).its('status').should('eq', 200);
   });
 });
 
@@ -163,20 +134,18 @@ describe('An editor', () => {
   after(restoreStatuses);
 
   it('may write a submission they were never assigned to', () => {
-    cy.getCsrfToken().then((csrfToken) => {
-      post(`status/update?submissionId=${NOT_ASSIGNED}`, {
-        submissionId: NOT_ASSIGNED,
-        status: ASSIGNED_CODECHECKER,
-        userId: SOMEONE_ELSE,
-      }, csrfToken).then((response) => {
-        expect(response.status, 'an editor is not limited to their assignments').to.eq(200);
-        expect(response.body.success).to.eq(true);
-        expect(response.body.statusRecord.status).to.eq(ASSIGNED_CODECHECKER);
-        expect(
-          response.body.statusRecord.user_id,
-          'the editor who asked is recorded, not the id they sent'
-        ).to.eq(ADMIN_ID);
-      });
+    post(`status/update?submissionId=${NOT_ASSIGNED}`, {
+      submissionId: NOT_ASSIGNED,
+      status: ASSIGNED_CODECHECKER,
+      userId: SOMEONE_ELSE,
+    }).then((response) => {
+      expect(response.status, 'an editor is not limited to their assignments').to.eq(200);
+      expect(response.body.success).to.eq(true);
+      expect(response.body.statusRecord.status).to.eq(ASSIGNED_CODECHECKER);
+      expect(
+        response.body.statusRecord.user_id,
+        'the editor who asked is recorded, not the id they sent'
+      ).to.eq(ADMIN_ID);
     });
   });
 });
@@ -296,26 +265,13 @@ describe('The ORCID authorisation routes', () => {
  * dataset happens to carry it, which is why this went unnoticed.
  */
 describe('The ORCID redirect URI', () => {
-  /** Set the ORCID fields on the plugin settings form, which is Smarty, not Vue. */
-  function openSettings() {
-    cy.visit(`/index.php/${JOURNAL}/management/settings/website`);
-    cy.get('a[href*="verb=settings"][href*="plugin=codecheckplugin"]', { timeout: 20000 })
-      .first()
-      .click({ force: true });
-  }
-
-  function saveSettings() {
-    cy.get('form#codecheckSettings').find('button[type="submit"]').first().click();
-    cy.get('#orcidEnabled', { timeout: 20000 }).should('not.exist');
-  }
-
   before(() => {
     cy.ojsLogin('admin', 'admin');
-    openSettings();
+    cy.openCodecheckSettings();
     cy.get('#orcidEnabled', { timeout: 20000 }).check();
     cy.get('input[name="orcidClientId"]').clear().type('APP-CYPRESS');
     cy.get('input[name="orcidClientSecret"]').clear().type('cypress-secret');
-    saveSettings();
+    cy.saveCodecheckSettings();
   });
 
   after(() => {
@@ -323,10 +279,10 @@ describe('The ORCID redirect URI', () => {
     // dummy secret stays until the dataset is reloaded. Switching ORCID off is
     // what actually restores the journal's behaviour for the other specs.
     cy.ojsLogin('admin', 'admin');
-    openSettings();
+    cy.openCodecheckSettings();
     cy.get('#orcidEnabled', { timeout: 20000 }).uncheck();
     cy.get('input[name="orcidClientId"]').clear();
-    saveSettings();
+    cy.saveCodecheckSettings();
   });
 
   it('sends the codechecker back to the journal, not to the site', () => {

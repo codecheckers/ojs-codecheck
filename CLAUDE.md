@@ -799,10 +799,11 @@ cypress/
   support/component.js         mounts via @cypress/vue, imports css/codecheck.css
   support/pkp-mock.js          fake window.pkp (localize, modal, registry, const) — import
                                this first in every component spec
-  support/e2e.js               cy.ojsLogin(), cy.getCsrfToken(), swallow uncaught exceptions
+  support/e2e.js               login, API and settings-form commands (see "E2E tests"),
+                               swallow uncaught exceptions
   support/component-index.html
   tests/component/*.cy.js      10 specs, 128 tests
-  tests/e2e/*.cy.js            13 specs, 71 tests
+  tests/e2e/*.cy.js            14 specs, 74 tests
                                yaml-generation, article-sidebar-setting,
                                issue-toc-setting, issue-toc-badge,
                                private-repository, publication-validation,
@@ -862,7 +863,7 @@ its dialog body, `CodecheckStatusDialog.vue`.
 
 ### E2E tests
 
-`make test-e2e` — 71 tests across 13 specs, driving a real OJS instance.
+`make test-e2e` — 74 tests across 14 specs, driving a real OJS instance.
 
 **Several specs share submission fixtures, and each must restore what it
 changes.** Submissions 8 and 9 are written by `publication-validation`,
@@ -893,6 +894,30 @@ twice because the dev server was down. "The suite is flaky" was the wrong first
 hypothesis on each occasion. Check that the server answers and that the plugin
 loads before concluding anything about the tests.
 
+**Specs reach OJS through the commands in `cypress/support/e2e.js`, never by
+hand.** Each of these was once copied into up to six specs, so a change in PKP
+broke all of them at once:
+
+- `cy.openCodecheckSettings()` / `cy.saveCodecheckSettings()` — the plugin grid
+  link and the settings modal. `cy.codecheckSettingsForm()` yields the form;
+  its selector is written nowhere else
+- `cy.setCodecheckFields({selector: value})` — opens, fills and saves in one go.
+  Selectors are looked up inside the form; `true` checks, `false` unchecks a
+  checkbox, anything else is set with `invoke('val')` plus a `change` event,
+  since a colour input refuses typing and a multilingual field's other
+  languages are hidden. `cy.setCodecheckSetting(fieldId, enabled)` is the
+  one-checkbox form. Specs that change settings restore them in `after()`,
+  reading first with `cy.getCodecheckSetting(fieldId)` where the value they
+  found is not a fixed default
+- `cy.ojsApi(method, path, body)` — a request against the journal, `path`
+  relative to `/index.php/codecheck/`, with the CSRF token. It yields every
+  status for the spec to assert on, and **needs a backend page open**: the
+  token is read off that page's `pkp` object, and a restored `cy.session()`
+  leaves the browser on `about:blank`, so visit one first. It fails at once
+  when there is no token rather than sending a request that is refused
+- `cy.publishedArticleId()` — a published submission's id, or `null` when
+  there is none; a failed request fails the test rather than reading as none
+
 - `yaml-generation.cy.js` — YAML preview vs. download parity, preview-button gating
 - `article-sidebar-setting.cy.js` — the `showArticleSidebar` setting, driven through
   the real settings form; restores the setting afterwards so the rest of the suite is
@@ -901,9 +926,6 @@ loads before concluding anything about the tests.
   the workflow form and absent from the published article and the issue TOC
 - `issue-toc-setting.cy.js` — the `showInTOC` setting, and that it is independent of
   the article sidebar
-- `cy.setCodecheckSetting(fieldId, enabled)` (in `cypress/support/e2e.js`) drives a
-  plugin checkbox setting through the real settings form; specs that toggle settings
-  restore them in an `after()` hook.
 - `issue-toc-badge.cy.js` — what the badge renders: image variants, height, the
   text-only form with its configured wording and colour, and where it links.
   Each variant is also captured to `cypress/screenshots/`, so the settings can be

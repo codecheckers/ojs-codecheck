@@ -45,17 +45,10 @@ describe('Issue table of contents badge setting', () => {
     cy.setCodecheckSetting('showArticleSidebar', true);
     cy.setCodecheckSetting('showInTOC', false);
 
-    cy.getCsrfToken().then((csrfToken) => {
-      cy.request({
-        method: 'GET',
-        url: `/index.php/${JOURNAL}/api/v1/submissions?status[]=3&count=1`,
-        headers: { 'X-Csrf-Token': csrfToken },
-      }).then((response) => {
-        const articleId = response.body.items[0].id;
-
-        cy.visit(`/index.php/${JOURNAL}/article/view/${articleId}`);
-        cy.get('[data-testid="codecheck-article-sidebar"]').should('exist');
-      });
+    cy.publishedArticleId().then((articleId) => {
+      expect(articleId, 'a published submission to test against').to.exist;
+      cy.visit(`/index.php/${JOURNAL}/article/view/${articleId}`);
+      cy.get('[data-testid="codecheck-article-sidebar"]').should('exist');
     });
   });
 });

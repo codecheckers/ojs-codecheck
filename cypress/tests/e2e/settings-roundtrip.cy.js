@@ -18,8 +18,6 @@
  * GitHub API calls, so saves are kept to what these assertions need.
  */
 
-const JOURNAL = 'codecheck';
-
 /**
  * Not asserted on:
  * - githubPersonalAccessToken is deliberately rendered blank and only written
@@ -47,23 +45,6 @@ const TEXT_VALUE = {
 /** Captured before anything is changed; restored in after(). */
 let originalFields;
 
-function openSettings() {
-  cy.visit(`/index.php/${JOURNAL}/management/settings/website`);
-
-  // Every settings tab is rendered up front, so the plugin grid is present
-  // without switching tabs; the row's action links are collapsed.
-  cy.get('a[href*="verb=settings"][href*="plugin=codecheckplugin"]', { timeout: 20000 })
-    .first()
-    .click({ force: true });
-
-  cy.get('form#codecheckSettings', { timeout: 20000 }).should('exist');
-}
-
-function saveSettings() {
-  cy.get('form#codecheckSettings').find('button[type="submit"]').first().click();
-  cy.get('form#codecheckSettings', { timeout: 20000 }).should('not.exist');
-}
-
 function isTextLike(el) {
   return el.tagName === 'TEXTAREA'
     || ['text', 'url', 'number', 'email'].includes(el.type);
@@ -71,7 +52,7 @@ function isTextLike(el) {
 
 /** Read every named control the form renders into a plain {name: value} map. */
 function captureFields() {
-  return cy.get('form#codecheckSettings').then(($form) => {
+  return cy.codecheckSettingsForm().then(($form) => {
     const captured = {};
 
     $form.find('input[name], select[name], textarea[name]').each((_, el) => {
@@ -113,7 +94,7 @@ function captureFields() {
  * return the map that should come back after saving.
  */
 function changeEveryField() {
-  return cy.get('form#codecheckSettings').then(($form) => {
+  return cy.codecheckSettingsForm().then(($form) => {
     const expected = {};
 
     $form.find('input[name], select[name], textarea[name]').each((_, el) => {
@@ -170,7 +151,7 @@ function changeEveryField() {
 
 /** Put the form back into a previously captured state. */
 function applyFields(fields) {
-  cy.get('form#codecheckSettings').then(($form) => {
+  cy.codecheckSettingsForm().then(($form) => {
     $form.find('input[name], select[name], textarea[name]').each((_, el) => {
       const name = el.getAttribute('name');
       if (!name || !(name in fields) || DO_NOT_MODIFY.includes(name)) {
@@ -195,7 +176,7 @@ describe('Settings round-trip', () => {
 
   before(() => {
     cy.ojsLogin('admin', 'admin');
-    openSettings();
+    cy.openCodecheckSettings();
     captureFields().then((fields) => {
       originalFields = fields;
     });
@@ -205,13 +186,13 @@ describe('Settings round-trip', () => {
   // even if an assertion above failed partway through.
   after(() => {
     cy.ojsLogin('admin', 'admin');
-    openSettings();
+    cy.openCodecheckSettings();
     applyFields(originalFields);
-    saveSettings();
+    cy.saveCodecheckSettings();
   });
 
   it('renders a form with settings to check', () => {
-    openSettings();
+    cy.openCodecheckSettings();
 
     // Guards the assertions below against passing on an empty form.
     captureFields().then((fields) => {
@@ -220,11 +201,11 @@ describe('Settings round-trip', () => {
   });
 
   it('returns every changed value after a save', () => {
-    openSettings();
+    cy.openCodecheckSettings();
 
     changeEveryField().then((expected) => {
-      saveSettings();
-      openSettings();
+      cy.saveCodecheckSettings();
+      cy.openCodecheckSettings();
 
       captureFields().then((actual) => {
         // Compared per field so a failure names the setting that was lost.
@@ -248,19 +229,19 @@ describe('Settings round-trip', () => {
   it('keeps a config version unticked, and offers the default when none is left', () => {
     const versions = () => cy.get('input[name="codecheckEnabledConfigVersions[]"]');
 
-    openSettings();
+    cy.openCodecheckSettings();
     versions().should('have.length.greaterThan', 1);
 
     // Tick every version, so the state under test is one this save produced.
     versions().check({ force: true });
-    saveSettings();
-    openSettings();
+    cy.saveCodecheckSettings();
+    cy.openCodecheckSettings();
     versions().each(($el) => expect($el[0].checked, `${$el.val()} ticked`).to.be.true);
 
     versions().first().uncheck({ force: true });
     versions().first().invoke('val').then((unticked) => {
-      saveSettings();
-      openSettings();
+      cy.saveCodecheckSettings();
+      cy.openCodecheckSettings();
 
       versions().each(($el) => {
         expect($el[0].checked, `${$el.val()} after unticking ${unticked}`)
@@ -270,8 +251,8 @@ describe('Settings round-trip', () => {
 
     // Nothing ticked posts no value at all; the default stands in on read.
     versions().uncheck({ force: true });
-    saveSettings();
-    openSettings();
+    cy.saveCodecheckSettings();
+    cy.openCodecheckSettings();
     versions().filter(':checked').should('have.length', 1);
     versions().filter(':checked').should('have.value', '1.0');
 
@@ -281,11 +262,11 @@ describe('Settings round-trip', () => {
   });
 
   it('returns the original values once they are written back', () => {
-    openSettings();
+    cy.openCodecheckSettings();
     applyFields(originalFields);
-    saveSettings();
+    cy.saveCodecheckSettings();
 
-    openSettings();
+    cy.openCodecheckSettings();
     captureFields().then((actual) => {
       Object.keys(originalFields).forEach((name) => {
         if (DO_NOT_MODIFY.includes(name)) {

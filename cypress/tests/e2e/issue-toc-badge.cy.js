@@ -36,30 +36,6 @@ function shootBadge(name) {
     .screenshot(`issue-toc-badge-${name}`, { overwrite: true });
 }
 
-/** Sets a text-like or colour field on the plugin settings form and saves. */
-function setBadgeFields(fields) {
-  cy.visit(`/index.php/${JOURNAL}/management/settings/website`);
-  cy.get('a[href*="verb=settings"][href*="plugin=codecheckplugin"]', { timeout: 20000 })
-    .first()
-    .click({ force: true });
-  cy.get('form#codecheckSettings', { timeout: 20000 }).should('exist');
-
-  Object.entries(fields).forEach(([selector, value]) => {
-    if (value === true) {
-      cy.get(selector).scrollIntoView();
-      cy.get(selector).check({ force: true });
-    } else {
-      // Set directly rather than typed: a colour input rejects typing, and the
-      // text field is hidden whenever the badge is not the text-only one.
-      cy.get(selector).invoke('val', value);
-      cy.get(selector).trigger('change', { force: true });
-    }
-  });
-
-  cy.get('form#codecheckSettings').find('button[type="submit"]').first().click();
-  cy.get('form#codecheckSettings', { timeout: 20000 }).should('not.exist');
-}
-
 describe('Issue table of contents badge', () => {
   beforeEach(() => {
     cy.ojsLogin('admin', 'admin');
@@ -68,7 +44,7 @@ describe('Issue table of contents badge', () => {
   // The badge settings are journal-wide, so put them back whatever happens.
   after(() => {
     cy.ojsLogin('admin', 'admin');
-    setBadgeFields({
+    cy.setCodecheckFields({
       '#badgeCodeworks': true,
       [BADGE_TEXT_EN]: '',
       '#codecheckBadgeTextColor': '#2d7f3e',
@@ -78,7 +54,7 @@ describe('Issue table of contents badge', () => {
   });
 
   it('renders the badge as an image linking to the certificate', () => {
-    setBadgeFields({ '#badgeCodeworks': true });
+    cy.setCodecheckFields({ '#badgeCodeworks': true });
 
     visitAnIssue();
 
@@ -91,7 +67,7 @@ describe('Issue table of contents badge', () => {
   });
 
   it('renders the CODECHECK logo when that is the chosen image', () => {
-    setBadgeFields({ '#badgeCodecheckLogo': true });
+    cy.setCodecheckFields({ '#badgeCodecheckLogo': true });
 
     visitAnIssue();
 
@@ -104,17 +80,17 @@ describe('Issue table of contents badge', () => {
   });
 
   it('renders the badge at the configured height', () => {
-    setBadgeFields({ '#badgeCodeworks': true, '[name="codecheckBadgeHeight"]': '40' });
+    cy.setCodecheckFields({ '#badgeCodeworks': true, '[name="codecheckBadgeHeight"]': '40' });
 
     visitAnIssue();
     cy.get(`${BADGE} img.codecheck-badge-img`).first().should('have.css', 'height', '40px');
     shootBadge('03-height-40px');
 
-    setBadgeFields({ '[name="codecheckBadgeHeight"]': '24' });
+    cy.setCodecheckFields({ '[name="codecheckBadgeHeight"]': '24' });
   });
 
   it('renders the configured text and colour when the journal shows no image', () => {
-    setBadgeFields({
+    cy.setCodecheckFields({
       '#badgeNone': true,
       [BADGE_TEXT_EN]: 'CODE WORKS',
       '#codecheckBadgeTextColor': '#b5121b',
@@ -132,7 +108,7 @@ describe('Issue table of contents badge', () => {
   });
 
   it('falls back to the default wording when the text is cleared', () => {
-    setBadgeFields({ '#badgeNone': true, [BADGE_TEXT_EN]: '' });
+    cy.setCodecheckFields({ '#badgeNone': true, [BADGE_TEXT_EN]: '' });
 
     visitAnIssue();
     cy.get(`${BADGE}.codecheck-badge--text`).first().should('contain', 'CODECHECK');
@@ -144,7 +120,7 @@ describe('Issue table of contents badge', () => {
     // Until this setting existed the badge linked nowhere at all: the link was
     // built only for a "CODECHECK-YYYY-NNN" certificate while identifiers are
     // stored as "YYYY-NNN".
-    setBadgeFields({ '#badgeCodeworks': true, '#codecheckBadgeLinkTarget': 'register' });
+    cy.setCodecheckFields({ '#badgeCodeworks': true, '#codecheckBadgeLinkTarget': 'register' });
 
     visitAnIssue();
     cy.get(BADGE)
@@ -152,7 +128,7 @@ describe('Issue table of contents badge', () => {
       .should('have.attr', 'href')
       .and('match', /^https:\/\/codecheck\.org\.uk\/register\/certs\/\d{4}-\d+\/$/);
 
-    setBadgeFields({ '#codecheckBadgeLinkTarget': 'doi' });
+    cy.setCodecheckFields({ '#codecheckBadgeLinkTarget': 'doi' });
 
     visitAnIssue();
     // The seeded records carry a DOI; where one is missing the register link
@@ -161,7 +137,7 @@ describe('Issue table of contents badge', () => {
   });
 
   it('badges only the articles whose check is finished', () => {
-    setBadgeFields({ '#badgeCodeworks': true });
+    cy.setCodecheckFields({ '#badgeCodeworks': true });
 
     // Every badge belongs to an article summary, and no summary carries more
     // than one — a badge escaping into the surrounding markup, or one rendered

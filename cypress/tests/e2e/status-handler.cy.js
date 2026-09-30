@@ -27,7 +27,6 @@
  */
 
 const JOURNAL = 'codecheck';
-const API = `/index.php/${JOURNAL}/api/v1/codecheck`;
 
 // All three are in review with codecheckers recorded, and none is published, so
 // no reader-facing spec depends on their status. 8 is kept for the automatic
@@ -41,18 +40,8 @@ const ASSIGNED_CODECHECKER = 'plugins.generic.codecheck.status.assignedCodecheck
 const STALLED_AUTHOR = 'plugins.generic.codecheck.status.stalled.author';
 const PENDING = 'plugins.generic.codecheck.status.pending';
 
-/** Calls the plugin API with the session's CSRF token. */
-function api(method, path, body) {
-  return cy.getCsrfToken().then((csrfToken) =>
-    cy.request({
-      method,
-      url: `${API}/${path}`,
-      headers: { 'X-Csrf-Token': csrfToken },
-      body,
-      failOnStatusCode: false,
-    })
-  );
-}
+/** Calls the plugin's own API. */
+const api = (method, path, body) => cy.ojsApi(method, `api/v1/codecheck/${path}`, body);
 
 const getStatus = (submissionId) => api('GET', `status?submissionId=${submissionId}`);
 const getHistory = (submissionId) => api('GET', `status/history?submissionId=${submissionId}`);
@@ -62,7 +51,7 @@ const updateStatus = (submissionId, status, userId) =>
 describe('CODECHECK status', () => {
   beforeEach(() => {
     cy.ojsLogin('admin', 'admin');
-    // cy.getCsrfToken() reads the token off the current page's pkp object, so
+    // cy.ojsApi() reads the token off the current page's pkp object, so
     // there has to be a page: a restored session alone leaves us on about:blank.
     cy.visit(`/index.php/${JOURNAL}/dashboard/editorial`);
   });

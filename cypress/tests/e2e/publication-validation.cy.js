@@ -52,28 +52,16 @@ let originalMetadata = null;
  */
 let orcidWasEnabled = null;
 
-function api(method, path, body) {
-  return cy.getCsrfToken().then((csrfToken) =>
-    cy.request({
-      method,
-      url: `/index.php/${JOURNAL}/${path}`,
-      headers: { 'X-Csrf-Token': csrfToken },
-      body,
-      failOnStatusCode: false,
-    })
-  );
-}
-
 const setStatusOf = (submissionId, status) =>
-  api('POST', `api/v1/codecheck/status/update?submissionId=${submissionId}`, { status, userId: 1 });
+  cy.ojsApi('POST', `api/v1/codecheck/status/update?submissionId=${submissionId}`, { status, userId: 1 });
 
 const setStatus = (status) => setStatusOf(SUBMISSION, status);
 
 const publish = (submissionId, publicationId) =>
-  api('PUT', `api/v1/submissions/${submissionId}/publications/${publicationId}/publish`);
+  cy.ojsApi('PUT', `api/v1/submissions/${submissionId}/publications/${publicationId}/publish`);
 
 const unpublish = (submissionId, publicationId) =>
-  api('PUT', `api/v1/submissions/${submissionId}/publications/${publicationId}/unpublish`);
+  cy.ojsApi('PUT', `api/v1/submissions/${submissionId}/publications/${publicationId}/unpublish`);
 
 /**
  * Publishes the submission if it is not published already.
@@ -85,7 +73,7 @@ function ensurePublished(submissionId) {
   allowOnlyStatuses([FULL_REPRODUCTION]);
   setStatusOf(submissionId, FULL_REPRODUCTION);
 
-  return api('GET', `api/v1/submissions/${submissionId}`).then((submission) => {
+  return cy.ojsApi('GET', `api/v1/submissions/${submissionId}`).then((submission) => {
     const publicationId = submission.body.currentPublicationId;
 
     if (submission.body.status === OJS_STATUS_PUBLISHED) {
@@ -101,8 +89,8 @@ function ensurePublished(submissionId) {
 
 /** Attempts to publish and returns the collected validation errors. */
 function attemptPublish() {
-  return api('GET', `api/v1/submissions/${SUBMISSION}`).then((submission) =>
-    api(
+  return cy.ojsApi('GET', `api/v1/submissions/${SUBMISSION}`).then((submission) =>
+    cy.ojsApi(
       'PUT',
       `api/v1/submissions/${SUBMISSION}/publications/${submission.body.currentPublicationId}/publish`
     ).then((response) => {
@@ -114,7 +102,7 @@ function attemptPublish() {
 
 /** The stored CODECHECK metadata of a submission, as the workflow form reads it. */
 const getMetadata = (submissionId) =>
-  api('GET', `api/v1/codecheck/metadata?submissionId=${submissionId}`).then((response) => {
+  cy.ojsApi('GET', `api/v1/codecheck/metadata?submissionId=${submissionId}`).then((response) => {
     expect(response.status, 'the metadata has to be readable').to.eq(200);
     return response.body.codecheck;
   });
@@ -128,7 +116,7 @@ const getMetadata = (submissionId) =>
  * for two of them, which is why they are mapped one by one rather than spread.
  */
 function setRepositories(submissionId, codecheck, repositories) {
-  return api('POST', `api/v1/codecheck/metadata?submissionId=${submissionId}`, {
+  return cy.ojsApi('POST', `api/v1/codecheck/metadata?submissionId=${submissionId}`, {
     version: codecheck.version,
     publication_type: codecheck.publicationType,
     manifest: codecheck.manifest,
@@ -159,11 +147,7 @@ const markedFirst = (entries, hidden) =>
 
 /** Ticks exactly the given CODECHECK statuses in the publication settings. */
 function allowOnlyStatuses(statusKeys) {
-  cy.visit(`/index.php/${JOURNAL}/management/settings/website`);
-  cy.get('a[href*="verb=settings"][href*="plugin=codecheckplugin"]', { timeout: 20000 })
-    .first()
-    .click({ force: true });
-  cy.get('form#codecheckSettings', { timeout: 20000 }).should('exist');
+  cy.openCodecheckSettings();
 
   // The ids carry the locale key, dots and all, so they are matched by
   // attribute rather than by a CSS id selector.
@@ -174,14 +158,13 @@ function allowOnlyStatuses(statusKeys) {
     }
   });
 
-  cy.get('form#codecheckSettings').find('button[type="submit"]').first().click();
-  cy.get('form#codecheckSettings', { timeout: 20000 }).should('not.exist');
+  cy.saveCodecheckSettings();
 }
 
 describe('CODECHECK publication validation', () => {
   beforeEach(() => {
     cy.ojsLogin('admin', 'admin');
-    // cy.getCsrfToken() reads the token off the page's pkp object.
+    // cy.ojsApi() reads the token off the page's pkp object.
     cy.visit(`/index.php/${JOURNAL}/dashboard/editorial`);
   });
 
