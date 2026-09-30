@@ -714,9 +714,6 @@ msgstr "Enter the codechecker's name."
 msgid "plugins.generic.codecheck.codecheckers.validation.orcidInvalid"
 msgstr "This is not an ORCID iD. Enter it as 0000-0000-0000-0000, or leave the field empty."
 
-msgid "plugins.generic.codecheck.validation.codecheckersRequired"
-msgstr "Please add at least one codechecker"
-
 msgid "plugins.generic.codecheck.repositories.infoTitle"
 msgstr "Repositories Info"
 
