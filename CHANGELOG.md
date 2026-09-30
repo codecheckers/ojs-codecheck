@@ -12,6 +12,14 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 
 ## [Unreleased]
 
+### Added
+
+#### Project
+
+- Installable and upgradable from OJS's Plugin Gallery by adding this
+  repository's `plugins.xml` to `plugin_gallery_urls` in `config.inc.php`, from
+  OJS 3.5.0-4 on (#157)
+
 ## [0.1.0.0] - 2026-09-30
 
 ### Added

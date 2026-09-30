@@ -826,7 +826,7 @@ README.md; keep `css/codecheck.css` and inline component styles consistent.
 ### Layout
 
 ```
-tests/                       PHPUnit (36 test classes, 380 tests)
+tests/                       PHPUnit (37 test classes, 385 tests)
   bootstrap.php              PKP_STRICT_MODE + BASE_SYS_DIR (OJS_ROOT or ../../../..)
   PKPTestCase.php            local stub extending PHPUnit TestCase
   FakeTranslator.php         minimal translator so __() works without booting OJS
@@ -855,6 +855,7 @@ tests/                       PHPUnit (36 test classes, 380 tests)
                                CodecheckSubmissionDAO, CodecheckSubmission, Schema
   WorkflowUnitTests/           CodecheckMetadataHandler, CodecheckPublicationValidator,
                                CodecheckStatusRegisterUpdate, CodecheckYamlValidator
+  PluginsXmlUnitTest.php       the Plugin Gallery listing against OJS's plugins.xsd
 
 cypress/
   support/component.js         mounts via @cypress/vue, imports css/codecheck.css
@@ -1052,7 +1053,7 @@ Still uncovered: opt-in, the submission wizard, and register deposit.
 
 ### PHPUnit tests
 
-`make test-php` — 380 tests, green, none skipped.
+`make test-php` — 385 tests, green, none skipped.
 
 PHPUnit needs an OJS installation: the tests load OJS classes and the runner uses the
 PHPUnit shipped in `lib/pkp`. Both `runTests.sh` and `bootstrap.php` honour `OJS_ROOT`,
@@ -1335,6 +1336,11 @@ Notes that matter when touching this:
   `spl_autoload_functions()` because `require_once` on the autoloader answers
   `true` once PHPUnit has already loaded it. A warning on stderr says so if the
   loader cannot be reached, rather than silently testing the wrong tree.
+- **The Makefile finds OJS beside the main checkout, from a worktree too.**
+  `OJS_ROOT` defaults to `../ojs-350` relative to git's common directory, not
+  to `$(CURDIR)`, which from `.claude/worktrees/<name>/` pointed into
+  `.claude/worktrees/` and made `check-ojs` stop with "No OJS installation".
+  `DATASET` stays relative to the checkout, so a worktree loads its own dump.
 - **After repointing it, clear `cache/t_compile/` as well as `make clear-cache`.**
   Smarty keeps compiled templates there, keyed by the *path* — which does not
   change across the swap — and invalidates them by comparing the source's mtime,
@@ -1655,6 +1661,27 @@ check.
 `README.md` steps through `version.xml`; `CITATION.cff` carries the same two
 values (`version`, `date-released`) and is the one most easily forgotten,
 because nothing at runtime reads it and no test covers it.
+
+**`plugins.xml` is the Plugin Gallery listing, and it follows a release rather
+than being part of one** (#157). A journal adds its raw URL on `main` to
+`plugin_gallery_urls`, so a release is recorded there *after* its package is
+uploaded, on `main` — step 14 of the release procedure in `README.md`, which
+pastes the `<release>` block `package-plugin.sh` prints rather than copying
+values by hand. Three properties to keep:
+
+- **Releases are appended, never edited.** The `md5` pins the published
+  package; OJS refuses an install whose download does not match it, so editing
+  an entry or replacing an uploaded asset breaks every journal that installs it.
+- **The file is never moved or renamed.** OJS fetches every gallery URL to draw
+  the Plugin Gallery tab, and one that does not answer makes `loadXML('')` throw,
+  which breaks the whole tab — official plugins included — not just this entry.
+- **It is `export-ignore`d**: it describes packages and is never inside one.
+
+OJS does not validate the listing when it reads it, so `PluginsXmlUnitTest` is
+the only check: it validates against `lib/pkp/xml/schema/plugins.xsd` in
+`OJS_ROOT` and ties each package URL to its version. It deliberately does *not*
+compare the newest release with `version.xml`, which runs ahead of the listing
+on a release branch.
 
 **The Zenodo DOI is not in the file yet, and this is where it goes.** Issue #8
 (beta release incl. Zenodo deposit) mints it. When it exists, add it to

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  * plugins.xml
+  *
+  * Copyright (c) 2026 CODECHECK Initiative
+  * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
+  *
+  * The Plugin Gallery listing for the CODECHECK plugin. Journals add
+  *
+  *   https://raw.githubusercontent.com/codecheckers/ojs-codecheck/main/plugins.xml
+  *
+  * to `plugin_gallery_urls` in config.inc.php (README.md, "From the Plugin
+  * Gallery"), so this file is never moved or renamed. A release is appended
+  * here after its package is uploaded, and never edited (README.md, "Creating
+  * a Release").
+  -->
+<plugins xmlns="http://pkp.sfu.ca" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pkp.sfu.ca plugins.xsd">
+	<plugin category="generic" product="codecheck">
+		<name locale="en">CODECHECK</name>
+		<homepage>https://github.com/codecheckers/ojs-codecheck</homepage>
+		<summary locale="en">Integrates the CODECHECK process for checking the computational reproducibility of research into submission, editorial workflow and publication.</summary>
+		<description locale="en"><![CDATA[<p>Integrates <a href="https://codecheck.org.uk/">CODECHECK</a> into OJS: authors opt in and name their code and data repositories at submission, editors and codecheckers record the check and its status in the workflow, publication can be held until the check is complete, and published articles show a CODECHECK badge, the certificate and a data and software availability statement.</p>
+<p>The plugin contacts external services. It opens and updates issues in the CODECHECK register and proposes <code>register.csv</code> entries on GitHub, using a personal access token that is stored in the plugin settings, and it can deposit peer-review activity to codecheckers' ORCID records.</p>]]></description>
+		<installation locale="en"><![CDATA[<p>Enable the plugin under Settings &gt; Website &gt; Plugins, then configure it in the plugin's settings: the CODECHECK register repository and personal access token, ORCID, and what is shown to readers.</p>]]></installation>
+		<maintainer>
+			<name>CODECHECK</name>
+			<institution>CODECHECK Initiative</institution>
+			<email>team@cdchck.science</email>
+		</maintainer>
+		<release date="2026-09-30" version="0.1.0.0" md5="b23e536a1d2379a152ac758ee67b579c">
+			<package>https://github.com/codecheckers/ojs-codecheck/releases/download/v0.1.0.0/codecheck-0.1.0.0.tar.gz</package>
+			<compatibility application="ojs2">
+				<version>~3.5.0.0</version>
+			</compatibility>
+			<description locale="en">First beta release, not yet recommended for production journals.</description>
+		</release>
+	</plugin>
+</plugins>
