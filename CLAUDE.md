@@ -622,8 +622,11 @@ produced #177 — `CODECHECK_MODE` (`'opt-in'`), `ORCID_API_TYPE`
   `plugins.generic.codecheck.dataSoftwareAvailability` when cleared, so the article
   page never renders an empty heading. `CODECHECK_HIDE_EMPTY_AVAILABILITY_STATEMENT`
   is the ordinary kind, defaulting to **off**: an article with no statement says
-  "No {$heading} provided for this work." rather than dropping the section, since
-  silence cannot be told apart from a journal that never asked
+  "Not provided for this work." rather than dropping the section, since
+  silence cannot be told apart from a journal that never asked. That sentence
+  **does not name the heading**, which sits right above it: it used to, and a
+  journal-worded heading dropped into a plugin-translated sentence mixed two
+  languages whenever they differed (#164)
 - `CODECHECK_BADGE_TEXT` falls back to the localised
   `plugins.generic.codecheck.badge.textOnly` when cleared, so a journal showing text
   instead of a badge never shows nothing. `CODECHECK_BADGE_TEXT_COLOR` falls back to
@@ -646,7 +649,10 @@ gets the plugin's localised default, not a stray other language.
 dropped so they fall back, and only the form's locales taken from the post.
 `SettingsForm::localizedTextToSave()` keeps what is stored for any *other*
 locale, because a reader language need not be a form language and a save must
-not drop wording the form never showed. **Anything but an array reads as
+not drop wording the form never showed. Such wording cannot be edited until the
+language is a form language again — deliberately so, since OJS keeps a journal's
+own texts the same way (`SchemaDAO::updateObject()` deletes a locale only when
+it is sent as null). **Anything but an array reads as
 nothing stored.** Both
 were a plain string until #164, but never in a release, so there is no migration
 and the old shape is deliberately not read — reading both would give one row two

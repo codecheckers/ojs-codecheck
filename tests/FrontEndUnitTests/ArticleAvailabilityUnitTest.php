@@ -41,11 +41,11 @@ class ArticleAvailabilityUnitTest extends PKPTestCase
 
         $this->assertSame(
             'Code available at https://example.org/repo',
-            $availability->resolveStatement('Code available at https://example.org/repo', 'Heading', false)
+            $availability->resolveStatement('Code available at https://example.org/repo', false)
         );
     }
 
-    public function testEmptyStatementIsReplacedByAMessageNamingTheHeading()
+    public function testEmptyStatementIsReplacedByAMessage()
     {
         $availability = $this->availabilityWithSettings([]);
 
@@ -53,7 +53,7 @@ class ArticleAvailabilityUnitTest extends PKPTestCase
         foreach ([null, '', '   ', "\n"] as $stored) {
             $this->assertSame(
                 'plugins.generic.codecheck.availabilityStatement.none',
-                $availability->resolveStatement($stored, 'Heading', false)
+                $availability->resolveStatement($stored, false)
             );
         }
     }
@@ -62,12 +62,12 @@ class ArticleAvailabilityUnitTest extends PKPTestCase
     {
         $availability = $this->availabilityWithSettings([]);
 
-        $this->assertNull($availability->resolveStatement(null, 'Heading', true));
+        $this->assertNull($availability->resolveStatement(null, true));
 
         // Hiding applies to the empty case only; a real statement still shows.
         $this->assertSame(
             'A statement',
-            $availability->resolveStatement('A statement', 'Heading', true)
+            $availability->resolveStatement('A statement', true)
         );
     }
 

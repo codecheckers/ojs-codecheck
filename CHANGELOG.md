@@ -98,7 +98,9 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   settings to hide it, rename its heading, or omit it where there is none (#152)
 - The availability statement heading and the text shown instead of a badge are
   set per journal language; a language left empty uses the primary language's
-  wording, then the default (#164)
+  wording, then the default. An article without a statement now says "Not
+  provided for this work." instead of repeating the heading, which could mix
+  two languages in one sentence (#164)
 
 #### Configuration
 

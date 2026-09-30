@@ -58,7 +58,6 @@ class ArticleAvailability
         $heading = $this->getHeading($context);
         $statement = $this->resolveStatement(
             $publication->getData('dataAvailabilityStatement'),
-            $heading,
             $this->hidesEmptyStatement($context->getId())
         );
 
@@ -89,11 +88,15 @@ class ArticleAvailability
      * author. A journal that would rather show nothing sets
      * CODECHECK_HIDE_EMPTY_AVAILABILITY_STATEMENT.
      *
+     * The message does not name the heading, which sits directly above it: the
+     * heading is the journal's wording, possibly in another language than the
+     * message, and a sentence built around it could only ever be right in one
+     * (#164).
+     *
      * @param string|null $stored the statement recorded on the publication
-     * @param string $heading the section heading, which the message names
      * @param bool $hideWhenEmpty whether an empty statement omits the section
      */
-    public function resolveStatement(?string $stored, string $heading, bool $hideWhenEmpty): ?string
+    public function resolveStatement(?string $stored, bool $hideWhenEmpty): ?string
     {
         $statement = trim((string) $stored);
 
@@ -105,7 +108,7 @@ class ArticleAvailability
             return null;
         }
 
-        return __('plugins.generic.codecheck.availabilityStatement.none', ['heading' => $heading]);
+        return __('plugins.generic.codecheck.availabilityStatement.none');
     }
 
     /**

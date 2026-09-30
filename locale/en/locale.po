@@ -84,7 +84,7 @@ msgid "plugins.generic.codecheck.settings.hideEmptyAvailabilityStatement.descrip
 msgstr "Leave the section out of articles whose authors provided no statement, instead of noting that none was provided"
 
 msgid "plugins.generic.codecheck.availabilityStatement.none"
-msgstr "No {$heading} provided for this work."
+msgstr "Not provided for this work."
 
 msgid "plugins.generic.codecheck.settings.availabilityStatementHeading"
 msgstr "Heading for the availability statement"
