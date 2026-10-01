@@ -454,6 +454,23 @@ Three properties of the sync that are easy to undo by accident:
   request finished last. The comment says what was recorded; the labels say
   where the check stands.
 
+**Every post to the register is signed, through one object.**
+`CodecheckPostOrigin` carries the journal's name and address, the OJS version
+and the plugin's (`CodecheckPlugin::codeVersion()`, read from `version.xml`,
+not the database), and the signature. `CodecheckGithubRegisterApiClient` takes
+one, and appends `signature()` to the issue body, every comment and the deposit
+PR body; the issue's JSON block takes `journal.url`, `journal.ojsVersion` and
+`plugin` from it. **The journal's address is built from the configuration**
+(`base_url`, its `base_url[<journal>]` override, `restful_urls`) by
+`CodecheckPostOrigin::journalUrl()`, never through the dispatcher: that takes
+the host from the request's `Host` / `X-Forwarded-Host` header, and an assigned
+reviewer can trigger a status change, so a crafted header would put an address
+of their choosing into a public post whenever `allowed_hosts` is left empty. The
+client cannot be built without one, so a new write path
+cannot go out unsigned by forgetting it. The JSON block is built with `json_encode` and is
+a published format now that it parses: anything reading the register may rely
+on its keys, so rename none of them.
+
 **A recorded issue number is only an address together with its repository.** A
 journal that moves from a testing register to the production one keeps the old
 numbers on its submissions, and that number in the new register is somebody
@@ -732,6 +749,14 @@ that holds one city, and the rest are values. The one borderline case is
 `CODECHECK_BADGE_CUSTOM_URL` — OJS keeps its own logos per locale, and a badge
 image with words in it could want the same; left single-valued until someone
 asks.
+
+**`CODECHECK_GITHUB_SIGNATURE` is the deliberate exception**: text a reader
+sees, and single-valued. It closes what the plugin posts to the register, which
+is one shared place read in English, so a post must not change language with
+the editor who happened to trigger it. Its reader rule is in
+`CodecheckPostOrigin::signature()` — a cleared or unset value is the English
+default in `CODECHECK_GITHUB_SIGNATURE_DEFAULT` — so it is not in
+`CODECHECK_SETTING_DEFAULTS` either, for the badge text's reason.
 
 `CODECHECK_ENABLED_CONFIG_VERSIONS` defaults to `CODECHECK_DEFAULT_CONFIG_VERSIONS`
 — `1.0` alone, not every known version — so a journal that has not chosen records
@@ -1562,16 +1587,15 @@ A change is **non-trivial** when either is true:
 Below that, and for documentation, wording, a locale entry or a dependency bump
 on its own: skip both.
 
-Effort level, for `/code-review`:
+Effort level, for `/code-review` — **scaled to the change, not fixed**:
 
 | Change | Level |
 |---|---|
-| 40–300 lines, ordinary domain or UI code | `high` |
-| over 300 lines | `max` |
-| `api/v1/`, `classes/migration/`, the `Publication::publish` / `validatePublish` hooks, or `classes/CodecheckRegister/` — at any size | `max` |
+| Small: 40–150 lines of ordinary domain or UI code | `medium` |
+| Larger: over 150 lines, or anything in `api/v1/`, `classes/CodecheckRegister/`, `classes/migration/` or the `Publication::publish` / `validatePublish` hooks | `high` |
+| Very critical work, where a quiet failure is expensive or cannot be undone: a migration that rewrites or drops data, the publication gate, the role sets or policies, GitHub token handling, a deposit that writes to a public repository | `max` |
 
-`high` is the floor rather than the default `medium` because of what this
-codebase is. There is no compiler and no static analysis in CI (issue #43 is
+`medium` is the floor, not `low`, because of what this codebase is. There is no compiler and no static analysis in CI (issue #43 is
 still open), so a wrong array shape, a null context or a renamed key is found at
 runtime or not at all. PHPUnit cannot reach the endpoint bodies, the migrations
 or anything that touches the database, so a large share of the PHP has no test
@@ -1580,6 +1604,12 @@ argument arrays carry references, the API handler `exit`s, and PKP swallows a
 TypeError thrown inside a hook — which is exactly how `validatePublicationHook()`
 went months without ever running, and how `setupAPIHandler()` left OJS answering
 every plugin API call with a 404. Neither showed up as a failing test.
+
+`max` is the exception rather than the habit: it fans out to about ten agents
+at once, costs accordingly, and has been cut off by the usage limit before it
+reported anything. A `high` review of each part of a large change is worth more
+than a `max` run that does not finish; when a review dies on a limit, rerun it
+at the level below rather than skipping it.
 
 Also run **`/security-review`** — separately from the above, whatever the size —
 when a change touches the role sets or policies in `CodecheckApiController`, the file

@@ -682,6 +682,22 @@ class CodecheckPlugin extends GenericPlugin
     }
 
     /**
+     * The release of the code that is running, from this plugin's `version.xml`.
+     *
+     * Read straight from the file rather than through `getCurrentVersion()`,
+     * which asks the database for what was last installed — the two differ
+     * between deploying a release and running the upgrade — and rather than
+     * `VersionCheck::parseVersionXML()`, which needs the cache facade.
+     */
+    public function codeVersion(): ?string
+    {
+        $xml = @simplexml_load_file(__DIR__ . '/version.xml');
+        $release = $xml === false ? '' : trim((string) $xml->release);
+
+        return $release === '' ? null : $release;
+    }
+
+    /**
      * Provide a description for this plugin.
      */
     public function getDescription(): string

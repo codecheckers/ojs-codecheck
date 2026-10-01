@@ -5,6 +5,7 @@ namespace APP\plugins\generic\codecheck\tests\CodecheckRegisterUnitTests;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifier;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterIssue;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckIssueLabels;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckPostOrigin;
 use PKP\tests\PKPTestCase;
 
 /**
@@ -22,7 +23,8 @@ class CodecheckGithubRegisterIssueUnitTest extends PKPTestCase
         array $repositories = ['https://github.com/example/repo'],
         array $codecheckers = [['name' => 'Jane Doe', 'ORCID' => '0000-0002-1825-0097']],
         array $labels = ['community', 'journal'],
-        string $authorString = 'Doe et al.'
+        string $authorString = 'Doe et al.',
+        string $journalName = 'CODECHECK Demo Journal'
     ): CodecheckGithubRegisterIssue {
         return new CodecheckGithubRegisterIssue(
             'codecheckers',
@@ -30,7 +32,7 @@ class CodecheckGithubRegisterIssueUnitTest extends PKPTestCase
             new CertificateIdentifier(2026, 7),
             new CodecheckIssueLabels($labels),
             'A Paper About Things',
-            'CODECHECK Demo Journal',
+            new CodecheckPostOrigin($journalName, 'https://journal.example/index.php/demo', '3.5.0.3', '0.1.0.0'),
             $authorString,
             '42',
             $codecheckers,
@@ -64,7 +66,7 @@ class CodecheckGithubRegisterIssueUnitTest extends PKPTestCase
             ['url' => 'https://github.com/public/repo', 'hidden' => false, 'providedByAuthor' => true],
         ])->getBody();
 
-        $this->assertStringContainsString('"repositories": ["https:\/\/github.com\/public\/repo"]', $body);
+        $this->assertSame(['https://github.com/public/repo'], $this->metadata($body)['repositories']);
         $this->assertStringNotContainsString('providedByAuthor', $body);
     }
 
@@ -89,15 +91,84 @@ class CodecheckGithubRegisterIssueUnitTest extends PKPTestCase
         $this->assertStringContainsString("\t- https://github.com/example/repo\n", $body);
     }
 
-    public function testTheBodyEmbedsTheMetadataAsJson()
+    /** The fenced JSON block of an issue body, decoded. */
+    private function metadata(string $body): array
+    {
+        $this->assertSame(1, preg_match('/```json\n(.*?)\n```/s', $body, $match), 'the body has one JSON block');
+        $decoded = json_decode($match[1], true);
+        $this->assertIsArray($decoded, 'the JSON block parses: ' . json_last_error_msg());
+
+        return $decoded;
+    }
+
+    /**
+     * The block was concatenated by hand, and had a trailing comma after
+     * `journal`: no JSON parser would read it. Pinned by decoding it.
+     */
+    public function testTheBodyEmbedsTheMetadataAsValidJson()
+    {
+        $metadata = $this->metadata($this->buildIssue()->getBody());
+
+        $this->assertSame(
+            ['identifier', 'repositories', 'codecheckers', 'links', 'journal', 'plugin'],
+            array_keys($metadata)
+        );
+        $this->assertSame('2026-007', $metadata['identifier']);
+        $this->assertSame(['https://github.com/example/repo'], $metadata['repositories']);
+        $this->assertSame('Jane Doe', $metadata['codecheckers'][0]['name']);
+        $this->assertSame([], $metadata['links']);
+    }
+
+    /** Which installation wrote the record, for whoever processes the register. */
+    public function testTheMetadataNamesTheJournalAndTheSoftware()
+    {
+        $metadata = $this->metadata($this->buildIssue()->getBody());
+
+        $this->assertSame(
+            [
+                'name' => 'CODECHECK Demo Journal',
+                'url' => 'https://journal.example/index.php/demo',
+                'ojsVersion' => '3.5.0.3',
+                'submissionID' => 42,
+            ],
+            $metadata['journal']
+        );
+        $this->assertSame(['name' => 'ojs-codecheck', 'version' => '0.1.0.0'], $metadata['plugin']);
+    }
+
+    /** A journal name was written into the JSON unescaped. */
+    public function testAJournalNameWithQuotesAndBackslashesStaysValidJson()
+    {
+        $name = 'The "Quoted" Journal \\ of Things';
+
+        $metadata = $this->metadata($this->buildIssue(journalName: $name)->getBody());
+
+        $this->assertSame($name, $metadata['journal']['name']);
+    }
+
+    /** Three backticks in a name would close the JSON fence early. */
+    public function testBackticksInANameCannotCloseTheJsonFence()
+    {
+        $name = 'Odd ``` Journal';
+
+        $body = $this->buildIssue(journalName: $name)->getBody();
+
+        $this->assertSame($name, $this->metadata($body)['journal']['name']);
+        $block = substr($body, strpos($body, '<details>'), strpos($body, '</details>') - strpos($body, '<details>'));
+        $this->assertSame(2, substr_count($block, '```'), 'only the fence itself');
+    }
+
+    /** The body is re-rendered whole on every update, so it is signed once, last. */
+    public function testTheBodyEndsWithTheSignatureOnce()
     {
         $body = $this->buildIssue()->getBody();
 
-        $this->assertStringContainsString('```json', $body);
-        $this->assertStringContainsString('"identifier": "2026-007"', $body);
-        $this->assertStringContainsString('"repositories": ["https:\/\/github.com\/example\/repo"]', $body);
-        $this->assertStringContainsString('"name":"Jane Doe"', $body);
-        $this->assertStringContainsString('"submissionID": 42', $body);
+        $this->assertStringEndsWith(
+            "\n\n---\n*Posted by the [CODECHECK plugin for OJS](https://github.com/codecheckers/ojs-codecheck)"
+            . ' from [CODECHECK Demo Journal](https://journal.example/index.php/demo).*',
+            $body
+        );
+        $this->assertSame(1, substr_count($body, 'Posted by the [CODECHECK plugin for OJS]'));
     }
 
     public function testWithoutTheUpdateFlagNoStatusIsRecorded()

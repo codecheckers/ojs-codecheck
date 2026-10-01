@@ -6,6 +6,7 @@ use APP\core\Application;
 use APP\core\Request;
 use APP\facades\Repo;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckPostOrigin;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Exceptions\GithubUrlParseException;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
@@ -131,7 +132,7 @@ class CodecheckRegisterDepositService
             $githubRegisterOrganization,
             $githubRegisterRepository,
             (string) $submissionId,
-            $context,
+            CodecheckPostOrigin::fromContext($this->plugin, $context),
         );
 
         try {

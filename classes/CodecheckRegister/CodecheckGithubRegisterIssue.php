@@ -26,7 +26,7 @@ class CodecheckGithubRegisterIssue
         CertificateIdentifier $certificateIdentifier,
         CodecheckIssueLabels $codecheckIssueLabels,
         string $paperTitle,
-        string $journalName,
+        CodecheckPostOrigin $origin,
         string $authorString,
         string $submissionID,
         array $codecheckers,
@@ -51,8 +51,12 @@ class CodecheckGithubRegisterIssue
         // all, along with their internal flags (Issue #154).
         $repositories = CodecheckRepositories::publicUrls($repositories);
         $this->title = $this->createTitleMarkdown($authorString, $certificateIdentifier);
-        $this->jsonEncodedCodecheckMetadata = $this->createJsonEncodedCodecheckMetadataMarkdown($authorString, $certificateIdentifier, $journalName, $submissionID, $codecheckers, $repositories);
-        $this->body = $this->createBodyMarkdown($paperTitle, $journalName, $repositories) . "\n" . $this->jsonEncodedCodecheckMetadata;
+        $this->jsonEncodedCodecheckMetadata = $this->createJsonEncodedCodecheckMetadataMarkdown($certificateIdentifier, $origin, $submissionID, $codecheckers, $repositories);
+        // The body is rendered whole on every update, so the signature closes
+        // it once and is never stacked.
+        $this->body = $this->createBodyMarkdown($paperTitle, $origin->getJournalName(), $repositories)
+            . "\n" . $this->jsonEncodedCodecheckMetadata
+            . $origin->signature();
         $this->labels = $this->fillLabels($codecheckIssueLabels);
     }
 
@@ -83,25 +87,38 @@ class CodecheckGithubRegisterIssue
         return $authorString . ' | ' . $certificateIdentifier->toStr();
     }
 
+    /**
+     * The record as JSON, for whoever processes the register by machine.
+     *
+     * Built as an array and encoded, where it used to be concatenated: that gave
+     * a trailing comma after `journal` and left the journal name unescaped, so
+     * the block was never valid JSON. `journal.url`, `journal.ojsVersion` and
+     * `plugin` say which installation wrote it.
+     */
     private function createJsonEncodedCodecheckMetadataMarkdown(
-        string $authorString,
         CertificateIdentifier $certificateIdentifier,
-        string $journalName,
+        CodecheckPostOrigin $origin,
         string $submissionID,
         array $codecheckers,
         array $repositories
     ): string {
-        $statusInformation = $this->updateStatus ? "\n\t\"status\": \"" . $this->codecheckStatus . '",' : '';
+        $metadata = ['identifier' => $certificateIdentifier->toStr()];
+        if ($this->updateStatus) {
+            $metadata['status'] = $this->codecheckStatus;
+        }
+        $metadata += [
+            'repositories' => array_values($repositories),
+            'codecheckers' => $codecheckers,
+            'links' => [],
+            'journal' => $origin->journalMetadata() + ['submissionID' => (int) $submissionID],
+            'plugin' => $origin->pluginMetadata(),
+        ];
+
         return "<details>\n<summary><h3>JSON encoded CODECHECK metadata</h3></summary>\n\n"
         . "```json\n"
-        . '{'
-        . "\n\t\"identifier\": \"" . $certificateIdentifier->toStr() . '",'
-        . $statusInformation
-        . "\n\t\"repositories\": " . json_encode($repositories) . ','
-        . "\n\t\"codecheckers\": " . json_encode($codecheckers) . ','
-        . "\n\t\"links\": [],"
-        . "\n\t\"journal\": {\"name\": \"" . $journalName . "\", \"submissionID\": {$submissionID}},"
-        . "\n}"
+        // A backtick as \u0060, which is the same string in JSON: a name holding
+        // three of them would otherwise close the fence early.
+        . str_replace('`', '\u0060', json_encode($metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE))
         . "\n```"
         . "\n\n</details>";
     }

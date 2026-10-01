@@ -27,7 +27,7 @@ class CodecheckGithubRegisterApiClient
     private string $githubRegisterOrganization;
     private string $githubRegisterRepository;
     private string $submissionID;
-    private string $journalName;
+    private CodecheckPostOrigin $origin;
 
     /**
      * Initializes a new CODECHECK GitHub Register Api Parser (initialize the GitHub Client and a new unique Array)
@@ -36,9 +36,9 @@ class CodecheckGithubRegisterApiClient
      * @param string $githubRegisterOrganization The Organization owning the GitHub Register Repository
      * @param string $githubRegisterRepository The Repository of the GitHub Register
      * @param string $submissionID The ID of the Submission realted to the GitHub Register Issue
-     * @param mixed $journal The name of the Journal the Submission is published in
+     * @param CodecheckPostOrigin $origin Where posts come from, and the signature they end with
      */
-    public function __construct(string $githubPersonalAccessToken, string $githubRegisterOrganization, string $githubRegisterRepository, string $submissionID, mixed $journal, ?Client $client = null)
+    public function __construct(string $githubPersonalAccessToken, string $githubRegisterOrganization, string $githubRegisterRepository, string $submissionID, CodecheckPostOrigin $origin, ?Client $client = null)
     {
         $this->client = $client ?? new Client();
         $this->labels = new UniqueArray();
@@ -46,7 +46,7 @@ class CodecheckGithubRegisterApiClient
         $this->githubRegisterOrganization = $githubRegisterOrganization;
         $this->githubRegisterRepository = $githubRegisterRepository;
         $this->submissionID = $submissionID;
-        $this->journalName = $journal?->getLocalizedName() ?? 'Unknown Journal';
+        $this->origin = $origin;
     }
 
     /**
@@ -327,7 +327,7 @@ class CodecheckGithubRegisterApiClient
             $certificateIdentifier,
             $codecheckIssueLabels,
             $paperTitle,
-            $this->journalName,
+            $this->origin,
             $authorString,
             $this->submissionID,
             $codecheckers,
@@ -475,6 +475,8 @@ class CodecheckGithubRegisterApiClient
      */
     public function commentOnIssue(int $issueNumber, string $body): void
     {
+        $body .= $this->origin->signature();
+
         $this->client->authenticate($this->githubPAT, null, Client::AUTH_ACCESS_TOKEN);
 
         try {
@@ -524,7 +526,7 @@ class CodecheckGithubRegisterApiClient
             $certificateIdentifier,
             $codecheckIssueLabels,
             $paperTitle,
-            $this->journalName,
+            $this->origin,
             $authorString,
             $this->submissionID,
             $codecheckers,
@@ -717,7 +719,7 @@ class CodecheckGithubRegisterApiClient
             }
             $body .= "| {$column} | {$value} |\n";
         }
-        return $body;
+        return $body . $this->origin->signature();
     }
 
     /**

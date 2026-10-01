@@ -43,6 +43,7 @@ use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifie
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterIssue;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckIssueLabels;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckPostOrigin;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\classes\Orcid\OrcidApiClient;
@@ -793,7 +794,7 @@ class CodecheckApiController extends PKPBaseController
             $githubRegisterOrganization,
             $githubRegisterRepository, // Name of the GitHub Repository for the Register
             $this->metadataHandler()->getSubmissionId(), // Submission ID
-            $context, // The Journal Object of the Submission
+            CodecheckPostOrigin::fromContext($this->plugin, $context),
         );
 
         // CODECHECK Register with list of all identifiers in range
@@ -913,7 +914,7 @@ class CodecheckApiController extends PKPBaseController
             $githubRegisterOrganization,
             $githubRegisterRepository, // Name of the GitHub Repository for the Register
             $this->metadataHandler()->getSubmissionId(), // Submission ID
-            $context, // The Journal Object of the Submission
+            CodecheckPostOrigin::fromContext($this->plugin, $context),
         );
 
         $identifier = CertificateIdentifier::fromStr($identifierStr);
@@ -1175,7 +1176,6 @@ class CodecheckApiController extends PKPBaseController
         // The request is neither a parameter nor a property here: it is read
         // through the application, as issueUpdateInformation() does (#50).
         $context = Application::get()->getRequest()->getContext();
-        $journalName = $context?->getLocalizedName() ?? 'Unknown Journal';
         $updateInformation = $this->issueUpdateInformation();
         $codecheckIssue = new CodecheckGithubRegisterIssue(
             $githubRegisterOrganization,
@@ -1183,7 +1183,7 @@ class CodecheckApiController extends PKPBaseController
             $identifier,
             $issueLabels,
             $articleTitle,
-            $journalName,
+            CodecheckPostOrigin::fromContext($this->plugin, $context),
             $authorString,
             $this->metadataHandler()->getSubmissionId(),
             $codecheckers,

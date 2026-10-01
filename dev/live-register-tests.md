@@ -64,17 +64,27 @@ as it found it.
 ## Configuring the local instance
 
 Settings live in `plugin_settings`, and OJS caches them, so a write straight to
-the database needs the cache cleared:
+the database needs the cache cleared. **The test dataset has none of these
+rows** — only a journal whose settings form has been saved does — so they are
+inserted, not updated; an `UPDATE` matches nothing and fails silently:
 
     mysql -h127.0.0.1 -uojs -pojs ojs_codecheck_350 -e "
-      UPDATE plugin_settings SET setting_value='<TOKEN>'
-       WHERE plugin_name='codecheckplugin' AND setting_name='githubPersonalAccessToken';
-      UPDATE plugin_settings SET setting_value='[\"updateTitle\",\"updateBody\",\"updateStatus\"]'
-       WHERE plugin_name='codecheckplugin' AND setting_name='codecheckGithubUpdateFields';"
+      INSERT INTO plugin_settings (plugin_name, context_id, setting_name, setting_value, setting_type) VALUES
+        ('codecheckplugin', 1, 'githubRegisterOrganization', 'codecheckers', 'string'),
+        ('codecheckplugin', 1, 'githubRegisterRepository', 'testing-dev-register', 'string'),
+        ('codecheckplugin', 1, 'codecheckGithubUpdateFields', '[\"updateTitle\",\"updateBody\",\"updateStatus\"]', 'object')
+      ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value);"
     make clear-cache
 
-`githubRegisterOrganization` and `githubRegisterRepository` are already
-`codecheckers` / `testing-dev-register` in the seeded dataset.
+Without the organisation and repository the reservation is refused with a 400
+before GitHub is asked anything. The token is put in by `make db-reset` from
+`~/.codecheck-ojs-pat`; write it there once
+(`read -rs t && umask 077 && printf '%s' "$t" > ~/.codecheck-ojs-pat`), or set
+it in the settings form. `make demo-db` sets all of this up for the demo.
+
+**What to look for on the issue.** Its body and every comment end with a
+`---` rule and the signature naming the journal, and the JSON block in the body
+parses and carries `journal.url`, `journal.ojsVersion` and `plugin.version`.
 
 **`codecheckGithubUpdateFields` matters more than it looks.** It is the journal's
 choice of what the register issue reflects, and it gates the status comment: with
@@ -82,7 +92,8 @@ choice of what the register issue reflects, and it gates the status comment: wit
 for #150 proves nothing. It must contain `updateStatus`.
 
 The token is **not** in the dataset and must never be committed. `make db-reset`
-reloads the dump and wipes it, so it has to be set again after every reset.
+reloads the dump and puts the token back from `~/.codecheck-ojs-pat`; the other
+three rows have to be inserted again after every reset.
 
 ## What the first run found
 

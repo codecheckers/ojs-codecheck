@@ -20,6 +20,14 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   repository's `plugins.xml` to `plugin_gallery_urls` in `config.inc.php`, from
   OJS 3.5.0-4 on (#157)
 
+#### CODECHECK register
+
+- Everything the plugin posts to the register — the issue, each status comment
+  and the `register.csv` pull request — ends with a signature naming the plugin
+  and the journal, worded by the new setting *Signature on GitHub posts*
+- The register issue's JSON metadata records the journal's address, its OJS
+  version and the plugin's version
+
 #### Under the hood
 
 - A five-minute live demo walkthrough with its own dataset, loaded by
@@ -42,6 +50,8 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   the draft
 - A certificate identifier can be reserved before the CODECHECK settings have
   ever been saved; the register's labels failed to load until then
+- The register issue's JSON metadata is valid JSON; a trailing comma and an
+  unescaped journal name kept any parser from reading it
 
 ## [0.1.0.0] - 2026-09-30
 

@@ -303,4 +303,13 @@ class CodecheckPluginUnitTest extends PKPTestCase
         $this->assertSame('index', $op);
         $this->assertNull($handler);
     }
+
+    /**
+     * The version the register records is the running code's, read from the
+     * file every release moves, and never read from the database.
+     */
+    public function testTheCodeVersionIsTheReleaseInVersionXml()
+    {
+        $this->assertMatchesRegularExpression('/^\d+\.\d+\.\d+\.\d+$/', $this->plugin->codeVersion());
+    }
 }

@@ -166,6 +166,15 @@ the plugin being able to see it:
 - the repository could not be read: check the setting, that it is public, and
   GitHub's rate limit
 
+**Everything the plugin posts there is signed.** The register issue, each
+status comment and the deposit's pull request end with a separator and a line
+naming the plugin and the journal, so a register shared by several journals
+shows where each post came from. The wording is the setting *Signature on GitHub
+posts*: one text per journal, Markdown, with `{$journal}` and `{$journalUrl}`
+filled in, and the default when left empty. The issue's JSON block also records
+the journal's address, its OJS version and the plugin's version, under
+`journal.url`, `journal.ojsVersion` and `plugin`.
+
 ### Personal access token
 
 Creating and updating register issues and depositing into `register.csv` are

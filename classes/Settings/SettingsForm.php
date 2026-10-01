@@ -154,6 +154,14 @@ class SettingsForm extends Form
             ) ?? []
         );
 
+        // Shown as stored: an empty field is the default, which the field's
+        // description spells out, so a journal that never wrote its own text
+        // follows the default when it changes.
+        $this->setData(
+            Constants::CODECHECK_GITHUB_SIGNATURE,
+            (string) $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_SIGNATURE)
+        );
+
         $this->setData(
             Constants::CODECHECK_BADGE_TYPE,
             $this->plugin->getSetting($context->getId(), Constants::CODECHECK_BADGE_TYPE) ?? 'codeworks'
@@ -295,6 +303,7 @@ class SettingsForm extends Form
             Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION,
             Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY,
             Constants::CODECHECK_GITHUB_CUSTOM_LABELS,
+            Constants::CODECHECK_GITHUB_SIGNATURE,
             Constants::CODECHECK_BADGE_TYPE,
             Constants::CODECHECK_BADGE_TEXT,
             Constants::CODECHECK_BADGE_TEXT_COLOR,
@@ -413,6 +422,11 @@ class SettingsForm extends Form
             (array) $this->getData(Constants::CODECHECK_STATUSES_SELECTED) ?? []
         );
         $templateMgr->assign('codecheckStatuses', Constants::CODECHECK_STATUSES);
+
+        // Passed in, not written into the message: `{$journal}` in a locale
+        // string would be read as one of the message's own parameters.
+        $templateMgr->assign('githubSignatureDefault', Constants::CODECHECK_GITHUB_SIGNATURE_DEFAULT);
+        $templateMgr->assign('githubSignaturePlaceholders', ['journal' => '{$journal}', 'journalUrl' => '{$journalUrl}']);
 
         $templateMgr->assign('orcidApiTypes', [
             Constants::ORCID_API_TYPE_SANDBOX => __('plugins.generic.codecheck.orcid.apiType.sandbox'),
@@ -550,6 +564,12 @@ class SettingsForm extends Form
                 (array) $this->getData(Constants::CODECHECK_GITHUB_CUSTOM_LABELS),
                 fn ($label) => !empty($label)
             ))
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_GITHUB_SIGNATURE,
+            trim((string) $this->getData(Constants::CODECHECK_GITHUB_SIGNATURE))
         );
 
         $this->plugin->updateSetting(

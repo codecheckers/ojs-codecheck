@@ -119,6 +119,12 @@ msgstr "GitHub Repository used as the CODECHECK register"
 msgid "plugins.generic.codecheck.settings.github.registerRepository.description"
 msgstr "The public GitHub repository holding the CODECHECK register (default: https://github.com/codecheckers/register). It must have issues enabled, a label “id assigned” — which is how certificate identifiers are found — and a register.csv at its root for register deposits."
 
+msgid "plugins.generic.codecheck.settings.github.signature"
+msgstr "Signature on GitHub posts"
+
+msgid "plugins.generic.codecheck.settings.github.signature.description"
+msgstr "Closes everything the plugin writes to the register — the issue, each status comment and the register deposit — below a separating line, so readers of the register can see which journal it came from. Markdown is allowed; {$journal} is replaced by the journal's name and {$journalUrl} by its address. Left empty, the default is used: {$default}"
+
 msgid "plugins.generic.codecheck.settings.github.labels"
 msgstr "GitHub Register Labels"
 

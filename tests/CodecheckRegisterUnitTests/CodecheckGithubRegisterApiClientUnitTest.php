@@ -6,6 +6,7 @@ use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifie
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterIssue;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckIssueLabels;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckPostOrigin;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\DataStructures\UniqueArray;
 use APP\plugins\generic\codecheck\classes\Exceptions\ApiUpdateException;
@@ -20,12 +21,11 @@ use PKP\tests\PKPTestCase;
  */
 class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
 {
-    private \APP\journal\Journal $journal;
+    private CodecheckPostOrigin $origin;
     private int $submissionId;
     private string $githubPAT;
     private string $githubRegisterOrganization;
     private string $githubRegisterRepository;
-    private string $journalName;
     private array $updateInformation;
 
     protected function setUp(): void
@@ -35,9 +35,13 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
         $this->githubPAT = 'testtoken123';
         $this->githubRegisterOrganization = 'codecheckers';
         $this->githubRegisterRepository = 'testing-dev-register';
-        $this->journalName = 'Example journal';
-        $this->journal = $this->createMock(\APP\journal\Journal::class);
-        $this->journal->method('getLocalizedName')->willReturn($this->journalName);
+        $this->origin = new CodecheckPostOrigin(
+            'Example journal',
+            'https://journal.example/index.php/example',
+            '3.5.0.3',
+            '0.1.0.0',
+            'Signed by {$journal}'
+        );
         $this->updateInformation = [
             Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_TITLE,
             Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY,
@@ -51,22 +55,7 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
             $this->githubRegisterOrganization,
             $this->githubRegisterRepository,
             $this->submissionId,
-            $this->journal
-        );
-
-        $this->assertSame([], $apiParser->getLabels()->toArray());
-    }
-
-    public function testGithubRegisterClientGetEmptyLabelsUnknownJournal()
-    {
-        $unknownJournal = null;
-
-        $apiParser = new CodecheckGithubRegisterApiClient(
-            $this->githubPAT,
-            $this->githubRegisterOrganization,
-            $this->githubRegisterRepository,
-            $this->submissionId,
-            $unknownJournal
+            $this->origin
         );
 
         $this->assertSame([], $apiParser->getLabels()->toArray());
@@ -79,7 +68,7 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
             $this->githubRegisterOrganization,
             $this->githubRegisterRepository,
             $this->submissionId,
-            $this->journal
+            $this->origin
         );
 
         $this->assertSame($apiParser->getIssues(), []);
@@ -99,7 +88,7 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
             $this->githubRegisterOrganization,
             $this->githubRegisterRepository,
             $this->submissionId,
-            $this->journal,
+            $this->origin,
             $clientMock
         );
         $apiParser->fetchNewestIssues();
@@ -126,7 +115,7 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
             $this->githubRegisterOrganization,
             $this->githubRegisterRepository,
             $this->submissionId,
-            $this->journal,
+            $this->origin,
             $clientMock
         );
         $parser->fetchLabels();
@@ -165,7 +154,7 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
             $certMock,
             $issueLabelsMock,
             $paperTitle,
-            $this->journalName,
+            $this->origin,
             $authorString,
             $this->submissionId,
             $codecheckers,
@@ -200,7 +189,7 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
             $this->githubRegisterOrganization,
             $this->githubRegisterRepository,
             $this->submissionId,
-            $this->journal,
+            $this->origin,
             $clientMock
         );
 
@@ -239,7 +228,7 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
             $this->githubRegisterOrganization,
             $this->githubRegisterRepository,
             $this->submissionId,
-            $this->journal,
+            $this->origin,
             $clientMock
         );
 
@@ -267,7 +256,7 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
             $this->githubRegisterOrganization,
             $this->githubRegisterRepository,
             $this->submissionId,
-            $this->journal,
+            $this->origin,
             $clientMock
         );
 
@@ -298,7 +287,7 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
             $this->githubRegisterOrganization,
             $this->githubRegisterRepository,
             $this->submissionId,
-            $this->journal,
+            $this->origin,
             $clientMock
         );
 
@@ -351,7 +340,7 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
             $this->githubRegisterOrganization,
             $this->githubRegisterRepository,
             $this->submissionId,
-            $this->journal,
+            $this->origin,
             $clientMock
         );
 
@@ -374,7 +363,7 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
             $this->githubRegisterOrganization,
             $this->githubRegisterRepository,
             $this->submissionId,
-            $this->journal,
+            $this->origin,
             $clientMock
         );
 
@@ -403,7 +392,7 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
             $this->githubRegisterOrganization,
             $this->githubRegisterRepository,
             $this->submissionId,
-            $this->journal,
+            $this->origin,
             $clientMock
         );
 
@@ -440,7 +429,7 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
             $this->githubRegisterOrganization,
             $this->githubRegisterRepository,
             $this->submissionId,
-            $this->journal,
+            $this->origin,
             $clientMock
         );
 
@@ -471,7 +460,7 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
             $this->githubRegisterOrganization,
             $this->githubRegisterRepository,
             $this->submissionId,
-            $this->journal,
+            $this->origin,
             $clientMock
         );
 
@@ -508,7 +497,7 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
             $this->githubRegisterOrganization,
             $this->githubRegisterRepository,
             $this->submissionId,
-            $this->journal,
+            $this->origin,
             $clientMock
         );
 
@@ -636,7 +625,7 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
             $this->githubRegisterOrganization,
             $this->githubRegisterRepository,
             $this->submissionId,
-            $this->journal,
+            $this->origin,
             $clientMock
         );
 
@@ -665,7 +654,7 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
             $this->githubRegisterOrganization,
             $this->githubRegisterRepository,
             $this->submissionId,
-            $this->journal,
+            $this->origin,
             $clientMock
         );
     }
@@ -677,5 +666,53 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
         $labelsApiMock->method('show')->willThrowException($e);
 
         return $this->clientWithLabelsApi($labelsApiMock);
+    }
+
+    /** Every status comment says where it came from. */
+    public function testAStatusCommentEndsWithTheSignature()
+    {
+        $commentsApiMock = $this->createMock(\Github\Api\Issue\Comments::class);
+        $commentsApiMock->expects($this->once())
+            ->method('create')
+            ->with(
+                $this->githubRegisterOrganization,
+                $this->githubRegisterRepository,
+                190,
+                ['body' => "The CODECHECK status changed to: completed\n\n---\nSigned by Example journal"]
+            );
+        $issueApiMock = $this->createMock(\Github\Api\Issue::class);
+        $issueApiMock->method('comments')->willReturn($commentsApiMock);
+        $clientMock = $this->createMock(\Github\Client::class);
+        $clientMock->method('api')->with('issue')->willReturn($issueApiMock);
+
+        $parser = new CodecheckGithubRegisterApiClient(
+            $this->githubPAT,
+            $this->githubRegisterOrganization,
+            $this->githubRegisterRepository,
+            $this->submissionId,
+            $this->origin,
+            $clientMock
+        );
+
+        $parser->commentOnIssue(190, 'The CODECHECK status changed to: completed');
+    }
+
+    /** The deposit's pull request is signed below its table. */
+    public function testTheDepositPullRequestBodyEndsWithTheSignature()
+    {
+        $parser = new CodecheckGithubRegisterApiClient(
+            $this->githubPAT,
+            $this->githubRegisterOrganization,
+            $this->githubRegisterRepository,
+            $this->submissionId,
+            $this->origin
+        );
+        $method = new \ReflectionMethod(CodecheckGithubRegisterApiClient::class, 'buildDepositPrBody');
+        $method->setAccessible(true);
+
+        $body = $method->invoke($parser, ['Certificate' => '2026-001', 'Issue' => '12']);
+
+        $this->assertStringContainsString("| Certificate | 2026-001 |\n", $body);
+        $this->assertStringEndsWith("|\n\n\n---\nSigned by Example journal", $body);
     }
 }

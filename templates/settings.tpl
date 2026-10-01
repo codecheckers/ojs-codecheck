@@ -431,6 +431,15 @@
 					label="plugins.generic.codecheck.settings.updateIssue.status"
 				}
 			{/fbvFormSection}
+
+			{* The text closing everything the plugin posts to the register *}
+			{fbvFormSection list=true}
+				<div class="field-header">
+					<label class="pkp_form_label" for="githubSignature">{translate key="plugins.generic.codecheck.settings.github.signature"}</label>
+				</div>
+				<label class="description">{translate key="plugins.generic.codecheck.settings.github.signature.description" journal=$githubSignaturePlaceholders.journal|escape journalUrl=$githubSignaturePlaceholders.journalUrl|escape default=$githubSignatureDefault|escape}</label>
+				<textarea id="githubSignature" name="githubSignature" rows="3" class="pkpFormField__input">{$githubSignature|escape}</textarea>
+			{/fbvFormSection}
 		{/fbvFormSection}
 
 		{fbvFormSection list=true}

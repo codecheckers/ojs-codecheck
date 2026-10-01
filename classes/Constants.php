@@ -59,6 +59,14 @@ class Constants
     public const CODECHECK_GITHUB_REGISTER_ORGANIZATION = 'githubRegisterOrganization';
     public const CODECHECK_GITHUB_REGISTER_REPOSITORY = 'githubRegisterRepository';
     public const CODECHECK_GITHUB_CUSTOM_LABELS = 'githubCustomLabels';
+
+    /** The text closing every register post; see CodecheckPostOrigin::signature(). */
+    public const CODECHECK_GITHUB_SIGNATURE = 'githubSignature';
+    public const CODECHECK_GITHUB_SIGNATURE_DEFAULT = '*Posted by the [CODECHECK plugin for OJS](https://github.com/codecheckers/ojs-codecheck) from [{$journal}]({$journalUrl}).*';
+
+    /** How the plugin names itself in what it writes to the register. */
+    public const CODECHECK_PLUGIN_NAME = 'ojs-codecheck';
+
     public const CODECHECK_MODE = 'codecheckMode';
 
     public const CODECHECK_BADGE_TYPE = 'codecheckBadgeType';

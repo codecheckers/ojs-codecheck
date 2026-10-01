@@ -32,6 +32,7 @@ namespace APP\plugins\generic\codecheck\classes\Workflow;
 
 use APP\core\Application;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckPostOrigin;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use Illuminate\Support\Facades\DB;
@@ -84,7 +85,7 @@ class CodecheckStatusRegisterUpdate
                 $organization,
                 $repository,
                 (string) $submissionId,
-                $context
+                CodecheckPostOrigin::fromContext($plugin, $context)
             );
 
             // Independent halves: the labels are the part a reader of the
