@@ -55,12 +55,8 @@ class ConstantsUnitTest extends PKPTestCase
     public function testConfigSpecUrlIsBuiltFromTheVersion()
     {
         $this->assertSame(
-            'https://codecheck.org.uk/spec/config/latest/',
-            Constants::getConfigSpecUrl('latest')
-        );
-        $this->assertSame(
-            'https://codecheck.org.uk/spec/config/1.0/',
-            Constants::getConfigSpecUrl('1.0')
+            'https://codecheck.org.uk/spec/config/2.0/',
+            Constants::getConfigSpecUrl('2.0')
         );
     }
 
@@ -77,19 +73,38 @@ class ConstantsUnitTest extends PKPTestCase
         }
     }
 
-    public function testLatestIsListedFirst()
+    public function testOnlyConcreteVersionsAreKnown()
     {
-        // The settings form renders the list in order, newest first.
-        $this->assertSame('latest', Constants::CODECHECK_CONFIG_VERSIONS[0]);
+        // `latest` named 1.0 until the specification moved it to 2.0, and every
+        // record on it began declaring a version it was not filled in against.
+        // The plugin implements 2.0 alone; 1.0 went before any journal used it.
+        $this->assertSame(['2.0'], Constants::CODECHECK_CONFIG_VERSIONS);
+        $this->assertNotContains('latest', Constants::CODECHECK_CONFIG_VERSIONS);
     }
 
     public function testTheDefaultIsTheCurrentStableSpecificationOnly()
     {
-        // A journal that has not chosen offers 1.0 rather than the moving
-        // target, so a check records the specification it was actually done
-        // against. Mirrored by CODECHECK_DEFAULT_CONFIG_VERSIONS in
+        // Mirrored by CODECHECK_DEFAULT_CONFIG_VERSIONS in
         // CodecheckMetadataForm.vue.
-        $this->assertSame(['1.0'], Constants::CODECHECK_DEFAULT_CONFIG_VERSIONS);
+        $this->assertSame(['2.0'], Constants::CODECHECK_DEFAULT_CONFIG_VERSIONS);
+    }
+
+    /**
+     * A record the upgrade missed, or a version an API client posted, reads as
+     * the default rather than declaring a specification the plugin does not
+     * implement.
+     */
+    public function testAConfigVersionThePluginDoesNotKnowResolvesToTheDefault()
+    {
+        $this->assertSame('2.0', Constants::resolveConfigVersion('2.0'));
+
+        foreach (['latest', '1.0', '', ' 2.0', '2', null] as $version) {
+            $this->assertSame(
+                Constants::CODECHECK_DEFAULT_CONFIG_VERSIONS[0],
+                Constants::resolveConfigVersion($version),
+                var_export($version, true)
+            );
+        }
     }
 
     public function testTheDefaultOnlyNamesVersionsThePluginKnows()

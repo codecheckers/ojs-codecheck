@@ -224,7 +224,7 @@ INSERT INTO submission_settings (submission_id, locale, setting_name, setting_va
 -- 11 has no CODECHECK record yet: the wizard writes it when the author saves.
 -- 12 carries what its author entered in the wizard.
 INSERT INTO codecheck_metadata (submission_id, spec_version, publication_type, manifest, repository, source, codecheckers, certificate, issue, check_time, summary, report, additional_content, created_at, updated_at) VALUES
-  (12, '1.0', 'doi',
+  (12, '2.0', 'doi',
    '[{"file":"figure2_clockboard.png","comment":"Figure 2: the ClockBoard zoning system for London","hidden":false,"providedByAuthor":true},{"file":"figure3_doughnuts_segments.png","comment":"Figure 3: doughnut and segment zones","hidden":false,"providedByAuthor":true},{"file":"figure4_grid.png","comment":"Figure 4: comparison with a rectangular grid","hidden":false,"providedByAuthor":true}]',
    '{"repositories":[{"url":"https://github.com/zonebuilders/zonebuilder","hidden":false,"providedByAuthor":true,"containsCodecheckYaml":false}]}',
    NULL, '[]', NULL, '{"url":null,"number":null,"labelsSelected":[]}', NULL, NULL, NULL, NULL,

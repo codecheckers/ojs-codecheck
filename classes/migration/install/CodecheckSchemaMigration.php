@@ -25,9 +25,11 @@
 
 namespace APP\plugins\generic\codecheck\classes\migration\install;
 
+use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\classes\migration\CodecheckMigration;
 use APP\plugins\generic\codecheck\classes\migration\upgrade\I154_MoveCodecheckYamlFlagOntoRepository;
+use APP\plugins\generic\codecheck\classes\migration\upgrade\I185_MoveRecordsToConfigSpec2;
 use APP\plugins\generic\codecheck\classes\migration\upgrade\I93_RenameVersionToSpecVersion;
 use APP\plugins\generic\codecheck\classes\migration\upgrade\I94_AddMissingColumns;
 use Illuminate\Database\Schema\Blueprint;
@@ -44,7 +46,7 @@ class CodecheckSchemaMigration extends CodecheckMigration
                 // The CODECHECK configuration specification this check was
                 // recorded against — see Constants::getConfigSpecUrl(). It was
                 // `version`, which read as a version of the record (#93).
-                $table->string('spec_version', 50)->default('latest');
+                $table->string('spec_version', 50)->default(Constants::CODECHECK_DEFAULT_CONFIG_VERSIONS[0]);
                 $table->string('publication_type', 50)->default('doi');
                 $table->text('manifest')->nullable();
                 // A JSON list of repository entries, not one address — see
@@ -115,6 +117,7 @@ class CodecheckSchemaMigration extends CodecheckMigration
         (new I94_AddMissingColumns())->up();
         (new I154_MoveCodecheckYamlFlagOntoRepository())->up();
         (new I93_RenameVersionToSpecVersion())->up();
+        (new I185_MoveRecordsToConfigSpec2())->up();
     }
 
     /**

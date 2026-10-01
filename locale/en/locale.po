@@ -96,7 +96,7 @@ msgid "plugins.generic.codecheck.settings.configVersions"
 msgstr "Available CODECHECK config versions"
 
 msgid "plugins.generic.codecheck.settings.configVersions.description"
-msgstr "Which versions of the CODECHECK config file specification codecheckers can choose from in the metadata form. Selecting a single version fixes it for every submission. If nothing is selected, all versions remain available."
+msgstr "Which versions of the CODECHECK config file specification codecheckers can choose from in the metadata form. Selecting a single version fixes it for every submission. If nothing is selected, the current stable version is offered."
 
 msgid "plugins.generic.codecheck.settings.authorAnonymity"
 msgstr "Author anonymity in the GitHub register repository"
@@ -250,6 +250,36 @@ msgstr "This journal offers a single CODECHECK config version."
 
 msgid "plugins.generic.codecheck.configVersion"
 msgstr "CODECHECK config version"
+
+msgid "plugins.generic.codecheck.configSpec.missing.heading"
+msgstr "Version {$version} of the CODECHECK config file specification requires the following, which this record does not have yet. It can still be saved, and the codecheck.yml still generated, but the file will not meet the specification until they are added."
+
+msgid "plugins.generic.codecheck.configSpec.missing.title"
+msgstr "the paper's title"
+
+msgid "plugins.generic.codecheck.configSpec.missing.authors"
+msgstr "at least one author of the paper"
+
+msgid "plugins.generic.codecheck.configSpec.missing.authorOrcid"
+msgstr "an ORCID iD for every author of the paper, which is missing for: {$names}"
+
+msgid "plugins.generic.codecheck.configSpec.missing.reference"
+msgstr "the paper's DOI"
+
+msgid "plugins.generic.codecheck.configSpec.missing.manifest"
+msgstr "at least one manifest file"
+
+msgid "plugins.generic.codecheck.configSpec.missing.codechecker"
+msgstr "at least one codechecker"
+
+msgid "plugins.generic.codecheck.configSpec.missing.summary"
+msgstr "a summary of the check"
+
+msgid "plugins.generic.codecheck.configSpec.missing.certificate"
+msgstr "a certificate identifier of the form YYYY-NNN"
+
+msgid "plugins.generic.codecheck.configSpec.missing.report"
+msgstr "the address of the report"
 
 msgid "plugins.generic.codecheck.publishWithDOI"
 msgstr "Check published with a DOI (e.g., Zenodo)"

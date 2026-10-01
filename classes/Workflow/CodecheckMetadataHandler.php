@@ -81,7 +81,7 @@ class CodecheckMetadataHandler
             'codecheck' => $metadata ? [
                 // The wire key stays `version`: the Vue form and the e2e
                 // specs speak it, and only the column was renamed (#93).
-                'version' => $metadata->spec_version ?? 'latest',
+                'version' => Constants::resolveConfigVersion($metadata->spec_version ?? null),
                 'publicationType' => $metadata->publication_type ?? 'doi',
                 'manifest' => json_decode($metadata->manifest ?? '[]', true),
                 'repository' => json_decode($metadata->repository ?? '{"repositories":null}', true),
@@ -171,7 +171,12 @@ class CodecheckMetadataHandler
 
         $metadataData = [
             'submission_id' => $submissionId,
-            'spec_version' => $data['version'] ?? 'latest',
+            // As with `repository` below, a payload with no `version` leaves the
+            // stored one alone; only a value the plugin does not know becomes
+            // the default.
+            'spec_version' => array_key_exists('version', $data)
+                ? Constants::resolveConfigVersion(is_string($data['version']) ? $data['version'] : null)
+                : Constants::resolveConfigVersion($stored->spec_version ?? null),
             'publication_type' => $data['publication_type'] ?? 'doi',
             'manifest' => json_encode($data['manifest'] ?? []),
             // A payload with no `repository` key leaves the stored list alone. It
@@ -244,7 +249,7 @@ class CodecheckMetadataHandler
         // this check rather than a fixed one, so the file declares the
         // specification the codechecker actually filled the form in against.
         $data = [
-            'version' => Constants::getConfigSpecUrl($metadata->spec_version ?: 'latest')
+            'version' => Constants::getConfigSpecUrl(Constants::resolveConfigVersion($metadata->spec_version ?? null))
         ];
 
         // Add source if present

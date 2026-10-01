@@ -20,7 +20,7 @@ const metadataResponseBody = () => ({
     dataAvailabilityStatement: 'Data is available at Zenodo'
   },
   codecheck: {
-    version: 'latest',
+    version: '2.0',
     publicationType: 'doi',
     manifest: [],
     repository: { repositories: null },
@@ -207,12 +207,20 @@ describe('CodecheckMetadataForm Component', () => {
     cy.wait('@loadMetadata');
 
     cy.get('.codecheck-intro a')
-      .should('have.attr', 'href', 'https://codecheck.org.uk/spec/config/latest/')
+      .should('have.attr', 'href', 'https://codecheck.org.uk/spec/config/2.0/')
       .and('have.attr', 'target', '_blank');
     cy.get('.codecheck-intro').should('not.contain', '{$specLink}');
   });
 
+  // The plugin knows one version, 2.0. The tests below that need a choice
+  // offer a future '2.1' through the journal's setting, which is how a second
+  // version would reach the form.
   it('points the specification link at the selected config version', () => {
+    interceptMetadata(
+      { settings: { enabledConfigVersions: ['2.1', '2.0'] } },
+      'loadTwoVersions'
+    );
+
     cy.mount(CodecheckMetadataForm, {
       props: {
         submission: { id: 1 },
@@ -220,20 +228,20 @@ describe('CodecheckMetadataForm Component', () => {
       }
     });
 
-    cy.wait('@loadMetadata');
+    cy.wait('@loadTwoVersions');
 
-    cy.get('.version-select').select('1.0');
+    cy.get('.version-select').select('2.1');
     cy.get('.codecheck-intro a')
-      .should('have.attr', 'href', 'https://codecheck.org.uk/spec/config/1.0/');
+      .should('have.attr', 'href', 'https://codecheck.org.uk/spec/config/2.1/');
 
-    cy.get('.version-select').select('latest');
+    cy.get('.version-select').select('2.0');
     cy.get('.codecheck-intro a')
-      .should('have.attr', 'href', 'https://codecheck.org.uk/spec/config/latest/');
+      .should('have.attr', 'href', 'https://codecheck.org.uk/spec/config/2.0/');
   });
 
   it('falls back to the current stable specification when the journal has not chosen', () => {
     // No settings block in the response and no version on the record: the form
-    // lands on 1.0 rather than on 'latest', matching the plugin's default.
+    // lands on the plugin's default.
     interceptMetadata(
       { codecheck: { ...metadataResponseBody().codecheck, version: '' } },
       'loadWithoutVersion'
@@ -248,16 +256,16 @@ describe('CodecheckMetadataForm Component', () => {
 
     cy.wait('@loadWithoutVersion');
 
-    cy.get('.version-select').should('have.value', '1.0');
+    cy.get('.version-select').should('have.value', '2.0');
     cy.get('.version-select option').should('have.length', 1);
     cy.get('.version-select').should('be.disabled');
     cy.get('.codecheck-intro a')
-      .should('have.attr', 'href', 'https://codecheck.org.uk/spec/config/1.0/');
+      .should('have.attr', 'href', 'https://codecheck.org.uk/spec/config/2.0/');
   });
 
   it('offers only the config versions the journal enabled', () => {
     interceptMetadata(
-      { settings: { enabledConfigVersions: ['1.0'] } },
+      { settings: { enabledConfigVersions: ['2.1'] } },
       'loadRestrictedMetadata'
     );
 
@@ -270,18 +278,18 @@ describe('CodecheckMetadataForm Component', () => {
 
     cy.wait('@loadRestrictedMetadata');
 
-    // 'latest' is stored on this record, so it stays selectable rather than
+    // '2.0' is stored on this record, so it stays selectable rather than
     // being silently rewritten — which also means the control is not disabled.
     cy.get('.version-select option').should('have.length', 2);
     cy.get('.version-select').should('not.be.disabled');
   });
 
   it('keeps a superseded version selectable after switching away from it', () => {
-    // The record is on 'latest', which the journal no longer offers. Selecting
-    // 1.0 must not remove 'latest' from the list, or the codechecker could
+    // The record is on '2.0', which the journal no longer offers. Selecting
+    // 2.1 must not remove '2.0' from the list, or the codechecker could
     // leave the recorded version but never return to it.
     interceptMetadata(
-      { settings: { enabledConfigVersions: ['1.0'] } },
+      { settings: { enabledConfigVersions: ['2.1'] } },
       'loadSupersededVersion'
     );
 
@@ -294,17 +302,17 @@ describe('CodecheckMetadataForm Component', () => {
 
     cy.wait('@loadSupersededVersion');
 
-    cy.get('.version-select').select('1.0');
+    cy.get('.version-select').select('2.1');
     cy.get('.version-select option').should('have.length', 2);
     cy.get('.version-select').should('not.be.disabled');
 
-    cy.get('.version-select').select('latest');
-    cy.get('.version-select').should('have.value', 'latest');
+    cy.get('.version-select').select('2.0');
+    cy.get('.version-select').should('have.value', '2.0');
   });
 
   it('disables the version selector when a single version is on offer', () => {
     interceptMetadata(
-      { settings: { enabledConfigVersions: ['latest'] } },
+      { settings: { enabledConfigVersions: ['2.0'] } },
       'loadSingleVersionMetadata'
     );
 
@@ -484,6 +492,118 @@ describe('CodecheckMetadataForm Component', () => {
 
     cy.wait('@saveMetadata');
     cy.get('.save-message.error').should('not.exist');
+  });
+
+  describe('fields the config specification requires', () => {
+    const warning = () => cy.get('[data-testid="config-spec-warning"]');
+    const missing = (field) => `plugins.generic.codecheck.configSpec.missing.${field}`;
+
+    /** A record with everything 2.0 requires, bar what `codecheck` overrides. */
+    const completeRecord = (codecheck = {}, submission = {}) => {
+      const body = metadataResponseBody();
+      return {
+        submission: { ...body.submission, ...submission },
+        codecheck: {
+          ...body.codecheck,
+          manifest: [{ file: 'figure2.png', comment: 'Figure 2' }],
+          codecheckers: [{ name: 'Stephen J. Eglen', orcid: '0000-0001-8607-8025' }],
+          certificate: '2025-042',
+          summary: 'Everything reproduced.',
+          report: 'https://doi.org/10.5281/zenodo.1',
+          ...codecheck,
+        },
+      };
+    };
+
+    it('names what an unfinished record still lacks, and saves it anyway', () => {
+      cy.intercept('POST', '**/codecheck/metadata*', {
+        statusCode: 200,
+        body: { success: true }
+      }).as('saveMetadata');
+
+      mountForm();
+      cy.wait('@loadMetadata');
+
+      warning().should('contain', 'Version 2.0 of the CODECHECK config file specification');
+      ['manifest', 'codechecker', 'summary', 'certificate', 'report'].forEach((field) =>
+        warning().should('contain', missing(field))
+      );
+      // The paper's title, authors, their iD and the DOI are all there.
+      ['title', 'authors', 'reference'].forEach((field) =>
+        warning().should('not.contain', missing(field))
+      );
+      warning().should('not.contain', 'ORCID iD for every author');
+
+      cy.get('.footer-actions button').contains(/save/i).click();
+      cy.wait('@saveMetadata');
+      cy.get('.save-message.error').should('not.exist');
+    });
+
+    it('shows nothing for a record that has everything', () => {
+      interceptMetadata(completeRecord(), 'loadComplete');
+      mountForm();
+      cy.wait('@loadComplete');
+
+      warning().should('not.exist');
+    });
+
+    it('names the authors without an ORCID iD, and a missing DOI', () => {
+      interceptMetadata(completeRecord({}, {
+        authors: [
+          { name: 'John Doe', orcid: '0000-0001-2345-6789' },
+          { name: 'Jane Smith', orcid: '' },
+          { name: 'Max Mustermann', orcid: null },
+        ],
+        doi: null,
+      }), 'loadWithoutOrcids');
+      mountForm();
+      cy.wait('@loadWithoutOrcids');
+
+      warning()
+        .should('contain', 'missing for: Jane Smith, Max Mustermann')
+        .and('not.contain', 'John Doe')
+        .and('contain', missing('reference'));
+    });
+
+    it('goes away once the missing field is filled in', () => {
+      interceptMetadata(completeRecord({ summary: '' }), 'loadWithoutSummary');
+      mountForm();
+      cy.wait('@loadWithoutSummary');
+
+      warning().should('contain', missing('summary'));
+      cy.contains('.field-label', /summary/i).parent().find('textarea').type('Everything reproduced.');
+      warning().should('not.exist');
+    });
+
+    it('does not take a malformed certificate identifier for one', () => {
+      interceptMetadata(completeRecord({ certificate: 'CODECHECK 2025/42' }), 'loadMalformedIdentifier');
+      mountForm();
+      cy.wait('@loadMalformedIdentifier');
+
+      warning().should('contain', missing('certificate'));
+    });
+
+    it('repeats the warning in the YAML preview', () => {
+      interceptMetadata(completeRecord({ report: '' }), 'loadWithoutReport');
+      cy.intercept('GET', '**/codecheck/yaml*', {
+        statusCode: 200,
+        body: { yaml: 'version: https://codecheck.org.uk/spec/config/2.0/\n', filename: 'codecheck.yml' }
+      }).as('generateYaml');
+      cy.intercept('POST', '**/codecheck/yaml/validate*', {
+        statusCode: 200,
+        body: { success: true }
+      }).as('validateYaml');
+
+      mountForm();
+      cy.wait('@loadWithoutReport');
+      cy.get('[data-testid="preview-yaml-button"]').click();
+      cy.wait('@validateYaml');
+
+      cy.get('.pkp-mock-modal [data-testid="config-spec-warning"]')
+        .should('contain', missing('report'))
+        .and('not.contain', missing('summary'));
+      cy.get('.pkp-mock-modal .yaml-preview-content').should('contain', 'spec/config/2.0/');
+    });
   });
 
   it('can fill and save summary field', () => {
@@ -925,8 +1045,7 @@ describe('CodecheckMetadataForm Component', () => {
     
     cy.get('.version-selector').should('exist');
     cy.get('.version-select').should('exist');
-    cy.get('.version-select option[value="latest"]').should('exist');
-    cy.get('.version-select option[value="1.0"]').should('exist');
+    cy.get('.version-select option[value="2.0"]').should('exist');
   });
 
   it('new repository has its hidden checkbox unchecked by default', () => {
@@ -1044,7 +1163,7 @@ describe('CodecheckMetadataForm Component', () => {
           submissionId: 1,
           submission: { id: 1, title: 'Test Article Title', authors: [], doi: null },
           codecheck: {
-            version: 'latest',
+            version: '2.0',
             publicationType: 'doi',
             manifest: [
               { file: 'figure2.png', comment: 'Figure 2', hidden: false, providedByAuthor: true },

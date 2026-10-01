@@ -34,6 +34,10 @@
         </div>
       </div>
 
+      <!-- Warns only: the record still saves, and several of these come from
+           OJS rather than from this form. See resources/js/configSpec.js. -->
+      <div v-if="canEdit" v-html="missingSpecFieldsHtml"></div>
+
       <div class="publication-section">
         <div class="radio-options">
           <label class="radio-option">
@@ -427,6 +431,7 @@
 <script>
 import { html, htmlSentence, MARKUP_PLACEHOLDER, toHtml } from '../markup.js';
 import { isWebUrl } from '../isWebUrl.js';
+import { missingMandatoryFields } from '../configSpec.js';
 import { askForConfirmation, askForInput, showInformation } from '../dialogs.js';
 import CodecheckCodecheckerDialog from './CodecheckCodecheckerDialog.vue';
 
@@ -437,7 +442,7 @@ const CODECHECK_SPEC_URL = 'https://codecheck.org.uk/spec/config/';
 
 // What the form offers until the journal's own list arrives with the metadata
 // response; mirrors Constants::CODECHECK_DEFAULT_CONFIG_VERSIONS.
-const CODECHECK_DEFAULT_CONFIG_VERSIONS = ['1.0'];
+const CODECHECK_DEFAULT_CONFIG_VERSIONS = ['2.0'];
 
 export default {
   name: 'CodecheckMetadataForm',
@@ -507,6 +512,22 @@ export default {
   },
   computed: {
     /**
+     * What the specification this record is on requires and the record does
+     * not have yet, one translated line each.
+     */
+    missingSpecFields() {
+      return missingMandatoryFields(this.metadata.version, {
+        metadata: this.metadata,
+        submission: this.submissionData,
+      }).map(({key, params}) => this.t(key, params));
+    },
+
+    /** The warning box, the same markup the YAML preview shows. */
+    missingSpecFieldsHtml() {
+      return toHtml(this.missingSpecFieldsMarkup());
+    },
+
+    /**
      * The introduction is a single translatable sentence with the link passed
      * in as a parameter, rather than a prefix key concatenated with a link
      * label. Splitting a sentence across keys fixes English word order and
@@ -527,9 +548,10 @@ export default {
      * that actually governs the fields below it.
      */
     specUrl() {
-      // The version is whatever the record carries; nothing validates it on
-      // save. It goes into an href that introText renders with v-html, so it
-      // is encoded rather than trusted.
+      // The server stores and answers only versions the plugin knows, but a
+      // journal's setting supplies the options, and this goes into an href
+      // that introText renders with v-html — so it is encoded rather than
+      // trusted.
       const version = this.metadata.version || this.enabledConfigVersions[0];
       return CODECHECK_SPEC_URL + encodeURIComponent(version) + '/';
     },
@@ -765,7 +787,10 @@ export default {
                 dataAvailabilityStatement: this.submissionData.dataAvailabilityStatement,
               };
               this.metadata = {
-                version: data.metadata?.version.replace(/^https:\/\/codecheck\.org\.uk\/spec\/config\/|\/$/g, '') ?? this.metadata.version,
+                // The record's own version, not the one the imported file
+                // declares: that is what the form is filled in against, and a
+                // file's version may be one the plugin does not offer.
+                version: this.metadata.version,
                 publicationType: data.metadata?.publicationType ?? this.metadata.publicationType,
                 manifest: data.metadata?.manifest ?? this.metadata.manifest,
                 repository: this.metadata.repository,
@@ -1141,7 +1166,7 @@ export default {
       // was pressed (#179).
       showInformation({
         title: this.t('plugins.generic.codecheck.yaml.previewTitle'),
-        body: html`<div class="yaml-modal-container"><pre class="yaml-preview-content">${yamlContent}</pre></div>`,
+        body: html`${this.missingSpecFieldsMarkup()}<div class="yaml-modal-container"><pre class="yaml-preview-content">${yamlContent}</pre></div>`,
         actionLabel: this.t('plugins.generic.codecheck.yaml.download'),
         onAction: () => {
           const blob = new Blob([yamlContent], { type: 'text/yaml' });
@@ -1158,6 +1183,19 @@ export default {
           setTimeout(() => URL.revokeObjectURL(url), 0);
         }
       });
+    },
+
+    /** The warning box, for the form and the YAML preview; empty when nothing is missing. */
+    missingSpecFieldsMarkup() {
+      if (this.missingSpecFields.length === 0) {
+        return html``;
+      }
+      const heading = this.t('plugins.generic.codecheck.configSpec.missing.heading', {version: this.metadata.version});
+      const fields = this.missingSpecFields.map((field) => html`<li>${field}</li>`);
+      return html`<div class="codecheck-spec-warning" data-testid="config-spec-warning">
+        <p>⚠ ${heading}</p>
+        <ul>${fields}</ul>
+      </div>`;
     },
 
     async getCodecheckIssueLabels() {
@@ -1490,7 +1528,8 @@ export default {
   box-sizing: border-box;
 }
 
-.codecheck-optin-warning {
+.codecheck-optin-warning,
+.codecheck-spec-warning {
   box-sizing: border-box;
   margin: 0 0 1rem 0;
   padding: 0.75rem 1rem;
@@ -1499,6 +1538,15 @@ export default {
   border-radius: 3px;
   font-size: 14px;
   color: #856404;
+}
+
+.codecheck-spec-warning p {
+  margin: 0 0 0.5rem 0;
+}
+
+.codecheck-spec-warning ul {
+  margin: 0;
+  padding-left: 1.5rem;
 }
 
 .codecheck-repository-warning {

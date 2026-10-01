@@ -230,7 +230,7 @@ describe('Settings round-trip', () => {
     const versions = () => cy.get('input[name="codecheckEnabledConfigVersions[]"]');
 
     cy.openCodecheckSettings();
-    versions().should('have.length.greaterThan', 1);
+    versions().should('have.length.greaterThan', 0);
 
     // Tick every version, so the state under test is one this save produced.
     versions().check({ force: true });
@@ -238,14 +238,22 @@ describe('Settings round-trip', () => {
     cy.openCodecheckSettings();
     versions().each(($el) => expect($el[0].checked, `${$el.val()} ticked`).to.be.true);
 
-    versions().first().uncheck({ force: true });
-    versions().first().invoke('val').then((unticked) => {
-      cy.saveCodecheckSettings();
-      cy.openCodecheckSettings();
+    // Unticking one of several keeps it unticked. The plugin knows 2.0 alone
+    // for now, and unticking the only version is the empty case below, so
+    // this half waits for a second version to exist.
+    versions().then(($all) => {
+      if ($all.length < 2) {
+        return;
+      }
+      versions().first().uncheck({ force: true });
+      versions().first().invoke('val').then((unticked) => {
+        cy.saveCodecheckSettings();
+        cy.openCodecheckSettings();
 
-      versions().each(($el) => {
-        expect($el[0].checked, `${$el.val()} after unticking ${unticked}`)
-          .to.equal($el.val() !== unticked);
+        versions().each(($el) => {
+          expect($el[0].checked, `${$el.val()} after unticking ${unticked}`)
+            .to.equal($el.val() !== unticked);
+        });
       });
     });
 
@@ -254,7 +262,7 @@ describe('Settings round-trip', () => {
     cy.saveCodecheckSettings();
     cy.openCodecheckSettings();
     versions().filter(':checked').should('have.length', 1);
-    versions().filter(':checked').should('have.value', '1.0');
+    versions().filter(':checked').should('have.value', '2.0');
 
     // The dataset ships no row at all for this setting, and no form can put
     // that state back; the after() hook's save records the default the form

@@ -53,7 +53,7 @@ describe('CodecheckReviewDisplay Component', () => {
         submission: {
           codecheckOptIn: true,
           codecheckMetadata: {
-            configVersion: 'latest',
+            configVersion: '2.0',
             certificate: 'CODECHECK-2024-001',
             checkTime: '2024-01-15T10:00:00Z',
             manifest: [{ file: 'output.png', comment: 'Main result' }],

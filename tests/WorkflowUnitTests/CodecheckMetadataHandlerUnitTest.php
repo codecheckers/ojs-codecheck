@@ -549,15 +549,16 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $publication->method('getData')->with('authors')->willReturn([]);
         $publication->method('getStoredPubId')->willReturn(null);
 
-        $yaml = $this->handler->buildYaml($publication, $this->buildYamlMetadata('1.0'));
-        $this->assertStringContainsString('https://codecheck.org.uk/spec/config/1.0/', $yaml);
+        $yaml = $this->handler->buildYaml($publication, $this->buildYamlMetadata('2.0'));
+        $this->assertStringContainsString('https://codecheck.org.uk/spec/config/2.0/', $yaml);
 
-        $yaml = $this->handler->buildYaml($publication, $this->buildYamlMetadata('latest'));
-        $this->assertStringContainsString('https://codecheck.org.uk/spec/config/latest/', $yaml);
-
-        // An empty version falls back rather than emitting a broken URL.
-        $yaml = $this->handler->buildYaml($publication, $this->buildYamlMetadata(''));
-        $this->assertStringContainsString('https://codecheck.org.uk/spec/config/latest/', $yaml);
+        // An empty version, or one the plugin no longer knows, falls back to
+        // the default rather than emitting a broken URL or declaring a
+        // specification the file was not built for.
+        foreach (['', 'latest', '1.0'] as $version) {
+            $yaml = $this->handler->buildYaml($publication, $this->buildYamlMetadata($version));
+            $this->assertStringContainsString('https://codecheck.org.uk/spec/config/2.0/', $yaml, $version);
+        }
     }
 
     /** A minimal codecheck_metadata row carrying the given config version. */
@@ -586,7 +587,7 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $publication->method('getStoredPubId')->willReturn(null);
 
         $metadata = (object) [
-            'spec_version' => 'latest',
+            'spec_version' => '2.0',
             'publication_type' => 'doi',
             'manifest' => '[]',
             'repository' => json_encode([
@@ -618,7 +619,7 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $publication->method('getStoredPubId')->willReturn(null);
 
         $metadata = (object) [
-            'spec_version' => 'latest',
+            'spec_version' => '2.0',
             'publication_type' => 'doi',
             'manifest' => '[]',
             'repository' => json_encode([
@@ -715,7 +716,7 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
     private function buildYamlMetadataWithRepositories(array $repositories): object
     {
         return (object) [
-            'spec_version' => 'latest',
+            'spec_version' => '2.0',
             'publication_type' => 'doi',
             'manifest' => '[]',
             'repository' => json_encode([

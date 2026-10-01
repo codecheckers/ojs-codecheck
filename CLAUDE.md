@@ -324,6 +324,9 @@ Migration structure (added for issue #94):
   and converts the old `repoWithCodecheckYaml` index into a `containsCodecheckYaml`
   flag on each entry. Its `convert()` is `public static` so the conversion is
   testable without a database
+- `upgrade/I185_MoveRecordsToConfigSpec2` — moves every record on a config
+  version the plugin no longer knows (`latest`, `1.0`) to `2.0`, and the
+  `spec_version` column default with it. Runs after I93, whose column it reads
 - `CodecheckPlugin::setEnabled()` runs the install migration on enable.
   **Nothing in the plugin drops a table** — the settings form's "Clear / Reset
   DB" button did, and was removed in #131; rebuild a development instance with
@@ -624,7 +627,7 @@ creation, so changing one of their defaults needs an upgrade migration.
 **`CODECHECK_ENABLED_CONFIG_VERSIONS` deliberately did not join it**, although
 it has the same shape. A recorded default is a *written* default, and this one
 is expected to change: a row frozen at today's stable specification would still
-offer `1.0` long after `1.1` replaced it, with no way for a migration to tell
+offer `2.0` long after `2.1` replaced it, with no way for a migration to tell
 that row apart from a deliberate choice. It resolves its default in
 `getEnabledConfigVersions()`, which is its only reader, and which also owns the
 two rules that are not the default — narrowing the stored list to the versions
@@ -734,8 +737,32 @@ image with words in it could want the same; left single-valued until someone
 asks.
 
 `CODECHECK_ENABLED_CONFIG_VERSIONS` defaults to `CODECHECK_DEFAULT_CONFIG_VERSIONS`
-— `1.0` alone, not every known version — so a journal that has not chosen records
-checks against the current stable specification rather than a moving target.
+— the current stable specification alone, not every known version.
+
+**The plugin knows `2.0` and nothing else, and never `latest`.** `latest` was on
+the list until the specification moved it from 1.0 to 2.0 (2026-09-11), and
+every record on it then declared a version it had not been filled in against,
+one that makes more fields mandatory. **Only concrete versions belong in
+`CODECHECK_CONFIG_VERSIONS`.** 1.0 was dropped at the same time, since no
+journal ran the plugin in production yet; the setting stays as the way a later
+version is offered next to 2.0. `Constants::resolveConfigVersion()` is the rule
+for a stored or posted version the plugin does not know — it reads as the
+default — applied on save, on the `GET metadata` response and in `buildYaml()`,
+so the version shown, stored and declared cannot disagree. A journal row still
+holding `['1.0']` needs no migration: `narrowConfigVersions()` narrows it to
+nothing, which resolves to the default.
+
+**What a version requires is warned about, never enforced.**
+`resources/js/configSpec.js` lists, per version, the fields the specification
+makes mandatory, and the metadata form and the YAML preview name the ones a
+record lacks. Nothing refuses a save or a publish on them, because several come
+from OJS rather than from the form — the authors' ORCID iDs, the DOI, which is
+often assigned just before publication — so a refusal would stop a check at a
+point nobody in the form can resolve. A new version with no entry there requires
+nothing the form knows of. The locale keys are named through a local `tk()`,
+which is what puts them into `registry/uiLocaleKeysBackend.json`: the extractor
+only sees literal keys, so a key assembled from a field name would reach the
+browser untranslated.
 
 `Constants::CODECHECK_DEFAULT_CONFIG_VERSIONS` and `getConfigSpecUrl()` are mirrored by
 `CODECHECK_DEFAULT_CONFIG_VERSIONS` / `CODECHECK_SPEC_URL` in `CodecheckMetadataForm.vue`.
@@ -1567,8 +1594,8 @@ Effort level, for `/code-review`:
 | Change | Level |
 |---|---|
 | 40–300 lines, ordinary domain or UI code | `high` |
-| over 300 lines | `max` |
-| `api/v1/`, `classes/migration/`, the `Publication::publish` / `validatePublish` hooks, or `classes/CodecheckRegister/` — at any size | `max` |
+| over 300 lines | `xhigh` |
+| `api/v1/`, `classes/migration/`, the `Publication::publish` / `validatePublish` hooks, or `classes/CodecheckRegister/` — at any size | `xhigh` |
 
 `high` is the floor rather than the default `medium` because of what this
 codebase is. There is no compiler and no static analysis in CI (issue #43 is

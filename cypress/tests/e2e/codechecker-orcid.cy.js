@@ -52,7 +52,7 @@ describe('Codechecker ORCID iDs', () => {
 
   /** The payload the editorial form sends, from the stored record. */
   const payloadFrom = (stored, codecheckers) => ({
-    version: stored.spec_version,
+    version: stored.version,
     publication_type: stored.publication_type,
     manifest: stored.manifest,
     repository: stored.repository,

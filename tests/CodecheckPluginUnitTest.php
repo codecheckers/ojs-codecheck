@@ -114,12 +114,14 @@ class CodecheckPluginUnitTest extends PKPTestCase
         $default = Constants::CODECHECK_DEFAULT_CONFIG_VERSIONS;
 
         $this->assertSame(
-            ['latest'],
-            $this->pluginWithSettings([Constants::CODECHECK_ENABLED_CONFIG_VERSIONS => ['latest', '0.9']])
+            ['2.0'],
+            $this->pluginWithSettings([Constants::CODECHECK_ENABLED_CONFIG_VERSIONS => ['latest', '2.0', '0.9']])
                 ->getEnabledConfigVersions(1)
         );
 
-        foreach ([null, [], ['0.9']] as $stored) {
+        // A row written while 1.0 or `latest` was offered narrows to nothing,
+        // and so to the default: no migration of the setting is needed.
+        foreach ([null, [], ['0.9'], ['1.0'], ['latest', '1.0']] as $stored) {
             $this->assertSame(
                 $default,
                 $this->pluginWithSettings([Constants::CODECHECK_ENABLED_CONFIG_VERSIONS => $stored])
