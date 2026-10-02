@@ -1635,6 +1635,16 @@ Chrome + Chromium + Firefox, Cypress 14.5.4, Playwright 1.61.
 
 ## Working agreements
 
+### Work on the current branch; a worktree only when asked
+
+**Implement in the main checkout, on the branch it is on.** Use a git worktree
+only when told to. Ask before starting if one seems warranted, for example when
+you know of another session working in this checkout at the same time. Do not
+create one on your own initiative. A worktree is not a free isolation layer
+here: OJS reaches the plugin through a single shared symlink, so code in a
+worktree is not what PHPUnit's OJS classes, `make serve` or the e2e suite run
+until that symlink is repointed (see "Local development environment").
+
 ### Never commit — stage a changeset and propose the message
 
 **Do not run `git commit`.** Committing is the author's act: it puts a name and a
