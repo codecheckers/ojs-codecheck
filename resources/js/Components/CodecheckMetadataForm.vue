@@ -315,6 +315,16 @@
           />
         </div>
 
+        <div v-if="certificateReferenceMode !== 'off'" class="field-group certificate-reference">
+          <button
+            type="button"
+            class="pkpButton"
+            :disabled="!canAddCertificateReference || addingCertificateReference"
+            @click="addCertificateReference"
+          >{{ t('plugins.generic.codecheck.certificateReference.add') }}</button>
+          <p class="field-description">{{ certificateReferenceHint }}</p>
+        </div>
+
         <div class="field-group">
           <label class="field-label">
             {{ t('plugins.generic.codecheck.completionTime.label') }}
@@ -488,6 +498,10 @@ export default {
       // The version this record was loaded with, which stays on offer for the
       // whole session even if the journal no longer enables it.
       loadedVersion: '',
+      // The journal's "Certificate in the References" setting (#183), from
+      // the metadata response; off until it says otherwise.
+      certificateReferenceMode: 'off',
+      addingCertificateReference: false,
       hasUnsavedChanges: false,
       submissionData: {
         id: null,
@@ -531,6 +545,26 @@ export default {
     }
   },
   computed: {
+    hasCertificate() {
+      return Boolean((this.metadata.certificate || '').trim());
+    },
+
+    canAddCertificateReference() {
+      return this.hasCertificate && !this.hasUnsavedChanges;
+    },
+
+    certificateReferenceHint() {
+      if (!this.hasCertificate) {
+        return this.t('plugins.generic.codecheck.certificateReference.needsCertificate');
+      }
+      if (this.hasUnsavedChanges) {
+        return this.t('plugins.generic.codecheck.certificateReference.saveFirst');
+      }
+      return this.certificateReferenceMode === 'publish'
+        ? this.t('plugins.generic.codecheck.certificateReference.hintPublish')
+        : this.t('plugins.generic.codecheck.certificateReference.hintButton');
+    },
+
     /**
      * What the specification this record is on requires and the record does
      * not have yet, one translated line each.
@@ -704,6 +738,7 @@ export default {
         if (Array.isArray(data.settings?.enabledConfigVersions) && data.settings.enabledConfigVersions.length) {
           this.enabledConfigVersions = data.settings.enabledConfigVersions;
         }
+        this.certificateReferenceMode = data.settings?.certificateReferenceMode ?? 'off';
 
         this.submissionData = {
           id: data.submission?.id || submissionId,
@@ -1081,6 +1116,53 @@ export default {
         workflowStore.codecheck.certificateIdentifier = this.metadata.certificate;
         workflowStore.codecheck.issue = this.certificateIdentifier.issue;
         console.log("Workflow Store: ", workflowStore?.codecheck);
+      }
+    },
+
+    /**
+     * List the certificate among the article's references, or refresh the
+     * line already there (#183). The server cites the CODECHECK as saved,
+     * which is why the button waits for unsaved changes to be saved.
+     */
+    async addCertificateReference() {
+      this.addingCertificateReference = true;
+      const title = this.t('plugins.generic.codecheck.certificateReference.add');
+      try {
+        const response = await fetch(`${pkp.context.apiBaseUrl}codecheck/references?submissionId=${this.submission.id}`, {
+          method: 'POST',
+          headers: {'X-Csrf-Token': pkp.currentUser.csrfToken},
+        });
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          // OJS's own refusals (a role the route does not admit) carry a
+          // translated errorMessage beside the bare locale key in error.
+          showInformation({title, text: data.errorMessage || data.error || this.t('plugins.generic.codecheck.certificateReference.failed')});
+          return;
+        }
+
+        showInformation({
+          title,
+          body: html`
+            <div class="modal-field">
+              <label class="modal-label">${data.changed
+                ? this.t('plugins.generic.codecheck.certificateReference.added')
+                : this.t('plugins.generic.codecheck.certificateReference.unchanged')}</label>
+              <p class="certificate-reference-line">${data.line}</p>
+            </div>
+          `
+        });
+
+        // OJS's own References form reads the publication from the workflow
+        // store, which has to fetch it again to show the new line.
+        if (data.changed) {
+          pkp.registry._piniaInstance?._s?.get('workflow')?.triggerDataChange?.();
+        }
+      } catch (error) {
+        console.error('Error adding the certificate to the references:', error);
+        showInformation({title, text: this.t('plugins.generic.codecheck.certificateReference.failed')});
+      } finally {
+        this.addingCertificateReference = false;
       }
     },
 
@@ -1895,6 +1977,15 @@ export default {
 
 .codecheck-metadata-form .required {
   color: #d9534f;
+}
+
+.codecheck-metadata-form .certificate-reference .field-description {
+  margin: 0.5rem 0 0 0;
+}
+
+/* In the dialog, outside the form: a reference carries a long address. */
+.certificate-reference-line {
+  overflow-wrap: anywhere;
 }
 
 .codecheck-metadata-form .full-width {

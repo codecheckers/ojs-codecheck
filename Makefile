@@ -18,7 +18,28 @@
 # worktree (.claude/worktrees/<name>/) resolves the same install as the main
 # checkout; outside git (an unpacked package) it falls back to $(CURDIR).
 MAIN_CHECKOUT := $(abspath $(or $(dir $(shell git -C "$(CURDIR)" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)),$(CURDIR)))
-OJS_ROOT    ?= $(abspath $(MAIN_CHECKOUT)/../ojs-350)
+# The shared development install. Nothing that writes may run against it
+# without being asked; see THROWAWAY below for where tests run instead.
+SHARED_OJS_ROOT := $(abspath $(MAIN_CHECKOUT)/../ojs-350)
+
+# A throwaway OJS instance: `make throwaway-up THROWAWAY=<name>` builds one
+# beside the shared install — the OJS code hard-linked from it (no copy of the
+# 3 GB), its own config, cache and files, its own MariaDB in a Docker container
+# and its own port — and then every target runs against it when given the same
+# THROWAWAY=<name>: `make serve THROWAWAY=doi`, `make test-e2e THROWAWAY=doi`.
+# `make throwaway-down THROWAWAY=<name>` removes it. Two at once need their own
+# THROWAWAY_PORT and THROWAWAY_DB_PORT.
+ifdef THROWAWAY
+ifneq ($(shell echo '$(THROWAWAY)' | grep -Ex '[a-z0-9_]+'),$(THROWAWAY))
+$(error THROWAWAY must be lower-case letters, digits and underscores)
+endif
+OJS_ROOT := $(abspath $(MAIN_CHECKOUT)/../ojs-350-$(THROWAWAY))
+DB_NAME  := ojs_codecheck_$(THROWAWAY)
+DB_PORT  := $(or $(THROWAWAY_DB_PORT),3307)
+PORT     := $(or $(THROWAWAY_PORT),8352)
+THROWAWAY_CONTAINER := ojs-codecheck-db-$(THROWAWAY)
+endif
+OJS_ROOT    ?= $(SHARED_OJS_ROOT)
 # Version fetched by `make ojs-install`.
 OJS_VERSION ?= 3.5.0-5
 
@@ -47,7 +68,8 @@ export OJS_ROOT
         clear-cache serve test test-component test-e2e test-e2e-reverse test-e2e-shuffle \
         lint lint-deps lint-fix hooks \
         test-php check-migration screenshots inspect social-preview \
-        build watch check-ojs clean
+        build watch check-ojs clean \
+        throwaway-check throwaway-up throwaway-down doi-test-config doi-export
 
 # --- Entry points -----------------------------------------------------------
 
@@ -89,6 +111,14 @@ help:
 	@echo "    make lint            report PHP coding-standard violations (changes nothing)"
 	@echo "    make lint-fix        rewrite the files to the coding standard"
 	@echo "    make hooks           install the git pre-commit hook that runs the linter"
+	@echo
+	@echo "  Throwaway instance (anything that writes: e2e, db-reset, DOI exports)"
+	@echo "    make throwaway-up THROWAWAY=name    build one: hard-linked OJS, own DB and port"
+	@echo "    make <target> THROWAWAY=name        run any target against it, e.g. serve, test-e2e"
+	@echo "    make throwaway-down THROWAWAY=name  remove it"
+	@echo "    make doi-test-config THROWAWAY=name [AGENCY=datacite] [REGISTERED=1] [CERTIFICATES=\"2 7\"]"
+	@echo "                         Crossref/DataCite in test mode and fake DOIs (#19)"
+	@echo "    make doi-export THROWAWAY=name ARTICLES=\"5 2\" [DOI_OUT=dir]  Crossref and DataCite XML, validated"
 	@echo
 	@echo "  OJS_ROOT = $(OJS_ROOT)"
 	@echo "  DB       = $(DB_NAME) as $(DB_USER)@$(DB_HOST):$(DB_PORT)"
@@ -175,6 +205,7 @@ ojs-config: check-ojs
 		-e 's|^username = .*|username = $(DB_USER)|' \
 		-e 's|^password = .*|password = $(DB_PASS)|' \
 		-e 's|^name = .*|name = $(DB_NAME)|' \
+		-e 's|^;\? *port = [0-9]*$$|port = $(DB_PORT)|' \
 		-e 's|^files_dir = .*|files_dir = $(OJS_ROOT)/files|' \
 		"$(OJS_ROOT)/config.inc.php"
 	@# OJS 3.5 ships an empty app_key and refuses to serve any page without it
@@ -540,6 +571,80 @@ screenshots:
 	CYPRESS_SCREENSHOTS_FOLDER=$(SHOT_DIR) \
 	npx cypress run --e2e --config specPattern='cypress/tests/visual/**/*.cy.js'
 	@echo "Screenshots written to $(SHOT_DIR)/"
+
+# --- Throwaway instance -------------------------------------------------------
+
+THROWAWAY_IMAGE ?= mariadb:10.6
+
+throwaway-check:
+	@test -n "$(THROWAWAY)" || { echo "Name the instance: THROWAWAY=<name>"; exit 1; }
+
+throwaway-up: throwaway-check
+	@test -f "$(SHARED_OJS_ROOT)/index.php" || { echo "No shared OJS at $(SHARED_OJS_ROOT) to copy from"; exit 1; }
+	@if [ -e "$(OJS_ROOT)" ]; then \
+		echo "$(OJS_ROOT) exists; keeping it"; \
+	else \
+		echo "Linking OJS into $(OJS_ROOT)..."; \
+		cp -al "$(SHARED_OJS_ROOT)" "$(OJS_ROOT)"; \
+		rm -rf "$(OJS_ROOT)/cache" "$(OJS_ROOT)/files" "$(OJS_ROOT)/public" "$(OJS_ROOT)/config.inc.php"; \
+		mkdir -p "$(OJS_ROOT)/cache/t_compile" "$(OJS_ROOT)/cache/t_cache" "$(OJS_ROOT)/cache/opcache" "$(OJS_ROOT)/cache/_db"; \
+		cp "$(SHARED_OJS_ROOT)/config.inc.php" "$(OJS_ROOT)/config.inc.php"; \
+	fi
+	@# The code is hard-linked, so nothing here may write into a file in place:
+	@# the config is a copy, and sed -i replaces files rather than editing them.
+	@if docker inspect "$(THROWAWAY_CONTAINER)" >/dev/null 2>&1; then \
+		docker start "$(THROWAWAY_CONTAINER)" >/dev/null; \
+	else \
+		docker run -d --name "$(THROWAWAY_CONTAINER)" \
+			-e MARIADB_ROOT_PASSWORD=root -e MARIADB_DATABASE=$(DB_NAME) \
+			-e MARIADB_USER=$(DB_USER) -e MARIADB_PASSWORD=$(DB_PASS) \
+			-p 127.0.0.1:$(DB_PORT):3306 $(THROWAWAY_IMAGE) >/dev/null; \
+	fi
+	@printf "Waiting for MariaDB on port $(DB_PORT)"; \
+		for i in $$(seq 60); do $(MYSQL) -e 'SELECT 1' $(DB_NAME) >/dev/null 2>&1 && break; printf .; sleep 1; done; echo; \
+		$(MYSQL) -e 'SELECT 1' $(DB_NAME) >/dev/null
+	@$(MAKE) --no-print-directory ojs-config ojs-link THROWAWAY=$(THROWAWAY)
+	@# Like the directory, an existing database is kept: rerunning this after a
+	@# reboot brings the instance back as it was. `make db-reset` reloads it.
+	@if [ "$$($(MYSQL) -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '$(DB_NAME)'")" = 0 ]; then \
+		$(MAKE) --no-print-directory db-load THROWAWAY=$(THROWAWAY); \
+	else \
+		echo "$(DB_NAME) has tables; keeping it (make db-reset THROWAWAY=$(THROWAWAY) reloads the dataset)"; \
+	fi
+	@# The dataset ships the journal not publicly enabled, which sends every
+	@# visitor who is not logged in to the login page; a throwaway shows readers.
+	$(MYSQL) $(DB_NAME) -e "UPDATE journals SET enabled = 1 WHERE path = 'codecheck'"
+	@$(MAKE) --no-print-directory clear-cache THROWAWAY=$(THROWAWAY)
+	@echo "Throwaway instance '$(THROWAWAY)' ready: make serve THROWAWAY=$(THROWAWAY)  ->  $(BASE_URL)"
+
+throwaway-down: throwaway-check
+	-docker rm -f "$(THROWAWAY_CONTAINER)"
+	@case "$(OJS_ROOT)" in "$(SHARED_OJS_ROOT)") echo "Refusing to remove the shared install"; exit 1;; esac
+	rm -rf "$(OJS_ROOT)"
+
+# Crossref and DataCite in test mode with fake credentials, and a fake DOI for
+# every published article (dev/doi-test-config.php). It writes, so it refuses
+# the shared install unless FORCE=1.
+AGENCY ?= crossref
+REGISTERED ?=
+CERTIFICATES ?=
+doi-test-config: check-ojs
+	@if [ "$(OJS_ROOT)" = "$(SHARED_OJS_ROOT)" ] && [ -z "$(FORCE)" ]; then \
+		echo "This writes DOI settings into the shared instance; use THROWAWAY=<name>, or FORCE=1"; exit 1; \
+	fi
+	php dev/doi-test-config.php codecheck $(AGENCY) "$(REGISTERED)" $(CERTIFICATES)
+	@$(MAKE) --no-print-directory clear-cache
+
+# The Crossref and DataCite records OJS would deposit for ARTICLES, built and
+# validated by OJS's own exporters, into DOI_OUT (dev/doi-export.php). Nothing
+# is deposited. Booted as a command-line tool, OJS loads every generic plugin
+# with no journal — as a deposit worker does — so this is also the path the
+# CODECHECK links must survive.
+ARTICLES ?= 5
+DOI_OUT  ?= dev/out/doi
+doi-export: check-ojs
+	@mkdir -p "$(DOI_OUT)"
+	php dev/doi-export.php codecheck "$(DOI_OUT)" $(ARTICLES)
 
 URL ?= $(BASE_URL)/index.php/codecheck
 inspect:

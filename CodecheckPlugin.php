@@ -20,6 +20,7 @@ use APP\plugins\generic\codecheck\classes\Submission\AvailabilityStatementField;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckAuthorMetadata;
 use APP\plugins\generic\codecheck\classes\Submission\Schema;
 use APP\plugins\generic\codecheck\classes\Submission\SubmissionWizardHandler;
+use APP\plugins\generic\codecheck\classes\Workflow\CertificateReferenceUpdate;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataDestinations;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckPublicationValidator;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckRegisterDepositService;
@@ -55,6 +56,11 @@ class CodecheckPlugin extends GenericPlugin
             $doiDeposit = new CodecheckDoiDeposit($this);
             Hook::add('articlecrossrefxmlfilter::execute', $doiDeposit->addToCrossref(...), Hook::SEQUENCE_LATE);
             Hook::add('datacitexmlfilter::execute', $doiDeposit->addToDatacite(...), Hook::SEQUENCE_LATE);
+
+            // The certificate among the references on publication (#183). Also
+            // outside: the scheduled task publishes on the command line, and
+            // the mode is read for the publication's own journal.
+            Hook::add('Publication::publish::before', (new CertificateReferenceUpdate($this))->addOnPublish(...));
         }
 
         if ($success && $this->getEnabled()) {
@@ -902,6 +908,18 @@ class CodecheckPlugin extends GenericPlugin
         return $contextId !== null && $this->getEnabled($contextId);
     }
 
+    /**
+     * Whether, and when, the certificate is listed among the article's
+     * references (#183): the one reader for the settings form, the publish
+     * hook, the endpoint and the editorial form. Off where the plugin is not
+     * enabled, because the publish hook is registered for every journal.
+     */
+    public function getCertificateReferenceMode(?int $contextId): string
+    {
+        return Constants::normalizeCertificateReferenceMode(
+            $this->isEnabledIn($contextId) ? $this->getSetting($contextId, Constants::CODECHECK_CERTIFICATE_REFERENCE) : null
+        );
+    }
 
     /**
      * Whether a change to the links sends the article's record again (#19).

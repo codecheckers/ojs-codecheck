@@ -1155,6 +1155,60 @@ msgstr "When enabled, publishing a CODECHECK-opted-in submission will automatica
 msgid "plugins.generic.codecheck.settings.registerDeposit.checkboxText"
 msgstr "Automatically deposit to the CODECHECK Register on publication"
 
+msgid "plugins.generic.codecheck.certificateReference.add"
+msgstr "Add certificate to references"
+
+msgid "plugins.generic.codecheck.certificateReference.added"
+msgstr "The certificate is now listed among the article's references:"
+
+msgid "plugins.generic.codecheck.certificateReference.unchanged"
+msgstr "The article's references already list the certificate:"
+
+msgid "plugins.generic.codecheck.certificateReference.failed"
+msgstr "The certificate could not be added to the references."
+
+msgid "plugins.generic.codecheck.certificateReference.needsCertificate"
+msgstr "Available once the check has a certificate."
+
+msgid "plugins.generic.codecheck.certificateReference.saveFirst"
+msgstr "Save the CODECHECK first: the reference is made from the saved certificate."
+
+msgid "plugins.generic.codecheck.certificateReference.hintButton"
+msgstr "Adds the certificate to the article's references, or updates the line already citing it. No other reference is changed."
+
+msgid "plugins.generic.codecheck.certificateReference.hintPublish"
+msgstr "Adds the certificate to the article's references now; it is also added or updated automatically whenever a version of the article is published."
+
+msgid "plugins.generic.codecheck.certificateReference.disabled"
+msgstr "This journal does not list the CODECHECK certificate among an article's references."
+
+msgid "plugins.generic.codecheck.certificateReference.published"
+msgstr "The latest version of this article is published and cannot be changed. Create a new version to add the certificate to its references."
+
+msgid "plugins.generic.codecheck.certificateReference.notAllowed"
+msgstr "You are not allowed to change the metadata of this article."
+
+msgid "plugins.generic.codecheck.certificateReference.noCertificate"
+msgstr "There is no published certificate to cite yet: the CODECHECK status has to say the certificate is published, and the certificate identifier, or its DOI or report address, has to be recorded."
+
+msgid "plugins.generic.codecheck.settings.certificateReference.title"
+msgstr "Certificate in the References"
+
+msgid "plugins.generic.codecheck.settings.certificateReference.description"
+msgstr "Lists the CODECHECK certificate among the article's references, so that it appears in the References section of the article page and wherever the references are exported. A line already citing the certificate is updated where it stands; no other reference is changed."
+
+msgid "plugins.generic.codecheck.settings.certificateReference.off"
+msgstr "Never change the article's references"
+
+msgid "plugins.generic.codecheck.settings.certificateReference.button"
+msgstr "An editor adds or updates the reference from the CODECHECK tab"
+
+msgid "plugins.generic.codecheck.settings.certificateReference.publish"
+msgstr "Also add or update the reference automatically whenever a version of the article is published"
+
+msgid "plugins.generic.codecheck.settings.certificateReference.notCollected"
+msgstr "This journal does not collect references (Workflow settings, Metadata), so readers will not see the certificate there until it does."
+
 msgid "plugins.generic.codecheck.settings.doiDeposit.title"
 msgstr "DOI Deposits"
 

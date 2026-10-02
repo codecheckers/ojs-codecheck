@@ -1546,3 +1546,96 @@ describe('CodecheckMetadataForm Component', () => {
     });
   });
 });
+
+/**
+ * The certificate among the article's references (#183): the button follows
+ * the journal's setting, waits for a certificate and for the form to be saved,
+ * and reports what the server wrote — or why it refused — in a dialog.
+ */
+describe('CodecheckMetadataForm certificate reference', () => {
+  const ADD = 'plugins.generic.codecheck.certificateReference.add';
+  const LINE = 'Jane Doe. (2026). CODECHECK certificate 2026-001. Zenodo. https://doi.org/10.5281/zenodo.1';
+
+  const withCertificate = (mode, certificate = '2026-001') => {
+    const body = metadataResponseBody();
+    body.codecheck.certificate = certificate;
+    body.settings = { enabledConfigVersions: ['2.0'], certificateReferenceMode: mode };
+    cy.intercept('GET', '**/codecheck/metadata*', { statusCode: 200, body }).as('loadMetadata');
+    mountForm();
+    cy.wait('@loadMetadata');
+  };
+
+  const addButton = () => cy.contains('.certificate-reference button', ADD);
+
+  it('offers no button when the journal does not list the certificate', () => {
+    withCertificate('off');
+    cy.get('.certificate-reference').should('not.exist');
+  });
+
+  it('offers no button when the response does not say', () => {
+    interceptMetadata();
+    mountForm();
+    cy.wait('@loadMetadata');
+    cy.get('.certificate-reference').should('not.exist');
+  });
+
+  it('waits for a certificate', () => {
+    withCertificate('button', '');
+    addButton().should('be.disabled');
+    cy.get('.certificate-reference .field-description')
+      .should('contain', 'plugins.generic.codecheck.certificateReference.needsCertificate');
+  });
+
+  it('waits for unsaved changes to be saved, since the server cites the saved check', () => {
+    withCertificate('button');
+    addButton().should('not.be.disabled');
+
+    cy.get('input[type="url"]').first().type('https://doi.org/10.5281/zenodo.2');
+    addButton().should('be.disabled');
+    cy.get('.certificate-reference .field-description')
+      .should('contain', 'plugins.generic.codecheck.certificateReference.saveFirst');
+  });
+
+  it('says when a version is published, too, in that mode', () => {
+    withCertificate('publish');
+    cy.get('.certificate-reference .field-description')
+      .should('contain', 'plugins.generic.codecheck.certificateReference.hintPublish');
+  });
+
+  it('shows the line it wrote', () => {
+    withCertificate('button');
+    cy.intercept('POST', '**/codecheck/references?submissionId=1', {
+      statusCode: 200,
+      body: { success: true, line: LINE, changed: true }
+    }).as('addReference');
+
+    addButton().click();
+    cy.wait('@addReference');
+    cy.get('.pkp-mock-modal')
+      .should('contain', 'plugins.generic.codecheck.certificateReference.added')
+      .and('contain', LINE);
+  });
+
+  it('says so when the references already carried the line', () => {
+    withCertificate('button');
+    cy.intercept('POST', '**/codecheck/references?submissionId=1', {
+      statusCode: 200,
+      body: { success: true, line: LINE, changed: false }
+    });
+
+    addButton().click();
+    cy.get('.pkp-mock-modal').should('contain', 'plugins.generic.codecheck.certificateReference.unchanged');
+  });
+
+  it('shows why the server refused', () => {
+    withCertificate('button');
+    cy.intercept('POST', '**/codecheck/references?submissionId=1', {
+      statusCode: 400,
+      body: { success: false, error: 'Create a new version first.' }
+    });
+
+    addButton().click();
+    cy.get('.pkp-mock-modal').should('contain', 'Create a new version first.');
+    addButton().should('not.be.disabled');
+  });
+});

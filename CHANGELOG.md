@@ -30,6 +30,7 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 
 #### Frontend
 
+- With the new setting *Certificate in the References*, the published CODECHECK certificate is listed among the article's references, from a button on the CODECHECK tab or also automatically whenever a version is published; a line already citing the certificate is updated where it stands and no other reference is changed (#183)
 - The editorial CODECHECK form names the submission's primary contact, with a link that emails them about the check (#28)
 - The "add codechecker" dialog offers the codecheckers the journal has recorded since this release (#186)
 - The publication's Metadata page shows the article's CODECHECK badge, certificate identifier, status and `codecheck.yml` preview, and which destinations receive its metadata: the register issue, `register.csv`, ORCID, the article page and the issue table of contents (#34)

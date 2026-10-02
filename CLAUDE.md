@@ -85,6 +85,7 @@ make test              # component tests + PHPUnit (no server needed)
 make test-component    # Cypress component tests — runs anywhere, no OJS needed
 make test-php          # PHPUnit — needs the linked OJS install
 make check-migration   # the #185 upgrade migration against the dev database (writes; asks first)
+make throwaway-up THROWAWAY=doi   # a throwaway OJS for anything that writes; see below
 make test-e2e          # Cypress e2e — needs `make serve` running
 make test-e2e-reverse  # the same specs backwards, to catch order dependence
 make test-e2e-shuffle  # the same specs in a seeded random order (SEED=n replays one)
@@ -134,6 +135,18 @@ See [Testing](#testing) below for what actually runs where.
 - `Template::SubmissionWizard::Section` / `…::Section::Review` → wizard templates
 - `Publication::validatePublish` → `validatePublicationHook()` can **block publication**
 - `Publication::publish` → `depositToRegister()` opens a register.csv PR (best-effort)
+- `Publication::publish::before` → `CertificateReferenceUpdate::addOnPublish()`
+  lists the certificate among the references (#183). Outside the
+  `getEnabled()` block too: the scheduled task publishes on the command line.
+  **`publish()` calls `dao->update()` without the old publication**, so a
+  `citationsRaw` set in this hook is never reparsed; it calls
+  `CitationDAO::importCitations()` itself. Like the DOI links, the line is
+  written only at a *published certificate* status: an identifier is reserved
+  when a check starts, and its register page does not exist until then.
+  `CertificateReference::merge()` finds an existing line by the certificate's
+  DOI, register address, linked address or identifier, each matched **whole**:
+  a substring match took `…zenodo.1234567` for `…zenodo.123456` and overwrote
+  someone else's reference
 - `articlecrossrefxmlfilter::execute` / `datacitexmlfilter::execute` →
   `CodecheckDoiDeposit` adds the CODECHECK links to the DOI deposit (#19).
   Registered **outside** the `getEnabled()` block, like `Context::add`, and
@@ -341,7 +354,10 @@ certificate identifier while `certificateLocked` — the same condition that mak
 the field read-only.
 
 Endpoints: `GET labels|metadata|yaml|register|status|status/history|orcid-status|orcid-test`,
-`POST identifier|issue|metadata|repository|repository/validate|yaml/validate|status/update|users/roles/validation|orcid-deposit`.
+`POST identifier|issue|metadata|references|repository|repository/validate|yaml/validate|status/update|users/roles/validation|orcid-deposit`.
+`POST references` (#183) is submission-scoped and for `EDITOR_ROLES`: it edits
+the article's own metadata through `Repo::publication()->edit()`, refusing a
+published latest version as OJS does, and answers `{line, changed}`.
 
 Adding one: register it in `getGroupRoutes()` with the right
 `->middleware([self::roleAuthorizer(...)])`, add the handler method returning a
@@ -1751,6 +1767,46 @@ Notes that matter when touching this:
   rows in the dump: a real install has them written by `writeDefaultSettings()`,
   but a fixture that carried them would stop exercising the reader that is the
   actual guarantee.
+
+### Throwaway instances, and DOI deposits to look at
+
+Anything that writes — e2e, `db-reset`, a DOI export set-up — runs against a
+throwaway OJS, never the shared `ojs-350`. `make throwaway-up THROWAWAY=<name>`
+builds one beside it in ~20 s and no disk space: the OJS tree is **hard-linked**
+(`cp -al`) from the shared install, with its own `config.inc.php`, `cache/`,
+`files/` and `public/`, its own MariaDB in a Docker container
+(`ojs-codecheck-db-<name>`, port 3307) and its own port (8352). Giving the same
+`THROWAWAY=<name>` to any other target points it there — `make serve`,
+`make test-e2e`, `make db-reset` — and `make throwaway-down` removes both.
+Two at once need `THROWAWAY_PORT`/`THROWAWAY_DB_PORT`. Because the code is
+hard-linked, **nothing may write into an OJS file in place** there: a write
+through the link would change the shared install too (`sed -i` is safe, it
+replaces the file). It also enables the journal: **the dataset ships it not
+publicly enabled**, so every visitor not logged in is sent to the login page,
+on the shared instance as well.
+
+`make doi-test-config THROWAWAY=<name>` (`dev/doi-test-config.php`) sets the
+journal up for DOI deposits that cannot reach anyone: DOIs for articles with
+Crossref's documentation prefix **10.5555**, which Crossref refuses to
+register; the Crossref and DataCite plugins in test mode with credentials that
+are not real; DataCite's test DOI prefix **10.5072**, its retired test prefix,
+which test mode rewrites every DOI to — the case the deposit hook must not look
+an article up by DOI for. Crossref's schema requires a `registrant`, which is
+the journal's publisher and empty in the dataset, so it sets one. `AGENCY=`
+picks the registration agency, `REGISTERED=1` marks the DOIs registered (so a
+change of the links can be seen marking them stale), and `CERTIFICATES="2 7"`
+records those certificates as published (a status row written directly —
+through the plugin it would comment on the register issue) and switches the
+#19 and #183 settings on.
+
+`make doi-export THROWAWAY=<name> ARTICLES="2 7" DOI_OUT=…` (`dev/doi-export.php`)
+writes the Crossref and DataCite records OJS would deposit, validated by OJS's
+exporters. **OJS 3.5's DOI exporters refuse its command-line tool**
+(`DOIPubIdExportPlugin::supportsCLI()` is false), so the script boots OJS as a
+command-line tool does and calls `exportXML()` itself — which is also the path
+of a deposit job in a CLI worker, every generic plugin loaded with no journal.
+**OJS never clears libxml's error buffer between exports**, so the script
+clears it before each one, or a second record reports the first one's errors.
 
 ### Inspecting the UI
 

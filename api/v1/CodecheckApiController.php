@@ -51,6 +51,7 @@ use APP\plugins\generic\codecheck\classes\Orcid\OrcidDepositService;
 use APP\plugins\generic\codecheck\classes\Orcid\OrcidTokenDAO;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckCodecheckerDirectory;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionAccess;
+use APP\plugins\generic\codecheck\classes\Workflow\CertificateReferenceUpdate;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckPublicationValidator;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckStatusHandler;
@@ -88,6 +89,7 @@ class CodecheckApiController extends PKPBaseController
         'loadMetadataFromRepository',
         'updateStatus',
         'depositToOrcid',
+        'addCertificateReference',
     ];
 
     public function __construct(private CodecheckPlugin $plugin)
@@ -199,6 +201,11 @@ class CodecheckApiController extends PKPBaseController
         Route::post('orcid-deposit', $this->depositToOrcid(...))
             ->name('codecheck.orcid.deposit')->middleware($write);
 
+        // Submission-scoped like the writes above, but for editors alone: it
+        // changes the article's own metadata, not the CODECHECK record (#183).
+        Route::post('references', $this->addCertificateReference(...))
+            ->name('codecheck.references.add')->middleware([self::roleAuthorizer(self::EDITOR_ROLES)]);
+
         // Journal-scoped: no submission, so authorize() adds no
         // SubmissionAccessPolicy for these — see SUBMISSION_SCOPED.
         $editor = [self::roleAuthorizer(self::EDITOR_ROLES)];
@@ -308,7 +315,28 @@ class CodecheckApiController extends PKPBaseController
 
         $result['settings'] = [
             'enabledConfigVersions' => $this->plugin->getEnabledConfigVersions($request->getContext()?->getId()),
+            'certificateReferenceMode' => $this->plugin->getCertificateReferenceMode($request->getContext()?->getId()),
         ];
+
+        return response()->json(array_merge($result, ['success' => true]), 200);
+    }
+
+    /**
+     * POST api/v1/codecheck/references?submissionId=N
+     *
+     * Lists the certificate among the references of the submission's latest
+     * publication, or refreshes the line already there (#183).
+     */
+    public function addCertificateReference(): \Illuminate\Http\JsonResponse
+    {
+        $request = Application::get()->getRequest();
+        $submission = $this->getAuthorizedContextObject(Application::ASSOC_TYPE_SUBMISSION);
+
+        $result = (new CertificateReferenceUpdate($this->plugin))->addToLatestPublication($submission, (int) $request->getUser()->getId());
+
+        if (isset($result['error'])) {
+            return response()->json(['success' => false, 'error' => $result['error']], $result['status']);
+        }
 
         return response()->json(array_merge($result, ['success' => true]), 200);
     }

@@ -502,6 +502,31 @@
 			{/fbvFormSection}
 		{/fbvFormSection}
 
+		{* The certificate among the article's references (#183) *}
+		{fbvFormSection list=true}
+			<div class="field-header">
+				<label class="pkp_form_title">{translate key="plugins.generic.codecheck.settings.certificateReference.title"}</label>
+			</div>
+			<label class="description">{translate key="plugins.generic.codecheck.settings.certificateReference.description"}</label>
+			<fieldset class="codecheck-choice-list">
+				{foreach from=$codecheckCertificateReferenceModes item=referenceMode}
+					<div class="codecheck-choice">
+						<input
+							type="radio"
+							name="codecheckCertificateReference"
+							id="certificateReference-{$referenceMode|escape}"
+							value="{$referenceMode|escape}"
+							{if $codecheckCertificateReference == $referenceMode}checked{/if}
+						/>
+						<label for="certificateReference-{$referenceMode|escape}">{translate key="plugins.generic.codecheck.settings.certificateReference."|cat:$referenceMode}</label>
+					</div>
+				{/foreach}
+			</fieldset>
+			{if !$codecheckJournalCollectsReferences}
+				<p class="description">{translate key="plugins.generic.codecheck.settings.certificateReference.notCollected"}</p>
+			{/if}
+		{/fbvFormSection}
+
 		{* CODECHECK links in the Crossref and DataCite deposits (#19) *}
 		{fbvFormSection list=true}
 			<div class="field-header">

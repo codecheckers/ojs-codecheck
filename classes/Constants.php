@@ -117,11 +117,28 @@ class Constants
 
     public static function getRegisterCertificateUrl(string $certificate): string
     {
+        $identifier = self::certificateIdentifier($certificate);
+
+        return $identifier === null ? '' : self::CODECHECK_REGISTER_CERTIFICATE_URL . $identifier . '/';
+    }
+
+    /**
+     * The register identifier a stored certificate names, `YYYY-NNN`, or
+     * `null` when it names none. Older records carry a `CODECHECK-` prefix.
+     */
+    public static function certificateIdentifier(string $certificate): ?string
+    {
         $identifier = preg_replace('/^CODECHECK-/', '', trim($certificate));
 
-        return preg_match('/^\d{4}-\d+$/', $identifier)
-            ? self::CODECHECK_REGISTER_CERTIFICATE_URL . $identifier . '/'
-            : '';
+        return preg_match('/^\d{4}-\d+$/', $identifier) ? $identifier : null;
+    }
+
+    /** A stored reference mode (#183), anything unknown read as off. */
+    public static function normalizeCertificateReferenceMode(mixed $mode): string
+    {
+        return in_array($mode, self::CODECHECK_CERTIFICATE_REFERENCE_MODES, true)
+            ? $mode
+            : self::CODECHECK_CERTIFICATE_REFERENCE_OFF;
     }
     /** The green the badge text has always been rendered in. */
     public const CODECHECK_BADGE_TEXT_COLOR_DEFAULT = '#2d7f3e';
@@ -303,6 +320,21 @@ class Constants
     public const CODECHECK_DOI_DEPOSIT_SETTINGS = [
         self::CODECHECK_DOI_DEPOSIT_LINKS,
         self::CODECHECK_DOI_REDEPOSIT,
+    ];
+
+    /**
+     * Whether, and when, the certificate is listed among the article's
+     * references (#183). Off when unset, which is not ambiguous, so not in the
+     * defaults map; anything else stored reads as off.
+     */
+    public const CODECHECK_CERTIFICATE_REFERENCE = 'codecheckCertificateReference';
+    public const CODECHECK_CERTIFICATE_REFERENCE_OFF = 'off';
+    public const CODECHECK_CERTIFICATE_REFERENCE_BUTTON = 'button';
+    public const CODECHECK_CERTIFICATE_REFERENCE_PUBLISH = 'publish';
+    public const CODECHECK_CERTIFICATE_REFERENCE_MODES = [
+        self::CODECHECK_CERTIFICATE_REFERENCE_OFF,
+        self::CODECHECK_CERTIFICATE_REFERENCE_BUTTON,
+        self::CODECHECK_CERTIFICATE_REFERENCE_PUBLISH,
     ];
 
     /** The statuses at which the certificate is published, and only then linked (#19). */

@@ -245,6 +245,11 @@ class SettingsForm extends Form
             $this->setData($name, (bool) $this->plugin->getSetting($context->getId(), $name));
         }
 
+        $this->setData(
+            Constants::CODECHECK_CERTIFICATE_REFERENCE,
+            $this->plugin->getCertificateReferenceMode($context->getId())
+        );
+
         // ORCID integration settings
         $this->setData(
             Constants::ORCID_ENABLED,
@@ -325,6 +330,7 @@ class SettingsForm extends Form
             Constants::CODECHECK_PUBLICATION_VALIDATION_EXTENDED,
             Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED,
             ...Constants::CODECHECK_DOI_DEPOSIT_SETTINGS,
+            Constants::CODECHECK_CERTIFICATE_REFERENCE,
             Constants::ORCID_ENABLED,
             Constants::ORCID_API_TYPE,
             Constants::ORCID_CLIENT_ID,
@@ -371,6 +377,9 @@ class SettingsForm extends Form
     {
         $templateMgr = TemplateManager::getManager($request);
         $templateMgr->assign('pluginName', $this->plugin->getName());
+        $templateMgr->assign('codecheckCertificateReferenceModes', Constants::CODECHECK_CERTIFICATE_REFERENCE_MODES);
+        // The journal's own References switch: off means nobody can see the list.
+        $templateMgr->assign('codecheckJournalCollectsReferences', (bool) $request->getContext()?->getData('citations'));
         $templateMgr->assign(
             Constants::CODECHECK_GITHUB_CUSTOM_LABELS,
             $this->getData(Constants::CODECHECK_GITHUB_CUSTOM_LABELS) ?? []
@@ -654,6 +663,12 @@ class SettingsForm extends Form
         foreach (Constants::CODECHECK_DOI_DEPOSIT_SETTINGS as $name) {
             $this->plugin->updateSetting($context->getId(), $name, (bool) $this->getData($name));
         }
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_CERTIFICATE_REFERENCE,
+            Constants::normalizeCertificateReferenceMode($this->getData(Constants::CODECHECK_CERTIFICATE_REFERENCE))
+        );
         // Save ORCID integration settings
         $this->plugin->updateSetting(
             $context->getId(),
