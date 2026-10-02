@@ -18,8 +18,13 @@
 namespace APP\plugins\generic\codecheck\tests\WorkflowUnitTests;
 
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckPostOrigin;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\GithubHttp;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckStatusRegisterUpdate;
+use GuzzleHttp\Client as GuzzleClient;
+use GuzzleHttp\Exception\ConnectException;
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\Psr7\Request;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PKP\tests\PKPTestCase;
 
@@ -270,5 +275,49 @@ class CodecheckStatusRegisterUpdateUnitTest extends PKPTestCase
         $origin = new CodecheckPostOrigin('Demo', 'https://journal.example/index.php/demo', null, null);
 
         $this->assertSame('https://journal.example/index.php/demo/about/contact', $origin->contactUrl());
+    }
+
+    protected function tearDown(): void
+    {
+        // Both are statics that last a request; a test must not hand them on.
+        CodecheckStatusRegisterUpdate::resetFailures();
+        GithubHttp::reset();
+        parent::tearDown();
+    }
+
+    /** A failure to reach the register, as the sync records one. */
+    private function recordFailure(string $message): void
+    {
+        $failed = new \ReflectionMethod(CodecheckStatusRegisterUpdate::class, 'failed');
+        $failed->invoke(null, $message);
+    }
+
+    /** Nothing sent, or everything sent and taken: nothing for the editor. */
+    public function testASyncThatFailedNowhereWarnsOfNothing()
+    {
+        $this->assertNull(CodecheckStatusRegisterUpdate::warning());
+    }
+
+    /** A refusal GitHub gave is reported as such; the log says which. */
+    public function testARefusedSyncIsReportedToTheEditor()
+    {
+        $this->recordFailure('Could not add the register labels [work in progress]: Forbidden');
+
+        $this->assertSame('plugins.generic.codecheck.register.sync.failed', CodecheckStatusRegisterUpdate::warning());
+    }
+
+    /** GitHub not answering is said as that, with the time it was given. */
+    public function testASyncGithubDidNotAnswerSaysSo()
+    {
+        $client = new GuzzleClient(GithubHttp::options(new MockHandler([
+            new ConnectException('cURL error 28: Operation timed out', new Request('GET', 'https://api.github.com/')),
+        ])));
+        try {
+            $client->sendRequest(new Request('GET', 'https://api.github.com/'));
+        } catch (ConnectException $e) {
+            $this->recordFailure('Could not comment the CODECHECK status on the register issue: ' . $e->getMessage());
+        }
+
+        $this->assertSame('plugins.generic.codecheck.register.sync.unreachable', CodecheckStatusRegisterUpdate::warning());
     }
 }

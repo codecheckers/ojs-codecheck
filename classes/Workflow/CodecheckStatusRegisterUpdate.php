@@ -34,6 +34,7 @@ use APP\core\Application;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterIssue;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckPostOrigin;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\GithubHttp;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\RegisterCodecheckers;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
@@ -44,6 +45,43 @@ use PKP\plugins\PluginRegistry;
 
 class CodecheckStatusRegisterUpdate
 {
+    /**
+     * Whether anything could not be carried to the register in this request;
+     * the log says what. A static, so the endpoint that triggered the sync can
+     * tell the editor; it lasts one request under mod_php or FPM.
+     */
+    private static bool $failed = false;
+
+    /**
+     * For the editor, one sentence on what the register issue did not get in
+     * this request, or null when it got everything it was sent — including
+     * when nothing was sent. The record itself is saved either way: the
+     * register is best-effort (#150, #186).
+     */
+    public static function warning(): ?string
+    {
+        if (!self::$failed) {
+            return null;
+        }
+
+        return GithubHttp::wasUnreachable()
+            ? GithubHttp::unreachableMessage('plugins.generic.codecheck.register.sync.unreachable')
+            : __('plugins.generic.codecheck.register.sync.failed');
+    }
+
+    /** Forget the failures, for tests. */
+    public static function resetFailures(): void
+    {
+        self::$failed = false;
+    }
+
+    /** Log a failure to reach the register, and keep it for `warning()`. */
+    private static function failed(string $message): void
+    {
+        CodecheckLogger::warning($message);
+        self::$failed = true;
+    }
+
     /**
      * Bring the submission's register issue up to date with the new status, if
      * there is an issue to bring up to date.
@@ -70,7 +108,9 @@ class CodecheckStatusRegisterUpdate
                 $assigned = $client->syncAssignees($issueNumber, $codecheckers);
                 // A failed request says nothing about who is assigned, so the
                 // comment then names nobody rather than calling them unreachable.
-                if ($assigned !== null) {
+                if ($assigned === null) {
+                    self::$failed = true;
+                } else {
                     $split = RegisterCodecheckers::split($codecheckers, $assigned);
                     $named = $split['assigned'] === [] && $split['unassigned'] === [] ? null : $split;
                 }
@@ -78,7 +118,7 @@ class CodecheckStatusRegisterUpdate
             self::comment($client, $issueNumber, $submissionId, $status, $named, $origin);
             self::syncLabels($client, $issueNumber, $submissionId, $status);
         } catch (\Throwable $e) {
-            CodecheckLogger::warning('Could not carry the CODECHECK status to the register issue: ' . $e->getMessage());
+            self::failed('Could not carry the CODECHECK status to the register issue: ' . $e->getMessage());
         }
 
         self::refreshMetadata($submissionId);
@@ -110,9 +150,12 @@ class CodecheckStatusRegisterUpdate
                 return;
             }
 
-            $register['client']->syncAssignees($register['issueNumber'], $register['metadata']->codecheckers ?? null);
+            // The client has logged why; null is its failure, [] nobody to assign.
+            if ($register['client']->syncAssignees($register['issueNumber'], $register['metadata']->codecheckers ?? null) === null) {
+                self::$failed = true;
+            }
         } catch (\Throwable $e) {
-            CodecheckLogger::warning('Could not assign the codecheckers to the register issue: ' . $e->getMessage());
+            self::failed('Could not assign the codecheckers to the register issue: ' . $e->getMessage());
         }
     }
 
@@ -124,16 +167,15 @@ class CodecheckStatusRegisterUpdate
      * The rest of the body — paper title, authors, the readable lines — needs
      * what only the form sends, and is still rewritten by "update issue" alone.
      *
-     * Under the journal's choice to keep the issue body up to date, for an
-     * editor only (#173), and once the record carries its identifier.
+     * Under the journal's choice to keep the issue body up to date, and once
+     * the record carries its identifier. Whoever recorded the status: a
+     * reviewer's status change already comments and moves the labels, and the
+     * block, which says it is the source of truth, must not lag behind them.
+     * A save reaches this for an editor only (`CodecheckMetadataHandler::afterSave()`).
      */
     public static function refreshMetadata(int $submissionId): void
     {
         try {
-            if (!self::byEditor()) {
-                return;
-            }
-
             $register = self::register($submissionId, Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY);
             if ($register === null) {
                 return;
@@ -162,7 +204,7 @@ class CodecheckStatusRegisterUpdate
                 CodecheckLogger::info("Rewrote the metadata of register issue #{$register['issueNumber']} for submission {$submissionId}.");
             }
         } catch (\Throwable $e) {
-            CodecheckLogger::warning('Could not rewrite the metadata of the register issue: ' . $e->getMessage());
+            self::failed('Could not rewrite the metadata of the register issue: ' . $e->getMessage());
         }
     }
 
@@ -223,6 +265,13 @@ class CodecheckStatusRegisterUpdate
         $repository = $plugin->getSetting($contextId, Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY);
 
         if (empty($token) || empty($organization) || empty($repository)) {
+            return null;
+        }
+
+        // A write is due, and would fail at once: GitHub did not answer
+        // earlier in this request. Reported as this sync failing, since it did.
+        if (GithubHttp::wasUnreachable()) {
+            self::$failed = true;
             return null;
         }
 
@@ -329,7 +378,7 @@ class CodecheckStatusRegisterUpdate
                 "Commented the CODECHECK status on register issue #{$issueNumber} for submission {$submissionId}."
             );
         } catch (\Throwable $e) {
-            CodecheckLogger::warning('Could not comment the CODECHECK status on the register issue: ' . $e->getMessage());
+            self::failed('Could not comment the CODECHECK status on the register issue: ' . $e->getMessage());
         }
     }
 
@@ -378,7 +427,7 @@ class CodecheckStatusRegisterUpdate
                     $client->removeLabelFromIssue($issueNumber, $label);
                     $removed[] = $label;
                 } catch (\Throwable $e) {
-                    CodecheckLogger::warning(
+                    self::failed(
                         "Could not remove the register label '{$label}': " . $e->getMessage()
                     );
                 }
@@ -388,7 +437,7 @@ class CodecheckStatusRegisterUpdate
                 $client->addLabelsToIssue($issueNumber, $changes['add']);
                 $added = $changes['add'];
             } catch (\Throwable $e) {
-                CodecheckLogger::warning(
+                self::failed(
                     'Could not add the register labels [' . implode(', ', $changes['add']) . ']: ' . $e->getMessage()
                 );
             }
@@ -398,7 +447,7 @@ class CodecheckStatusRegisterUpdate
                 . implode(', ', $added) . '], removed [' . implode(', ', $removed) . '].'
             );
         } catch (\Throwable $e) {
-            CodecheckLogger::warning('Could not update the labels of the register issue: ' . $e->getMessage());
+            self::failed('Could not update the labels of the register issue: ' . $e->getMessage());
         }
     }
 

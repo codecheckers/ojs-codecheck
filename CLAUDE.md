@@ -22,11 +22,12 @@ composer install    # REQUIRED — see note below
 npm install
 ```
 
-`composer install` is **not optional**: three classes hard-`require`
+`composer install` is **not optional**: four classes hard-`require`
 `__DIR__/../../vendor/autoload.php` at file scope
 (`classes/Workflow/CodecheckMetadataHandler.php:5`,
 `classes/Workflow/CodecheckYamlValidator.php:5`,
-`classes/CodecheckRegister/CodecheckGithubRegisterApiClient.php:5`).
+`classes/CodecheckRegister/CodecheckGithubRegisterApiClient.php:5`,
+`classes/CodecheckRegister/GithubHttp.php`).
 Without `vendor/`, any request touching the API handler fatals.
 
 ### Frontend build
@@ -663,22 +664,76 @@ both for editors only:
   is the state #174 removed.
 
 Issue creation and "update issue" do not assign: they carried the form's
-unsaved list and bypassed the resolver. Nothing is unassigned: someone may
-have assigned a person by hand, and withdrawing the plugin's own assignments
-needs a record of which ones it made. GitHub **silently drops** a username it
+unsaved list and bypassed the resolver. **Nothing is ever unassigned**, not
+when a codechecker is removed from the form and not when the issue is closed:
+an assignment is a record of who worked on the check, and someone may have
+assigned a person by hand. That was the repository owner's decision, so
+withdrawing the plugin's own assignments is not a gap to close. GitHub **silently drops** a username it
 cannot assign (not a member or collaborator of the register, has not
 commented), so the answer is read back.
 
 **The issue body's JSON block follows the record; the rest of the body does
 not.** `CodecheckStatusRegisterUpdate::refreshMetadata()` rewrites the
-`<details>` JSON block from the stored record after every status change and
-every editorial save — editors only, under the journal's "update body" choice,
-once the record carries its identifier. It reads the body first and writes only
+`<details>` JSON block from the stored record after every status change,
+whoever recorded it, and every editorial save — under the journal's "update
+body" choice, once the record carries its identifier. A reviewer's status
+change rewrites it too (the repository owner's decision): it already comments
+and moves the labels, and a block that says it is the source of truth must not
+lag behind them. Only the save path is for editors, gated in `afterSave()`. It reads the body first and writes only
 when the block changed, and leaves a body without the block alone. The rest of
 the body (paper title, authors, the readable status and codecheckers lines)
 needs what only the form sends, so it is still rewritten by "update issue"
 alone; `CodecheckGithubRegisterIssue::metadataBlock()` is the one builder of
 the block for both paths.
+
+**So the block says it is the source of truth**, in its summary line where it
+can be read without opening it, with the time it was written (UTC), and a
+sentence under it saying the lines above and the comments below may describe
+an earlier state. That is the repository owner's decision: the readable lines
+are **not** rebuilt from the record, and the status comments stay as they are,
+as the record of how the check progressed. It claims to be the record *as of
+that time* and no more, because a journal without "update body" leaves it
+behind. Consequences to keep:
+
+- **The block is found by an HTML comment marker**, not by its summary, which
+  now changes with every write. A block from before the marker is found by its
+  old opening and rewritten once with the marker, even if its JSON is the same.
+  Line endings are normalised first: a body saved in GitHub's web editor comes
+  back CRLF, and the block would silently stop being found.
+- **Whether to write is the JSON's question** (`metadataJson()`): the update
+  time differs on every call, so comparing bodies would edit the issue on every
+  save, changed or not. "Update issue", which the form sends after every save,
+  rebuilds the whole body, so it reads the issue first and keeps the existing
+  block when the JSON is the same (`keepingUnchangedMetadataBlock()`), and sends
+  no body when nothing changed.
+
+**Every GitHub API client comes from `GithubHttp::client()`**, which sets a
+time limit (`TIMEOUT_SECONDS`, `CONNECT_TIMEOUT_SECONDS`) and a per-request
+breaker: once a call goes unanswered, every later GitHub call in that PHP
+request fails at once, so a save that makes five calls waits for one timeout,
+not five. knplabs' own client has no limit at all, so `new \Github\Client()`
+anywhere else brings back a save that hangs for as long as PHP lets it. The
+breaker is a static and nothing resets it within a request — the trap the ORCID
+memo has too; a test that trips it must call `GithubHttp::reset()`.
+**`depositToRegister()` resets it for each article**: publishing an issue
+publishes every article in one request, the deposit runs only on publish, and
+one timeout must not cancel every later article's deposit — the ORCID memo's
+rule, only a resolved attempt is remembered. It takes
+OJS's `[proxy]` setting as `PKPApplication::getHttpClient()` does, and none
+under PHPUnit, where `Config` cannot be read. The other outbound fetch, the
+`codecheck.yml` download in `CurlApiClient::fetch()`, has its own cURL time
+limit.
+
+**A register failure reaches the editor without failing what triggered it.**
+`CodecheckStatusRegisterUpdate` records what it could not carry (comment,
+labels, assignees, metadata block) and `warning()` turns that into one
+sentence, which `POST metadata` and `POST status/update` answer as
+`registerWarning` beside their success; the editorial form and the status
+panel show it. The save also answers `registerUnreachable`, and the form then
+skips its "update issue" request: that is a second PHP request, with a fresh
+breaker, and would wait out a second time limit. The explicit writes — reserving an identifier, "update issue" —
+fail as before, but say GitHub did not answer (504) rather than giving cURL's
+message, and that the write may have landed regardless.
 
 **A codechecker without a usable username is the fallback, not an error.** The
 comment names them, with their ORCID record, and links the journal's contact

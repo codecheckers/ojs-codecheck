@@ -268,4 +268,100 @@ class CodecheckGithubRegisterIssueUnitTest extends PKPTestCase
     {
         $this->assertNull(CodecheckGithubRegisterIssue::withMetadataBlock('Written by hand.', '<details>…</details>'));
     }
+
+    private function block(string $status, string $time): string
+    {
+        return CodecheckGithubRegisterIssue::metadataBlock(
+            '2026-007',
+            $status,
+            ['https://github.com/a/b'],
+            [['name' => 'Daniel', 'orcid' => '', 'github' => 'nuest']],
+            new CodecheckPostOrigin('Demo', 'https://journal.example/index.php/demo', null, null),
+            '42',
+            new \DateTimeImmutable($time)
+        );
+    }
+
+    /**
+     * The block is the one part of the issue that follows the record, while
+     * the readable lines and the comments may describe an earlier state; it
+     * says so, and when it was written, without being opened.
+     */
+    public function testTheBlockSaysItIsTheSourceOfTruthAndAsOfWhen()
+    {
+        $block = $this->block('plugins.generic.codecheck.status.assignedCodechecker', '2026-10-02 21:15:00+02:00');
+
+        $this->assertStringContainsString(
+            '<summary><h3>CODECHECK metadata, the record of this check (JSON, updated 2026-10-02 19:15 UTC)</h3></summary>',
+            $block
+        );
+        $this->assertStringContainsString('source of truth for the metadata of this check, as of the time above', $block);
+    }
+
+    /** GitHub's web editor saves CRLF; the block must still be found. */
+    public function testABodySavedInTheWebEditorStillShowsItsBlock()
+    {
+        $status = 'plugins.generic.codecheck.status.assignedCodechecker';
+        $crlf = str_replace("\n", "\r\n", "## Title\n\n" . $this->block($status, '2026-10-01 08:00:00Z') . "\n\nSigned.");
+
+        $this->assertNotNull(CodecheckGithubRegisterIssue::metadataJson($crlf));
+        $this->assertTrue(CodecheckGithubRegisterIssue::hasMarkedMetadataBlock($crlf));
+        $this->assertStringContainsString('2026-10-02 19:15 UTC', CodecheckGithubRegisterIssue::withMetadataBlock($crlf, $this->block($status, '2026-10-02 19:15:00Z')));
+    }
+
+    /**
+     * "Update issue" rebuilds the whole body after every save; a block whose
+     * JSON did not change keeps the time the record last changed.
+     */
+    public function testARebuiltBodyKeepsAnUnchangedBlockAndItsTime()
+    {
+        $status = 'plugins.generic.codecheck.status.assignedCodechecker';
+        $current = "## Old title\n\n" . $this->block($status, '2026-10-01 08:00:00Z');
+        $rebuilt = "## New title\n\n" . $this->block($status, '2026-10-02 19:15:00Z');
+
+        $kept = CodecheckGithubRegisterIssue::keepingUnchangedMetadataBlock($rebuilt, $current);
+        $this->assertStringStartsWith('## New title', $kept);
+        $this->assertStringContainsString('2026-10-01 08:00 UTC', $kept);
+
+        // A changed record, or a block from before the marker, takes the new one.
+        $changed = "## New title\n\n" . $this->block('plugins.generic.codecheck.status.stalled.author', '2026-10-02 19:15:00Z');
+        $this->assertSame($changed, CodecheckGithubRegisterIssue::keepingUnchangedMetadataBlock($changed, $current));
+        $legacy = "<details>\n<summary><h3>JSON encoded CODECHECK metadata</h3></summary>\n\n```json\n{}\n```\n\n</details>";
+        $this->assertSame($rebuilt, CodecheckGithubRegisterIssue::keepingUnchangedMetadataBlock($rebuilt, $legacy));
+    }
+
+    /** An issue opened before the block was marked is found, and gets the marked block. */
+    public function testABlockWrittenBeforeItWasMarkedIsReplaced()
+    {
+        $legacy = "## Title\n\n<details>\n<summary><h3>JSON encoded CODECHECK metadata</h3></summary>\n\n```json\n{\"identifier\": \"2026-007\"}\n```\n\n</details>\n\nSigned.";
+        $block = $this->block('plugins.generic.codecheck.status.assignedCodechecker', '2026-10-02 19:15:00Z');
+
+        $updated = CodecheckGithubRegisterIssue::withMetadataBlock($legacy, $block);
+
+        $this->assertSame("## Title\n\n" . $block . "\n\nSigned.", $updated);
+        // And the marked block is found again next time.
+        $this->assertSame($updated, CodecheckGithubRegisterIssue::withMetadataBlock($updated, $block));
+    }
+
+    /**
+     * Whether the block needs writing is the JSON's question alone: the update
+     * time differs every time, and a save that changed nothing must not
+     * rewrite the issue.
+     */
+    public function testTheJsonDecidesWhetherTheBlockChanged()
+    {
+        $status = 'plugins.generic.codecheck.status.assignedCodechecker';
+        $earlier = $this->block($status, '2026-10-01 08:00:00Z');
+
+        $this->assertNotSame($earlier, $this->block($status, '2026-10-02 19:15:00Z'));
+        $this->assertSame(
+            CodecheckGithubRegisterIssue::metadataJson($earlier),
+            CodecheckGithubRegisterIssue::metadataJson($this->block($status, '2026-10-02 19:15:00Z'))
+        );
+        $this->assertNotSame(
+            CodecheckGithubRegisterIssue::metadataJson($earlier),
+            CodecheckGithubRegisterIssue::metadataJson($this->block('plugins.generic.codecheck.status.stalled.author', '2026-10-01 08:00:00Z'))
+        );
+        $this->assertNull(CodecheckGithubRegisterIssue::metadataJson('Written by hand.'));
+    }
 }

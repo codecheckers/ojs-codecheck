@@ -2,6 +2,7 @@
 
 namespace APP\plugins\generic\codecheck\api\v1;
 
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\GithubHttp;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlHttpException;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitException;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
@@ -25,6 +26,10 @@ class CurlApiClient implements ApiClientInterface
         curl_setopt_array($curlHandle, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_FOLLOWLOCATION => true, // follow redirects
+            // A repository host that never answers must not hold the editor's
+            // request, or a publication, for as long as PHP lets it run.
+            CURLOPT_CONNECTTIMEOUT => GithubHttp::CONNECT_TIMEOUT_SECONDS,
+            CURLOPT_TIMEOUT => GithubHttp::TIMEOUT_SECONDS,
             CURLOPT_USERAGENT => 'Mozilla/5.0 (compatible; Codecheck/1.0; +https://codecheck.org.uk)', // Set the User Agent
             CURLOPT_HTTPHEADER => ['Accept: */*'],
         ]);

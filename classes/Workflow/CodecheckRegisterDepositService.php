@@ -7,12 +7,12 @@ use APP\core\Request;
 use APP\facades\Repo;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckPostOrigin;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\GithubHttp;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Exceptions\GithubUrlParseException;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckRepositories;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
-use Github\Client;
 
 /**
  * Assembles the register.csv row for a published CODECHECK and deposits it
@@ -35,7 +35,7 @@ class CodecheckRegisterDepositService
     {
         $this->plugin = $plugin;
         $this->request = Application::get()->getRequest();
-        $this->codecheckMetadataHandler = new CodecheckMetadataHandler($this->request, new Client());
+        $this->codecheckMetadataHandler = new CodecheckMetadataHandler($this->request, GithubHttp::client());
     }
 
     /**

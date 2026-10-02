@@ -60,6 +60,9 @@
                     <p class="text-base-normal" :class="statusClass">
                         {{ getStatusText() }}
                     </p>
+                    <p v-if="registerWarning" class="codecheck-register-warning" role="status">
+                        {{ registerWarning }}
+                    </p>
                 </div>
             </div>
         </div>
@@ -92,8 +95,8 @@ export default {
       saving: false,
       dataLoaded: false,
       error: null,
-      saveMessage: '',
-      saveMessageType: '',
+      // What the register issue did not get from the last recorded status (#186).
+      registerWarning: null,
       hasUnsavedChanges: false,
       statusData: [],
       allStatuses: [],
@@ -314,6 +317,9 @@ export default {
      * @returns {Promise<string|null>} the reason it was refused, or null
      */
     async updateStatus(status, user) {
+        // Whatever comes of this one, the last one's warning is not about it.
+        this.registerWarning = null;
+
         if (!this.userAllowedToAccess && user.id !== -1) {
             return this.t('plugins.generic.codecheck.status.update.notPermitted');
         }
@@ -348,6 +354,8 @@ export default {
 
             this.statusData = data.statusRecord;
             this.allStatuses = data.allStatuses;
+            // Recorded either way; the register is best-effort, and says so here.
+            this.registerWarning = data.registerWarning ?? null;
             return null;
         } catch (error) {
             console.error('CODECHECK: the status could not be recorded', error);
@@ -446,6 +454,15 @@ export default {
   height: 2.5rem;
   background: #fff;
   width: 100%;
+}
+
+.codecheck-register-warning {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeeba;
+  border-radius: 4px;
 }
 
 .loading-state,

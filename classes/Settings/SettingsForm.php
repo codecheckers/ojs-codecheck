@@ -17,11 +17,11 @@ use APP\core\Application;
 use APP\notification\Notification;
 use APP\notification\NotificationManager;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\GithubHttp;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
 use APP\template\TemplateManager;
-use Github\Client;
 use PKP\form\Form;
 use PKP\form\validation\FormValidatorCSRF;
 use PKP\form\validation\FormValidatorPost;
@@ -751,7 +751,7 @@ class SettingsForm extends Form
         $missingLabels = [];
 
         try {
-            $client = new Client();
+            $client = GithubHttp::client();
 
             foreach ($requiredLabels as $label) {
                 $hasLabel = CodecheckGithubRegisterApiClient::repositoryHasLabel(

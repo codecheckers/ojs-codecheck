@@ -720,6 +720,39 @@ describe('CodecheckMetadataForm Component', () => {
     cy.get('.save-message.error').should('not.exist');
   });
 
+  /**
+   * The save stands when the register issue could not be brought up to date,
+   * and the editor is told so beside it rather than only in the console (#186).
+   */
+  it('says beside a successful save what the register did not get', () => {
+    cy.intercept('POST', '**/codecheck/metadata*', {
+      statusCode: 200,
+      body: { success: true, registerWarning: 'GitHub did not answer within 10 seconds.' }
+    }).as('saveMetadata');
+
+    mountForm();
+    cy.wait('@loadMetadata');
+    cy.get('.footer-actions button').contains(/save/i).click();
+    cy.wait('@saveMetadata');
+
+    cy.get('.save-message.warning')
+      .should('contain', 'plugins.generic.codecheck.savedSuccessfully')
+      .and('contain', 'GitHub did not answer within 10 seconds.');
+  });
+
+  it('does not ask to update a register issue the check does not have', () => {
+    cy.intercept('POST', '**/codecheck/metadata*', { statusCode: 200, body: { success: true } }).as('saveMetadata');
+    cy.intercept('POST', '**/codecheck/issue*', cy.spy().as('updateIssue'));
+
+    mountForm();
+    cy.wait('@loadMetadata');
+    cy.get('.footer-actions button').contains(/save/i).click();
+    cy.wait('@saveMetadata');
+
+    cy.get('.save-message.success').should('be.visible');
+    cy.get('@updateIssue').should('not.have.been.called');
+  });
+
   describe('fields the config specification requires', () => {
     const warning = () => cy.get('[data-testid="config-spec-warning"]');
     const missing = (field) => `plugins.generic.codecheck.configSpec.missing.${field}`;

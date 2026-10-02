@@ -500,6 +500,18 @@ msgstr "The register repository {$organization}/{$repository} holds issues carry
 msgid "plugins.generic.codecheck.identifier.reserve.firstIdentifier.refused.unreadableRegister"
 msgstr "The register repository {$organization}/{$repository} could not be read, so it is not known which certificate identifiers it already holds. No identifier was reserved. Check the register repository setting, that the repository is public, and try again later — GitHub limits how often it may be read."
 
+msgid "plugins.generic.codecheck.register.unreachable"
+msgstr "GitHub did not answer within {$seconds} seconds. Look at the CODECHECK Register before trying again: the change may have reached it all the same."
+
+msgid "plugins.generic.codecheck.register.unreachable.read"
+msgstr "GitHub did not answer within {$seconds} seconds, so the CODECHECK Register could not be read and nothing was reserved. Try again later."
+
+msgid "plugins.generic.codecheck.register.sync.unreachable"
+msgstr "GitHub did not answer within {$seconds} seconds, so the CODECHECK Register issue was not brought up to date. The next save or status change tries again."
+
+msgid "plugins.generic.codecheck.register.sync.failed"
+msgstr "The CODECHECK Register issue could not be brought fully up to date. The server log says what GitHub refused."
+
 msgid "plugins.generic.codecheck.identifier.reserve.register.notConfigured"
 msgstr "No CODECHECK register repository is configured. Set the register organisation and repository in the CODECHECK plugin settings first."
 

@@ -9,6 +9,7 @@ use APP\facades\Repo;
 use APP\plugins\generic\codecheck\api\v1\CurlApiClient;
 use APP\plugins\generic\codecheck\api\v1\JsonResponse;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\GithubHttp;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\RegisterCodecheckers;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\DoiDeposit\CodecheckDoiDeposit;
@@ -32,9 +33,9 @@ class CodecheckMetadataHandler
      *
      * @param \APP\core\Request $request The API Request
      */
-    public function __construct(Request $request, Client $client = new Client(), CurlApiClient $curlApiClient = new CurlApiClient())
+    public function __construct(Request $request, ?Client $client = null, CurlApiClient $curlApiClient = new CurlApiClient())
     {
-        $this->client = $client;
+        $this->client = $client ?? GithubHttp::client();
         $this->submissionId = $request->getUserVar('submissionId');
         $this->curlApiClient = $curlApiClient;
 

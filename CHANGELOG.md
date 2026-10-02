@@ -23,6 +23,8 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 - The register issue's JSON metadata records the journal's address and the OJS and plugin versions
 - A codechecker can be given a GitHub username, offered from the CODECHECK community list when their ORCID iD is on it. Once the check stands at "codechecker assigned", an editor's change assigns them to the register issue, and the status comment names them with their ORCID iD; a codechecker the register cannot assign is named with a link to the journal's contact page (#186)
 - The register issue lists the codecheckers, and its JSON metadata is brought up to date on every status change and every save of the CODECHECK form, when the journal keeps the issue body up to date (#186)
+- The register issue's JSON metadata says that it is the source of truth for the check's metadata, and when it was last updated (#186)
+- A save or status change that could not bring the register issue up to date says so beside its result; calls to GitHub give up after 10 seconds (#186)
 
 #### DOI deposits
 

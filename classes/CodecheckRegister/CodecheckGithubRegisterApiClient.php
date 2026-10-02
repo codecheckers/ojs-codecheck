@@ -40,7 +40,7 @@ class CodecheckGithubRegisterApiClient
      */
     public function __construct(string $githubPersonalAccessToken, string $githubRegisterOrganization, string $githubRegisterRepository, string $submissionID, CodecheckPostOrigin $origin, ?Client $client = null)
     {
-        $this->client = $client ?? new Client();
+        $this->client = $client ?? GithubHttp::client();
         $this->labels = new UniqueArray();
         $this->githubPAT = $githubPersonalAccessToken;
         $this->githubRegisterOrganization = $githubRegisterOrganization;
@@ -179,7 +179,7 @@ class CodecheckGithubRegisterApiClient
         ?Client $client = null
     ): ?bool {
         try {
-            ($client ?? new Client())->api('issue')->labels()->show($organization, $repository, $label);
+            ($client ?? GithubHttp::client())->api('issue')->labels()->show($organization, $repository, $label);
             return true;
         } catch (\Throwable $e) {
             if ((int) $e->getCode() === 404) {
@@ -538,9 +538,10 @@ class CodecheckGithubRegisterApiClient
      * Rewrite the JSON metadata block in a register issue's body, leaving the
      * rest of the body as it stands (#186).
      *
-     * Read first and written only when the block changed, so a save that
+     * Read first and written only when the JSON changed, so a save that
      * changed nothing the block carries costs one request and no edit on the
-     * issue. A body without the block is left alone.
+     * issue — not even a new update time. A body without the block is left
+     * alone.
      *
      * @throws ApiUpdateException when GitHub refuses the edit.
      *
@@ -552,10 +553,17 @@ class CodecheckGithubRegisterApiClient
 
         try {
             $body = (string) ($this->showIssue($issueNumber)['body'] ?? '');
-            $updated = CodecheckGithubRegisterIssue::withMetadataBlock($body, $block);
-            if ($updated === null || $updated === $body) {
+            // The JSON alone decides: the block's update time differs on every
+            // call, and a save that changed nothing it carries leaves it be.
+            // A body without the block (null) is left alone; one written before
+            // the block was marked is rewritten once, to carry the marker.
+            $current = CodecheckGithubRegisterIssue::metadataJson($body);
+            if ($current === null
+                || ($current === CodecheckGithubRegisterIssue::metadataJson($block)
+                    && CodecheckGithubRegisterIssue::hasMarkedMetadataBlock($body))) {
                 return false;
             }
+            $updated = CodecheckGithubRegisterIssue::withMetadataBlock($body, $block);
 
             $this->client->api('issue')->update(
                 $this->githubRegisterOrganization,
@@ -664,11 +672,18 @@ class CodecheckGithubRegisterApiClient
             $issueContents['title'] = $codecheckIssue->getTitle();
         }
 
-        if (in_array(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY, $updateInformation)) {
-            $issueContents['body'] = $codecheckIssue->getBody();
-        }
-
         try {
+            if (in_array(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY, $updateInformation)) {
+                // The form asks for this after every save: a block whose JSON
+                // did not change keeps its time, and a body that would not
+                // change is not sent, so the issue shows no edit for it.
+                $currentBody = (string) ($this->showIssue($issueNumber)['body'] ?? '');
+                $body = CodecheckGithubRegisterIssue::keepingUnchangedMetadataBlock($codecheckIssue->getBody(), $currentBody);
+                if ($body !== str_replace("\r\n", "\n", $currentBody)) {
+                    $issueContents['body'] = $body;
+                }
+            }
+
             $issue = empty($issueContents)
                 // Nothing the journal asked to keep up to date, so nothing to send.
                 ? $this->showIssue($issueNumber)

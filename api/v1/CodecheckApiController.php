@@ -44,6 +44,7 @@ use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegis
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterIssue;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckIssueLabels;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckPostOrigin;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\GithubHttp;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\classes\Orcid\OrcidApiClient;
@@ -55,6 +56,7 @@ use APP\plugins\generic\codecheck\classes\Workflow\CertificateReferenceUpdate;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckPublicationValidator;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckStatusHandler;
+use APP\plugins\generic\codecheck\classes\Workflow\CodecheckStatusRegisterUpdate;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckYamlValidator;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
 use Illuminate\Http\Request as IlluminateRequest;
@@ -381,7 +383,7 @@ class CodecheckApiController extends PKPBaseController
     {
         return new CodecheckMetadataHandler(
             Application::get()->getRequest(),
-            new \Github\Client(),
+            GithubHttp::client(),
             new CurlApiClient()
         );
     }
@@ -486,7 +488,13 @@ class CodecheckApiController extends PKPBaseController
             );
         }
 
-        return response()->json(array_merge($result, ['success' => true]), 200);
+        return response()->json(array_merge($result, [
+            'success' => true,
+            'registerWarning' => CodecheckStatusRegisterUpdate::warning(),
+            // So the form does not ask GitHub again in a second request, and
+            // wait out a second time limit, for the issue update.
+            'registerUnreachable' => GithubHttp::wasUnreachable(),
+        ]), 200);
     }
 
     /**
@@ -639,6 +647,7 @@ class CodecheckApiController extends PKPBaseController
                 'success' => true,
                 'statusRecord' => $statusUpdate,
                 'allStatuses' => Constants::CODECHECK_STATUSES,
+                'registerWarning' => CodecheckStatusRegisterUpdate::warning(),
             ], 200);
         }
 
@@ -669,7 +678,33 @@ class CodecheckApiController extends PKPBaseController
             'success' => true,
             'statusRecord' => $statusUpdate,
             'allStatuses' => Constants::CODECHECK_STATUSES,
+            'registerWarning' => CodecheckStatusRegisterUpdate::warning(),
         ], 200);
+    }
+
+    /**
+     * The answer to a write to the register that failed: GitHub's own refusal
+     * as it gave it, or — when GitHub did not answer at all — a sentence the
+     * editor can act on rather than a cURL error number. A write GitHub did
+     * not answer may have landed regardless, so the sentence says to look.
+     *
+     * @param string $error what to say when GitHub did answer
+     * @param int $status the status to answer with then
+     * @param array<string, mixed> $extra further keys for the answer
+     * @param string $unreachableKey what to say when GitHub did not answer: by
+     *   default that a write may have landed; a failed read says it did not
+     */
+    private static function registerFailure(
+        string $error,
+        int $status,
+        array $extra = [],
+        string $unreachableKey = 'plugins.generic.codecheck.register.unreachable'
+    ): \Illuminate\Http\JsonResponse {
+        if (GithubHttp::wasUnreachable()) {
+            [$error, $status] = [GithubHttp::unreachableMessage($unreachableKey), 504];
+        }
+
+        return response()->json(['success' => false, 'error' => $error] + $extra, $status);
     }
 
 
@@ -959,10 +994,7 @@ class CodecheckApiController extends PKPBaseController
                 $issueNumber = null;
             }
         } catch (\Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage(),
-            ], JsonResponse::errorStatus($e));
+            return self::registerFailure($e->getMessage(), JsonResponse::errorStatus($e));
         }
 
         return response()->json([
@@ -1033,11 +1065,7 @@ class CodecheckApiController extends PKPBaseController
                 'issueNumber' => $updatedIssue['number'],
             ], 200);
         } catch (\Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'identifier' => $identifier->toStr(),
-                'error' => $e->getMessage()
-            ], JsonResponse::errorStatus($e));
+            return self::registerFailure($e->getMessage(), JsonResponse::errorStatus($e), ['identifier' => $identifier->toStr()]);
         }
     }
 
@@ -1214,10 +1242,12 @@ class CodecheckApiController extends PKPBaseController
         $hasLabel = $codecheckGithubRegisterApiClient->registerHasIdAssignedLabel();
 
         if ($hasLabel === null) {
-            return response()->json([
-                'success' => false,
-                'error' => __('plugins.generic.codecheck.identifier.reserve.firstIdentifier.refused.unreadableRegister', $messageParams),
-            ], 502);
+            return self::registerFailure(
+                __('plugins.generic.codecheck.identifier.reserve.firstIdentifier.refused.unreadableRegister', $messageParams),
+                502,
+                [],
+                'plugins.generic.codecheck.register.unreachable.read'
+            );
         }
 
         if ($hasLabel === false) {

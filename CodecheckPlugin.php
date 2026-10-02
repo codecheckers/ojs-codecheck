@@ -5,6 +5,7 @@ namespace APP\plugins\generic\codecheck;
 use APP\core\Application;
 use APP\facades\Repo;
 use APP\plugins\generic\codecheck\api\v1\CodecheckApiController;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\GithubHttp;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\DoiDeposit\CodecheckDoiDeposit;
 use APP\plugins\generic\codecheck\classes\FrontEnd\ArticleAvailability;
@@ -175,6 +176,12 @@ class CodecheckPlugin extends GenericPlugin
     public function depositToRegister(string $hookName, array $args): bool
     {
         [$newPublication, $publication, $submission] = $args;
+
+        // Publishing an issue publishes every article in one request, and a
+        // deposit runs only on publish: one article's timeout must not cost
+        // the others theirs, as the breaker would otherwise have it. Each
+        // deposit waits out at most one time limit of its own.
+        GithubHttp::reset();
 
         if (!$submission->getData('codecheckOptIn')) {
             return false;

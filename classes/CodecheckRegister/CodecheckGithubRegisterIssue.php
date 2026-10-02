@@ -11,8 +11,15 @@ use APP\plugins\generic\codecheck\classes\Workflow\CodecheckStatusRegisterUpdate
 
 class CodecheckGithubRegisterIssue
 {
-    /** How the JSON metadata block opens, which is how it is found again. */
-    private const METADATA_BLOCK_OPENING = "<details>\n<summary><h3>JSON encoded CODECHECK metadata</h3></summary>\n\n";
+    /**
+     * What the JSON metadata block starts with, which is how it is found again.
+     * A comment, so it says nothing to a reader and stays put whatever the
+     * summary line below it says.
+     */
+    private const METADATA_BLOCK_MARKER = "<!-- CODECHECK metadata: written by the journal's OJS, do not edit by hand -->\n";
+
+    /** How the block opened before it was marked, so those issues are found too. */
+    private const LEGACY_METADATA_BLOCK_OPENING = "<details>\n<summary><h3>JSON encoded CODECHECK metadata</h3></summary>\n\n";
 
     private string $repositoryOwner;
     private string $repository;
@@ -121,9 +128,17 @@ class CodecheckGithubRegisterIssue
      * record when the status or the record changes, without the paper title
      * and author string the rest of the body needs (#186).
      *
+     * It is the one part of the issue written from the record, so it says so
+     * where it can be read without opening it: that it is the record, and as
+     * of when. It claims no more than that time — a reviewer's status change,
+     * or a journal that does not keep the body up to date, leaves it as it
+     * was. The readable lines above it are written only by "update issue",
+     * and the comments below are a record of how the check progressed.
+     *
      * @param ?string $status the status key, or null when the journal does not
      *   publish the status
      * @param string[] $publicRepositories already reduced to what a reader may see
+     * @param ?\DateTimeInterface $updated when it was written; now, unless a test says otherwise
      */
     public static function metadataBlock(
         string $identifier,
@@ -131,7 +146,8 @@ class CodecheckGithubRegisterIssue
         array $publicRepositories,
         mixed $codecheckers,
         CodecheckPostOrigin $origin,
-        string $submissionID
+        string $submissionID,
+        ?\DateTimeInterface $updated = null
     ): string {
         $metadata = ['identifier' => $identifier];
         if ($status !== null) {
@@ -147,7 +163,15 @@ class CodecheckGithubRegisterIssue
             'plugin' => $origin->pluginMetadata(),
         ];
 
-        return self::METADATA_BLOCK_OPENING
+        $updated = ($updated ?? new \DateTimeImmutable())->setTimezone(new \DateTimeZone('UTC'));
+
+        // English whatever the editor's language: the register is one shared
+        // place read in English, as the signature is.
+        return self::METADATA_BLOCK_MARKER
+        . "<details>\n<summary><h3>CODECHECK metadata, the record of this check (JSON, updated "
+        . $updated->format('Y-m-d H:i') . " UTC)</h3></summary>\n\n"
+        . 'This block is the source of truth for the metadata of this check, as of the time above, written by the journal from its record. '
+        . "The lines above it and the comments below record how the check progressed and may describe an earlier state.\n\n"
         . "```json\n"
         // A backtick as \u0060, which is the same string in JSON: a name holding
         // three of them would otherwise close the fence early.
@@ -159,11 +183,92 @@ class CodecheckGithubRegisterIssue
     /**
      * An issue body with its JSON metadata block replaced, or null when the
      * body has none — one edited by hand, or written by something else — which
-     * is then left as it is rather than given a second block.
+     * is then left as it is rather than given a second block. A block written
+     * before it was marked is found, and replaced by a marked one.
      */
     public static function withMetadataBlock(string $body, string $block): ?string
     {
-        $start = strpos($body, self::METADATA_BLOCK_OPENING);
+        $body = self::withLineFeeds($body);
+        $span = self::metadataBlockSpan($body);
+        if ($span === null) {
+            return null;
+        }
+
+        return substr($body, 0, $span[0]) . $block . substr($body, $span[1]);
+    }
+
+    /**
+     * The JSON a body's metadata block carries, or null when it has none.
+     *
+     * What decides whether the block needs writing: the update time in its
+     * summary changes every time, so comparing whole bodies would rewrite the
+     * issue on every save, changed or not.
+     */
+    public static function metadataJson(string $body): ?string
+    {
+        $block = self::metadataBlockOf($body);
+        if ($block === null) {
+            return null;
+        }
+
+        return preg_match('/```json\n(.*?)\n```/s', $block, $match) ? $match[1] : null;
+    }
+
+    /** Whether a body's metadata block carries the marker, rather than being one written before it. */
+    public static function hasMarkedMetadataBlock(string $body): bool
+    {
+        return str_contains(self::withLineFeeds($body), self::METADATA_BLOCK_MARKER);
+    }
+
+    /**
+     * A freshly built body, with the metadata block of the body the issue
+     * has now put back in when the JSON of the two is the same — so a body
+     * rewritten with nothing new in its block keeps the time the record last
+     * changed, rather than the time of the latest save.
+     */
+    public static function keepingUnchangedMetadataBlock(string $newBody, string $currentBody): string
+    {
+        $current = self::metadataBlockOf($currentBody);
+        if ($current === null
+            || !self::hasMarkedMetadataBlock($current)
+            || self::metadataJson($current) !== self::metadataJson($newBody)) {
+            return $newBody;
+        }
+
+        return self::withMetadataBlock($newBody, $current) ?? $newBody;
+    }
+
+    /** A body's metadata block, line feeds only, or null when it has none. */
+    private static function metadataBlockOf(string $body): ?string
+    {
+        $body = self::withLineFeeds($body);
+        $span = self::metadataBlockSpan($body);
+
+        return $span === null ? null : substr($body, $span[0], $span[1] - $span[0]);
+    }
+
+    /**
+     * A body with GitHub's web editor's CRLF line endings made LF, which is
+     * how the plugin writes it: a body saved there would otherwise no longer
+     * show the block the plugin looks for.
+     */
+    private static function withLineFeeds(string $body): string
+    {
+        return str_replace("\r\n", "\n", $body);
+    }
+
+    /**
+     * Where the metadata block starts and ends in a body: `[start, end]`, end
+     * exclusive, or null when there is none.
+     *
+     * @return ?array{0: int, 1: int}
+     */
+    private static function metadataBlockSpan(string $body): ?array
+    {
+        $start = strpos($body, self::METADATA_BLOCK_MARKER);
+        if ($start === false) {
+            $start = strpos($body, self::LEGACY_METADATA_BLOCK_OPENING);
+        }
         if ($start === false) {
             return null;
         }
@@ -172,7 +277,7 @@ class CodecheckGithubRegisterIssue
             return null;
         }
 
-        return substr($body, 0, $start) . $block . substr($body, $end + strlen('</details>'));
+        return [$start, $end + strlen('</details>')];
     }
 
     private function createBodyMarkdown(

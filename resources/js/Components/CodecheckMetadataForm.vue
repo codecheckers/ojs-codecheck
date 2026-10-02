@@ -1233,16 +1233,19 @@ export default {
         // Only once the save succeeded: the register issue is public, and
         // updating it first published repository addresses the save then
         // refused (Issue #154).
-        try {
-          await this.updateGithubIssueContents();
-        } catch (error) {
-          console.error('CODECHECK: could not update the register issue:', error);
-        }
+        const issueProblem = data.registerUnreachable ? null : await this.updateGithubIssueContents();
 
         this.triggerCodecheckStatusUpdateEvent();
         this.triggerRegisterIssueDisplayUpdateEvent();
 
-        this.showMessage(this.t('plugins.generic.codecheck.savedSuccessfully'), 'success');
+        // The save stands either way; what the register did not get is said
+        // beside it, rather than only in the console.
+        const registerProblem = issueProblem ?? data.registerWarning;
+        if (registerProblem) {
+          this.showMessage(`${this.t('plugins.generic.codecheck.savedSuccessfully')}\n${registerProblem}`, 'warning');
+        } else {
+          this.showMessage(this.t('plugins.generic.codecheck.savedSuccessfully'), 'success');
+        }
       } catch (error) {
         console.error('Save error:', error);
         this.showMessage(this.t('plugins.generic.codecheck.saveFailed') + ': ' + error.message, 'error');
@@ -1512,7 +1515,20 @@ export default {
       return authors.length > 1 ? first + ' et al.' : first;
     },
 
+    /**
+     * Brings the register issue's title, body and labels up to date with the
+     * form, as the journal chose.
+     *
+     * @returns {Promise<string|null>} what went wrong, for the save to report
+     *   beside its own result, or null
+     */
     async updateGithubIssueContents() {
+      // No register issue yet (none reserved, or one handed over as a prefilled
+      // GitHub form), so nothing to update: the server would refuse the call.
+      if (!Number.isInteger(this.certificateIdentifier.issue?.number) || !this.metadata.certificate) {
+        return null;
+      }
+
       const authorString = this.registerAuthorString();
 
       const submissionId = this.submission.id;
@@ -1542,12 +1558,13 @@ export default {
           const data = await response.json();
 
           if (!data.success) {
-            this.showMessage(`${this.t('plugins.generic.codecheck.identifier.update.error.message')}\n${data.error}`, 'error');
             console.error('Error while updating the GitHub Issue: ', data.error);
+            return `${this.t('plugins.generic.codecheck.identifier.update.error.message')}\n${data.error}`;
           }
+          return null;
       } catch (error) {
-          this.showMessage(`${this.t('plugins.generic.codecheck.request.failed')}\n${error}`, 'error');
           console.error('Request failed:', error);
+          return `${this.t('plugins.generic.codecheck.request.failed')}\n${error}`;
       }
     },
 
@@ -1631,9 +1648,15 @@ export default {
     showMessage(message, type) {
       this.saveMessage = message;
       this.saveMessageType = type;
-      setTimeout(() => {
-        this.saveMessage = '';
-      }, 5000);
+      // A success can go; a warning stays until the next save, because it
+      // says something the editor may need to act on.
+      if (type === 'success') {
+        setTimeout(() => {
+          if (this.saveMessage === message) {
+            this.saveMessage = '';
+          }
+        }, 5000);
+      }
     },
 
     /**

@@ -7,9 +7,14 @@ use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegis
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterIssue;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckIssueLabels;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckPostOrigin;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\GithubHttp;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\DataStructures\UniqueArray;
 use APP\plugins\generic\codecheck\classes\Exceptions\ApiUpdateException;
+use GuzzleHttp\Exception\ConnectException;
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\Psr7\Request;
+use GuzzleHttp\Psr7\Response;
 use PKP\tests\PKPTestCase;
 
 /**
@@ -714,5 +719,82 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
 
         $this->assertStringContainsString("| Certificate | 2026-001 |\n", $body);
         $this->assertStringEndsWith("|\n\n\n---\nSigned by Example journal", $body);
+    }
+
+    /** A client talking to queued HTTP answers rather than GitHub. */
+    private function clientAnswering(MockHandler $answers): CodecheckGithubRegisterApiClient
+    {
+        return new CodecheckGithubRegisterApiClient(
+            $this->githubPAT,
+            $this->githubRegisterOrganization,
+            $this->githubRegisterRepository,
+            (string) $this->submissionId,
+            $this->origin,
+            GithubHttp::client($answers)
+        );
+    }
+
+    private function metadataBlock(string $time): string
+    {
+        return CodecheckGithubRegisterIssue::metadataBlock(
+            '2026-007',
+            'plugins.generic.codecheck.status.assignedCodechecker',
+            [],
+            [],
+            $this->origin,
+            '42',
+            new \DateTimeImmutable($time)
+        );
+    }
+
+    /**
+     * Only the update time differs, so nothing is written: the issue's history
+     * would otherwise show an edit for every save of the form.
+     */
+    public function testTheMetadataBlockIsNotRewrittenWhenOnlyItsTimeWouldChange()
+    {
+        $issue = ['number' => 7, 'body' => "## Title\n\n" . $this->metadataBlock('2026-10-01 08:00:00Z')];
+        $answers = new MockHandler([
+            new Response(200, ['Content-Type' => 'application/json'], json_encode($issue)),
+        ]);
+
+        $this->assertFalse($this->clientAnswering($answers)->replaceIssueMetadataBlock(7, $this->metadataBlock('2026-10-02 19:15:00Z')));
+        $this->assertSame('GET', $answers->getLastRequest()->getMethod());
+    }
+
+    /** A block from before the marker is rewritten once, although its JSON is the same. */
+    public function testABlockWrittenBeforeTheMarkerIsRewrittenOnce()
+    {
+        $marked = $this->metadataBlock('2026-10-02 19:15:00Z');
+        preg_match('/```json\n.*?\n```/s', $marked, $json);
+        $legacy = "<details>\n<summary><h3>JSON encoded CODECHECK metadata</h3></summary>\n\n" . $json[0] . "\n\n</details>";
+        $answers = new MockHandler([
+            new Response(200, ['Content-Type' => 'application/json'], json_encode(['number' => 7, 'body' => $legacy])),
+            new Response(200, ['Content-Type' => 'application/json'], json_encode(['number' => 7])),
+        ]);
+
+        $this->assertTrue($this->clientAnswering($answers)->replaceIssueMetadataBlock(7, $marked));
+        $this->assertSame('PATCH', $answers->getLastRequest()->getMethod());
+    }
+
+    /**
+     * GitHub not answering is a failure to update, reported as one, and the
+     * rest of the request does not wait for it again.
+     */
+    public function testAGithubThatDoesNotAnswerIsAnUpdateFailure()
+    {
+        GithubHttp::reset();
+        $answers = new MockHandler([
+            new ConnectException('cURL error 28: Operation timed out', new Request('GET', 'https://api.github.com/')),
+        ]);
+
+        try {
+            $this->clientAnswering($answers)->replaceIssueMetadataBlock(7, $this->metadataBlock('2026-10-02 19:15:00Z'));
+            $this->fail('the failure is reported');
+        } catch (ApiUpdateException $e) {
+            $this->assertTrue(GithubHttp::wasUnreachable());
+        } finally {
+            GithubHttp::reset();
+        }
     }
 }

@@ -90,6 +90,9 @@ describe('CODECHECK status', () => {
       expect(response.status).to.eq(200);
       expect(response.body.success).to.be.true;
       expect(response.body.statusRecord.status).to.eq(NEEDS_CODECHECKER);
+      // No register is configured in the dataset, so nothing was sent to one
+      // and there is nothing to warn the editor about (#186).
+      expect(response.body).to.have.property('registerWarning', null);
     });
 
     getStatus(SUBMISSION).then((response) => {
