@@ -132,6 +132,29 @@ describe('CodecheckMetadataForm Component', () => {
     cy.get('.loading-state').should('exist');
   });
 
+  describe('the opt-in warning gives the reason every tab gives (#34)', () => {
+    [
+      { optIn: true, mode: 'opt-in', reason: null },
+      { optIn: false, mode: 'opt-in', reason: 'plugins.generic.codecheck.warning.notOptedIn' },
+      { optIn: false, mode: 'opt-out', reason: 'plugins.generic.codecheck.warning.optedOut' },
+      { optIn: null, mode: 'opt-out', reason: 'plugins.generic.codecheck.warning.noChoice' },
+    ].forEach(({ optIn, mode, reason }) => {
+      it(`${String(optIn)} in an ${mode} journal`, () => {
+        cy.mount(CodecheckMetadataForm, {
+          props: { submission: { id: 1, codecheckOptIn: optIn }, canEdit: true, codecheckMode: mode },
+        });
+        cy.wait('@loadMetadata');
+
+        if (reason) {
+          cy.get('.codecheck-optin-warning').should('contain', reason);
+        } else {
+          cy.get('.codecheck-header').should('exist');
+          cy.get('.codecheck-optin-warning').should('not.exist');
+        }
+      });
+    });
+  });
+
   it('loads and displays submission metadata correctly', () => {
     cy.mount(CodecheckMetadataForm, {
       props: {

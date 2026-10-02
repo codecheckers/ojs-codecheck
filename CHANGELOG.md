@@ -20,6 +20,18 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   repository's `plugins.xml` to `plugin_gallery_urls` in `config.inc.php`, from
   OJS 3.5.0-4 on (#157)
 
+#### Editorial workflow
+
+- The publication's *Metadata* page shows whether the article takes part in a
+  CODECHECK — and if not, why — with its badge, certificate identifier, status,
+  a preview of the `codecheck.yml`, and which destinations (register issue,
+  `register.csv`, ORCID, article page, issue table of contents) this journal
+  sends the metadata to (#34)
+- Every editorial view gives the same reason for a submission that takes no
+  part in a CODECHECK — not opted in, opted out, or no choice recorded — where
+  the CODECHECK tab and the review stage used to word it differently or not at
+  all (#34)
+
 #### CODECHECK register
 
 - Everything the plugin posts to the register — the issue, each status comment

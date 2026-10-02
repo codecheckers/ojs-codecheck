@@ -927,6 +927,72 @@ msgstr "This article was not opted into CODECHECK during submission."
 msgid "plugins.generic.codecheck.warning.optedOut"
 msgstr "The author opted out of CODECHECK for this article."
 
+msgid "plugins.generic.codecheck.publicationInfo.heading"
+msgstr "This article takes part in CODECHECK"
+
+msgid "plugins.generic.codecheck.warning.noChoice"
+msgstr "No CODECHECK choice was recorded for this article, for example because it was submitted before the journal enabled CODECHECK."
+
+msgid "plugins.generic.codecheck.publicationInfo.certificate"
+msgstr "Certificate identifier"
+
+msgid "plugins.generic.codecheck.publicationInfo.certificate.none"
+msgstr "Not reserved yet"
+
+msgid "plugins.generic.codecheck.publicationInfo.registerIssue"
+msgstr "Register issue"
+
+msgid "plugins.generic.codecheck.publicationInfo.recorded.heading"
+msgstr "What is recorded"
+
+msgid "plugins.generic.codecheck.publicationInfo.recorded"
+msgstr "The CODECHECK metadata combines this article's title, authors and DOI, as entered on these publication pages, with the codecheckers, repositories, output files, summary and report recorded on the CODECHECK tab."
+
+msgid "plugins.generic.codecheck.publicationInfo.destinations.heading"
+msgstr "Where it is deposited"
+
+msgid "plugins.generic.codecheck.publicationInfo.destination.on"
+msgstr "On"
+
+msgid "plugins.generic.codecheck.publicationInfo.destination.off"
+msgstr "Off"
+
+msgid "plugins.generic.codecheck.publicationInfo.destination.registerIssue"
+msgstr "An issue in the CODECHECK Register, opened when a certificate identifier is reserved."
+
+msgid "plugins.generic.codecheck.publicationInfo.destination.registerIssue.authorNames"
+msgstr "It includes the author names."
+
+msgid "plugins.generic.codecheck.publicationInfo.destination.registerIssue.anonymous"
+msgstr "It leaves out the author names."
+
+msgid "plugins.generic.codecheck.publicationInfo.destination.registerCsv"
+msgstr "A row in the register's register.csv, proposed by pull request when the article is published."
+
+msgid "plugins.generic.codecheck.publicationInfo.destination.orcid"
+msgstr "A peer review item on the ORCID record of each codechecker who authorised it, when the article is published."
+
+msgid "plugins.generic.codecheck.publicationInfo.destination.orcid.sandbox"
+msgstr "This journal uses the ORCID sandbox, not the public registry."
+
+msgid "plugins.generic.codecheck.publicationInfo.destination.articlePage"
+msgstr "The CODECHECK details in the sidebar of the article page."
+
+msgid "plugins.generic.codecheck.publicationInfo.destination.availabilityStatement"
+msgstr "The data and software availability statement on the article page."
+
+msgid "plugins.generic.codecheck.publicationInfo.destination.issueToc"
+msgstr "The CODECHECK badge in the issue's table of contents."
+
+msgid "plugins.generic.codecheck.publicationInfo.yaml"
+msgstr "Preview codecheck.yml"
+
+msgid "plugins.generic.codecheck.publicationInfo.yaml.none"
+msgstr "Nothing has been recorded for this CODECHECK yet, so there is no codecheck.yml to preview."
+
+msgid "plugins.generic.codecheck.publicationInfo.edit"
+msgstr "Edit on the CODECHECK tab"
+
 msgid "plugins.generic.codecheck.settings.showDashboardColumn"
 msgstr "Show CODECHECK column in submissions dashboard"
 

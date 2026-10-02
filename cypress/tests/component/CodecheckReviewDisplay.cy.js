@@ -22,7 +22,7 @@ describe('CodecheckReviewDisplay Component', () => {
       }
     });
     
-    cy.contains('plugins.generic.codecheck.notOptedIn').should('exist');
+    cy.contains('plugins.generic.codecheck.warning.notOptedIn').should('exist');
     cy.get('.codecheck-info').should('not.exist');
   });
 

@@ -10,6 +10,8 @@ import CodecheckOrcidSection from "./Components/CodecheckOrcidSection.vue";
 import CodecheckMetadataForm from './Components/CodecheckMetadataForm.vue';
 import CodecheckStatusForm from './Components/CodecheckStatusForm.vue';
 import CodecheckGithubIssueDisplay from "./Components/CodecheckGithubIssueDisplay.vue";
+import { isOptedIn } from "./optIn.js";
+import CodecheckPublicationInfo from "./Components/CodecheckPublicationInfo.vue";
 
 pkp.registry.registerComponent("CodecheckReviewDisplay", CodecheckReviewDisplay);
 pkp.registry.registerComponent("CodecheckMetadataForm", CodecheckMetadataForm);
@@ -19,6 +21,7 @@ pkp.registry.registerComponent("CodecheckDataAndSoftwareAvailability", Codecheck
 pkp.registry.registerComponent("CodecheckOrcidSection", CodecheckOrcidSection);
 pkp.registry.registerComponent("CodecheckStatusForm", CodecheckStatusForm);
 pkp.registry.registerComponent("CodecheckGithubIssueDisplay", CodecheckGithubIssueDisplay);
+pkp.registry.registerComponent("CodecheckPublicationInfo", CodecheckPublicationInfo);
 
 const { useLocalize } = pkp.modules.useLocalize;
 const { t } = useLocalize();
@@ -103,17 +106,39 @@ pkp.registry.storeExtend("workflow", (piniaContext) => {
     if (
       args?.selectedMenuState?.primaryMenuItem === "workflow" &&
       args?.selectedMenuState?.stageId === pkp.const.WORKFLOW_STAGE_ID_EXTERNAL_REVIEW &&
-      submission?.codecheckOptIn
+      isOptedIn(submission)
     ) {
       return [
         ...primaryItems,
         {
           component: "CodecheckReviewDisplay",
-          props: { submission: submission },
+          props: {
+            submission: submission,
+            codecheckMode: window.codecheckDashboardConfig?.codecheckMode ?? 'opt-in',
+          },
         },
       ];
     }
-    
+
+    // Publication › Metadata: above OJS's own form, so whoever edits the
+    // metadata sees what the CODECHECK records and where it goes (#34).
+    if (
+      args?.selectedMenuState?.primaryMenuItem === "publication" &&
+      args?.selectedMenuState?.secondaryMenuItem === "metadata"
+    ) {
+      return [
+        {
+          component: "CodecheckPublicationInfo",
+          props: {
+            submission: submission,
+            config: window.codecheckDashboardConfig?.publicationInfo ?? {},
+            codecheckMode: window.codecheckDashboardConfig?.codecheckMode ?? 'opt-in',
+          },
+        },
+        ...primaryItems,
+      ];
+    }
+
     return primaryItems;
   });
 
@@ -153,7 +178,7 @@ pkp.registry.storeExtend("fileManager_SUBMISSION_FILES", (piniaContext) => {
   const workflowStore = pkp.registry.getPiniaStore("workflow");
   const submission = workflowStore?.submission;
   
-  if (!submission?.codecheckOptIn) {
+  if (!isOptedIn(submission)) {
     return;
   }
 

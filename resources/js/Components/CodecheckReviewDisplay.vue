@@ -7,7 +7,7 @@
       <p>{{ t('common.loading') }}</p>
     </div>
     <div v-else-if="dataLoaded">
-      <div v-if="submission?.codecheckOptIn" class="codecheck-info">
+      <div v-if="!notOptedIn" class="codecheck-info">
         <div class="border border-light p-4">
           <h3 class="mb-2 text-lg-bold text-heading">{{ t("plugins.generic.codecheck.status") }}</h3>
           <p class="text-sm-normal" :class="statusClass">
@@ -80,7 +80,7 @@
       </div>
       
       <div v-else class="codecheck-not-opted">
-        <p>{{ t("plugins.generic.codecheck.notOptedIn") }}</p>
+        <p>{{ t(notOptedIn) }}</p>
       </div>
     </div>
   </div>
@@ -88,12 +88,17 @@
 
 <script setup>
 import { computed, ref, onMounted} from 'vue';
+import { notOptedInReason } from '../optIn.js';
 
 const { t } = pkp.modules.useLocalize.useLocalize();
 
 const props = defineProps({
-  submission: { type: Object, required: true }
+  submission: { type: Object, required: true },
+  codecheckMode: { type: String, default: 'opt-in' },
 });
+
+// Why the submission takes no part, worded as on every other tab (#34).
+const notOptedIn = computed(() => notOptedInReason(props.submission, props.codecheckMode));
 
 const status = ref('');
 const loading = ref(true);
