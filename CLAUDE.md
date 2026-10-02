@@ -1626,8 +1626,8 @@ description, so the next reader does not re-derive the same objection.
   verbs in function names; document public methods/classes
 - Vue SFCs use `<script setup>`-style composition where already present — match the file
 - Every user-visible change belongs in `CHANGELOG.md`, under `[Unreleased]` in the
-  section it fits (Frontend, Configuration, Under the hood, …). See "Writing the
-  changelog" below for how much to write
+  section it fits (Frontend, Configuration, Under the hood, …), as one terse line
+  stating the outcome. See "Writing the changelog" below
 - Release process, packaging (`package-plugin.sh`) and the API-extension recipe are in
   `README.md`. **Three files state the release and must agree**: `version.xml`
   (`<release>`, `<date>`), `CITATION.cff` (`version`, `date-released`) and the
@@ -1639,36 +1639,16 @@ description, so the next reader does not re-derive the same objection.
 
 ## Writing the changelog
 
-**One or two lines per change, stating the result.** `CHANGELOG.md` is read by
-someone deciding whether to upgrade and by someone wondering why the plugin
-behaves as it does — not by someone reviewing the work. So:
+**One line per change, stating how things are after it.** `CHANGELOG.md` is read by someone deciding whether to upgrade, not by someone reviewing the work. So:
 
-- **Report the result, not the route to it.** What the plugin does now, and —
-  for a fix — what it did wrong, in one clause. Not what was tried first, not
-  which hypothesis turned out to be false, not how many places the rule used to
-  live in.
-- **No internal detail.** Class and method names, hook names, column names,
-  which file a rule moved to: all of it belongs in the code, in `CLAUDE.md` or
-  in the issue. A reader upgrading a journal cannot act on
-  `Constants::normalizeBadgeHeight()`. Name a user-visible setting, a page or a
-  file the journal handles (`codecheck.yml`, `register.csv`) instead.
-- **Point at the issue, every time.** `(#154)` carries the whole story for
-  anyone who wants it, at no cost to anyone who does not. Several issues on one
-  entry is fine; entries that share an issue can be merged into one line.
-- **Lessons learned go on the issue, not in the changelog.** What was
-  established, what turned out false, what the next person should know — that is
-  a comment on the issue it came from. Ask before posting one: an issue comment
-  is published under the repository owner's name (see "Never create GitHub
-  issues without confirmation").
-- **Say so when something needs preserving and there is no obvious home.** A
-  conclusion that shapes future work but fits neither the changelog nor an
-  issue — a constraint discovered, a trap in OJS, a decision that will be
-  re-litigated — belongs in `CLAUDE.md`. If it is not clear where it goes or how
-  much of it to keep, **tell the user rather than guessing**: writing it in the
-  wrong place is how one paragraph becomes three contradictory ones.
+- **Terse and factual: the final outcome only.** What the plugin does now. Not why it was decided, not which alternatives were rejected, not what was tried first, not what it did before, not how many places the rule used to live in. A fix says what now works (`Reserving a certificate identifier works when the journal keeps its authors anonymous`), not what was broken. The history of a fix is on the issue.
+- **No manual line breaks.** One entry is one line, however long, and a paragraph is one line. Nothing is wrapped at a column, so a diff shows what changed rather than where a line happened to break. A sub-bullet, a heading, a blank line and the list markers are the only line structure. (This applies to `CHANGELOG.md`; the rest of this file is wrapped.)
+- **No internal detail.** Class and method names, hook names, column names, which file a rule moved to: all of it belongs in the code, in `CLAUDE.md` or in the issue. A reader upgrading a journal cannot act on `Constants::normalizeBadgeHeight()`. Name a user-visible setting, a page or a file the journal handles (`codecheck.yml`, `register.csv`) instead.
+- **Point at the issue, every time.** `(#154)` carries the whole story for anyone who wants it, at no cost to anyone who does not. Several issues on one entry is fine; entries that share an issue can be merged into one line.
+- **Lessons learned go on the issue, not in the changelog.** What was established, what turned out false, what the next person should know: a comment on the issue it came from. Ask before posting one: an issue comment is published under the repository owner's name (see "Never create GitHub issues without confirmation").
+- **Say so when something needs preserving and there is no obvious home.** A conclusion that shapes future work but fits neither the changelog nor an issue (a constraint discovered, a trap in OJS, a decision that will be re-litigated) belongs in `CLAUDE.md`. If it is not clear where it goes or how much of it to keep, **tell the user rather than guessing**: writing it in the wrong place is how one paragraph becomes three contradictory ones.
 
-The rewrite that established this cut `[Unreleased]` from 567 lines to 225
-without losing a single change.
+An entry that needs a second sentence is usually carrying a decision or a reason, and that belongs on the issue.
 
 **Read it the other way round when picking work up.** Because the detail lives
 on the issues, `CHANGELOG.md` is the index into them: when a feature misbehaves
