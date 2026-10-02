@@ -70,6 +70,39 @@ describe('CODECHECK UI surfaces', () => {
     shoot('03-workflow-codecheck-tab');
   });
 
+  /**
+   * The add-codechecker dialog with the journal's directory and an offered
+   * GitHub username (#186). Both answers are stubbed: the directory is empty on
+   * a fresh dataset, and the real offer comes from GitHub, which no capture
+   * pass reaches. Nothing is added.
+   */
+  it('add-codechecker dialog with an offered GitHub username', function () {
+    if (!publishedSubmissionId) {
+      this.skip();
+    }
+
+    cy.intercept(
+      { method: 'GET', pathname: `/index.php/${JOURNAL}/api/v1/codecheck/codecheckers` },
+      { success: true, codecheckers: [{ name: 'Stephen J. Eglen', orcid: '0000-0001-8607-8025', github: 'sje30' }] }
+    );
+    cy.intercept(
+      { method: 'GET', pathname: `/index.php/${JOURNAL}/api/v1/codecheck/codecheckers/lookup` },
+      { success: true, github: 'nuest', source: 'community' }
+    );
+    cy.visit(
+      `/index.php/${JOURNAL}/dashboard/editorial` +
+      `?currentViewId=published&workflowSubmissionId=${publishedSubmissionId}` +
+      `&workflowMenuKey=codecheck`
+    );
+    cy.get('.codecheck-metadata-form', { timeout: 20000 }).should('exist');
+    cy.contains('.field-label', /codechecker/i).parent().find('.btn-add').click();
+    cy.get('input[id^=codecheck-checker-name]').type('Daniel Nüst');
+    cy.get('input[id^=codecheck-checker-orcid]').type('0000-0002-0024-5046').blur();
+    cy.get('.codecheck-github-suggestion').should('be.visible');
+    shoot('03a-add-codechecker-dialog');
+    cy.get('body').type('{esc}');
+  });
+
   it('workflow publication Metadata page with the CODECHECK panel', function () {
     if (!publishedSubmissionId) {
       this.skip();

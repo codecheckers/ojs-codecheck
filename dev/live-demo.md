@@ -172,10 +172,13 @@ In the editor window, logged in as `admin`:
    *needs codechecker*, so the issue also has a comment saying so and the label
    `needs codechecker`.
 5. Back in OJS, add a codechecker with **+ CODECHECKer**. Enter a mistyped
-   ORCID iD first to show the dialog refusing it, then a correct one, and save.
+   ORCID iD first to show the dialog refusing it, then Daniel Nüst's,
+   `0000-0002-0024-5046`: leaving the field offers the GitHub username `nuest`
+   from the CODECHECK community list. Press **Use it**, add, and save.
    Because a codechecker is now assigned, saving records *codechecker assigned*.
-   On GitHub a second comment appears, and `needs codechecker` is replaced by
-   `work in progress`.
+   On GitHub a second comment appears naming the codechecker, the issue is
+   assigned to `nuest`, and `needs codechecker` is replaced by
+   `work in progress` (#186).
 6. Optional: use the status form to record *stalled (author)* or
    *completed*, and open **CODECHECK Status History**. Each change is one more
    comment on the issue.

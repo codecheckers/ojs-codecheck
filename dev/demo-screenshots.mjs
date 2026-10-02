@@ -233,16 +233,39 @@ await view('2e-codechecker-refused', async (capture) => {
   await capture(editor, { element: '[data-cy=dialog]' });
 });
 
-await view('2f-codechecker-added', async (capture) => {
-  // ORCID's own test identity, with its correct check digit.
-  await dialog(editor).locator('input[id^=codecheck-checker-orcid]').fill('0000-0002-1825-0097');
+// An ORCID iD the CODECHECK community list knows, so the dialog offers its
+// GitHub username, and the register issue is assigned to it (#186).
+const COMMUNITY_CODECHECKER = { name: 'Daniel Nüst', orcid: '0000-0002-0024-5046' };
+
+await view('2f-github-username-offered', async (capture) => {
+  await dialog(editor).locator('input[id^=codecheck-checker-name]').fill(COMMUNITY_CODECHECKER.name);
+  await dialog(editor).locator('input[id^=codecheck-checker-orcid]').fill(COMMUNITY_CODECHECKER.orcid);
+  await dialog(editor).locator('input[id^=codecheck-checker-github]').focus();
+  await dialog(editor).locator('.codecheck-github-suggestion').waitFor({ timeout: 20000 });
+  await capture(editor, { element: '[data-cy=dialog]' });
+});
+
+await view('2g-codechecker-added', async (capture) => {
+  const offer = dialog(editor).locator('.codecheck-github-suggestion button');
+  if (await offer.count()) {
+    await offer.click();
+  }
   await dialog(editor).locator('.modal-actions button', { hasText: 'Add' }).click();
   await editor.waitForTimeout(800);
   await saveForm(editor);
   await capture(editor, { element: '.codecheck-metadata-form' });
 });
 
-await view('2g-status-change-dialog', async (capture) => {
+await view('2h-codechecker-directory', async (capture) => {
+  // The journal now has a codechecker on record, so the dialog offers it.
+  await openCodecheckTab(editor, 12);
+  await editor.locator('.field-label', { hasText: /codechecker/i }).locator('..').locator('.btn-add').first().click();
+  await dialog(editor).locator('select[id^=codecheck-checker-directory]').waitFor({ timeout: 20000 });
+  await capture(editor, { element: '[data-cy=dialog]' });
+  await closeDialog(editor);
+});
+
+await view('2i-status-change-dialog', async (capture) => {
   await openCodecheckTab(editor, 11);
   await editor.getByRole('button', { name: 'Change', exact: true }).first().click();
   const select = dialog(editor).locator('select');
@@ -252,7 +275,7 @@ await view('2g-status-change-dialog', async (capture) => {
   await settle(editor, 3000);
 });
 
-await view('2h-status-history', async (capture) => {
+await view('2j-status-history', async (capture) => {
   await editor.getByRole('button', { name: 'History', exact: true }).first().click();
   await editor.waitForTimeout(1500);
   await capture(editor, { element: '[data-cy=dialog]' });
@@ -260,7 +283,7 @@ await view('2h-status-history', async (capture) => {
 });
 
 if (issueUrl) {
-  await view('2i-register-issue', async (capture) => {
+  await view('2k-register-issue', async (capture) => {
     const github = await openWindow(null);
     await github.goto(issueUrl, { waitUntil: 'domcontentloaded' });
     await settle(github, 3000);

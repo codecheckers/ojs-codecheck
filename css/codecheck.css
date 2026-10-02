@@ -488,4 +488,33 @@ textarea[name="dataAvailabilityStatement"] {
   margin-top: 0.25rem;
   color: #555;
   font-size: 13px;
+  line-height: 1.4;
+}
+
+/* A GitHub username offered for the ORCID iD, taken only with the button (#186). */
+.codecheck-github-suggestion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-left: 3px solid #008033;
+  background: #e8f5e8;
+  color: #222;
+}
+
+.codecheck-github-suggestion button {
+  padding: 0.15rem 0.75rem;
+  border: 1px solid #008033;
+  border-radius: 3px;
+  background: #fff;
+  color: #006629;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.codecheck-github-suggestion button:hover,
+.codecheck-github-suggestion button:focus {
+  background: #008033;
+  color: #fff;
 }
