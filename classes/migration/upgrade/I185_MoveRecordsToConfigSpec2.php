@@ -49,13 +49,26 @@ class I185_MoveRecordsToConfigSpec2 extends CodecheckMigration
             CodecheckLogger::info("Moved {$moved} CODECHECK records to config specification {$default}.");
         }
 
-        // Altering the column rebuilds it, so only when the default differs.
-        // MariaDB reports a string default quoted, MySQL does not.
+        // Altering the column rebuilds it, so only when it still carries a
+        // default this release retires. Anything else is a later release's
+        // choice, and this runs on every enable.
         $column = collect(Schema::getColumns('codecheck_metadata'))->firstWhere('name', 'spec_version');
-        if (trim((string) ($column['default'] ?? ''), "'") !== $default) {
+        $reported = $column['default'] ?? null;
+        if (self::defaultIs($reported, 'latest') || self::defaultIs($reported, '1.0')) {
             Schema::table('codecheck_metadata', function (Blueprint $table) use ($default) {
                 $table->string('spec_version', 50)->default($default)->change();
             });
         }
+    }
+
+    /**
+     * Whether the default a column reports is $default. MariaDB reports a
+     * string default quoted (`'2.0'`), MySQL does not (`2.0`) and PostgreSQL
+     * adds a cast (`'2.0'::character varying`), so none of that is part of the
+     * answer; public static so that is testable without a database.
+     */
+    public static function defaultIs(?string $reported, string $default): bool
+    {
+        return trim((string) preg_replace('/::.*$/', '', (string) $reported), "'") === $default;
     }
 }

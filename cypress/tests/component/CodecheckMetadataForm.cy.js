@@ -583,6 +583,43 @@ describe('CodecheckMetadataForm Component', () => {
       warning().should('contain', missing('certificate'));
     });
 
+    it('keeps judging the OJS authors after a repository import', () => {
+      // The generated codecheck.yml takes the paper's authors from OJS, so an
+      // imported file's authors must not make the warning think they have iDs.
+      interceptMetadata(completeRecord({
+        repository: { repositories: [
+          { url: 'https://github.com/codecheckers/repo', hidden: false, providedByAuthor: false, containsCodecheckYaml: true },
+        ] },
+      }, {
+        authors: [{ name: 'Jane Smith', orcid: '' }],
+      }), 'loadForImport');
+      cy.intercept('POST', '**/codecheck/repository', {
+        statusCode: 200,
+        body: {
+          success: true,
+          metadata: {
+            paper: {
+              title: 'Imported title',
+              authors: [{ name: 'Imported Author', ORCID: '0000-0001-2345-6789' }],
+              doi: '10.1234/imported',
+            },
+            summary: 'Imported summary',
+          },
+        },
+      }).as('importMetadata');
+
+      mountForm();
+      cy.wait('@loadForImport');
+      warning().should('contain', 'missing for: Jane Smith');
+
+      cy.get('.repository-item .btn-add').click();
+      cy.wait('@importMetadata');
+
+      cy.contains('.field-label', /summary/i).parent().find('textarea').should('have.value', 'Imported summary');
+      cy.get('.read-only-section').should('contain', 'Test Article Title').and('not.contain', 'Imported title');
+      warning().should('contain', 'missing for: Jane Smith').and('not.contain', 'Imported Author');
+    });
+
     it('repeats the warning in the YAML preview', () => {
       interceptMetadata(completeRecord({ report: '' }), 'loadWithoutReport');
       cy.intercept('GET', '**/codecheck/yaml*', {

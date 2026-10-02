@@ -28,10 +28,6 @@ const CERTIFICATE_IDENTIFIER = /^\d{4}-\d{3,}$/;
 const isBlank = (value) => String(value ?? '').trim() === '';
 const isEmpty = (list) => (list ?? []).length === 0;
 
-// An author from the metadata response carries `orcid`; one taken over from a
-// repository's codecheck.yml carries the specification's `ORCID`.
-const authorOrcid = (author) => author?.orcid ?? author?.ORCID;
-
 /** A rule naming `key` when `isMissing` holds for the record. */
 const requires = (key, isMissing) => (record) => (isMissing(record) ? {key} : null);
 
@@ -41,7 +37,7 @@ const RULES = {
     requires(tk('plugins.generic.codecheck.configSpec.missing.authors'), ({submission}) => isEmpty(submission.authors)),
     ({submission}) => {
       const names = (submission.authors ?? [])
-        .filter((author) => isBlank(authorOrcid(author)))
+        .filter((author) => isBlank(author?.orcid))
         .map((author) => author?.name ?? '');
       return names.length === 0 ? null : {
         key: tk('plugins.generic.codecheck.configSpec.missing.authorOrcid'),

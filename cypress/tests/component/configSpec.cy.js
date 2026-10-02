@@ -34,11 +34,10 @@ describe('missingMandatoryFields', () => {
     ]);
   });
 
-  it('names the authors without an ORCID iD, whichever key carries it', () => {
+  it('names the authors without an ORCID iD', () => {
     const record = complete();
     record.submission.authors = [
       { name: 'With a URI', orcid: 'https://orcid.org/0000-0002-1825-0097' },
-      { name: 'From a codecheck.yml', ORCID: '0000-0002-1825-0097' },
       { name: 'Empty', orcid: '' },
       { name: 'Blank', orcid: '  ' },
       { name: 'Null', orcid: null },

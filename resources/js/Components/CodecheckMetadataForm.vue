@@ -779,13 +779,10 @@ export default {
 
           if (data.success) {
               console.log('Success:', data.repository);
-              this.submissionData = {
-                id: this.submissionData.id,
-                title: data.metadata?.paper.title ?? this.submissionData.title,
-                authors: data.metadata?.paper.authors ?? this.submissionData.authors,
-                doi: data.metadata?.paper.doi ?? this.submissionData.doi,
-                dataAvailabilityStatement: this.submissionData.dataAvailabilityStatement,
-              };
+              // Only the CODECHECK fields are taken over. The paper's title,
+              // authors and DOI stay OJS's: they are what `buildYaml()` writes
+              // whatever the imported file says, and what the warning about the
+              // specification's mandatory fields reads.
               this.metadata = {
                 // The record's own version, not the one the imported file
                 // declares: that is what the form is filled in against, and a

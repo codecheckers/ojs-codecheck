@@ -96,7 +96,7 @@ msgid "plugins.generic.codecheck.settings.configVersions"
 msgstr "Available CODECHECK config versions"
 
 msgid "plugins.generic.codecheck.settings.configVersions.description"
-msgstr "Which versions of the CODECHECK config file specification codecheckers can choose from in the metadata form. Selecting a single version fixes it for every submission. If nothing is selected, the current stable version is offered."
+msgstr "The versions of the CODECHECK config file specification this plugin supports. The ticked ones are offered to codecheckers in the metadata form; ticking a single one fixes it for every submission, and ticking none offers the current stable version. While only one version is supported there is nothing to choose."
 
 msgid "plugins.generic.codecheck.settings.authorAnonymity"
 msgstr "Author anonymity in the GitHub register repository"

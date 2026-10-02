@@ -84,6 +84,7 @@ Use the Makefile — it sets `OJS_ROOT` and the base URL for you:
 make test              # component tests + PHPUnit (no server needed)
 make test-component    # Cypress component tests — runs anywhere, no OJS needed
 make test-php          # PHPUnit — needs the linked OJS install
+make check-migration   # the #185 upgrade migration against the dev database (writes; asks first)
 make test-e2e          # Cypress e2e — needs `make serve` running
 make test-e2e-reverse  # the same specs backwards, to catch order dependence
 make test-e2e-shuffle  # the same specs in a seeded random order (SEED=n replays one)
@@ -331,6 +332,12 @@ Migration structure (added for issue #94):
   **Nothing in the plugin drops a table** — the settings form's "Clear / Reset
   DB" button did, and was removed in #131; rebuild a development instance with
   `make db-reset` instead.
+- **No automated run sees a legacy row**, because both datasets start on 2.0.
+  `make check-migration` (`dev/check-migration-spec2.php`) seeds `latest` and
+  `1.0` rows and a `latest` column default, runs I185 twice and asserts — and,
+  as it writes to the development database, asks first and refuses unless the OJS
+  plugin symlink points at this checkout. Run it after touching an upgrade
+  migration that moves data.
 
 The migration is the single source of truth for this schema. A stale `schema.xml`
 and a dead `CodecheckMetadataDAO` used to describe two further, contradictory
@@ -869,7 +876,10 @@ tests/                       PHPUnit (37 test classes, 385 tests)
   ApiUnitTests/                CodecheckApiControllerRoles, CodecheckApiControllerRoutes,
                                IdentifierParameterValidator, JsonResponse
   MigrationUnitTests/          I154_MoveCodecheckYamlFlagOntoRepository (the
-                               index-to-flag conversion, tested without a database)
+                               index-to-flag conversion, tested without a database),
+                               I185_MoveRecordsToConfigSpec2 (how the column default
+                               reads back; the rows and the second run are
+                               `make check-migration`)
   SettingsUnitTests/           Actions, Manage
   OrcidUnitTests/              OrcidDepositService (which codecheckers a deposit
                                run is for — the rule that stands between a

@@ -17,6 +17,21 @@ class CodecheckSubmissionUnitTest extends PKPTestCase
         $this->assertSame($manifest, $submission->getManifest());
     }
 
+    /**
+     * A record the upgrade missed — a hand-edited dump, say — still reads as a
+     * version the plugin implements rather than declaring `latest`, which
+     * names a different specification now (#185).
+     */
+    public function testASpecVersionThePluginDoesNotKnowReadsAsTheDefault()
+    {
+        foreach (['latest', '1.0', '', null] as $stored) {
+            $submission = new CodecheckSubmission(['submission_id' => 1, 'spec_version' => $stored]);
+            $this->assertSame('2.0', $submission->getSpecVersion(), var_export($stored, true));
+        }
+
+        $this->assertSame('2.0', (new CodecheckSubmission(['submission_id' => 1]))->getSpecVersion());
+    }
+
     public function testGetManifestReturnsEmptyArrayWhenNotSet()
     {
         $submission = new CodecheckSubmission(['submission_id' => 1]);

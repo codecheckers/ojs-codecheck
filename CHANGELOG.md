@@ -32,12 +32,12 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   entry is refused, where a missing identifier, manifest or summary used to
   block every save. The `codecheck.yml` preview still waits for a complete record
 - Checks are recorded against version 2.0 of the CODECHECK config file
-  specification, the only version offered; 1.0 and `latest` are gone, and
-  existing records move to 2.0 on upgrade. A `codecheck.yml` on `latest` claimed
-  2.0 since the specification moved it there (#185)
+  specification, the only version offered; `latest` and 1.0 are gone and existing
+  records move to 2.0 on upgrade (#185)
 - The metadata form and the YAML preview name the fields version 2.0 requires that
-  a record still lacks, such as an author's ORCID iD or the DOI; saving and
-  publishing are not blocked by them (#185)
+  a record still lacks, without blocking a save or publication. Importing a
+  `codecheck.yml` from a repository no longer replaces the paper's title, authors
+  and DOI shown in the form (#185)
 
 ### Fixed
 
