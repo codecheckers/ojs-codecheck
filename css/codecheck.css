@@ -478,6 +478,44 @@ textarea[name="dataAvailabilityStatement"] {
   margin-top: 1.5rem;
 }
 
+/* Styled here rather than through `.pkpButton`: the dialog renders in OJS's
+   modal, outside `.codecheck-metadata-form`, where the form's button rules
+   are scoped, and OJS 3.5's own components no longer style that class — so
+   Add was a bare blue box and Cancel plain text. Matches OJS's buttons. */
+.modal-actions button {
+  padding: 0.4375rem 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #fff;
+  color: #006798;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  cursor: pointer;
+}
+
+.modal-actions button:hover:not(:disabled),
+.modal-actions button:focus-visible {
+  border-color: #006798;
+}
+
+.modal-actions button.pkpButton--isPrimary {
+  border-color: #006798;
+  background: #006798;
+  color: #fff;
+}
+
+.modal-actions button.pkpButton--isPrimary:hover:not(:disabled),
+.modal-actions button.pkpButton--isPrimary:focus-visible {
+  border-color: #005580;
+  background: #005580;
+}
+
+.modal-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .modal-field-error {
   margin-top: 0.25rem;
   color: #d00a0a;
