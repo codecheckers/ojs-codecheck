@@ -21,10 +21,13 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 
 - Everything the plugin posts to the register (the issue, each status comment, the `register.csv` pull request) ends with a signature naming the plugin and the journal, set by the new setting *Signature on GitHub posts*
 - The register issue's JSON metadata records the journal's address and the OJS and plugin versions
+- A codechecker can be given a GitHub username, offered from the CODECHECK community list when their ORCID iD is on it. Once the check stands at "codechecker assigned", an editor's change assigns them to the register issue, and the status comment names them with their ORCID iD; a codechecker the register cannot assign is named with a link to the journal's contact page (#186)
+- The register issue lists the codecheckers (#186)
 
 #### Frontend
 
 - The editorial CODECHECK form names the submission's primary contact, with a link that emails them about the check (#28)
+- The "add codechecker" dialog offers the codecheckers the journal has recorded since this release (#186)
 - The publication's Metadata page shows the article's CODECHECK badge, certificate identifier, status and `codecheck.yml` preview, and which destinations receive its metadata: the register issue, `register.csv`, ORCID, the article page and the issue table of contents (#34)
 
 #### Under the hood
@@ -50,6 +53,7 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 - A comment on an expected output in the submission wizard is kept as the comment and survives reopening the draft
 - A certificate identifier can be reserved before the CODECHECK settings have been saved
 - The register issue's JSON metadata is valid JSON
+- A codechecker's ORCID iD imported from a repository's `codecheck.yml` is kept when the form is saved (#186)
 
 ## [0.1.0.0] - 2026-09-30
 

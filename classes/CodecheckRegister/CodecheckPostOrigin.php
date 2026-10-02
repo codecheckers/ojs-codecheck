@@ -102,9 +102,28 @@ class CodecheckPostOrigin
         return self::SEPARATOR . strtr($text, [
             // Escaped, so a name like "Journal [Beta]" cannot break the link the
             // default text puts it in; GitHub renders each escape as the character.
-            '{$journal}' => preg_replace('/([\\\\\[\]`*_])/', '\\\\$1', $this->journalName),
+            '{$journal}' => self::escapeMarkdown($this->journalName),
             '{$journalUrl}' => $this->journalUrl,
         ]);
+    }
+
+    /**
+     * Text with the characters that would change its meaning in GitHub's
+     * Markdown escaped; GitHub renders each escape as the character.
+     */
+    public static function escapeMarkdown(string $text): string
+    {
+        return preg_replace('/([\\\\\[\]`*_<>#|])/', '\\\\$1', $text);
+    }
+
+    /**
+     * The journal's contact page, which a register reader is sent to when the
+     * journal coordinates a codechecker the register cannot reach (#186). Built
+     * from the configuration, as the journal's address is, for the same reason.
+     */
+    public function contactUrl(): string
+    {
+        return $this->journalUrl . '/about/contact';
     }
 
     public function getJournalName(): string

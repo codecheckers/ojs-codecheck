@@ -442,6 +442,29 @@ CREATE TABLE `codecheck_issue_labels` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `codecheck_codecheckers`
+--
+-- The journal's directory of codecheckers (#186), from
+-- I186_AddCodecheckerDirectory. Left empty on purpose: it fills from the
+-- editorial saves, which is the path worth exercising.
+--
+
+CREATE TABLE `codecheck_codecheckers` (
+  `codechecker_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `context_id` bigint NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `orcid` varchar(19) DEFAULT NULL,
+  `github_username` varchar(39) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`codechecker_id`),
+  UNIQUE KEY `codecheck_codecheckers_orcid` (`context_id`,`orcid`),
+  UNIQUE KEY `codecheck_codecheckers_github` (`context_id`,`github_username`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `completed_payments`
 --
 

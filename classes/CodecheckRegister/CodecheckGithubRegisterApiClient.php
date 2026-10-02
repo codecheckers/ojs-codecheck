@@ -450,6 +450,91 @@ class CodecheckGithubRegisterApiClient
     }
 
     /**
+     * Assign people to a register issue, leaving anyone already assigned alone.
+     *
+     * Adding, never replacing, for the reason the labels are only added (#174):
+     * someone may have assigned a person by hand, and the register is not this
+     * plugin's to tidy up (#186).
+     *
+     * GitHub does not refuse a username it cannot assign — someone who is not
+     * a member or collaborator of the register and has not commented on the
+     * issue — it leaves them out. So the answer is read back: what this returns
+     * is who is actually assigned now, and a requested name missing from it was
+     * not assigned.
+     *
+     * @param string[] $usernames
+     *
+     * @throws ApiUpdateException when GitHub refuses the request.
+     *
+     * @return string[] Everyone assigned to the issue after the request
+     */
+    private function addAssigneesToIssue(int $issueNumber, array $usernames): array
+    {
+        if (empty($usernames)) {
+            return [];
+        }
+
+        $this->client->authenticate($this->githubPAT, null, Client::AUTH_ACCESS_TOKEN);
+
+        try {
+            $issue = $this->client->api('issue')->assignees()->add(
+                $this->githubRegisterOrganization,
+                $this->githubRegisterRepository,
+                $issueNumber,
+                ['assignees' => array_values($usernames)]
+            );
+        } catch (\Throwable $e) {
+            throw new ApiUpdateException(
+                'Could not assign ' . implode(', ', $usernames)
+                . " to register issue #{$issueNumber}: " . $e->getMessage(),
+                (int) $e->getCode()
+            );
+        }
+
+        return array_values(array_filter(
+            array_map(
+                fn ($assignee) => is_array($assignee) ? ($assignee['login'] ?? null) : null,
+                is_array($issue) ? ($issue['assignees'] ?? []) : []
+            ),
+            'is_string'
+        ));
+    }
+
+    /**
+     * Assign the codecheckers that have a GitHub username to a register issue
+     * (#186), and answer who is assigned to it afterwards — or `null` when
+     * GitHub could not be asked, which is not the same as nobody assigned: a
+     * failed request says nothing about who is assigned already.
+     *
+     * Best-effort, and the one place that decides so: whatever wrote the issue
+     * has already succeeded, and an assignment GitHub refuses must not be
+     * reported as that write failing.
+     *
+     * @param mixed $codecheckers the list as the column holds it
+     *
+     * @return ?string[]
+     */
+    public function syncAssignees(int $issueNumber, mixed $codecheckers): ?array
+    {
+        $usernames = RegisterCodecheckers::usernames($codecheckers);
+        if ($usernames === []) {
+            return [];
+        }
+
+        try {
+            $assigned = $this->addAssigneesToIssue($issueNumber, $usernames);
+            CodecheckLogger::info(
+                "Register issue #{$issueNumber}: asked to assign [" . implode(', ', $usernames)
+                . '], assigned now [' . implode(', ', $assigned) . '].'
+            );
+            return $assigned;
+        } catch (\Throwable $e) {
+            CodecheckLogger::warning("Could not assign the codecheckers to register issue #{$issueNumber}: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
      * A register issue as GitHub holds it.
      */
     private function showIssue(int $issueNumber): array

@@ -4,6 +4,7 @@ namespace APP\plugins\generic\codecheck\classes\CodecheckRegister;
 
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
+use APP\plugins\generic\codecheck\classes\Submission\CodecheckCodecheckers;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckRepositories;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckStatusHandler;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckStatusRegisterUpdate;
@@ -54,7 +55,7 @@ class CodecheckGithubRegisterIssue
         $this->jsonEncodedCodecheckMetadata = $this->createJsonEncodedCodecheckMetadataMarkdown($certificateIdentifier, $origin, $submissionID, $codecheckers, $repositories);
         // The body is rendered whole on every update, so the signature closes
         // it once and is never stacked.
-        $this->body = $this->createBodyMarkdown($paperTitle, $origin->getJournalName(), $repositories)
+        $this->body = $this->createBodyMarkdown($paperTitle, $origin->getJournalName(), $repositories, $codecheckers)
             . "\n" . $this->jsonEncodedCodecheckMetadata
             . $origin->signature();
         $this->labels = $this->fillLabels($codecheckIssueLabels);
@@ -108,7 +109,9 @@ class CodecheckGithubRegisterIssue
         }
         $metadata += [
             'repositories' => array_values($repositories),
-            'codecheckers' => $codecheckers,
+            // In the stored shape, whatever the form sent: name, bare ORCID iD
+            // and GitHub username (#186).
+            'codecheckers' => CodecheckCodecheckers::withNormalizedEntries($codecheckers),
             'links' => [],
             'journal' => $origin->journalMetadata() + ['submissionID' => (int) $submissionID],
             'plugin' => $origin->pluginMetadata(),
@@ -126,18 +129,26 @@ class CodecheckGithubRegisterIssue
     private function createBodyMarkdown(
         string $paperTitle,
         string $journalName,
-        array $repositories
+        array $repositories,
+        array $codecheckers
     ): string {
         $repoStr = '';
         foreach ($repositories as $repo) {
             $repoStr .= "\t- " . $repo . "\n";
         }
+        // Named without a mention: the body is rewritten on every update, and
+        // the assignment is what says on GitHub who is checking (#186).
+        $codecheckerNames = RegisterCodecheckers::describeAll($codecheckers);
+        $codecheckerInformation = $codecheckerNames === ''
+            ? ''
+            : "<!-- Who is checking -->\n**Codecheckers:** " . $codecheckerNames . "\n\n";
         $statusInformation = $this->updateStatus ? "<!-- The current status of the CODECHECK -->\n**CODECHECK Status:** " . __($this->codecheckStatus) . "\n\n" : '';
 
         return "<!-- Provide the title of your published paper or preprint -->\n## " . $paperTitle . "\n\n"
         . "<!-- Provide a link to your published paper or preprint, ideally with a DOI -->\n**Article:**\n\n"
         . "<!-- Information about the Journal in which the paper/ preprint is published -->\n**Journal:** " . $journalName . ' *(Submission ID: ' . $this->submissionID . ")*\n\n"
         . "<!-- Provide a link to your code (and data) repository(s) (GitHub, GitLab, etc.) -->\n**Repositories:**\n" . $repoStr . "\n\n"
+        . $codecheckerInformation
         . $statusInformation;
     }
 

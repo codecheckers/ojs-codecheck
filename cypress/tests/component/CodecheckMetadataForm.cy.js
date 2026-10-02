@@ -353,6 +353,45 @@ describe('CodecheckMetadataForm Component', () => {
     });
   });
 
+  /**
+   * The file spells the iD `ORCID` and the form `orcid`, and an imported iD
+   * used to be dropped on save; one that is not an iD still is, or every
+   * later save would fail. The file carries no GitHub username, so one already
+   * on the form for the same iD, or the same name, survives the import (#186).
+   */
+  it("takes the file's codecheckers in the form's shape, keeping a known username", () => {
+    const yml = importedYml();
+    yml.metadata.codechecker = [
+      { name: 'Josiah Carberry', ORCID: 'https://orcid.org/0000-0002-1825-0097' },
+      { name: 'Someone New', ORCID: '0000-0001-5109-3700' },
+      { name: 'Daniel', ORCID: 'NA' },
+    ];
+    cy.intercept('POST', '**/codecheck/repository?submissionId=1*', { statusCode: 200, body: yml });
+    interceptMetadata();
+    cy.mount(CodecheckMetadataForm, { props: { submission: { id: 1 }, canEdit: true } })
+      .then(({ wrapper }) => {
+        cy.wait('@loadMetadata');
+        cy.get('.codecheck-contact-email').should('exist').then(() => {
+          wrapper.vm.repositories = [{ url: 'https://github.com/a/b', hidden: false, containsCodecheckYaml: true }];
+          wrapper.vm.metadata = {
+            ...wrapper.vm.metadata,
+            codecheckers: [
+              { name: 'J. Carberry', orcid: '0000-0002-1825-0097', github: 'jcarberry' },
+              { name: 'Daniel', orcid: '', github: 'nuest' },
+            ],
+          };
+          return wrapper.vm.loadMetadataFromRepository(0).then(() => wrapper);
+        });
+      })
+      .then((wrapper) => {
+        cy.wrap(wrapper.vm).its('metadata.codecheckers').should('deep.equal', [
+          { name: 'Josiah Carberry', orcid: '0000-0002-1825-0097', github: 'jcarberry' },
+          { name: 'Someone New', orcid: '0000-0001-5109-3700', github: '' },
+          { name: 'Daniel', orcid: '', github: 'nuest' },
+        ]);
+      });
+  });
+
   it('shows why a file for another paper was refused, and imports nothing', () => {
     cy.intercept('POST', '**/codecheck/repository?submissionId=1*', {
       statusCode: 422,

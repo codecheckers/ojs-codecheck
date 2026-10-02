@@ -21,7 +21,7 @@ class CodecheckGithubRegisterIssueUnitTest extends PKPTestCase
 {
     private function buildIssue(
         array $repositories = ['https://github.com/example/repo'],
-        array $codecheckers = [['name' => 'Jane Doe', 'ORCID' => '0000-0002-1825-0097']],
+        array $codecheckers = [['name' => 'Jane Doe', 'orcid' => '0000-0002-1825-0097', 'github' => 'janedoe']],
         array $labels = ['community', 'journal'],
         string $authorString = 'Doe et al.',
         string $journalName = 'CODECHECK Demo Journal'
@@ -115,7 +115,10 @@ class CodecheckGithubRegisterIssueUnitTest extends PKPTestCase
         );
         $this->assertSame('2026-007', $metadata['identifier']);
         $this->assertSame(['https://github.com/example/repo'], $metadata['repositories']);
-        $this->assertSame('Jane Doe', $metadata['codecheckers'][0]['name']);
+        $this->assertSame(
+            ['name' => 'Jane Doe', 'orcid' => '0000-0002-1825-0097', 'github' => 'janedoe'],
+            $metadata['codecheckers'][0]
+        );
         $this->assertSame([], $metadata['links']);
     }
 
@@ -215,5 +218,21 @@ class CodecheckGithubRegisterIssueUnitTest extends PKPTestCase
     public function testTheRepositoryOwnerIsKeptForTheApiCall()
     {
         $this->assertSame('codecheckers', $this->buildIssue()->getRepositoryOwner());
+    }
+
+    /**
+     * Named in the body, linked to their ORCID record, and not mentioned: the
+     * body is rewritten on every update, and the assignment is what says on
+     * GitHub who is checking (#186).
+     */
+    public function testTheBodyNamesTheCodecheckersWithoutMentioningThem()
+    {
+        $body = $this->buildIssue()->getBody();
+
+        $this->assertStringContainsString(
+            '**Codecheckers:** Jane Doe ([ORCID 0000-0002-1825-0097](https://orcid.org/0000-0002-1825-0097))',
+            $body
+        );
+        $this->assertStringNotContainsString('@janedoe', $body);
     }
 }

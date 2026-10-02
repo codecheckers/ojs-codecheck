@@ -17,6 +17,7 @@
 
 namespace APP\plugins\generic\codecheck\tests\WorkflowUnitTests;
 
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckPostOrigin;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckStatusRegisterUpdate;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -220,5 +221,54 @@ class CodecheckStatusRegisterUpdateUnitTest extends PKPTestCase
                 "{$status} wants a label the plugin does not manage"
             );
         }
+    }
+
+    /**
+     * The status sentence alone, as before #186, when there is nobody to name.
+     */
+    public function testTheCommentIsTheStatusSentenceWhenNobodyIsNamed(): void
+    {
+        $this->assertSame(
+            'plugins.generic.codecheck.register.issue.statusComment',
+            CodecheckStatusRegisterUpdate::body(
+                Constants::CODECHECK_STATUS_NEEDS_CODECHECKER,
+                new CodecheckPostOrigin('Demo', 'https://journal.example/index.php/demo', null, null)
+            )
+        );
+    }
+
+    /**
+     * A codechecker GitHub assigned is named; one it did not is named with
+     * where to reach the journal coordinating them — the fallback a CODECHECK
+     * editor reading the register relies on (#186).
+     */
+    public function testAnUnassignedCodecheckerIsSentToTheJournal(): void
+    {
+        $body = CodecheckStatusRegisterUpdate::body(
+            Constants::CODECHECK_STATUS_ASSIGNED_CODECHECKER,
+            new CodecheckPostOrigin('Demo Journal', 'https://journal.example/index.php/demo', null, null),
+            [
+                'assigned' => [['name' => 'Daniel', 'orcid' => '', 'github' => 'nuest']],
+                'unassigned' => [
+                    ['name' => 'No username', 'orcid' => '', 'github' => ''],
+                    ['name' => 'Outsider', 'orcid' => '', 'github' => 'outsider'],
+                ],
+            ]
+        );
+
+        $lines = explode("\n\n", $body);
+        $this->assertSame([
+            'plugins.generic.codecheck.register.issue.statusComment',
+            'plugins.generic.codecheck.register.issue.codecheckerAssigned',
+            'plugins.generic.codecheck.register.issue.codecheckerViaJournal',
+            'plugins.generic.codecheck.register.issue.codecheckerViaJournal',
+        ], $lines);
+    }
+
+    public function testTheContactPageIsBuiltFromTheJournalAddress(): void
+    {
+        $origin = new CodecheckPostOrigin('Demo', 'https://journal.example/index.php/demo', null, null);
+
+        $this->assertSame('https://journal.example/index.php/demo/about/contact', $origin->contactUrl());
     }
 }

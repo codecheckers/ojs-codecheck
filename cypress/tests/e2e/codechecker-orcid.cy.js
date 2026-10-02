@@ -85,13 +85,18 @@ describe('Codechecker ORCID iDs', () => {
       save(payloadFrom(stored, [{ name: 'Josiah Carberry', orcid: `https://orcid.org/${CARBERRY}` }]))
         .its('status').should('eq', 200);
 
+      // Every save stores the GitHub username too, empty when there is none (#186).
       readMetadata().its('codecheckers').should('deep.equal', [
-        { name: 'Josiah Carberry', orcid: CARBERRY }
+        { name: 'Josiah Carberry', orcid: CARBERRY, github: '' }
       ]);
 
-      // put the record back, so the rest of the suite sees what it expects
+      // put the record back, so the rest of the suite sees what it expects —
+      // compared without `github`, which the dataset's entries predate
+      const withoutUsername = (list) => list.map(({ name, orcid }) => ({ name, orcid }));
       save(payloadFrom(stored, stored.codecheckers)).its('status').should('eq', 200);
-      readMetadata().its('codecheckers').should('deep.equal', stored.codecheckers);
+      readMetadata().its('codecheckers').then((restored) => {
+        expect(withoutUsername(restored)).to.deep.equal(withoutUsername(stored.codecheckers));
+      });
     });
   });
 

@@ -155,6 +155,15 @@ Two things worth fixing that this run exposed and that are not yet filed:
   *codechecker assigned* status the second test records (#174). The register must
   therefore carry `work in progress` and `needs codechecker` —
   `codecheckers/testing-dev-register` does, as does the real register.
+- **The assignee must be someone GitHub can assign there** (#186). Before
+  recording *codechecker assigned*, the second test saves two codecheckers: one
+  with the GitHub username `nuest` (override with `CYPRESS_liveAssignee`) and
+  one without. The third test expects the issue assigned to the first, the
+  first mentioned in the comment, and the second named with a link to the
+  journal's `about/contact` page. GitHub silently skips a username that is
+  neither a member or collaborator of the register nor a commenter on the
+  issue, so a username from outside `codecheckers` fails the assignee
+  assertion without any error from the plugin.
 - **A register with no identifier yet answers with a question, not a
   reservation.** `POST identifier` returns `confirmFirstIdentifier` and reserves
   nothing until the editor agrees, so the spec sends `confirmFirstIdentifier:

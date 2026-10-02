@@ -9,9 +9,11 @@
  * @class CodecheckCodecheckers
  *
  * @brief The rules for the `codecheckers` list of `codecheck_metadata`, and for
- *   the ORCID iDs in it.
+ *   the ORCID iDs and GitHub usernames in it.
  *
- * The list is `[{name, orcid}, …]`. An ORCID iD used to be stored exactly as it
+ * The list is `[{name, orcid, github}, …]`. The GitHub username is what the
+ * register issue is assigned to (#186); entries written before it existed
+ * have no `github` key and read as having no username. An ORCID iD used to be stored exactly as it
  * was typed, unchecked, and it reaches the generated `codecheck.yml`, the
  * article page and the public register from there — so this class is the same
  * arrangement the repository addresses already have (`CodecheckRepositories`,
@@ -52,7 +54,13 @@ class CodecheckCodecheckers
     public const ORCID_URI_PREFIX = 'https://orcid.org/';
 
     /** Sixteen digits in four groups; the last may be the check character `X`. */
-    private const BARE = '/^\d{4}-\d{4}-\d{4}-\d{3}[0-9X]$/';
+    private const BARE = '/^\d{4}-\d{4}-\d{4}-\d{3}[0-9X]$/D';
+
+    /**
+     * GitHub's rule for a username: up to 39 letters, digits and single
+     * hyphens, neither starting nor ending with a hyphen.
+     */
+    private const GITHUB_USERNAME = '/^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$/D';
 
     /**
      * Reduces an ORCID iD to the bare `0000-0000-0000-0000` form that is stored.
@@ -112,6 +120,55 @@ class CodecheckCodecheckers
     }
 
     /**
+     * Reduces a GitHub username to the bare name that is stored.
+     *
+     * Accepts what someone is likely to paste: the name, the `@name` form the
+     * community list and GitHub's own mentions use, or the address of the
+     * profile. Mirrored by `normalizeGithubUsername` in
+     * `resources/js/githubUsername.js`. Nothing is validated here, as with
+     * `normalizeOrcid()`.
+     */
+    public static function normalizeGithubUsername(mixed $value): string
+    {
+        $username = trim((string) ($value ?? ''));
+        $username = preg_replace('#^(?:https?://)?(?:www\.)?github\.com/#i', '', $username);
+        $username = preg_replace('/[?#].*$/', '', $username);
+
+        return ltrim(rtrim($username, '/'), '@');
+    }
+
+    /**
+     * Whether a value is a GitHub username. The empty value is not one; the
+     * field is optional, as the ORCID iD is.
+     */
+    public static function isGithubUsername(mixed $value): bool
+    {
+        return (bool) preg_match(self::GITHUB_USERNAME, self::normalizeGithubUsername($value));
+    }
+
+    /**
+     * The GitHub usernames in a codechecker list that are not usernames, in
+     * the form they were given.
+     *
+     * @return array<int, string>
+     */
+    private static function unusableGithubUsernames(mixed $codecheckers): array
+    {
+        return self::unusable($codecheckers, 'github', [self::class, 'isGithubUsername']);
+    }
+
+    /**
+     * The unusable GitHub usernames a save would *introduce* — only what is new
+     * is judged, as for the ORCID iDs below.
+     *
+     * @return array<int, string>
+     */
+    public static function newUnusableGithubUsernames(mixed $incoming, mixed $stored): array
+    {
+        return self::newlyIntroduced(self::unusableGithubUsernames($incoming), self::unusableGithubUsernames($stored));
+    }
+
+    /**
      * The ORCID iDs in a codechecker list that are not ORCID iDs.
      *
      * Reported in the form they were given, not normalised, so a refusal
@@ -123,17 +180,7 @@ class CodecheckCodecheckers
      */
     public static function unusableOrcids(mixed $codecheckers): array
     {
-        $unusable = [];
-
-        foreach (self::entries($codecheckers) as $codechecker) {
-            $orcid = trim((string) ($codechecker['orcid'] ?? ''));
-
-            if ($orcid !== '' && !self::isOrcid($orcid)) {
-                $unusable[] = $orcid;
-            }
-        }
-
-        return array_values(array_unique($unusable));
+        return self::unusable($codecheckers, 'orcid', [self::class, 'isOrcid']);
     }
 
     /**
@@ -147,40 +194,77 @@ class CodecheckCodecheckers
      */
     public static function newUnusableOrcids(mixed $incoming, mixed $stored): array
     {
-        $alreadyStored = self::unusableOrcids($stored);
-
-        return array_values(array_filter(
-            self::unusableOrcids($incoming),
-            fn (string $orcid) => !in_array($orcid, $alreadyStored, true)
-        ));
+        return self::newlyIntroduced(self::unusableOrcids($incoming), self::unusableOrcids($stored));
     }
 
     /**
-     * The list with every ORCID iD reduced to the stored form, and each name
-     * trimmed.
+     * The list with every ORCID iD and GitHub username reduced to the stored
+     * form, and each name trimmed.
      *
      * Applied on the way in so the column holds one shape whatever the client
      * sent — the dialog normalises too, but the endpoint is reachable without
      * it.
      *
-     * @return array<int, array{name: string, orcid: string}>
+     * @return array<int, array{name: string, orcid: string, github: string}>
      */
-    public static function withNormalizedOrcids(mixed $codecheckers): array
+    public static function withNormalizedEntries(mixed $codecheckers): array
     {
-        $normalized = [];
+        return array_map([self::class, 'normalizedEntry'], self::entries($codecheckers));
+    }
+
+    /**
+     * One entry in the stored form.
+     *
+     * An unrecognisable value is refused before this is reached, so what is
+     * stored is either a well-formed value or nothing.
+     *
+     * @return array{name: string, orcid: string, github: string}
+     */
+    public static function normalizedEntry(array $codechecker): array
+    {
+        $orcid = self::normalizeOrcid($codechecker['orcid'] ?? '');
+        $github = self::normalizeGithubUsername($codechecker['github'] ?? '');
+
+        return [
+            'name' => trim((string) ($codechecker['name'] ?? '')),
+            'orcid' => self::isOrcid($orcid) ? $orcid : '',
+            'github' => self::isGithubUsername($github) ? $github : '',
+        ];
+    }
+
+    /**
+     * The values under `$key` that `$isUsable` refuses, in the form they were
+     * given, so a refusal message shows the editor what they typed.
+     *
+     * @return array<int, string>
+     */
+    private static function unusable(mixed $codecheckers, string $key, callable $isUsable): array
+    {
+        $unusable = [];
 
         foreach (self::entries($codecheckers) as $codechecker) {
-            $orcid = self::normalizeOrcid($codechecker['orcid'] ?? '');
+            $value = trim((string) ($codechecker[$key] ?? ''));
 
-            $normalized[] = [
-                'name' => trim((string) ($codechecker['name'] ?? '')),
-                // An unrecognisable value is refused before this is reached, so
-                // what is stored is either a well-formed iD or nothing.
-                'orcid' => self::isOrcid($orcid) ? $orcid : '',
-            ];
+            if ($value !== '' && !$isUsable($value)) {
+                $unusable[] = $value;
+            }
         }
 
-        return $normalized;
+        return array_values(array_unique($unusable));
+    }
+
+    /**
+     * Refusing a record for a value already in it turns away saves that changed
+     * something else entirely, and the editor is given no way out (issue #170).
+     *
+     * @return array<int, string>
+     */
+    private static function newlyIntroduced(array $incoming, array $alreadyStored): array
+    {
+        return array_values(array_filter(
+            $incoming,
+            fn (string $value) => !in_array($value, $alreadyStored, true)
+        ));
     }
 
     /**

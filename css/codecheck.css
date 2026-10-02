@@ -483,3 +483,9 @@ textarea[name="dataAvailabilityStatement"] {
   color: #d00a0a;
   font-size: 14px;
 }
+
+.modal-field-hint {
+  margin-top: 0.25rem;
+  color: #555;
+  font-size: 13px;
+}

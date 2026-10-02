@@ -279,6 +279,7 @@
               <div class="item-content">
                 <div class="item-name">{{ checker.name }}</div>
                 <div class="item-orcid" v-if="checker.orcid">ORCID: {{ checker.orcid }}</div>
+                <div class="item-orcid" v-if="checker.github">GitHub: @{{ checker.github }}</div>
               </div>
               <button 
                 type="button"
@@ -444,6 +445,7 @@
 <script>
 import { html, htmlSentence, MARKUP_PLACEHOLDER, toHtml } from '../markup.js';
 import { isWebUrl } from '../isWebUrl.js';
+import { isValidOrcid, normalizeOrcid } from '../orcid.js';
 import { missingMandatoryFields } from '../configSpec.js';
 import { notOptedInReason } from '../optIn.js';
 import { askForConfirmation, askForInput, showInformation } from '../dialogs.js';
@@ -821,7 +823,9 @@ export default {
                 manifest: data.metadata?.manifest ?? this.metadata.manifest,
                 repository: this.metadata.repository,
                 source: data.metadata?.source ?? this.metadata.source,
-                codecheckers: data.metadata?.codechecker ?? this.metadata.codecheckers,
+                codecheckers: Array.isArray(data.metadata?.codechecker)
+                  ? this.importedCodecheckers(data.metadata.codechecker)
+                  : this.metadata.codecheckers,
                 certificate: this.certificateLocked
                   ? this.metadata.certificate
                   : (data.metadata?.certificate ?? this.metadata.certificate),
@@ -1027,6 +1031,24 @@ export default {
             <label class="modal-label">${htmlSentence(this.t('plugins.generic.codecheck.repositories.infoTextMoreInformation', {link: MARKUP_PLACEHOLDER}), link)}</label>
           </div>
         `
+      });
+    },
+
+    /**
+     * The codecheckers of an imported codecheck.yml in the form's shape. The
+     * file spells it `ORCID`, while the form, the dialog and the server read
+     * `orcid` alone, so an imported iD used to be dropped on save. One that is
+     * not an iD is still dropped — kept, it would make every later save fail —
+     * and the file has no GitHub username, so one already on the form for the
+     * same iD, or failing that the same name, survives the import (#186).
+     */
+    importedCodecheckers(fromFile) {
+      return fromFile.map(({ name, ORCID, orcid }) => {
+        const id = normalizeOrcid(orcid ?? ORCID ?? '');
+        const usableId = isValidOrcid(id) ? id : '';
+        const known = this.metadata.codecheckers.find((checker) =>
+          usableId ? checker.orcid === usableId : checker.name === name);
+        return { name: name ?? '', orcid: usableId, github: known?.github ?? '' };
       });
     },
 

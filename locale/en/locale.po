@@ -383,6 +383,12 @@ msgstr "Nothing was deposited: this CODECHECK has no certificate identifier yet,
 msgid "plugins.generic.codecheck.register.issue.statusComment"
 msgstr "The CODECHECK status changed to: {$status}"
 
+msgid "plugins.generic.codecheck.register.issue.codecheckerAssigned"
+msgstr "Codechecker: {$codechecker}"
+
+msgid "plugins.generic.codecheck.register.issue.codecheckerViaJournal"
+msgstr "Codechecker: {$codechecker}, coordinated by {$journal}; to reach them, please contact the journal via {$contactUrl}"
+
 msgid "plugins.generic.codecheck.repositories.titleMismatch"
 msgstr "The paper title in this repository's codecheck.yml is missing or does not match the title of this submission, so nothing was imported."
 
@@ -717,6 +723,30 @@ msgstr "Enter codechecker name:"
 msgid "plugins.generic.codecheck.codecheckers.enterOrcid"
 msgstr "Enter ORCID (optional):"
 
+msgid "plugins.generic.codecheck.codecheckers.enterGithubUsername"
+msgstr "GitHub username (optional)"
+
+msgid "plugins.generic.codecheck.codecheckers.githubHint"
+msgstr "The register issue is assigned to this account. Without one, the issue names the codechecker and refers readers to the journal."
+
+msgid "plugins.generic.codecheck.codecheckers.githubSuggested.directory"
+msgstr "This journal has recorded the GitHub username {$username} for this ORCID iD."
+
+msgid "plugins.generic.codecheck.codecheckers.githubSuggested.community"
+msgstr "The CODECHECK community list gives the GitHub username {$username} for this ORCID iD."
+
+msgid "plugins.generic.codecheck.codecheckers.githubSuggestion.use"
+msgstr "Use it"
+
+msgid "plugins.generic.codecheck.codecheckers.directory"
+msgstr "Choose a codechecker this journal has worked with"
+
+msgid "plugins.generic.codecheck.codecheckers.directory.none"
+msgstr "Someone new"
+
+msgid "plugins.generic.codecheck.codecheckers.validation.githubInvalid"
+msgstr "This is not a GitHub username. Enter the username alone, for example octocat, or leave the field empty."
+
 msgid "plugins.generic.codecheck.codecheckers.remove.modal.title"
 msgstr "Remove codechecker"
 
@@ -767,6 +797,9 @@ msgstr "This journal does not offer CODECHECK config version {$version}."
 
 msgid "plugins.generic.codecheck.codecheckers.invalidOrcid"
 msgstr "This is not an ORCID iD: {$orcid}. Enter it as 0000-0000-0000-0000, or leave the field empty."
+
+msgid "plugins.generic.codecheck.codecheckers.invalidGithubUsername"
+msgstr "This is not a GitHub username: {$username}. Enter the username alone, without spaces, or leave the field empty."
 
 msgid "plugins.generic.codecheck.codecheckers.validation.nameRequired"
 msgstr "Enter the codechecker's name."

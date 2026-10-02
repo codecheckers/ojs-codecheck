@@ -369,6 +369,9 @@ Tables are created by `classes/migration/install/CodecheckSchemaMigration.php`:
 - `codecheck_status` — status history (FK → `codecheck_metadata`, cascade delete)
 - `codecheck_issue_labels` — cached GitHub labels (refreshed if >6h old)
 - `codecheck_orcid_tokens` — created but currently unused
+- `codecheck_codecheckers` — the journal's directory of codecheckers (#186):
+  `context_id, name, orcid, github_username`, unique per journal on the ORCID
+  iD and on the username
 
 Migration structure (added for issue #94):
 
@@ -382,6 +385,8 @@ Migration structure (added for issue #94):
   and converts the old `repoWithCodecheckYaml` index into a `containsCodecheckYaml`
   flag on each entry. Its `convert()` is `public static` so the conversion is
   testable without a database
+- `upgrade/I186_AddCodecheckerDirectory` — creates `codecheck_codecheckers`;
+  converts nothing
 - `upgrade/I185_MoveRecordsToConfigSpec2` — moves every record on a config
   version the plugin no longer knows (`latest`, `1.0`) to `2.0`, and the
   `spec_version` column default with it. Runs after I93, whose column it reads
@@ -572,6 +577,86 @@ invent labels in someone else's repository. And `CodecheckIssueLabels` keeps all
 of them out of the list the form offers
 (`isAssignedByThePlugin()`), or the form would add what a status change had just
 removed.
+
+### Codecheckers and register assignees (#186)
+
+A codechecker in a submission's `codecheckers` list is `{name, orcid, github}`;
+entries from before #186 have no `github` and read as having no username.
+`CodecheckCodecheckers` is the rule for all three, at the save boundary, and
+`resources/js/githubUsername.js` mirrors the username half as `orcid.js`
+mirrors the ORCID half. The save path reads `orcid` alone. A `codecheck.yml`
+spells it `ORCID`, so `CodecheckMetadataForm.importedCodecheckers()` maps an
+import into the form's shape — that is where the second spelling entered, and
+an imported iD was dropped on save while the form held it raw. An imported iD
+that is not one is still dropped, or every later save would be refused, and a
+username already on the form for the same iD (or name) survives the import.
+(`OrcidAuthHandler` and the ORCID status endpoint still accept `ORCID` too;
+they read the stored column, which now only ever holds `orcid`.)
+
+**Everything journal-wide or public is for editors** (#173), checked with
+`CodecheckSubmissionAccess::isEditor()`. `POST metadata` and `POST
+status/update` admit an assigned reviewer, so the editor check is inside:
+a reviewer's save neither writes the directory nor assigns anyone, and a
+reviewer recording "codechecker assigned" gets the plain status comment (#150)
+without codechecker lines.
+
+**The submission keeps a copy; the directory is a memory.**
+`CodecheckCodecheckerDirectory` fills `codecheck_codecheckers` from editorial
+saves and feeds the dialog's picker, but nothing reads a check's codecheckers
+from it — a check records who did it at the time. It learns only the entries a
+save brings in or changes, so re-saving an older record cannot put back a name
+or username a newer check replaced; the cost is that past checks are not
+backfilled — the directory starts empty and fills as checks are edited. Entries
+with neither an ORCID iD nor a username are not remembered, and a username held
+by another entry is not moved silently. The lookup order — directory, then
+community list — is `suggestGithubUsername()`, and the dialog checks the
+directory it already loaded before asking. `GET codecheckers` and
+`GET codecheckers/lookup` are `EDITOR_ROLES`.
+
+**A suggested username is offered, never filled in.** The dialog shows it with
+a "Use it" button. Filling it in on blur meant the blur that pressing Add
+causes could fill it, and the editor added a username they never saw.
+
+**The suggestion is the only server call to `raw.githubusercontent.com`.**
+`CommunityCodecheckers` reads the three lists in `codecheckers/codecheckers`
+at `HEAD` — the default branch is `master`, and a guessed `main` answered 404
+for every list — concurrently, with columns found by header. A complete read is
+cached for six hours in Laravel's cache, a partial or failed one for five
+minutes. The e2e suite must make no external call, so a spec driving the
+dialog against a real OJS intercepts `codecheckers/lookup`
+(`codechecker-dialog.cy.js` does).
+
+**Assignment follows the status, as the labels do, and is only added.**
+`CodecheckGithubRegisterApiClient::syncAssignees()` is the one place that
+assigns, and the one that decides it is best-effort; it answers `null` when
+GitHub could not be asked, which is not "nobody assigned" — the comment then
+names nobody rather than calling an assigned codechecker unreachable. It is
+reached two ways, both through `CodecheckStatusRegisterUpdate`'s resolver (the
+"update status" choice, credentials, an issue in the configured register) and
+both for editors only:
+
+- recording `codechecker assigned` (`apply()`, before the comment, so the
+  comment can say whom it reached);
+- an editorial save that brings in a username or records the issue for the
+  first time (`syncAssignees()`), while the current status is past
+  `needs codechecker` — an issue labelled `needs codechecker` with an assignee
+  is the state #174 removed.
+
+Issue creation and "update issue" do not assign: they carried the form's
+unsaved list and bypassed the resolver. Nothing is unassigned: someone may
+have assigned a person by hand, and withdrawing the plugin's own assignments
+needs a record of which ones it made. GitHub **silently drops** a username it
+cannot assign (not a member or collaborator of the register, has not
+commented), so the answer is read back.
+
+**A codechecker without a usable username is the fallback, not an error.** The
+comment names them, with their ORCID record, and links the journal's contact
+page (`CodecheckPostOrigin::contactUrl()`, built from the configuration like
+the journal address, never from the request). Such a codechecker is not
+@-mentioned. `RegisterCodecheckers::describe()` keeps a name to one line,
+escapes it, writes `&` as `&amp;` and follows every `@` and `#` with a
+zero-width space. **An HTML entity is not enough**: GitHub renders `&#64;name`
+as a mention, and `\#1` still links an issue.
 
 ### ORCID deposit (`classes/Orcid/`)
 

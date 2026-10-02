@@ -9,14 +9,14 @@
  * @class CodecheckStatusRegisterUpdate
  *
  * @brief Carries a CODECHECK status change to the register issue: a comment
- *   saying it changed (#150), and the labels that say where the check stands
- *   (#174).
+ *   saying it changed (#150), the labels that say where the check stands
+ *   (#174), and — once a codechecker is assigned — who that is (#186).
  *
- * Two halves of one idea, in one class because they need the same four things
+ * Parts of one idea, in one class because they need the same four things
  * resolved — the journal's "update status" choice, the credentials, the register
- * and the issue number — and a second resolver would be a second reader of all
- * four. Each half is attempted independently, so a refused comment still brings
- * the labels with it.
+ * and the issue number (`register()`) — and a second resolver would be a second
+ * reader of all four. Each part is attempted independently, so a refused comment
+ * still brings the labels with it.
  *
  * The register issue's title, body and labels are rewritten in place as a check
  * progresses, so the issue always shows the present state and never how it got
@@ -33,8 +33,10 @@ namespace APP\plugins\generic\codecheck\classes\Workflow;
 use APP\core\Application;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckPostOrigin;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\RegisterCodecheckers;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
+use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionAccess;
 use Illuminate\Support\Facades\DB;
 use PKP\plugins\PluginRegistry;
 
@@ -49,52 +51,144 @@ class CodecheckStatusRegisterUpdate
     public static function apply(int $submissionId, string $status): void
     {
         try {
-            $plugin = PluginRegistry::getPlugin('generic', 'codecheckplugin');
-            $context = Application::get()->getRequest()->getContext();
-
-            if (!$plugin || !$context) {
+            $register = self::register($submissionId);
+            if ($register === null) {
                 return;
             }
+            [$client, $issueNumber, $origin, $codecheckers] = $register;
 
-            $contextId = $context->getId();
-
-            // The journal chose whether the register issue reflects the status at
-            // all. If it does not, a comment saying it changed would be noise in
-            // someone else's repository.
-            $updateFields = $plugin->getSetting($contextId, Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_FIELDS);
-            if (!is_array($updateFields)
-                || !in_array(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_STATUS, $updateFields)) {
-                return;
-            }
-
-            $token = $plugin->getSetting($contextId, Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN);
-            $organization = $plugin->getSetting($contextId, Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION);
-            $repository = $plugin->getSetting($contextId, Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY);
-
-            if (empty($token) || empty($organization) || empty($repository)) {
-                return;
-            }
-
-            $issueNumber = self::issueNumberInRegister($submissionId, $organization, $repository);
-            if ($issueNumber === null) {
-                return;
-            }
-
-            $client = new CodecheckGithubRegisterApiClient(
-                $token,
-                $organization,
-                $repository,
-                (string) $submissionId,
-                CodecheckPostOrigin::fromContext($plugin, $context)
-            );
-
-            // Independent halves: the labels are the part a reader of the
+            // Independent parts: the labels are the part a reader of the
             // register filters on, so a refused comment must not cost them.
-            self::comment($client, $issueNumber, $submissionId, $status);
+            // The assignment goes first because the comment says who it reached.
+            // Only an editor's recording assigns, as only an editor writes to
+            // the register otherwise (#173); a reviewer's still comments (#150).
+            $named = null;
+            if ($status === Constants::CODECHECK_STATUS_ASSIGNED_CODECHECKER && self::byEditor()) {
+                $assigned = $client->syncAssignees($issueNumber, $codecheckers);
+                // A failed request says nothing about who is assigned, so the
+                // comment then names nobody rather than calling them unreachable.
+                if ($assigned !== null) {
+                    $split = RegisterCodecheckers::split($codecheckers, $assigned);
+                    $named = $split['assigned'] === [] && $split['unassigned'] === [] ? null : $split;
+                }
+            }
+            self::comment($client, $issueNumber, $submissionId, $status, $named, $origin);
             self::syncLabels($client, $issueNumber, $submissionId, $status);
         } catch (\Throwable $e) {
             CodecheckLogger::warning('Could not carry the CODECHECK status to the register issue: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Assign the codecheckers on record to the register issue, outside a status
+     * change (#186): a codechecker added, or given a username, after the check
+     * was marked "codechecker assigned" records no new status, and would
+     * otherwise never be assigned. GitHub shows the assignment on the issue's
+     * timeline, so no comment is written.
+     *
+     * Under the same conditions as `apply()` — the journal's "update status"
+     * choice, the credentials, an issue in the configured register, and an
+     * editor asking — and only once the check stands at "codechecker assigned"
+     * or later: an issue still labelled `needs codechecker` with someone
+     * assigned says both things at once, the state #174 removed. The
+     * assignment follows the status, as the labels do.
+     */
+    public static function syncAssignees(int $submissionId): void
+    {
+        try {
+            if (!self::byEditor() || !self::statusAssigns($submissionId)) {
+                return;
+            }
+
+            $register = self::register($submissionId);
+            if ($register === null) {
+                return;
+            }
+            [$client, $issueNumber, , $codecheckers] = $register;
+
+            $client->syncAssignees($issueNumber, $codecheckers);
+        } catch (\Throwable $e) {
+            CodecheckLogger::warning('Could not assign the codecheckers to the register issue: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Whether the check's current status is one at which a codechecker is
+     * assigned: anything past waiting for one.
+     */
+    private static function statusAssigns(int $submissionId): bool
+    {
+        $current = CodecheckStatusHandler::getCurrentStatusData($submissionId)->status ?? null;
+
+        return is_string($current) && !in_array($current, [
+            Constants::CODECHECK_STATUS_PENDING,
+            Constants::CODECHECK_STATUS_NEEDS_CODECHECKER,
+        ], true);
+    }
+
+    /** Whether the request comes from someone in an editorial role (#173). */
+    private static function byEditor(): bool
+    {
+        $request = Application::get()->getRequest();
+        $context = $request->getContext();
+
+        return $context !== null && CodecheckSubmissionAccess::isEditor($request->getUser(), $context->getId());
+    }
+
+    /**
+     * Everything a write to the register issue needs, or `null` when there is
+     * to be no write: the client, the issue number, the post origin and the
+     * stored codecheckers.
+     *
+     * @return ?array{0: CodecheckGithubRegisterApiClient, 1: int, 2: CodecheckPostOrigin, 3: ?string}
+     */
+    private static function register(int $submissionId): ?array
+    {
+        $plugin = PluginRegistry::getPlugin('generic', 'codecheckplugin');
+        $context = Application::get()->getRequest()->getContext();
+
+        if (!$plugin || !$context) {
+            return null;
+        }
+
+        $contextId = $context->getId();
+
+        // The journal chose whether the register issue reflects the status at
+        // all. If it does not, a comment saying it changed would be noise in
+        // someone else's repository.
+        $updateFields = $plugin->getSetting($contextId, Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_FIELDS);
+        if (!is_array($updateFields)
+            || !in_array(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_STATUS, $updateFields)) {
+            return null;
+        }
+
+        $token = $plugin->getSetting($contextId, Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN);
+        $organization = $plugin->getSetting($contextId, Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION);
+        $repository = $plugin->getSetting($contextId, Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY);
+
+        if (empty($token) || empty($organization) || empty($repository)) {
+            return null;
+        }
+
+        $metadata = DB::table('codecheck_metadata')
+            ->where('submission_id', $submissionId)
+            ->first(['issue', 'codecheckers']);
+
+        $issueNumber = self::issueNumberInRegister($submissionId, $metadata->issue ?? null, $organization, $repository);
+        if ($issueNumber === null) {
+            return null;
+        }
+
+        $origin = CodecheckPostOrigin::fromContext($plugin, $context);
+        $client = new CodecheckGithubRegisterApiClient(
+            $token,
+            $organization,
+            $repository,
+            (string) $submissionId,
+            $origin
+        );
+
+        return [$client, $issueNumber, $origin, $metadata->codecheckers ?? null];
     }
 
     /**
@@ -154,10 +248,12 @@ class CodecheckStatusRegisterUpdate
         CodecheckGithubRegisterApiClient $client,
         int $issueNumber,
         int $submissionId,
-        string $status
+        string $status,
+        ?array $codecheckers,
+        CodecheckPostOrigin $origin
     ): void {
         try {
-            $body = self::body($status);
+            $body = self::body($status, $origin, $codecheckers);
             if ($body === null) {
                 return;
             }
@@ -258,14 +354,11 @@ class CodecheckStatusRegisterUpdate
      */
     private static function issueNumberInRegister(
         int $submissionId,
+        ?string $storedIssue,
         string $organization,
         string $repository
     ): ?int {
-        $metadata = DB::table('codecheck_metadata')
-            ->where('submission_id', $submissionId)
-            ->first(['issue']);
-
-        $issue = json_decode($metadata->issue ?? '', true);
+        $issue = json_decode($storedIssue ?? '', true);
 
         if (!is_array($issue)) {
             return null;
@@ -305,9 +398,19 @@ class CodecheckStatusRegisterUpdate
     }
 
     /**
-     * The comment, as one translated sentence.
+     * The comment: the status as one translated sentence, and — when the
+     * status assigns a codechecker — a line per codechecker saying who it is
+     * (#186).
+     *
+     * A codechecker GitHub holds assigned is named and mentioned. One it does
+     * not is named with where to reach the journal coordinating them: that is
+     * the fallback for a codechecker the register cannot reach, and the line a
+     * CODECHECK editor needs in order to ask. Such a codechecker is not
+     * mentioned, since a username GitHub would not assign may not be theirs.
+     *
+     * @param ?array{assigned: array, unassigned: array} $codecheckers
      */
-    private static function body(string $status): ?string
+    public static function body(string $status, CodecheckPostOrigin $origin, ?array $codecheckers = null): ?string
     {
         $translated = __($status);
 
@@ -318,8 +421,24 @@ class CodecheckStatusRegisterUpdate
             return null;
         }
 
-        return __('plugins.generic.codecheck.register.issue.statusComment', [
+        $lines = [__('plugins.generic.codecheck.register.issue.statusComment', [
             'status' => $translated,
-        ]);
+        ])];
+
+        foreach ($codecheckers['assigned'] ?? [] as $entry) {
+            $lines[] = __('plugins.generic.codecheck.register.issue.codecheckerAssigned', [
+                'codechecker' => RegisterCodecheckers::describe($entry),
+            ]);
+        }
+
+        foreach ($codecheckers['unassigned'] ?? [] as $entry) {
+            $lines[] = __('plugins.generic.codecheck.register.issue.codecheckerViaJournal', [
+                'codechecker' => RegisterCodecheckers::describe($entry, false),
+                'journal' => CodecheckPostOrigin::escapeMarkdown($origin->getJournalName()),
+                'contactUrl' => $origin->contactUrl(),
+            ]);
+        }
+
+        return implode("\n\n", $lines);
     }
 }

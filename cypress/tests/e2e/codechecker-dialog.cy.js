@@ -15,6 +15,13 @@ describe('The add-codechecker dialog', () => {
   const submissionId = 10;
 
   beforeEach(() => {
+    // Leaving the ORCID field asks OJS for a GitHub username, which reaches
+    // the CODECHECK community list on GitHub; the e2e suite makes no external
+    // call, so the answer is stubbed (#186).
+    cy.intercept(
+      { method: 'GET', pathname: '/index.php/codecheck/api/v1/codecheck/codecheckers/lookup' },
+      { success: true, github: null, source: null }
+    );
     cy.ojsLogin('admin', 'admin');
     cy.visit(
       '/index.php/codecheck/dashboard/editorial' +

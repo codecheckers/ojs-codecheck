@@ -11,7 +11,10 @@
  * What it exercises, end to end and for real:
  *
  *   1. reserving a certificate identifier, which opens an issue in the register;
- *   2. recording a CODECHECK status, which comments on that issue (#150).
+ *   2. recording a CODECHECK status, which comments on that issue (#150);
+ *   3. recording "codechecker assigned", which assigns the codechecker who has
+ *      a GitHub username and names the one without, sending the reader to the
+ *      journal (#186).
  *
  * Neither can be tested against a stub: the first asks the register which
  * identifiers are taken, and the second is only observable as a comment in
@@ -39,6 +42,17 @@ const readRegister = (path) =>
   });
 
 const registerOrganization = () => Cypress.env('registerOrganization') || 'codecheckers';
+
+// Who is assigned: a member of the codecheckers organisation, so GitHub can
+// assign them in the testing register. Override for a register elsewhere.
+const assignee = () => Cypress.env('liveAssignee') || 'nuest';
+
+// The two codecheckers recorded before "codechecker assigned" (#186): one the
+// register can be assigned to, and one it cannot reach.
+const CODECHECKERS = () => [
+  { name: 'Live test codechecker', orcid: '', github: assignee() },
+  { name: 'Live test codechecker without a username', orcid: '0000-0002-1825-0097', github: '' },
+];
 const registerRepository = () => Cypress.env('registerRepository') || 'testing-dev-register';
 
 describe('Live: the register issue', () => {
@@ -188,6 +202,30 @@ describe('Live: the register issue', () => {
           expect(labels, 'the check asks for a codechecker').to.include('needs codechecker');
         });
 
+        // The record, saved whole with the codecheckers in it: a save without
+        // the issue or the certificate would blank them.
+        const codecheck = response.body.codecheck;
+        cy.request({
+          method: 'POST',
+          url: api(`metadata?submissionId=${SUBMISSION}`),
+          headers: { 'X-Csrf-Token': csrfToken, 'Content-Type': 'application/json' },
+          body: {
+            version: codecheck.version,
+            publication_type: codecheck.publicationType,
+            manifest: codecheck.manifest ?? [],
+            repository: codecheck.repository,
+            source: codecheck.source,
+            codecheckers: CODECHECKERS(),
+            certificate: codecheck.certificate,
+            issue: codecheck.issue,
+            check_time: codecheck.check_time,
+            summary: codecheck.summary,
+            report: codecheck.report,
+            additional_content: codecheck.additionalContent,
+          },
+          timeout: 60000,
+        }).its('status').should('eq', 200);
+
         recordStatus('plugins.generic.codecheck.status.assignedCodechecker');
       });
     });
@@ -216,6 +254,11 @@ describe('Live: the register issue', () => {
           const bodies = comments.body.map((c) => c.body).join('\n');
           cy.log(`issue #${issue.number}: ${comments.body.length} comment(s)`);
           expect(bodies, 'the status change was commented on the issue').to.contain('CODECHECK status');
+          // #186: the assigned codechecker is named and mentioned, the other is
+          // named with where to reach the journal.
+          expect(bodies, 'the assigned codechecker is mentioned').to.contain(`@${assignee()}`);
+          expect(bodies, 'the codechecker without a username is named').to.contain('Live test codechecker without a username');
+          expect(bodies, 'and the reader is sent to the journal').to.contain('/about/contact');
         });
 
         // The other half of the same idea (#174): the labels say where the check
@@ -227,6 +270,11 @@ describe('Live: the register issue', () => {
           expect(labels, 'the check is marked as in progress').to.include('work in progress');
           expect(labels, 'the check no longer asks for a codechecker').to.not.include('needs codechecker');
           expect(labels, 'the identifier label is left in place').to.include('id assigned');
+
+          // #186: what testing-dev-register#212 lacked — the labels said a
+          // codechecker was assigned, and nobody was.
+          const assignees = registerIssue.body.assignees.map((user) => user.login.toLowerCase());
+          expect(assignees, 'the codechecker is assigned to the issue').to.include(assignee().toLowerCase());
         });
 
         cy.log(

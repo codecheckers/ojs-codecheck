@@ -9,10 +9,13 @@ use APP\facades\Repo;
 use APP\plugins\generic\codecheck\api\v1\CurlApiClient;
 use APP\plugins\generic\codecheck\api\v1\JsonResponse;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\RegisterCodecheckers;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
+use APP\plugins\generic\codecheck\classes\Submission\CodecheckCodecheckerDirectory;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckCodecheckers;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckRepositories;
+use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionAccess;
 use Github\Client;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\Yaml\Yaml;
@@ -212,6 +215,25 @@ class CodecheckMetadataHandler
             ];
         }
 
+        // And for the GitHub usernames, which the register issue is assigned to
+        // (#186): a name GitHub would refuse is better refused here, where the
+        // editor typed it, than at a public issue that ends up unassigned.
+        $unusableUsernames = CodecheckCodecheckers::newUnusableGithubUsernames(
+            $data['codecheckers'] ?? null,
+            $stored->codecheckers ?? null
+        );
+        if ($unusableUsernames !== []) {
+            return [
+                'success' => false,
+                'error' => __('plugins.generic.codecheck.codecheckers.invalidGithubUsername', [
+                    'username' => implode(', ', $unusableUsernames),
+                ]),
+                'status' => 400,
+            ];
+        }
+
+        $codecheckers = CodecheckCodecheckers::withNormalizedEntries($data['codecheckers'] ?? []);
+
         $metadataData = [
             'submission_id' => $submissionId,
             // As with `repository` below, a payload with no `version` leaves the
@@ -229,7 +251,7 @@ class CodecheckMetadataHandler
                 ? json_encode(CodecheckRepositories::withOneMarked($data['repository'] ?? ['repositories' => null]))
                 : ($stored->repository ?? json_encode(['repositories' => null])),
             'source' => $nullIfEmpty($data['source'] ?? null),
-            'codecheckers' => json_encode(CodecheckCodecheckers::withNormalizedOrcids($data['codecheckers'] ?? [])),
+            'codecheckers' => json_encode($codecheckers),
             // Trimmed so that what is stored is what the generated codecheck.yml
             // carries, and what the form judges against the specification.
             'certificate' => $nullIfEmpty($trim($data['certificate'] ?? null)),
@@ -250,10 +272,49 @@ class CodecheckMetadataHandler
             DB::table('codecheck_metadata')->insert($metadataData);
         }
 
+        $this->afterCodecheckersSaved($request, $submissionId, $stored, $codecheckers, $metadataData['issue']);
+
         return [
             'success' => true,
             'message' => 'CODECHECK metadata saved successfully'
         ];
+    }
+
+    /**
+     * What a save of the codecheckers sets off beyond the record (#186), for an
+     * editor only: the journal's directory and the register issue are both
+     * journal-wide, and a reviewer is held to one submission everywhere else
+     * (#173).
+     *
+     * - The directory learns the entries this save brings in or changes, not
+     *   the ones it carries unchanged: an older record re-saved must not put
+     *   back a name or username a newer check replaced.
+     * - The register issue is assigned when this save brings in a username, or
+     *   records the issue for the first time — the identifier is reserved
+     *   before the record holds the issue, so the assignment waits for this
+     *   save. `CodecheckStatusRegisterUpdate::syncAssignees()` decides the rest.
+     */
+    private function afterCodecheckersSaved($request, int $submissionId, ?object $stored, array $codecheckers, string $issue): void
+    {
+        $context = $request->getContext();
+        if (!$context || !CodecheckSubmissionAccess::isEditor($request->getUser(), $context->getId())) {
+            return;
+        }
+
+        $storedCodecheckers = CodecheckCodecheckers::withNormalizedEntries($stored->codecheckers ?? null);
+
+        CodecheckCodecheckerDirectory::rememberAll(
+            $context->getId(),
+            array_values(array_filter($codecheckers, fn (array $entry) => !in_array($entry, $storedCodecheckers, true)))
+        );
+
+        $newUsernames = array_diff(RegisterCodecheckers::usernames($codecheckers), RegisterCodecheckers::usernames($storedCodecheckers));
+        $storedIssueNumber = json_decode($stored->issue ?? '', true)['number'] ?? null;
+        $issueNumber = json_decode($issue, true)['number'] ?? null;
+
+        if ($newUsernames !== [] || ($issueNumber !== null && $issueNumber !== $storedIssueNumber)) {
+            CodecheckStatusRegisterUpdate::syncAssignees($submissionId);
+        }
     }
 
     /**

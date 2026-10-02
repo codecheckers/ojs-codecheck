@@ -21,6 +21,7 @@
 namespace APP\plugins\generic\codecheck\tests\SubmissionUnitTests;
 
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckCodecheckers;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PKP\tests\PKPTestCase;
 
 class CodecheckCodecheckersUnitTest extends PKPTestCase
@@ -145,14 +146,14 @@ class CodecheckCodecheckersUnitTest extends PKPTestCase
 
     public function testNormalizingAListReducesEveryIdentifierAndTrimsNames(): void
     {
-        $normalized = CodecheckCodecheckers::withNormalizedOrcids([
+        $normalized = CodecheckCodecheckers::withNormalizedEntries([
             ['name' => '  Josiah Carberry  ', 'orcid' => 'https://orcid.org/' . self::CARBERRY],
             ['name' => 'No iD', 'orcid' => ''],
         ]);
 
         $this->assertSame([
-            ['name' => 'Josiah Carberry', 'orcid' => self::CARBERRY],
-            ['name' => 'No iD', 'orcid' => ''],
+            ['name' => 'Josiah Carberry', 'orcid' => self::CARBERRY, 'github' => ''],
+            ['name' => 'No iD', 'orcid' => '', 'github' => ''],
         ], $normalized);
     }
 
@@ -163,18 +164,86 @@ class CodecheckCodecheckersUnitTest extends PKPTestCase
      */
     public function testAnUnusableIdentifierIsNotWrittenBack(): void
     {
-        $normalized = CodecheckCodecheckers::withNormalizedOrcids([
+        $normalized = CodecheckCodecheckers::withNormalizedEntries([
             ['name' => 'Mistyped', 'orcid' => '0000-0002-1825-0098'],
         ]);
 
-        $this->assertSame([['name' => 'Mistyped', 'orcid' => '']], $normalized);
+        $this->assertSame([['name' => 'Mistyped', 'orcid' => '', 'github' => '']], $normalized);
     }
 
     public function testAMissingNameOrIdentifierBecomesTheEmptyString(): void
     {
         $this->assertSame(
-            [['name' => '', 'orcid' => '']],
-            CodecheckCodecheckers::withNormalizedOrcids([[]])
+            [['name' => '', 'orcid' => '', 'github' => '']],
+            CodecheckCodecheckers::withNormalizedEntries([[]])
         );
+    }
+
+    #[DataProvider('pastedGithubUsernames')]
+    public function testAGithubUsernameIsReducedToTheBareName(string $pasted): void
+    {
+        $this->assertSame('nuest', CodecheckCodecheckers::normalizeGithubUsername($pasted));
+        $this->assertTrue(CodecheckCodecheckers::isGithubUsername($pasted));
+    }
+
+    public static function pastedGithubUsernames(): array
+    {
+        return [
+            'bare' => ['nuest'],
+            'mention' => ['@nuest'],
+            'padded' => ['  nuest  '],
+            'profile address' => ['https://github.com/nuest'],
+            'profile address with slash and query' => ['github.com/nuest/?tab=repositories'],
+            'www' => ['https://www.github.com/nuest'],
+        ];
+    }
+
+    #[DataProvider('notGithubUsernames')]
+    public function testWhatGithubWouldRefuseIsNotAUsername(string $value): void
+    {
+        $this->assertFalse(CodecheckCodecheckers::isGithubUsername($value));
+    }
+
+    public static function notGithubUsernames(): array
+    {
+        return [
+            'empty' => [''],
+            'space' => ['daniel nuest'],
+            'leading hyphen' => ['-nuest'],
+            'trailing hyphen' => ['nuest-'],
+            'double hyphen' => ['nu--est'],
+            'forty characters' => [str_repeat('a', 40)],
+            'underscore' => ['nu_est'],
+            'a repository, not a user' => ['github.com/codecheckers/register'],
+        ];
+    }
+
+    public function testThirtyNineCharactersAndSingleHyphensAreAUsername(): void
+    {
+        $this->assertTrue(CodecheckCodecheckers::isGithubUsername(str_repeat('a', 39)));
+        $this->assertTrue(CodecheckCodecheckers::isGithubUsername('Nathan-Skene-2'));
+    }
+
+    public function testTheNormalizedListKeepsAUsableUsernameAndDropsAnUnusableOne(): void
+    {
+        $this->assertSame([
+            ['name' => 'Daniel', 'orcid' => '', 'github' => 'nuest'],
+            ['name' => 'Typo', 'orcid' => '', 'github' => ''],
+        ], CodecheckCodecheckers::withNormalizedEntries([
+            ['name' => 'Daniel', 'github' => '@nuest'],
+            ['name' => 'Typo', 'github' => 'not a name'],
+        ]));
+    }
+
+    public function testOnlyAnIntroducedUnusableUsernameIsRefused(): void
+    {
+        $stored = json_encode([['name' => 'Old', 'orcid' => '', 'github' => 'bad name']]);
+        $incoming = [
+            ['name' => 'Old', 'github' => 'bad name'],
+            ['name' => 'New', 'github' => 'also bad'],
+            ['name' => 'Fine', 'github' => 'nuest'],
+        ];
+
+        $this->assertSame(['also bad'], CodecheckCodecheckers::newUnusableGithubUsernames($incoming, $stored));
     }
 }
