@@ -381,7 +381,8 @@ serve: check-ojs
 # column default, runs it twice and asserts (dev/check-migration-spec2.php).
 # Outside every suite because it writes to the development database and moves
 # any real `latest` or `1.0` record in it. Refuses unless the OJS plugin symlink
-# points at this checkout. FORCE=1 skips the prompt.
+# points at this checkout. FORCE=1 skips the prompt; UPGRADE_XML=1 runs it the
+# way a Plugin Gallery upgrade does, through the plugin's upgrade.xml.
 check-migration: check-ojs
 	@if [ -z "$(FORCE)" ]; then \
 		echo "This runs the upgrade migration against $(DB_NAME): it moves every \`latest\` and \`1.0\` record to 2.0."; \
@@ -389,7 +390,7 @@ check-migration: check-ojs
 		read answer; \
 		[ "$$answer" = "yes" ] || (echo "Cancelled; nothing was run." && exit 1); \
 	fi
-	@php dev/check-migration-spec2.php "$(OJS_ROOT)"
+	@php dev/check-migration-spec2.php "$(OJS_ROOT)" $(if $(UPGRADE_XML),--upgrade-xml)
 
 # --- Code style -------------------------------------------------------------
 

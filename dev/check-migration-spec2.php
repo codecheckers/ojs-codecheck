@@ -20,15 +20,31 @@
  * checkout: the migration class is autoloaded through that symlink, and the
  * check would otherwise test somebody else's branch (see CLAUDE.md).
  *
+ * With `--upgrade-xml` the migration is run the way a Plugin Gallery upgrade
+ * runs it — OJS's own `Upgrade` installer reading the plugin's `upgrade.xml`,
+ * with the parameters `PluginHelper` gives it — instead of by calling the class.
+ * A gallery upgrade does nothing else to the database, so this is what a journal
+ * that never re-enables the plugin gets.
+ *
+ * What it shows is that the installer accepts the descriptor and the database
+ * ends up migrated, not which path ran the migration: the installer also loads
+ * the plugins, and `Plugin::register()` hooks the install migration to
+ * `Installer::postInstall`, so it may run twice. It is idempotent, and the
+ * second-run assertion below is the proof. OJS prints "Plugin … failed to be
+ * registered" for every plugin in that mode, this one included: it loads them
+ * with no request, and the lines are noise.
+ *
  * Usage (see the check-migration target in the Makefile):
  *
- *   php dev/check-migration-spec2.php OJS_ROOT
+ *   php dev/check-migration-spec2.php OJS_ROOT [--upgrade-xml]
  */
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-$ojsRoot = $argv[1] ?? getenv('OJS_ROOT') ?: '';
+$viaUpgradeXml = in_array('--upgrade-xml', $argv, true);
+$arguments = array_values(array_diff(array_slice($argv, 1), ['--upgrade-xml']));
+$ojsRoot = $arguments[0] ?? (getenv('OJS_ROOT') ?: '');
 if ($ojsRoot === '' || !is_file("{$ojsRoot}/tools/bootstrap.php")) {
     fwrite(STDERR, "No OJS installation at '{$ojsRoot}'; pass OJS_ROOT.\n");
     exit(2);
@@ -65,6 +81,38 @@ $columnDefault = function (): ?string {
     return $column['default'] ?? null;
 };
 
+// What runs the migration: the class itself, or OJS's installer reading the
+// plugin's upgrade.xml as a Plugin Gallery upgrade does.
+$runMigration = function () use ($viaUpgradeXml, $here): void {
+    if (!$viaUpgradeXml) {
+        (new Migration())->up();
+
+        return;
+    }
+
+    $params = [];
+    foreach ([
+        'connectionCharset' => ['i18n', 'connection_charset'],
+        'databaseDriver' => ['database', 'driver'],
+        'databaseHost' => ['database', 'host'],
+        'databasePort' => ['database', 'port'],
+        'unixSocket' => ['database', 'unix_socket'],
+        'databaseUsername' => ['database', 'username'],
+        'databasePassword' => ['database', 'password'],
+        'databaseName' => ['database', 'name'],
+    ] as $key => [$section, $name]) {
+        $params[$key] = \PKP\config\Config::getVar($section, $name);
+    }
+    $site = \PKP\db\DAORegistry::getDAO('SiteDAO')->getSite();
+    $params['locale'] = $site->getPrimaryLocale();
+    $params['additionalLocales'] = $site->getSupportedLocales();
+
+    $installer = new \APP\install\Upgrade($params, "{$here}/upgrade.xml", true);
+    if (!$installer->execute()) {
+        throw new RuntimeException('The upgrade installer failed: ' . $installer->getErrorString());
+    }
+};
+
 $now = date('Y-m-d H:i:s');
 try {
     foreach ($seed as $id => $version) {
@@ -75,11 +123,12 @@ try {
     }
     DB::statement("ALTER TABLE codecheck_metadata ALTER spec_version SET DEFAULT 'latest'");
 
+    echo ($viaUpgradeXml ? 'Through upgrade.xml' : 'By calling the migration') . "\n";
     echo 'Before: ' . json_encode($versions()) . ', default ' . var_export($columnDefault(), true) . "\n";
     $check('seeded the legacy default', Migration::defaultIs($columnDefault(), 'latest'));
 
     echo "First run\n";
-    (new Migration())->up();
+    $runMigration();
     $check('`latest` moved to 2.0', ($versions()[9990001] ?? null) === '2.0');
     $check('`1.0` moved to 2.0', ($versions()[9990002] ?? null) === '2.0');
     $check('a version the migration does not retire is left alone', ($versions()[9990003] ?? null) === '2.1');
@@ -87,7 +136,7 @@ try {
 
     $afterFirst = $versions();
     echo "Second run\n";
-    (new Migration())->up();
+    $runMigration();
     $check('changes nothing', $versions() === $afterFirst && Migration::defaultIs($columnDefault(), '2.0'));
 } finally {
     DB::table('codecheck_metadata')->whereIn('submission_id', array_keys($seed))->delete();

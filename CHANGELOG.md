@@ -24,6 +24,7 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 
 #### Under the hood
 
+- The database is brought up to date when the plugin is upgraded from the Plugin Gallery, not only when it is enabled
 - Five-minute live demo walkthrough with its own dataset (`make demo-db`) and screenshots of every view for backup slides (`make demo-screenshots`): [dev/live-demo.md](dev/live-demo.md)
 
 ### Changed

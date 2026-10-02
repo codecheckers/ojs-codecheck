@@ -328,7 +328,23 @@ Migration structure (added for issue #94):
 - `upgrade/I185_MoveRecordsToConfigSpec2` — moves every record on a config
   version the plugin no longer knows (`latest`, `1.0`) to `2.0`, and the
   `spec_version` column default with it. Runs after I93, whose column it reads
-- `CodecheckPlugin::setEnabled()` runs the install migration on enable.
+- `CodecheckPlugin::setEnabled()` runs the install migration on enable, and
+  **`upgrade.xml` runs it when the plugin is upgraded from the Plugin Gallery**.
+  A gallery upgrade replaces the files and records the new version and runs
+  nothing else unless the package carries that file, so without it a journal that
+  never re-enabled the plugin kept the old schema and rows. The file names
+  `GalleryUpgradeMigration` alone, which runs the install migration (that calls
+  every upgrade step) and **carries no `version`**: the installer records a
+  descriptor's version as OJS's own when it is newer. The wrapper exists because
+  `PluginHelper::upgradePlugin()` **deletes the plugin's directory when anything
+  throws** and the installer catches only `Exception`: a failure — the old plugin
+  object is still in memory and the migration calls it — is logged instead, and
+  the migration runs again on the next enable. It also upgrades only an install
+  that already has `codecheck_metadata`, because the install migration writes a
+  genre into every journal, which is for a journal that enables the plugin.
+  `UpgradeXmlUnitTest` pins the class, that OJS's parser reads the file and that
+  `git` does not `export-ignore` it; the full gallery path (a packaged zip and a
+  version bump) is not exercised, and is worth one run on a release candidate.
   **Nothing in the plugin drops a table** — the settings form's "Clear / Reset
   DB" button did, and was removed in #131; rebuild a development instance with
   `make db-reset` instead.
@@ -337,7 +353,10 @@ Migration structure (added for issue #94):
   `1.0` rows and a `latest` column default, runs I185 twice and asserts — and,
   as it writes to the development database, asks first and refuses unless the OJS
   plugin symlink points at this checkout. Run it after touching an upgrade
-  migration that moves data.
+  migration that moves data. `make check-migration UPGRADE_XML=1` runs it the way
+  a gallery upgrade does, through OJS's `Upgrade` installer and `upgrade.xml`; the
+  installer also hooks the install migration itself, so that mode shows the
+  descriptor is accepted and the result is right, not which of the two ran it.
 
 The migration is the single source of truth for this schema. A stale `schema.xml`
 and a dead `CodecheckMetadataDAO` used to describe two further, contradictory
