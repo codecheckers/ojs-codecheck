@@ -11,6 +11,9 @@ use APP\plugins\generic\codecheck\classes\Workflow\CodecheckStatusRegisterUpdate
 
 class CodecheckGithubRegisterIssue
 {
+    /** How the JSON metadata block opens, which is how it is found again. */
+    private const METADATA_BLOCK_OPENING = "<details>\n<summary><h3>JSON encoded CODECHECK metadata</h3></summary>\n\n";
+
     private string $repositoryOwner;
     private string $repository;
     private string $title;
@@ -103,12 +106,39 @@ class CodecheckGithubRegisterIssue
         array $codecheckers,
         array $repositories
     ): string {
-        $metadata = ['identifier' => $certificateIdentifier->toStr()];
-        if ($this->updateStatus) {
-            $metadata['status'] = $this->codecheckStatus;
+        return self::metadataBlock(
+            $certificateIdentifier->toStr(),
+            $this->updateStatus ? $this->codecheckStatus : null,
+            $repositories,
+            $codecheckers,
+            $origin,
+            $submissionID
+        );
+    }
+
+    /**
+     * The JSON metadata block on its own, so it can be rewritten from the stored
+     * record when the status or the record changes, without the paper title
+     * and author string the rest of the body needs (#186).
+     *
+     * @param ?string $status the status key, or null when the journal does not
+     *   publish the status
+     * @param string[] $publicRepositories already reduced to what a reader may see
+     */
+    public static function metadataBlock(
+        string $identifier,
+        ?string $status,
+        array $publicRepositories,
+        mixed $codecheckers,
+        CodecheckPostOrigin $origin,
+        string $submissionID
+    ): string {
+        $metadata = ['identifier' => $identifier];
+        if ($status !== null) {
+            $metadata['status'] = $status;
         }
         $metadata += [
-            'repositories' => array_values($repositories),
+            'repositories' => array_values($publicRepositories),
             // In the stored shape, whatever the form sent: name, bare ORCID iD
             // and GitHub username (#186).
             'codecheckers' => CodecheckCodecheckers::withNormalizedEntries($codecheckers),
@@ -117,13 +147,32 @@ class CodecheckGithubRegisterIssue
             'plugin' => $origin->pluginMetadata(),
         ];
 
-        return "<details>\n<summary><h3>JSON encoded CODECHECK metadata</h3></summary>\n\n"
+        return self::METADATA_BLOCK_OPENING
         . "```json\n"
         // A backtick as \u0060, which is the same string in JSON: a name holding
         // three of them would otherwise close the fence early.
         . str_replace('`', '\u0060', json_encode($metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE))
         . "\n```"
         . "\n\n</details>";
+    }
+
+    /**
+     * An issue body with its JSON metadata block replaced, or null when the
+     * body has none — one edited by hand, or written by something else — which
+     * is then left as it is rather than given a second block.
+     */
+    public static function withMetadataBlock(string $body, string $block): ?string
+    {
+        $start = strpos($body, self::METADATA_BLOCK_OPENING);
+        if ($start === false) {
+            return null;
+        }
+        $end = strpos($body, '</details>', $start);
+        if ($end === false) {
+            return null;
+        }
+
+        return substr($body, 0, $start) . $block . substr($body, $end + strlen('</details>'));
     }
 
     private function createBodyMarkdown(

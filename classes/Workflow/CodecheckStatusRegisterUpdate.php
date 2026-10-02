@@ -32,10 +32,12 @@ namespace APP\plugins\generic\codecheck\classes\Workflow;
 
 use APP\core\Application;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterIssue;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckPostOrigin;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\RegisterCodecheckers;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
+use APP\plugins\generic\codecheck\classes\Submission\CodecheckRepositories;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionAccess;
 use Illuminate\Support\Facades\DB;
 use PKP\plugins\PluginRegistry;
@@ -55,7 +57,8 @@ class CodecheckStatusRegisterUpdate
             if ($register === null) {
                 return;
             }
-            [$client, $issueNumber, $origin, $codecheckers] = $register;
+            ['client' => $client, 'issueNumber' => $issueNumber, 'origin' => $origin] = $register;
+            $codecheckers = $register['metadata']->codecheckers ?? null;
 
             // Independent parts: the labels are the part a reader of the
             // register filters on, so a refused comment must not cost them.
@@ -77,6 +80,8 @@ class CodecheckStatusRegisterUpdate
         } catch (\Throwable $e) {
             CodecheckLogger::warning('Could not carry the CODECHECK status to the register issue: ' . $e->getMessage());
         }
+
+        self::refreshMetadata($submissionId);
     }
 
     /**
@@ -104,11 +109,60 @@ class CodecheckStatusRegisterUpdate
             if ($register === null) {
                 return;
             }
-            [$client, $issueNumber, , $codecheckers] = $register;
 
-            $client->syncAssignees($issueNumber, $codecheckers);
+            $register['client']->syncAssignees($register['issueNumber'], $register['metadata']->codecheckers ?? null);
         } catch (\Throwable $e) {
             CodecheckLogger::warning('Could not assign the codecheckers to the register issue: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Rewrite the JSON metadata block in the register issue's body from the
+     * stored record (#186), so the record a machine reads off the register
+     * follows a status change or a save, not only the editor's "update issue".
+     *
+     * The rest of the body — paper title, authors, the readable lines — needs
+     * what only the form sends, and is still rewritten by "update issue" alone.
+     *
+     * Under the journal's choice to keep the issue body up to date, for an
+     * editor only (#173), and once the record carries its identifier.
+     */
+    public static function refreshMetadata(int $submissionId): void
+    {
+        try {
+            if (!self::byEditor()) {
+                return;
+            }
+
+            $register = self::register($submissionId, Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_BODY);
+            if ($register === null) {
+                return;
+            }
+
+            $metadata = $register['metadata'];
+            $identifier = trim((string) ($metadata->certificate ?? ''));
+            if ($identifier === '') {
+                return;
+            }
+
+            $status = in_array(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_STATUS, $register['updateFields'])
+                ? CodecheckStatusHandler::getCurrentStatusData($submissionId)->status
+                : null;
+
+            $block = CodecheckGithubRegisterIssue::metadataBlock(
+                $identifier,
+                $status,
+                CodecheckRepositories::publicUrls($metadata->repository ?? null),
+                $metadata->codecheckers ?? null,
+                $register['origin'],
+                (string) $submissionId
+            );
+
+            if ($register['client']->replaceIssueMetadataBlock($register['issueNumber'], $block)) {
+                CodecheckLogger::info("Rewrote the metadata of register issue #{$register['issueNumber']} for submission {$submissionId}.");
+            }
+        } catch (\Throwable $e) {
+            CodecheckLogger::warning('Could not rewrite the metadata of the register issue: ' . $e->getMessage());
         }
     }
 
@@ -137,12 +191,15 @@ class CodecheckStatusRegisterUpdate
 
     /**
      * Everything a write to the register issue needs, or `null` when there is
-     * to be no write: the client, the issue number, the post origin and the
-     * stored codecheckers.
+     * to be no write: the client, the issue number, the post origin, the stored
+     * record and the journal's choice of what the issue reflects.
      *
-     * @return ?array{0: CodecheckGithubRegisterApiClient, 1: int, 2: CodecheckPostOrigin, 3: ?string}
+     * @param string $field the part of the issue the journal must have chosen
+     *   to keep up to date: the status (comment, labels, assignees) or the body
+     *
+     * @return ?array{client: CodecheckGithubRegisterApiClient, issueNumber: int, origin: CodecheckPostOrigin, metadata: object, updateFields: array}
      */
-    private static function register(int $submissionId): ?array
+    private static function register(int $submissionId, string $field = Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_STATUS): ?array
     {
         $plugin = PluginRegistry::getPlugin('generic', 'codecheckplugin');
         $context = Application::get()->getRequest()->getContext();
@@ -153,12 +210,11 @@ class CodecheckStatusRegisterUpdate
 
         $contextId = $context->getId();
 
-        // The journal chose whether the register issue reflects the status at
-        // all. If it does not, a comment saying it changed would be noise in
-        // someone else's repository.
+        // The journal chose what the register issue reflects. What it did not
+        // choose is left alone: a comment saying the status changed would be
+        // noise in someone else's repository.
         $updateFields = $plugin->getSetting($contextId, Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_FIELDS);
-        if (!is_array($updateFields)
-            || !in_array(Constants::CODECHECK_GITHUB_REGISTER_ISSUE_UPDATE_STATUS, $updateFields)) {
+        if (!is_array($updateFields) || !in_array($field, $updateFields)) {
             return null;
         }
 
@@ -172,7 +228,10 @@ class CodecheckStatusRegisterUpdate
 
         $metadata = DB::table('codecheck_metadata')
             ->where('submission_id', $submissionId)
-            ->first(['issue', 'codecheckers']);
+            ->first(['issue', 'codecheckers', 'certificate', 'repository']);
+        if (!$metadata) {
+            return null;
+        }
 
         $issueNumber = self::issueNumberInRegister($submissionId, $metadata->issue ?? null, $organization, $repository);
         if ($issueNumber === null) {
@@ -188,7 +247,13 @@ class CodecheckStatusRegisterUpdate
             $origin
         );
 
-        return [$client, $issueNumber, $origin, $metadata->codecheckers ?? null];
+        return [
+            'client' => $client,
+            'issueNumber' => $issueNumber,
+            'origin' => $origin,
+            'metadata' => $metadata,
+            'updateFields' => $updateFields,
+        ];
     }
 
     /**

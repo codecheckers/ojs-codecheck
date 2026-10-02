@@ -235,4 +235,37 @@ class CodecheckGithubRegisterIssueUnitTest extends PKPTestCase
         );
         $this->assertStringNotContainsString('@janedoe', $body);
     }
+
+    /**
+     * The JSON block is rewritten in place from the stored record on a status
+     * change or a save (#186); the rest of the body stays as it is.
+     */
+    public function testTheMetadataBlockIsReplacedAndTheRestOfTheBodyKept()
+    {
+        $body = $this->buildIssue()->getBody();
+        $origin = new CodecheckPostOrigin('Demo', 'https://journal.example/index.php/demo', null, null);
+        $block = CodecheckGithubRegisterIssue::metadataBlock(
+            '2026-007',
+            'plugins.generic.codecheck.status.assignedCodechecker',
+            ['https://github.com/a/b'],
+            [['name' => 'Daniel', 'orcid' => '', 'github' => 'nuest']],
+            $origin,
+            '42'
+        );
+
+        $updated = CodecheckGithubRegisterIssue::withMetadataBlock($body, $block);
+
+        $this->assertNotNull($updated);
+        $this->assertStringContainsString('"github": "nuest"', $updated);
+        $this->assertSame(1, substr_count($updated, '<details>'));
+        $before = substr($body, 0, strpos($body, '<details>'));
+        $this->assertStringStartsWith($before, $updated);
+        $this->assertStringEndsWith(substr($body, strpos($body, '</details>') + strlen('</details>')), $updated);
+        $this->assertSame('nuest', $this->metadata($updated)['codecheckers'][0]['github']);
+    }
+
+    public function testABodyWithoutTheBlockIsLeftAlone()
+    {
+        $this->assertNull(CodecheckGithubRegisterIssue::withMetadataBlock('Written by hand.', '<details>…</details>'));
+    }
 }

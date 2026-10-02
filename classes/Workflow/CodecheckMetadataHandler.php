@@ -272,7 +272,7 @@ class CodecheckMetadataHandler
             DB::table('codecheck_metadata')->insert($metadataData);
         }
 
-        $this->afterCodecheckersSaved($request, $submissionId, $stored, $codecheckers, $metadataData['issue']);
+        $this->afterSave($request, $submissionId, $stored, $codecheckers, $metadataData['issue']);
 
         return [
             'success' => true,
@@ -281,7 +281,7 @@ class CodecheckMetadataHandler
     }
 
     /**
-     * What a save of the codecheckers sets off beyond the record (#186), for an
+     * What a save sets off beyond the record (#186), for an
      * editor only: the journal's directory and the register issue are both
      * journal-wide, and a reviewer is held to one submission everywhere else
      * (#173).
@@ -293,8 +293,9 @@ class CodecheckMetadataHandler
      *   records the issue for the first time — the identifier is reserved
      *   before the record holds the issue, so the assignment waits for this
      *   save. `CodecheckStatusRegisterUpdate::syncAssignees()` decides the rest.
+     * - The register issue's JSON metadata block is rewritten from the record.
      */
-    private function afterCodecheckersSaved($request, int $submissionId, ?object $stored, array $codecheckers, string $issue): void
+    private function afterSave($request, int $submissionId, ?object $stored, array $codecheckers, string $issue): void
     {
         $context = $request->getContext();
         if (!$context || !CodecheckSubmissionAccess::isEditor($request->getUser(), $context->getId())) {
@@ -315,6 +316,10 @@ class CodecheckMetadataHandler
         if ($newUsernames !== [] || ($issueNumber !== null && $issueNumber !== $storedIssueNumber)) {
             CodecheckStatusRegisterUpdate::syncAssignees($submissionId);
         }
+
+        // The issue's JSON metadata follows the record on every save; it is
+        // read first and only written when it changed.
+        CodecheckStatusRegisterUpdate::refreshMetadata($submissionId);
     }
 
     /**

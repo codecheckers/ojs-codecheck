@@ -649,6 +649,17 @@ needs a record of which ones it made. GitHub **silently drops** a username it
 cannot assign (not a member or collaborator of the register, has not
 commented), so the answer is read back.
 
+**The issue body's JSON block follows the record; the rest of the body does
+not.** `CodecheckStatusRegisterUpdate::refreshMetadata()` rewrites the
+`<details>` JSON block from the stored record after every status change and
+every editorial save — editors only, under the journal's "update body" choice,
+once the record carries its identifier. It reads the body first and writes only
+when the block changed, and leaves a body without the block alone. The rest of
+the body (paper title, authors, the readable status and codecheckers lines)
+needs what only the form sends, so it is still rewritten by "update issue"
+alone; `CodecheckGithubRegisterIssue::metadataBlock()` is the one builder of
+the block for both paths.
+
 **A codechecker without a usable username is the fallback, not an error.** The
 comment names them, with their ORCID record, and links the journal's contact
 page (`CodecheckPostOrigin::contactUrl()`, built from the configuration like

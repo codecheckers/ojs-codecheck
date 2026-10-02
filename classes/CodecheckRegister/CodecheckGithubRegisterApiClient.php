@@ -535,6 +535,45 @@ class CodecheckGithubRegisterApiClient
     }
 
     /**
+     * Rewrite the JSON metadata block in a register issue's body, leaving the
+     * rest of the body as it stands (#186).
+     *
+     * Read first and written only when the block changed, so a save that
+     * changed nothing the block carries costs one request and no edit on the
+     * issue. A body without the block is left alone.
+     *
+     * @throws ApiUpdateException when GitHub refuses the edit.
+     *
+     * @return bool whether the body was rewritten
+     */
+    public function replaceIssueMetadataBlock(int $issueNumber, string $block): bool
+    {
+        $this->client->authenticate($this->githubPAT, null, Client::AUTH_ACCESS_TOKEN);
+
+        try {
+            $body = (string) ($this->showIssue($issueNumber)['body'] ?? '');
+            $updated = CodecheckGithubRegisterIssue::withMetadataBlock($body, $block);
+            if ($updated === null || $updated === $body) {
+                return false;
+            }
+
+            $this->client->api('issue')->update(
+                $this->githubRegisterOrganization,
+                $this->githubRegisterRepository,
+                $issueNumber,
+                ['body' => $updated]
+            );
+
+            return true;
+        } catch (\Throwable $e) {
+            throw new ApiUpdateException(
+                "Could not rewrite the metadata of register issue #{$issueNumber}: " . $e->getMessage(),
+                (int) $e->getCode()
+            );
+        }
+    }
+
+    /**
      * A register issue as GitHub holds it.
      */
     private function showIssue(int $issueNumber): array
