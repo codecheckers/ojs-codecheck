@@ -85,7 +85,15 @@ function t(key, params = {}) {
     return key;
   }
 
-  return message.replace(PLACEHOLDER_PATTERN, (_, name) => params[name]);
+  // As OJS's own localizer does it (`ibe()` in its bundle): one `String.replace`
+  // per parameter, with the value as the replacement *string*. So `$&`, `$'`,
+  // `$$` and `` $` `` in a value are substitution patterns and not text, and a
+  // caller that passes user-supplied text has to escape `$` — a function
+  // replacer here hid that.
+  return Object.entries(params).reduce(
+    (text, [name, value]) => text.replace(new RegExp(`\\{\\$${name}\\}`, 'g'), String(value)),
+    message
+  );
 }
 
 if (typeof window !== 'undefined') {

@@ -16,6 +16,8 @@ const metadataResponseBody = () => ({
       { name: 'John Doe', orcid: '0000-0001-2345-6789' },
       { name: 'Jane Smith', orcid: '0000-0002-3456-7890' }
     ],
+    contact: { name: 'Jane Smith', email: 'jane.smith@example.org' },
+    authorsWithheld: false,
     doi: '10.1234/test.2024',
     dataAvailabilityStatement: 'Data is available at Zenodo'
   },
@@ -190,6 +192,168 @@ describe('CodecheckMetadataForm Component', () => {
     cy.get('.read-only-section .availability-statement').should('not.exist');
     cy.get('.read-only-section')
       .should('contain', 'plugins.generic.codecheck.paperMetadata.noAvailabilityStatement');
+  });
+
+  /** The submission part of the metadata response, with fields overridden. */
+  const submissionWith = (fields) => ({ submission: { ...metadataResponseBody().submission, ...fields } });
+
+  it('names the contact author and links their address, with the paper in the subject (#28)', () => {
+    interceptMetadata();
+    mountForm();
+    cy.wait('@loadMetadata');
+
+    cy.get('.codecheck-contact').should('contain', 'Jane Smith');
+    cy.get('.codecheck-contact-email')
+      .should('have.text', 'jane.smith@example.org')
+      .invoke('attr', 'href')
+      .then((href) => {
+        expect(href.startsWith('mailto:jane.smith@example.org?subject=')).to.equal(true);
+        expect(decodeURIComponent(href.split('?subject=')[1]))
+          .to.equal('Question about the CODECHECK of "Test Article Title"');
+      });
+  });
+
+  it('keeps a title with $ patterns intact in the mail subject', () => {
+    // OJS's t() substitutes with String.replace, so `$&` and `$'` in a title would
+    // otherwise be read as patterns; the mock substitutes the same way.
+    const title = "Cost of $5, $& and $' in R";
+    interceptMetadata(submissionWith({ title }));
+    mountForm();
+    cy.wait('@loadMetadata');
+
+    cy.get('.codecheck-contact-email').invoke('attr', 'href').then((href) => {
+      expect(decodeURIComponent(href.split('?subject=')[1]))
+        .to.equal(`Question about the CODECHECK of "${title}"`);
+    });
+  });
+
+  it('keeps an address from adding headers of its own to the mail', () => {
+    interceptMetadata(submissionWith({ contact: { name: 'Mallory', email: 'm@example.org?bcc=x@example.org' } }));
+    mountForm();
+    cy.wait('@loadMetadata');
+
+    cy.get('.codecheck-contact-email').invoke('attr', 'href').then((href) => {
+      expect(href).to.contain('m@example.org%3Fbcc%3Dx@example.org?subject=');
+      expect(href.match(/\?/g)).to.have.length(1);
+    });
+  });
+
+  it('says so when the submission names no contact author', () => {
+    interceptMetadata(submissionWith({ contact: null }));
+    mountForm();
+    cy.wait('@loadMetadata');
+
+    cy.get('.codecheck-contact-email').should('not.exist');
+    cy.get('.codecheck-contact').should('contain', 'plugins.generic.codecheck.paperMetadata.noContact');
+  });
+
+  it('says in the YAML preview that the authors are left out for a withheld viewer', () => {
+    interceptMetadata(submissionWith({ authors: [], contact: null, authorsWithheld: true }));
+    cy.mount(CodecheckMetadataForm, { props: { submission: { id: 1 }, canEdit: true } })
+      .then(({ wrapper }) => {
+        cy.wait('@loadMetadata').then(() => wrapper.vm.showYamlModal('paper:\n  title: x\n'));
+      });
+
+    cy.get('.pkp-mock-modal .yaml-withheld-notice')
+      .should('contain', 'plugins.generic.codecheck.yaml.authorsWithheld');
+  });
+
+  it('shows no such notice to a viewer who sees the authors', () => {
+    interceptMetadata();
+    cy.mount(CodecheckMetadataForm, { props: { submission: { id: 1 }, canEdit: true } })
+      .then(({ wrapper }) => {
+        cy.wait('@loadMetadata').then(() => wrapper.vm.showYamlModal('paper:\n  title: x\n'));
+      });
+
+    cy.get('.pkp-mock-modal .yaml-preview-content').should('exist');
+    cy.get('.yaml-withheld-notice').should('not.exist');
+  });
+
+  /** The yml a repository import answers with: other paper data and an identifier. */
+  const importedYml = () => ({
+    success: true,
+    metadata: {
+      version: 'https://codecheck.org.uk/spec/config/1.0/',
+      paper: { title: 'A different title', authors: [{ name: 'Someone Else' }], doi: '10.9999/other' },
+      summary: 'Imported summary',
+      certificate: '2030-001',
+    },
+  });
+
+  /** Import from the first repository, once the form has loaded. */
+  const importFirstRepository = (certificateInStore) =>
+    cy.mount(CodecheckMetadataForm, { props: { submission: { id: 1 }, canEdit: true } })
+      .then(({ wrapper }) => {
+        cy.wait('@loadMetadata');
+        // The response is in before the form has applied it, and the linked issue
+        // is part of what it applies.
+        cy.get('.codecheck-contact-email').should('exist').then(() => {
+          wrapper.vm.repositories = [{ url: 'https://github.com/a/b', hidden: false, containsCodecheckYaml: true }];
+          if (certificateInStore !== undefined) {
+            // Replaced as a whole: a nested write through the wrapper does not reach
+            // the form's computed properties.
+            wrapper.vm.metadata = { ...wrapper.vm.metadata, certificate: certificateInStore };
+          }
+          return wrapper.vm.loadMetadataFromRepository(0).then(() => wrapper);
+        });
+      });
+
+  it('imports for this submission, and leaves the paper data the form shows read-only alone (#28)', () => {
+    cy.intercept('POST', '**/codecheck/repository?submissionId=1*', { statusCode: 200, body: importedYml() })
+      .as('importRepository');
+    interceptMetadata();
+    importFirstRepository().then((wrapper) => {
+      cy.wait('@importRepository');
+      cy.wrap(wrapper.vm).should((vm) => {
+        expect(vm.metadata.summary, 'what the form edits is imported').to.equal('Imported summary');
+        expect(vm.submissionData.title).to.equal('Test Article Title');
+        expect(vm.submissionData.authors.map((a) => a.name)).to.deep.equal(['John Doe', 'Jane Smith']);
+        expect(vm.submissionData.doi).to.equal('10.1234/test.2024');
+      });
+    });
+  });
+
+  it('takes the certificate identifier from the file while the field can still be edited', () => {
+    cy.intercept('POST', '**/codecheck/repository?submissionId=1*', { statusCode: 200, body: importedYml() });
+    interceptMetadata();
+    importFirstRepository('').then((wrapper) => {
+      cy.wrap(wrapper.vm).its('metadata.certificate').should('equal', '2030-001');
+    });
+  });
+
+  it('keeps an identifier that is linked to its register issue', () => {
+    cy.intercept('POST', '**/codecheck/repository?submissionId=1*', { statusCode: 200, body: importedYml() });
+    interceptMetadata();
+    // metadataResponseBody() links the issue; the identifier below is the one reserved for it.
+    importFirstRepository('2025-042').then((wrapper) => {
+      cy.wrap(wrapper.vm).its('metadata.certificate').should('equal', '2025-042');
+    });
+  });
+
+  it('shows why a file for another paper was refused, and imports nothing', () => {
+    cy.intercept('POST', '**/codecheck/repository?submissionId=1*', {
+      statusCode: 422,
+      body: { success: false, error: 'The paper title does not match.', repository: 'https://github.com/a/b' },
+    });
+    interceptMetadata();
+    importFirstRepository().then((wrapper) => {
+      cy.wrap(wrapper.vm).should((vm) => {
+        expect(vm.repositoryWarning.message).to.contain('The paper title does not match.');
+        expect(vm.metadata.summary).to.not.equal('Imported summary');
+      });
+    });
+  });
+
+  it('tells a codechecker on an anonymous assignment to go through the editor', () => {
+    interceptMetadata(submissionWith({ authors: [], contact: null, authorsWithheld: true }));
+    mountForm();
+    cy.wait('@loadMetadata');
+
+    cy.get('.author-item').should('not.exist');
+    cy.get('.read-only-section')
+      .should('contain', 'plugins.generic.codecheck.paperMetadata.authorsWithheld')
+      .and('not.contain', 'plugins.generic.codecheck.paperMetadata.noAuthors');
+    cy.get('.codecheck-contact').should('contain', 'plugins.generic.codecheck.paperMetadata.contactWithheld');
   });
 
   it('renders the specification link into the introduction', () => {

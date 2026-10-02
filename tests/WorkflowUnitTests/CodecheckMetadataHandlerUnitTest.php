@@ -111,6 +111,85 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $this->assertEmpty($result);
     }
 
+    /** An author as the publication hands it over. */
+    private function author(int $id, string $given, string $family, string $email, ?string $orcid = null): \APP\author\Author
+    {
+        $author = $this->createMock(\APP\author\Author::class);
+        $author->method('getId')->willReturn($id);
+        $author->method('getDefaultLocale')->willReturn('en');
+        $author->method('getGivenName')->willReturn($given);
+        $author->method('getFamilyName')->willReturn($family);
+        $author->method('getEmail')->willReturn($email);
+        $author->method('getOrcid')->willReturn($orcid);
+
+        return $author;
+    }
+
+    /** A publication with two authors, the second of them its primary contact. */
+    private function publicationWithAuthors(?int $primaryContactId = 2): \APP\publication\Publication
+    {
+        $authors = [
+            $this->author(1, 'Stephen', 'Eglen', 'eglen@example.org'),
+            $this->author(2, 'Daniel', 'Nüst', 'nuest@example.org', 'https://orcid.org/0000-0002-1825-0097'),
+        ];
+        $publication = $this->createMock(\APP\publication\Publication::class);
+        $publication->method('getLocalizedTitle')->willReturn('Test Paper');
+        $publication->method('getStoredPubId')->willReturn(null);
+        $publication->method('getData')->willReturnCallback(fn (string $key) => match ($key) {
+            'authors' => $authors,
+            default => null,
+        });
+        // OJS's own lookup, which compares the author's id with `primaryContactId`.
+        $publication->method('getPrimaryAuthor')->willReturn(
+            collect($authors)->first(fn ($author) => $author->getId() === $primaryContactId)
+        );
+
+        return $publication;
+    }
+
+    /** The codechecker asks the author the submission names as its contact (#28). */
+    public function testTheContactIsThePrimaryContact()
+    {
+        $this->assertSame(
+            ['name' => 'Daniel Nüst', 'email' => 'nuest@example.org'],
+            $this->handler->getContact($this->publicationWithAuthors(2))
+        );
+    }
+
+    /** Nobody chosen means nobody named — not the first author. */
+    public function testThereIsNoContactWithoutAPrimaryContact()
+    {
+        $this->assertNull($this->handler->getContact($this->publicationWithAuthors(null)));
+        $this->assertNull($this->handler->getContact(null));
+    }
+
+    public function testAPrimaryContactWhoIsNoLongerAnAuthorIsNoContact()
+    {
+        $this->assertNull($this->handler->getContact($this->publicationWithAuthors(99)));
+    }
+
+    /** The email is for the form alone; the `codecheck.yml` is published. */
+    public function testTheYamlCarriesNoEmail()
+    {
+        $yaml = $this->handler->buildYaml($this->publicationWithAuthors(2), $this->buildYamlMetadata('latest'));
+
+        $this->assertStringContainsString('Daniel Nüst', $yaml);
+        $this->assertStringNotContainsString('@example.org', $yaml);
+        $this->assertStringNotContainsStringIgnoringCase('email', $yaml);
+    }
+
+    /** A viewer who may not know the authors gets a file that names none (#28). */
+    public function testTheYamlLeavesTheAuthorsOutWhenTheyAreWithheld()
+    {
+        $yaml = $this->handler->buildYaml($this->publicationWithAuthors(2), $this->buildYamlMetadata('latest'), false);
+        $paper = \Symfony\Component\Yaml\Yaml::parse($yaml)['paper'];
+
+        $this->assertSame('Test Paper', $paper['title']);
+        $this->assertArrayNotHasKey('authors', $paper);
+        $this->assertStringNotContainsString('Nüst', $yaml);
+        $this->assertStringNotContainsString('0000-0002-1825-0097', $yaml);
+    }
+
     public function testGetSubmissionId()
     {
         $client = $this->createMock(\Github\Client::class);
@@ -315,6 +394,94 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $this->assertFalse($actualMetadataReturnArray['success']);
         $this->assertEquals($repositoryUrl, $actualMetadataReturnArray['repository']);
         $this->assertEquals('codecheck.yml not found', $actualMetadataReturnArray['error']);
+    }
+
+    #[DataProvider('titleComparisonProvider')]
+    public function testTitlesMatch(mixed $first, mixed $second, bool $expected)
+    {
+        $this->assertSame($expected, CodecheckMetadataHandler::titlesMatch($first, $second));
+    }
+
+    /** Spacing and capitals do not make another paper (#28). */
+    public static function titleComparisonProvider(): array
+    {
+        return [
+            'identical' => ['A Paper', 'A Paper', true],
+            'capitals' => ['a paper ON data', 'A Paper on Data', true],
+            'capitals beyond ASCII' => ['Über Ökologie', 'über ökologie', true],
+            'runs of spaces' => ['A   Paper', 'A Paper', true],
+            'edges' => ["  A Paper \n", 'A Paper', true],
+            'a line break inside a folded YAML scalar' => ["A\nPaper", 'A Paper', true],
+            'a non-breaking space' => ["A\u{00A0}Paper", 'A Paper', true],
+            'another paper' => ['A Paper', 'Another Paper', false],
+            'a word missing' => ['A Paper on Data', 'A Paper', false],
+            'punctuation still counts' => ['A Paper.', 'A Paper', false],
+            'two empty titles are no title' => ['', '', false],
+            'only spaces' => ['   ', '   ', false],
+            'no title in the file' => [null, 'A Paper', false],
+            'a title that is not a string' => [['A Paper'], 'A Paper', false],
+        ];
+    }
+
+    /** A handler whose repository answers with the given `codecheck.yml`. */
+    private function handlerServing(string $yaml, string $repository): CodecheckMetadataHandler
+    {
+        $curlApiClient = $this->createMock(CurlApiClient::class);
+        $curlApiClient->method('resolveDoi')->willReturn($repository);
+        $curlApiClient->method('fetch')->willReturn($yaml);
+
+        return new CodecheckMetadataHandler(new Request(), $this->createMock(\Github\Client::class), $curlApiClient);
+    }
+
+    public function testTheImportForASubmissionAcceptsATitleThatDiffersInCaseAndSpacing()
+    {
+        $repository = 'https://zenodo.org/records/14900193';
+        $handler = $this->handlerServing("paper:\n  title: 'the  PAPER on data'\nsummary: ok\n", $repository);
+
+        $response = $handler->importMetadataForSubmission($repository, 'The Paper on Data');
+
+        $this->assertSame(200, $response->getHttpResponseCode());
+        $this->assertSame('ok', $response->getPayloadArray()['metadata']['summary']);
+    }
+
+    public function testTheImportForASubmissionRefusesAnotherPaper()
+    {
+        $repository = 'https://zenodo.org/records/14900193';
+        $handler = $this->handlerServing("paper:\n  title: Some other paper\nsummary: ok\n", $repository);
+
+        $response = $handler->importMetadataForSubmission($repository, 'The Paper on Data');
+        $payload = $response->getPayloadArray();
+
+        $this->assertSame(422, $response->getHttpResponseCode());
+        $this->assertFalse($payload['success']);
+        $this->assertSame($repository, $payload['repository']);
+        $this->assertArrayNotHasKey('metadata', $payload, 'nothing of the file is handed back');
+    }
+
+    public function testTheImportForASubmissionRefusesAFileWithNoPaperTitle()
+    {
+        $repository = 'https://zenodo.org/records/14900193';
+        $handler = $this->handlerServing("summary: ok\n", $repository);
+
+        $response = $handler->importMetadataForSubmission($repository, 'The Paper on Data');
+
+        $this->assertSame(422, $response->getHttpResponseCode());
+        $this->assertFalse($response->getPayloadArray()['success']);
+    }
+
+    /** A repository that cannot be read is answered as it was, not as a title problem. */
+    public function testTheImportForASubmissionLeavesAFailedFetchAlone()
+    {
+        $repository = 'https://zenodo.org/records/14900193';
+        $curlApiClient = $this->createMock(CurlApiClient::class);
+        $curlApiClient->method('resolveDoi')->willReturn($repository);
+        $curlApiClient->method('fetch')->willThrowException(new \RuntimeException('unreadable'));
+        $handler = new CodecheckMetadataHandler(new Request(), $this->createMock(\Github\Client::class), $curlApiClient);
+
+        $response = $handler->importMetadataForSubmission($repository, 'The Paper on Data');
+
+        $this->assertNotSame(422, $response->getHttpResponseCode());
+        $this->assertFalse($response->getPayloadArray()['success']);
     }
 
     public function testImportMetadataFromZenodo()

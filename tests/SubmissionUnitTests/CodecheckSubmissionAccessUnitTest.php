@@ -11,6 +11,9 @@
  * The assigned-reviewer path reads `review_assignments` and is covered by the
  * e2e suite. What is pinned here is the part that decides without the database:
  * which roles count as editorial, and that nothing is granted to nobody.
+ *
+ * Issue #28 — who may know the authors of a submission. The rule is pinned
+ * through authorsVisible(); the lookups feeding it read the database.
  */
 
 namespace APP\plugins\generic\codecheck\tests\SubmissionUnitTests;
@@ -18,6 +21,7 @@ namespace APP\plugins\generic\codecheck\tests\SubmissionUnitTests;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionAccess;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PKP\security\Role;
+use PKP\submission\reviewAssignment\ReviewAssignment;
 use PKP\tests\PKPTestCase;
 use PKP\user\User;
 
@@ -90,5 +94,61 @@ class CodecheckSubmissionAccessUnitTest extends PKPTestCase
 
         $this->assertFalse(CodecheckSubmissionAccess::isAssignedReviewer($reviewer, 0));
         $this->assertFalse(CodecheckSubmissionAccess::isAssignedReviewer($reviewer, -1));
+    }
+
+    #[DataProvider('authorVisibilityProvider')]
+    public function testWhoMayKnowTheAuthors(bool $hasStanding, ?int $reviewMethod, bool $expected)
+    {
+        $this->assertSame($expected, CodecheckSubmissionAccess::authorsVisible($hasStanding, $reviewMethod));
+    }
+
+    /** OJS hides the authors from a reviewer in double-anonymous review only. */
+    public static function authorVisibilityProvider(): array
+    {
+        $open = ReviewAssignment::SUBMISSION_REVIEW_METHOD_OPEN;
+        $anonymous = ReviewAssignment::SUBMISSION_REVIEW_METHOD_ANONYMOUS;
+        $double = ReviewAssignment::SUBMISSION_REVIEW_METHOD_DOUBLEANONYMOUS;
+
+        return [
+            'an editor or author of the submission' => [true, null, true],
+            'one who is also a double-anonymous reviewer' => [true, $double, true],
+            'a reviewer on an open assignment' => [false, $open, true],
+            'a reviewer on an anonymous-reviewer, disclosed-author assignment' => [false, $anonymous, true],
+            'a reviewer on a double-anonymous assignment' => [false, $double, false],
+            'someone with no standing and no assignment' => [false, null, false],
+        ];
+    }
+
+    /** No user, or no submission, is refused before any lookup. */
+    public function testNobodyMayKnowTheAuthors()
+    {
+        $this->assertFalse(CodecheckSubmissionAccess::mayKnowAuthors(null, 42, 1));
+        $this->assertFalse(CodecheckSubmissionAccess::mayKnowAuthors(
+            $this->userWithRoles([Role::ROLE_ID_MANAGER]),
+            0,
+            1
+        ));
+    }
+
+    /** A manager is decided from the role alone, before any lookup. */
+    public function testAManagerMayKnowTheAuthorsWithoutALookup()
+    {
+        $manager = $this->userWithRoles([Role::ROLE_ID_MANAGER]);
+
+        $this->assertTrue(CodecheckSubmissionAccess::mayKnowAuthors($manager, 42, 1));
+    }
+
+    /**
+     * A site administrator holds no journal role, so the lookup has to ask for
+     * that group in the site context — as OJS's own `has.roles` does.
+     */
+    public function testASiteAdministratorWithoutAJournalRoleMayKnowTheAuthors()
+    {
+        $siteAdmin = $this->createMock(User::class);
+        $siteAdmin->method('hasRole')->willReturnCallback(
+            fn (array $asked, $contextId) => $contextId === null && in_array(Role::ROLE_ID_SITE_ADMIN, $asked, true)
+        );
+
+        $this->assertTrue(CodecheckSubmissionAccess::mayKnowAuthors($siteAdmin, 42, 1));
     }
 }

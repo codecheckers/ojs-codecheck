@@ -53,7 +53,13 @@ class CodecheckMetadataHandler
         return $this->submissionId;
     }
 
-    public function getMetadata($request, $submissionId): array
+    /**
+     * Without `$revealAuthors` — a viewer who may not know the authors (#28) —
+     * the authors and the contact are left out and `authorsWithheld` says so.
+     * There is no default: whoever calls this says whether the answer goes to
+     * such a viewer, and the journal's own checks pass `true`.
+     */
+    public function getMetadata($request, $submissionId, bool $revealAuthors): array
     {
         $submission = Repo::submission()->get($submissionId);
 
@@ -72,7 +78,9 @@ class CodecheckMetadataHandler
             'submission' => [
                 'id' => $submission->getId(),
                 'title' => $publication ? $publication->getLocalizedTitle() : '',
-                'authors' => $this->getAuthors($publication),
+                'authors' => $revealAuthors ? $this->getAuthors($publication) : [],
+                'contact' => $revealAuthors ? $this->getContact($publication) : null,
+                'authorsWithheld' => !$revealAuthors,
                 'doi' => $publication ? $publication->getStoredPubId('doi') : null,
                 // The statement lives on the publication (see Submission/Schema.php),
                 // which is also where the wizard writes it and where the article page reads it.
@@ -208,7 +216,11 @@ class CodecheckMetadataHandler
         ];
     }
 
-    public function generateYaml($request, $submissionId): array
+    /**
+     * The generated `codecheck.yml`. Without `$revealAuthors`, the paper's
+     * authors are left out — see getMetadata().
+     */
+    public function generateYaml($request, $submissionId, bool $revealAuthors): array
     {
         $submission = Repo::submission()->get($submissionId);
 
@@ -226,7 +238,7 @@ class CodecheckMetadataHandler
             return ['error' => 'No CODECHECK metadata found'];
         }
 
-        $yaml = $this->buildYaml($publication, $metadata);
+        $yaml = $this->buildYaml($publication, $metadata, $revealAuthors);
 
         return [
             'yaml' => $yaml,
@@ -234,7 +246,7 @@ class CodecheckMetadataHandler
         ];
     }
 
-    public function buildYaml($publication, $metadata): string
+    public function buildYaml($publication, $metadata, bool $revealAuthors = true): string
     {
         $manifest = json_decode($metadata->manifest ?? '[]', true);
         $codecheckers = json_decode($metadata->codecheckers ?? '[]', true);
@@ -259,20 +271,18 @@ class CodecheckMetadataHandler
         // `https://orcid.org/…` URI — its own templates use the stored value as
         // an `href` — while a codechecker's is bare, so the generated file
         // carried both forms at once, in two neighbouring sections.
-        $authors = [];
-        foreach ($this->getAuthors($publication) as $author) {
-            $authorData = ['name' => $author['name']];
-            $orcid = CodecheckCodecheckers::normalizeOrcid($author['orcid'] ?? '');
-            if ($orcid !== '') {
-                $authorData['ORCID'] = $orcid;
+        $paperData = ['title' => $publication->getLocalizedTitle()];
+        if ($revealAuthors) {
+            $paperData['authors'] = [];
+            foreach ($this->getAuthors($publication) as $author) {
+                $authorData = ['name' => $author['name']];
+                $orcid = CodecheckCodecheckers::normalizeOrcid($author['orcid'] ?? '');
+                if ($orcid !== '') {
+                    $authorData['ORCID'] = $orcid;
+                }
+                $paperData['authors'][] = $authorData;
             }
-            $authors[] = $authorData;
         }
-
-        $paperData = [
-            'title' => $publication->getLocalizedTitle(),
-            'authors' => $authors
-        ];
 
         $doi = $publication->getStoredPubId('doi');
         if ($doi) {
@@ -372,17 +382,45 @@ class CodecheckMetadataHandler
 
         $authors = [];
         foreach ($publication->getData('authors') as $author) {
-            $locale = $author->getDefaultLocale();
-            $givenName = $author->getGivenName($locale) ?? '';
-            $familyName = $author->getFamilyName($locale) ?? '';
-            $fullName = trim($givenName . ' ' . $familyName);
-
             $authors[] = [
-                'name' => $fullName,
+                'name' => $this->getAuthorName($author),
                 'orcid' => $author->getOrcid()
             ];
         }
         return $authors;
+    }
+
+    /**
+     * Whom a codechecker asks about the check: the publication's primary
+     * contact, which the author chooses among the contributors (#28).
+     *
+     * No fallback to the first author: that would name someone nobody chose.
+     * The email is deliberately not in getAuthors(), which feeds the
+     * `codecheck.yml`.
+     *
+     * @return array{name: string, email: string}|null
+     */
+    public function getContact($publication): ?array
+    {
+        $author = $publication?->getPrimaryAuthor();
+        if (!$author) {
+            return null;
+        }
+
+        return [
+            'name' => $this->getAuthorName($author),
+            'email' => (string) $author->getEmail(),
+        ];
+    }
+
+    /** An author's name as the form and the `codecheck.yml` show it. */
+    private function getAuthorName($author): string
+    {
+        $locale = $author->getDefaultLocale();
+        $givenName = $author->getGivenName($locale) ?? '';
+        $familyName = $author->getFamilyName($locale) ?? '';
+
+        return trim($givenName . ' ' . $familyName);
     }
 
     /**
@@ -408,6 +446,53 @@ class CodecheckMetadataHandler
         $yaml = preg_replace('/^(\s+)-\n\s+(\w+):/m', '$1- $2:', $yaml);
 
         return $yaml;
+    }
+
+    /**
+     * The import behind the editorial form: the repository's `codecheck.yml`, but
+     * only when it is for this submission's paper (#28). The form shows the title
+     * as read-only submission data, so a file naming another paper — a wrong
+     * repository, or a DOI that resolves elsewhere — is refused rather than
+     * having its other values filled in. A file with no paper title cannot be
+     * tied to the paper either, so it is refused the same way.
+     */
+    public function importMetadataForSubmission(string $repository, string $submissionTitle): JsonResponse
+    {
+        $response = $this->importMetadataFromRepository($repository);
+        if (!$response->isSuccess()) {
+            return $response;
+        }
+
+        $payload = $response->getPayloadArray();
+        if (!self::titlesMatch($payload['metadata']['paper']['title'] ?? null, $submissionTitle)) {
+            return new JsonResponse([
+                'success' => false,
+                'error' => __('plugins.generic.codecheck.repositories.titleMismatch'),
+                'repository' => $repository,
+            ], 422);
+        }
+
+        return $response;
+    }
+
+    /**
+     * Whether two paper titles name the same paper: whitespace runs (including
+     * non-breaking spaces and line breaks a YAML scalar may carry) count as one
+     * space, and capitals do not matter. Anything that is not a string never matches.
+     */
+    public static function titlesMatch(mixed $first, mixed $second): bool
+    {
+        if (!is_string($first) || !is_string($second)) {
+            return false;
+        }
+
+        $normalise = fn (string $title): string => mb_strtolower(
+            trim(preg_replace('/[\s\x{00A0}]+/u', ' ', $title) ?? $title)
+        );
+
+        $normalisedFirst = $normalise($first);
+
+        return $normalisedFirst !== '' && $normalisedFirst === $normalise($second);
     }
 
     public function importMetadataFromRepository(string $repository): JsonResponse

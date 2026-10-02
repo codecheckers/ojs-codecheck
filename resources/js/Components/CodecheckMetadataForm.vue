@@ -62,7 +62,20 @@
                   <span v-if="author.orcid" class="orcid-badge">{{ author.orcid }}</span>
                 </div>
               </template>
+              <em v-else-if="submissionData.authorsWithheld">{{ t('plugins.generic.codecheck.paperMetadata.authorsWithheld') }}</em>
               <em v-else>{{ t('plugins.generic.codecheck.paperMetadata.noAuthors') }}</em>
+            </div>
+          </div>
+
+          <div class="info-item">
+            <label class="info-label">{{ t('plugins.generic.codecheck.paperMetadata.contact') }}:</label>
+            <div class="info-value codecheck-contact">
+              <em v-if="submissionData.authorsWithheld">{{ t('plugins.generic.codecheck.paperMetadata.contactWithheld') }}</em>
+              <template v-else-if="submissionData.contact">
+                {{ submissionData.contact.name || t('common.notAvailable') }}
+                <a v-if="submissionData.contact.email" :href="contactMailto" class="codecheck-contact-email">{{ submissionData.contact.email }}</a>
+              </template>
+              <em v-else>{{ t('plugins.generic.codecheck.paperMetadata.noContact') }}</em>
             </div>
           </div>
 
@@ -339,7 +352,7 @@
                 type="text"
                 v-model="metadata.certificate"
                 :placeholder="t('plugins.generic.codecheck.identifier.label')"
-                :readonly="(this.certificateIdentifier.issue?.url ?? '').trim() !== '' && !this.identifierInputEmpty"
+                :readonly="certificateLocked"
                 class="certificate-identifier-input"
               />
               <fieldset :disabled="!identifierInputEmpty || certificateIdentifier.isReserved">
@@ -472,6 +485,10 @@ export default {
         id: null,
         title: '',
         authors: [],
+        // Whom a codechecker asks about the check, and whether the viewer may
+        // know who the authors are at all — see GET metadata (#28).
+        contact: null,
+        authorsWithheld: false,
         doi: '',
         dataAvailabilityStatement: ''
       },
@@ -506,6 +523,21 @@ export default {
     }
   },
   computed: {
+    /**
+     * A `mailto:` for the contact author with the paper in the subject (#28).
+     * The address is encoded so it cannot add headers; `@` is put back.
+     */
+    contactMailto() {
+      const email = this.submissionData.contact?.email ?? '';
+      // `$` is escaped because OJS's t() hands the value to String.replace, which
+      // reads `$&`, `$'` and `$$` in a title as substitution patterns.
+      const subject = this.t('plugins.generic.codecheck.paperMetadata.contactSubject', {
+        title: (this.submissionData.title || '').replace(/\$/g, '$$$$'),
+      });
+      return 'mailto:' + encodeURIComponent(email).replace(/%40/g, '@')
+        + '?subject=' + encodeURIComponent(subject);
+    },
+
     /**
      * The introduction is a single translatable sentence with the link passed
      * in as a parameter, rather than a prefix key concatenated with a link
@@ -593,6 +625,11 @@ export default {
 
     identifierInputEmpty() {
       return this.metadata.certificate.trim() === '';
+    },
+
+    /** The identifier is linked to its register issue, so the field cannot be changed. */
+    certificateLocked() {
+      return (this.certificateIdentifier.issue?.url ?? '').trim() !== '' && !this.identifierInputEmpty;
     }
   },
   mounted() {
@@ -650,8 +687,6 @@ export default {
           throw new Error(`[HTTP ${response.status}] ${data.error}`);
         }
         
-        console.log(data)
-
         if (Array.isArray(data.settings?.enabledConfigVersions) && data.settings.enabledConfigVersions.length) {
           this.enabledConfigVersions = data.settings.enabledConfigVersions;
         }
@@ -660,6 +695,8 @@ export default {
           id: data.submission?.id || submissionId,
           title: data.submission?.title || '',
           authors: Array.isArray(data.submission?.authors) ? data.submission.authors : [],
+          contact: data.submission?.contact ?? null,
+          authorsWithheld: data.submission?.authorsWithheld === true,
           doi: data.submission?.doi || '',
           dataAvailabilityStatement: data.submission?.dataAvailabilityStatement || ''
         };
@@ -743,7 +780,7 @@ export default {
       let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
 
       try {
-          const response = await fetch(`${apiUrl}/repository`, {
+          const response = await fetch(`${apiUrl}/repository?submissionId=${this.submission.id}`, {
               method: 'POST',
               headers: {
               'Content-Type': 'application/json',
@@ -757,13 +794,10 @@ export default {
 
           if (data.success) {
               console.log('Success:', data.repository);
-              this.submissionData = {
-                id: this.submissionData.id,
-                title: data.metadata?.paper.title ?? this.submissionData.title,
-                authors: data.metadata?.paper.authors ?? this.submissionData.authors,
-                doi: data.metadata?.paper.doi ?? this.submissionData.doi,
-                dataAvailabilityStatement: this.submissionData.dataAvailabilityStatement,
-              };
+              // Only what the form lets an editor change is taken from the file. The
+              // paper's title, authors and DOI are the submission's own, shown
+              // read-only above, and a certificate identifier linked to its register
+              // issue is read-only too (#28).
               this.metadata = {
                 version: data.metadata?.version.replace(/^https:\/\/codecheck\.org\.uk\/spec\/config\/|\/$/g, '') ?? this.metadata.version,
                 publicationType: data.metadata?.publicationType ?? this.metadata.publicationType,
@@ -771,7 +805,9 @@ export default {
                 repository: this.metadata.repository,
                 source: data.metadata?.source ?? this.metadata.source,
                 codecheckers: data.metadata?.codechecker ?? this.metadata.codecheckers,
-                certificate: data.metadata?.certificate ?? this.metadata.certificate,
+                certificate: this.certificateLocked
+                  ? this.metadata.certificate
+                  : (data.metadata?.certificate ?? this.metadata.certificate),
                 check_time: this.formatDateTimeLocal(data.metadata?.check_time) ?? this.metadata.check_time,
                 summary: data.metadata?.summary ?? this.metadata.summary,
                 report: data.metadata?.report ?? this.metadata.report,
@@ -1141,7 +1177,7 @@ export default {
       // was pressed (#179).
       showInformation({
         title: this.t('plugins.generic.codecheck.yaml.previewTitle'),
-        body: html`<div class="yaml-modal-container"><pre class="yaml-preview-content">${yamlContent}</pre></div>`,
+        body: html`<div class="yaml-modal-container">${this.submissionData.authorsWithheld ? html`<p class="yaml-withheld-notice">${this.t('plugins.generic.codecheck.yaml.authorsWithheld')}</p>` : ''}<pre class="yaml-preview-content">${yamlContent}</pre></div>`,
         actionLabel: this.t('plugins.generic.codecheck.yaml.download'),
         onAction: () => {
           const blob = new Blob([yamlContent], { type: 'text/yaml' });

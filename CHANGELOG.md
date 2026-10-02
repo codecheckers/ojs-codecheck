@@ -20,6 +20,11 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
   repository's `plugins.xml` to `plugin_gallery_urls` in `config.inc.php`, from
   OJS 3.5.0-4 on (#157)
 
+#### Frontend
+
+- The editorial CODECHECK form names the submission's primary contact, with a
+  link that emails them about the check, so a codechecker knows whom to ask (#28)
+
 #### Under the hood
 
 - A five-minute live demo walkthrough with its own dataset, loaded by
@@ -34,6 +39,16 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 
 ### Fixed
 
+- A codechecker on a double-anonymous review assignment is no longer shown the
+  authors, in the CODECHECK form or in the `codecheck.yml` preview, which says
+  the authors were left out; they are told to ask the handling editor (#28)
+- "Load metadata from repository" in the editorial form works again; it never
+  said which submission it was for and was always refused (#28)
+- Importing a repository's `codecheck.yml` no longer overwrites the title, authors
+  or DOI the form shows as read-only, nor a certificate identifier already linked
+  to its register issue; a file whose paper title is missing or differs from the
+  submission's is refused. The comparison ignores capitals and spacing, and so
+  does the title check when publishing (#28)
 - The repositories and expected outputs an author enters in the submission
   wizard are saved for a new submission; they were dropped until a CODECHECK
   record existed (#170)

@@ -347,6 +347,9 @@ msgstr "Nothing was deposited: this CODECHECK has no certificate identifier yet,
 msgid "plugins.generic.codecheck.register.issue.statusComment"
 msgstr "The CODECHECK status changed to: {$status}"
 
+msgid "plugins.generic.codecheck.repositories.titleMismatch"
+msgstr "The paper title in this repository's codecheck.yml is missing or does not match the title of this submission, so nothing was imported."
+
 msgid "plugins.generic.codecheck.repositories.error"
 msgstr "Error while importing the CODECHECK metadata from the repository. {$error}"
 
@@ -636,6 +639,21 @@ msgstr "This information comes from the original submission and cannot be edited
 msgid "plugins.generic.codecheck.paperMetadata.noAuthors"
 msgstr "No authors found"
 
+msgid "plugins.generic.codecheck.paperMetadata.authorsWithheld"
+msgstr "Not shown, because your review assignment is double-anonymous"
+
+msgid "plugins.generic.codecheck.paperMetadata.contact"
+msgstr "Contact for questions about the check"
+
+msgid "plugins.generic.codecheck.paperMetadata.contactWithheld"
+msgstr "Your review assignment is double-anonymous, so please send any questions about the check to the handling editor."
+
+msgid "plugins.generic.codecheck.paperMetadata.noContact"
+msgstr "The submission names no primary contact."
+
+msgid "plugins.generic.codecheck.paperMetadata.contactSubject"
+msgstr "Question about the CODECHECK of \"{$title}\""
+
 msgid "plugins.generic.codecheck.paperMetadata.noAvailabilityStatement"
 msgstr "The author provided no data and software availability statement"
 
@@ -743,6 +761,9 @@ msgstr "Remove this file from the manifest?"
 
 msgid "plugins.generic.codecheck.yaml.download"
 msgstr "Download"
+
+msgid "plugins.generic.codecheck.yaml.authorsWithheld"
+msgstr "The authors are left out of this file because your review assignment is double-anonymous. The editor has to add paper.authors before it is committed."
 
 msgid "plugins.generic.codecheck.yaml.previewTitle"
 msgstr "CODECHECK metadata preview (codecheck.yml)"

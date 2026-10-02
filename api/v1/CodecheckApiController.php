@@ -281,7 +281,7 @@ class CodecheckApiController extends PKPBaseController
         $request = Application::get()->getRequest();
         $submission = $this->getAuthorizedContextObject(Application::ASSOC_TYPE_SUBMISSION);
 
-        $result = $this->metadataHandler()->getMetadata($request, $submission->getId());
+        $result = $this->metadataHandler()->getMetadata($request, $submission->getId(), $this->mayKnowAuthors($request, $submission));
 
         if (isset($result['error'])) {
             // A refused payload is a bad request; 404 is for a submission that
@@ -310,7 +310,7 @@ class CodecheckApiController extends PKPBaseController
         $request = Application::get()->getRequest();
         $submission = $this->getAuthorizedContextObject(Application::ASSOC_TYPE_SUBMISSION);
 
-        $result = $this->metadataHandler()->generateYaml($request, $submission->getId());
+        $result = $this->metadataHandler()->generateYaml($request, $submission->getId(), $this->mayKnowAuthors($request, $submission));
 
         if (isset($result['error'])) {
             $status = $result['status'] ?? 404;
@@ -323,6 +323,16 @@ class CodecheckApiController extends PKPBaseController
         }
 
         return response()->json(array_merge($result, ['success' => true]), 200);
+    }
+
+    /** Whether the requesting user may see the authors of this submission (#28). */
+    private function mayKnowAuthors(PKPRequest $request, $submission): bool
+    {
+        return CodecheckSubmissionAccess::mayKnowAuthors(
+            $request->getUser(),
+            (int) $submission->getId(),
+            (int) $request->getContext()->getId()
+        );
     }
 
     /**
@@ -454,7 +464,11 @@ class CodecheckApiController extends PKPBaseController
             ], 400);
         }
 
-        $response = $this->metadataHandler()->importMetadataFromRepository($repository);
+        // The title comes from the authorised submission, never from the request.
+        $submission = $this->getAuthorizedContextObject(Application::ASSOC_TYPE_SUBMISSION);
+        $title = (string) $submission->getCurrentPublication()?->getLocalizedTitle();
+
+        $response = $this->metadataHandler()->importMetadataForSubmission($repository, $title);
 
         return response()->json($response->getPayloadArray(), $response->getHttpResponseCode());
     }
@@ -557,7 +571,7 @@ class CodecheckApiController extends PKPBaseController
         }
 
         if ($requestedMode === -1) {
-            $submissionMetadata = $this->metadataHandler()->getMetadata($request, $submissionId);
+            $submissionMetadata = $this->metadataHandler()->getMetadata($request, $submissionId, false);
 
             if (array_key_exists('error', $submissionMetadata)) {
                 return response()->json([

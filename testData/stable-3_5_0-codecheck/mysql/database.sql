@@ -2458,7 +2458,7 @@ INSERT INTO `review_rounds` (`review_round_id`, `submission_id`, `stage_id`, `ro
 --
 
 INSERT INTO `review_assignments` (`review_id`, `submission_id`, `reviewer_id`, `competing_interests`, `recommendation`, `date_assigned`, `date_notified`, `date_confirmed`, `date_completed`, `date_considered`, `date_acknowledged`, `date_due`, `date_response_due`, `last_modified`, `reminder_was_automatic`, `declined`, `cancelled`, `date_cancelled`, `date_rated`, `date_reminded`, `quality`, `review_round_id`, `stage_id`, `review_method`, `round`, `step`, `review_form_id`, `considered`, `request_resent`) VALUES
-(1, 9, 6, NULL, NULL, '2026-02-26 02:12:00', '2026-02-26 02:12:00', '2026-02-26 02:13:00', NULL, NULL, NULL, '2026-03-26 02:12:00', '2026-03-05 02:12:00', '2026-02-26 02:13:00', 0, 0, 0, NULL, NULL, NULL, NULL, 2, 3, 1, 1, 1, NULL, NULL, 0);
+(1, 9, 6, NULL, NULL, '2026-02-26 02:12:00', '2026-02-26 02:12:00', '2026-02-26 02:13:00', NULL, NULL, NULL, '2026-03-26 02:12:00', '2026-03-05 02:12:00', '2026-02-26 02:13:00', 0, 0, 0, NULL, NULL, NULL, NULL, 2, 3, 2, 1, 1, NULL, NULL, 0);
 
 -- --------------------------------------------------------
 

@@ -21,7 +21,7 @@ class CodecheckYamlValidator
         $codecheckMetadataHandler = new CodecheckMetadataHandler($request);
         $submissionId = $codecheckMetadataHandler->getSubmissionId();
         CodecheckLogger::debug('Submission ID during Yaml Validation: ' . $submissionId);
-        $result = $codecheckMetadataHandler->generateYaml($request, $submissionId);
+        $result = $codecheckMetadataHandler->generateYaml($request, $submissionId, true);
 
         if (isset($result['error'])) {
             throw new \Exception("Something went wrong during the creation of the Yaml File from the CODECHECK Metadata.\n" . $result['error'], 404);

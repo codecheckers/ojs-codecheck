@@ -22,8 +22,11 @@
 
 namespace APP\plugins\generic\codecheck\classes\Submission;
 
+use APP\core\Application;
 use APP\facades\Repo;
 use PKP\security\Role;
+use PKP\stageAssignment\StageAssignment;
+use PKP\submission\reviewAssignment\ReviewAssignment;
 use PKP\user\User;
 
 class CodecheckSubmissionAccess
@@ -82,5 +85,86 @@ class CodecheckSubmissionAccess
             [Role::ROLE_ID_MANAGER, Role::ROLE_ID_SITE_ADMIN, Role::ROLE_ID_SUB_EDITOR, Role::ROLE_ID_ASSISTANT],
             $contextId
         );
+    }
+
+    /**
+     * May this user know who wrote this submission, and how to reach them (#28)?
+     *
+     * `SubmissionAccessPolicy` admits a reviewer without asking their review
+     * method. OJS hides the authors from a reviewer only in double-anonymous
+     * review, so that is the one case withheld here. Editors, and the
+     * submission's own authors, are never in it.
+     *
+     * Standing is judged per submission, not by journal role: a Section editor
+     * or Assistant who is invited as a blind reviewer reaches the submission
+     * through that assignment alone, and the author role is held by nearly every
+     * reviewer. Checked cheapest first, so a manager costs no query.
+     */
+    public static function mayKnowAuthors(?User $user, int $submissionId, int $contextId): bool
+    {
+        if (!$user || $submissionId <= 0) {
+            return false;
+        }
+
+        return self::isJournalManager($user, $contextId)
+            || self::hasStageAssignment($user, $submissionId)
+            || self::authorsVisible(false, self::currentReviewMethod($user, $submissionId));
+    }
+
+    /**
+     * The rule of mayKnowAuthors(), without the lookups.
+     *
+     * Without a standing on the submission, authors are visible only through a
+     * review assignment that is not double-anonymous — nothing else admits
+     * such a user, so none means withheld.
+     *
+     * @param ?int $reviewMethod The method of the user's current review
+     *                           assignment, null when they have none
+     */
+    public static function authorsVisible(bool $hasStanding, ?int $reviewMethod): bool
+    {
+        return $hasStanding
+            || ($reviewMethod !== null
+                && $reviewMethod !== ReviewAssignment::SUBMISSION_REVIEW_METHOD_DOUBLEANONYMOUS);
+    }
+
+    /**
+     * The managers: a site administrator has no journal role, so that group
+     * is asked for in the site context.
+     */
+    private static function isJournalManager(User $user, int $contextId): bool
+    {
+        return $user->hasRole([Role::ROLE_ID_MANAGER], $contextId)
+            || $user->hasRole([Role::ROLE_ID_SITE_ADMIN], Application::SITE_CONTEXT_ID);
+    }
+
+    /** Is this user assigned to the submission as an author, editor or assistant? */
+    private static function hasStageAssignment(User $user, int $submissionId): bool
+    {
+        return StageAssignment::withSubmissionIds([$submissionId])
+            ->withUserId($user->getId())
+            ->withRoleIds([Role::ROLE_ID_AUTHOR, Role::ROLE_ID_SUB_EDITOR, Role::ROLE_ID_ASSISTANT])
+            ->exists();
+    }
+
+    /**
+     * The method of the review assignment now in force for the user, found the
+     * way OJS's ReviewAssignmentAccessPolicy finds it: the last round, and none
+     * at all when it was cancelled or declined.
+     */
+    private static function currentReviewMethod(User $user, int $submissionId): ?int
+    {
+        $assignment = Repo::reviewAssignment()
+            ->getCollector()
+            ->filterBySubmissionIds([$submissionId])
+            ->filterByReviewerIds([$user->getId()], true)
+            ->getMany()
+            ->first();
+
+        if (!$assignment || $assignment->getCancelled() || $assignment->getDeclined()) {
+            return null;
+        }
+
+        return (int) $assignment->getReviewMethod();
     }
 }
