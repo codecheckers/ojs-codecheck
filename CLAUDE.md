@@ -801,7 +801,18 @@ version the plugin does not know, a `2.1` before it is implemented included.
 `Constants::isKnownConfigVersion()` is the one question. **A version posted to
 `saveMetadata()` that is not known is refused with a 400**, before anything is
 written, so it cannot be selected or created; an absent `version` keeps the
-stored one. A version *stored* that is not known reads as the default
+stored one. **A known version the journal does not offer is refused as well**,
+unless the record is already on it (`Constants::isConfigVersionAllowed()`: the
+form keeps the loaded version selectable, so a record on a version the journal
+has since stopped offering still saves). The controller passes the journal's
+list to `saveMetadata()`, which requires it. The stored version is compared as
+`GET metadata` answers it, resolved, so a record the upgrade missed still saves.
+With a single known version the offered list can never exclude it, so only the
+pure rule is tested until a second one exists — then a case belongs in
+`config-version.cy.js`: untick it in the settings, post it, expect 400, post the
+stored one, expect 200.
+
+A version *stored* that is not known reads as the default
 (`Constants::resolveConfigVersion()`), on the `GET metadata` response, in
 `buildYaml()` and in `CodecheckSubmission`, so a record the upgrade missed
 degrades rather than fails. A journal row still holding `['1.0']` needs no

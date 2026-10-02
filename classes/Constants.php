@@ -414,4 +414,20 @@ class Constants
     {
         return in_array($version, self::CODECHECK_CONFIG_VERSIONS, true);
     }
+
+    /**
+     * Whether a version posted for a record may be recorded: the plugin knows
+     * it, and the journal offers it or the record is already on it. The second
+     * half is what lets a record stay on a version the journal has since
+     * stopped offering — the form keeps that version selectable too — while
+     * nothing can be moved onto one the journal does not offer.
+     *
+     * @param array $enabled The versions the journal offers
+     * @param string|null $stored The version the record is on now, if it has one
+     */
+    public static function isConfigVersionAllowed(mixed $posted, array $enabled, ?string $stored): bool
+    {
+        return self::isKnownConfigVersion($posted)
+            && (in_array($posted, $enabled, true) || $posted === $stored);
+    }
 }

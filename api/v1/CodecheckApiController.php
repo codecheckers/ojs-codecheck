@@ -420,7 +420,11 @@ class CodecheckApiController extends PKPBaseController
         $request = Application::get()->getRequest();
         $submission = $this->getAuthorizedContextObject(Application::ASSOC_TYPE_SUBMISSION);
 
-        $result = $this->metadataHandler()->saveMetadata($request, $submission->getId());
+        $result = $this->metadataHandler()->saveMetadata(
+            $request,
+            $submission->getId(),
+            $this->plugin->getEnabledConfigVersions($request->getContext()?->getId())
+        );
 
         if (isset($result['error'])) {
             // A refused payload is a bad request; 404 is for a submission that

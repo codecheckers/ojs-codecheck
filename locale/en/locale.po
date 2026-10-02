@@ -744,6 +744,9 @@ msgstr "Failed to generate YAML Content"
 msgid "plugins.generic.codecheck.configVersion.unknown"
 msgstr "This is not a CODECHECK config version this plugin supports: {$version}."
 
+msgid "plugins.generic.codecheck.configVersion.notOffered"
+msgstr "This journal does not offer CODECHECK config version {$version}."
+
 msgid "plugins.generic.codecheck.codecheckers.invalidOrcid"
 msgstr "This is not an ORCID iD: {$orcid}. Enter it as 0000-0000-0000-0000, or leave the field empty."
 

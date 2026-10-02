@@ -99,7 +99,11 @@ class CodecheckMetadataHandler
         return $response;
     }
 
-    public function saveMetadata($request, $submissionId): array
+    /**
+     * @param array $enabledVersions The config versions the journal offers.
+     *        Required, so a caller cannot leave the check off by forgetting it
+     */
+    public function saveMetadata($request, $submissionId, array $enabledVersions): array
     {
         $submission = Repo::submission()->get($submissionId);
 
@@ -123,21 +127,6 @@ class CodecheckMetadataHandler
             ];
         }
 
-        // A version the plugin does not implement cannot be recorded. Reading
-        // it as the default would store a different version than the one sent
-        // and answer success; an absent `version` is not this, and keeps the
-        // stored one below.
-        if (array_key_exists('version', $data) && !Constants::isKnownConfigVersion($data['version'])) {
-            return [
-                'success' => false,
-                'error' => __('plugins.generic.codecheck.configVersion.unknown', [
-                    // Shortened: the client chose it, and it is quoted back in a message.
-                    'version' => is_scalar($data['version']) ? mb_substr((string) $data['version'], 0, 50) : gettype($data['version']),
-                ]),
-                'status' => 400,
-            ];
-        }
-
         $nullIfEmpty = function ($value) {
             return (is_string($value) && trim($value) === '') ? null : $value;
         };
@@ -146,6 +135,36 @@ class CodecheckMetadataHandler
         $stored = DB::table('codecheck_metadata')
             ->where('submission_id', $submissionId)
             ->first();
+
+        // A version posted for the record has to be one the plugin implements and
+        // the journal offers — or the one the record is already on, so a record
+        // on a version the journal has since stopped offering still saves.
+        // Reading a refused version as the default instead would store another
+        // version than the one sent and answer success. An absent `version`
+        // keeps the stored one below. The stored version is compared as the form
+        // saw it (`GET metadata` answers the resolved one), not as the row holds it.
+        if (array_key_exists('version', $data)) {
+            $reason = null;
+            if (!Constants::isKnownConfigVersion($data['version'])) {
+                $reason = 'plugins.generic.codecheck.configVersion.unknown';
+            } elseif (!Constants::isConfigVersionAllowed(
+                $data['version'],
+                $enabledVersions,
+                Constants::resolveConfigVersion($stored->spec_version ?? null)
+            )) {
+                $reason = 'plugins.generic.codecheck.configVersion.notOffered';
+            }
+            if ($reason !== null) {
+                return [
+                    'success' => false,
+                    'error' => __($reason, [
+                        // Shortened: the client chose it, and it is quoted back in a message.
+                        'version' => is_scalar($data['version']) ? mb_substr((string) $data['version'], 0, 50) : gettype($data['version']),
+                    ]),
+                    'status' => 400,
+                ];
+            }
+        }
 
         // Refuse addresses that cannot be a repository link rather than storing
         // them and guarding every place they are published (Issue #154) — but
