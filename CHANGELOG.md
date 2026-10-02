@@ -29,13 +29,14 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 
 #### Under the hood
 
+- The database is brought up to date when the plugin is upgraded from the Plugin Gallery, not only when it is enabled
 - Five-minute live demo walkthrough with its own dataset (`make demo-db`) and screenshots of every view for backup slides (`make demo-screenshots`): [dev/live-demo.md](dev/live-demo.md)
 
 ### Changed
 
 - The editorial CODECHECK form saves an unfinished check and refuses only invalid entries; the `codecheck.yml` preview still requires a complete record
 - Checks are recorded against version 2.0 of the CODECHECK config file specification, the only version offered; `latest` and 1.0 are gone and existing records move to 2.0 on upgrade (#185)
-- Saving a check with a config version the plugin does not support is refused with a reason, and the stored version is kept (#185)
+- Saving a check with a config version the plugin does not support, or the journal does not offer, is refused with a reason and the stored version is kept (#185)
 - The paper title check when publishing ignores capitals and spacing (#28)
 - The CODECHECK tab, the review stage and the Metadata page give the same reason for a submission that takes no part in a CODECHECK: not opted in, opted out, or no choice recorded (#34)
 - The metadata form and the YAML preview name the fields version 2.0 requires that a record still lacks, without blocking a save or publication; importing a `codecheck.yml` from a repository does not replace the paper's title, authors and DOI shown in the form (#185)

@@ -120,6 +120,27 @@ class ConstantsUnitTest extends PKPTestCase
         }
     }
 
+    /**
+     * A record may stay on a version the journal has stopped offering, and
+     * nothing may be moved onto one it does not offer. Written against a second
+     * version, `2.1`, which the plugin does not know yet: the rule has to hold
+     * the day it does, and today only the known half can be seen end to end.
+     */
+    public function testAVersionMustBeKnownAndOfferedOrAlreadyStored()
+    {
+        $this->assertTrue(Constants::isConfigVersionAllowed('2.0', ['2.0'], null), 'offered');
+        $this->assertTrue(Constants::isConfigVersionAllowed('2.0', ['2.0'], '2.0'), 'offered and stored');
+        $this->assertTrue(Constants::isConfigVersionAllowed('2.0', [], '2.0'), 'stored, no longer offered');
+        $this->assertFalse(Constants::isConfigVersionAllowed('2.0', [], null), 'known, not offered, not stored');
+        $this->assertFalse(Constants::isConfigVersionAllowed('2.0', ['2.1'], '2.1'), 'known, not offered, record on another');
+        $this->assertFalse(Constants::isConfigVersionAllowed('2.1', ['2.1'], '2.1'), 'offered and stored but not known to the plugin');
+        $this->assertFalse(Constants::isConfigVersionAllowed('latest', ['latest'], 'latest'), 'unknown, whatever else is true');
+
+        foreach ([null, 2.0, ['2.0'], true] as $posted) {
+            $this->assertFalse(Constants::isConfigVersionAllowed($posted, ['2.0'], '2.0'), var_export($posted, true));
+        }
+    }
+
     public function testTheDefaultOnlyNamesVersionsThePluginKnows()
     {
         $this->assertNotEmpty(Constants::CODECHECK_DEFAULT_CONFIG_VERSIONS);

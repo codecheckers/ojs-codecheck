@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE install SYSTEM "../../../lib/pkp/dtd/install.dtd">
+
+<!--
+  * upgrade.xml
+  *
+  * Copyright (c) 2026 CODECHECK Initiative
+  * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
+  *
+  * Run by OJS when this plugin is upgraded from the Plugin Gallery, which replaces
+  * the files and records the new version and runs nothing else unless this file
+  * exists. GalleryUpgradeMigration runs the install migration, which is idempotent
+  * and calls every upgrade migration in order, as CodecheckPlugin::setEnabled()
+  * does, and which a failure cannot turn into a deleted plugin: see that class.
+  *
+  * The root element carries no `version`: the installer records a descriptor's
+  * version as OJS's own when it is newer than the one installed.
+  -->
+
+<install>
+	<migration class="APP\plugins\generic\codecheck\classes\migration\GalleryUpgradeMigration" />
+</install>

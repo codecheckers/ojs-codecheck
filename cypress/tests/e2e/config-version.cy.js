@@ -7,6 +7,12 @@
  * string at all — and writing nothing when it does.
  *
  * Only refusals are posted, so no fixture is changed and nothing is restored.
+ *
+ * Not here yet: a version the plugin knows but the journal has not enabled.
+ * With one known version that cannot happen, so
+ * `ConstantsUnitTest::testAVersionMustBeKnownAndOfferedOrAlreadyStored` is the
+ * coverage. When a second version exists, add the case: untick it in the
+ * settings, post it (400), post the stored one (200).
  */
 
 const JOURNAL = 'codecheck';

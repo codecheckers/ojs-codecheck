@@ -385,7 +385,26 @@ Migration structure (added for issue #94):
 - `upgrade/I185_MoveRecordsToConfigSpec2` — moves every record on a config
   version the plugin no longer knows (`latest`, `1.0`) to `2.0`, and the
   `spec_version` column default with it. Runs after I93, whose column it reads
-- `CodecheckPlugin::setEnabled()` runs the install migration on enable.
+- `CodecheckPlugin::setEnabled()` runs the install migration on enable, and
+  **`upgrade.xml` runs it when the plugin is upgraded from the Plugin Gallery**.
+  A gallery upgrade replaces the files and records the new version and runs
+  nothing else unless the package carries that file, so without it a journal that
+  never re-enabled the plugin kept the old schema and rows. The file names
+  `GalleryUpgradeMigration` alone, which runs the install migration (that calls
+  every upgrade step) and **carries no `version`**: the installer records a
+  descriptor's version as OJS's own when it is newer. The wrapper exists because
+  `PluginHelper::upgradePlugin()` **deletes the plugin's directory when anything
+  throws** and the installer catches only `Exception`: a failure — the old plugin
+  object is still in memory and the migration calls it — is logged instead.
+  **Nothing retries it on its own**: it runs again on an enable or an OJS
+  upgrade, so an enabled journal stays on the old schema until an administrator
+  disables and enables the plugin, and the log line is the only sign. It also
+  upgrades only an install that already has `codecheck_metadata`, so an upgrade
+  never creates the schema where the plugin was not enabled; where it was enabled
+  in any journal the whole install migration runs, genre in every journal
+  included, as it does on enable. `UpgradeXmlUnitTest` pins the class, that OJS's
+  parser reads the file and that `.gitattributes` does not `export-ignore` it; the full gallery path (a packaged zip and a
+  version bump) is not exercised, and is worth one run on a release candidate.
   **Nothing in the plugin drops a table** — the settings form's "Clear / Reset
   DB" button did, and was removed in #131; rebuild a development instance with
   `make db-reset` instead.
@@ -394,7 +413,10 @@ Migration structure (added for issue #94):
   `1.0` rows and a `latest` column default, runs I185 twice and asserts — and,
   as it writes to the development database, asks first and refuses unless the OJS
   plugin symlink points at this checkout. Run it after touching an upgrade
-  migration that moves data.
+  migration that moves data. `make check-migration UPGRADE_XML=1` runs it the way
+  a gallery upgrade does, through OJS's `Upgrade` installer and `upgrade.xml`; the
+  installer also hooks the install migration itself, so that mode shows the
+  descriptor is accepted and the result is right, not which of the two ran it.
 
 The migration is the single source of truth for this schema. A stale `schema.xml`
 and a dead `CodecheckMetadataDAO` used to describe two further, contradictory
@@ -839,7 +861,18 @@ version the plugin does not know, a `2.1` before it is implemented included.
 `Constants::isKnownConfigVersion()` is the one question. **A version posted to
 `saveMetadata()` that is not known is refused with a 400**, before anything is
 written, so it cannot be selected or created; an absent `version` keeps the
-stored one. A version *stored* that is not known reads as the default
+stored one. **A known version the journal does not offer is refused as well**,
+unless the record is already on it (`Constants::isConfigVersionAllowed()`: the
+form keeps the loaded version selectable, so a record on a version the journal
+has since stopped offering still saves). The controller passes the journal's
+list to `saveMetadata()`, which requires it. The stored version is compared as
+`GET metadata` answers it, resolved, so a record the upgrade missed still saves.
+With a single known version the offered list can never exclude it, so only the
+pure rule is tested until a second one exists — then a case belongs in
+`config-version.cy.js`: untick it in the settings, post it, expect 400, post the
+stored one, expect 200.
+
+A version *stored* that is not known reads as the default
 (`Constants::resolveConfigVersion()`), on the `GET metadata` response, in
 `buildYaml()` and in `CodecheckSubmission`, so a record the upgrade missed
 degrades rather than fails. A journal row still holding `['1.0']` needs no

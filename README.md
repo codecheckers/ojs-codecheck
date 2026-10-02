@@ -475,7 +475,9 @@ under the repository's **Settings → General → Social preview**.
     directory. It prints the md5 of the result and, for `tar.gz`, the
     `<release>` entry for `plugins.xml` that step 14 records, with the version
     and date taken from `version.xml` at the tag. It refuses a tag whose
-    `version.xml` names a different release.
+    `version.xml` names a different release. `upgrade.xml` is exported with the
+    rest, which is what makes a Plugin Gallery upgrade run the database
+    migrations; keep it out of `.gitattributes`.
 
     Do not assemble the archive by hand. Three things are easy to get wrong and
     all three have been:
