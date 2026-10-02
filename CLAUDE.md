@@ -1196,7 +1196,7 @@ README.md; keep `css/codecheck.css` and inline component styles consistent.
 ### Layout
 
 ```
-tests/                       PHPUnit (37 test classes, 385 tests)
+tests/                       PHPUnit (49 test classes, 564 tests)
   bootstrap.php              PKP_STRICT_MODE + BASE_SYS_DIR (OJS_ROOT or ../../../..)
   PKPTestCase.php            local stub extending PHPUnit TestCase
   FakeTranslator.php         minimal translator so __() works without booting OJS
@@ -1205,7 +1205,11 @@ tests/                       PHPUnit (37 test classes, 385 tests)
   runTests.sh                wrapper; honours OJS_ROOT; --coverage-report=true|false
   CodecheckPluginUnitTest.php
   CodecheckRegisterUnitTests/  CertificateIdentifier(List), GithubRegisterApiClient,
-                               GithubRegisterIssue, IssueLabels
+                               GithubRegisterIssue, IssueLabels, PostOrigin,
+                               CommunityCodecheckers, RegisterCodecheckers,
+                               GithubHttp (time limits and the breaker)
+  DoiDepositUnitTests/         DepositLinks, CrossrefRelations, DataciteRelations,
+                               DepositSchema (against the vendored schemas/) — #19
   DataStructuresUnitTests/     UniqueArray, UniqueIdentifierArray
   FrontEndUnitTests/           ArticleAvailability, ArticleDetails, Badge, IssueTOC
   LogUnitTests/                CodecheckLogger
@@ -1223,13 +1227,16 @@ tests/                       PHPUnit (37 test classes, 385 tests)
                                bare-versus-URI iD shapes), and
                                PeerReviewPayloadBuilder (the group id the
                                payload and the registration must agree on) — #182
-  SubmissionUnitTests/         AvailabilityStatementField, CodecheckCodecheckers,
-                               CodecheckRepositories,
+  SubmissionUnitTests/         AvailabilityStatementField, CertificateReference (#183),
+                               CodecheckAuthorMetadata, CodecheckCodecheckers,
+                               CodecheckRepositories, CodecheckSubmissionAccess,
                                CodecheckSubmissionDAO, CodecheckSubmission, Schema
   WorkflowUnitTests/           CodecheckMetadataDestinations, CodecheckMetadataHandler,
                                CodecheckPublicationValidator,
                                CodecheckStatusRegisterUpdate, CodecheckYamlValidator
+  CodecheckPluginHooksUnitTest.php, ConstantsUnitTest.php
   PluginsXmlUnitTest.php       the Plugin Gallery listing against OJS's plugins.xsd
+  UpgradeXmlUnitTest.php       the Plugin Gallery upgrade descriptor
 
 cypress/
   support/component.js         mounts via @cypress/vue, imports css/codecheck.css
@@ -1238,8 +1245,8 @@ cypress/
   support/e2e.js               login, API and settings-form commands (see "E2E tests"),
                                swallow uncaught exceptions
   support/component-index.html
-  tests/component/*.cy.js      14 specs, 190 tests
-  tests/e2e/*.cy.js            17 specs, 95 tests
+  tests/component/*.cy.js      15 specs, 228 tests
+  tests/e2e/*.cy.js            18 specs, 102 tests
                                yaml-generation, article-sidebar-setting,
                                issue-toc-setting, issue-toc-badge,
                                private-repository, publication-validation,
@@ -1254,7 +1261,7 @@ dev/
 ### Component tests (the reliable suite)
 
 `npm run test:component` — **passes locally with no OJS, no database, no build step**
-(128/128, ~40 s). Cypress mounts the `.vue` sources directly through Vite and stubs the
+(228/228, about a minute). Cypress mounts the `.vue` sources directly through Vite and stubs the
 API with `cy.intercept`.
 
 Covered: metadata form load/render, manifest files add/remove/comment, repository list
@@ -1304,7 +1311,7 @@ its dialog body, `CodecheckStatusDialog.vue`.
 
 ### E2E tests
 
-`make test-e2e` — 95 tests across 17 specs, driving a real OJS instance.
+`make test-e2e` — 102 tests across 18 specs, driving a real OJS instance.
 
 **Several specs share submission fixtures, and each must restore what it
 changes.** Submissions 8 and 9 are written by `publication-validation`,
@@ -1438,6 +1445,15 @@ broke all of them at once:
   Nothing is deposited: both agencies stay in test mode with credentials that
   are not real. Submission 4 is left at *completed* — "pending" cannot be
   recorded, only be the absence of a row
+- `certificate-reference.cy.js` — the certificate among the references (#183):
+  the endpoint refuses with the mode off, before the certificate is published,
+  for a published version and for the assigned reviewer (`EDITOR_ROLES`); the
+  button adds the line once, beside the references already there; and in
+  *publish* mode the line survives `publish()`, which never reparses a
+  `citationsRaw` set before it, and the article page lists it (captured to
+  `cypress/screenshots/`). Uses submission 8, restored to *codechecker
+  assigned* and no references, and unpublishes and republishes 5, which it
+  leaves at *completed* without references, as `publication-validation` does
 
 Requires `make serve` running with the dataset loaded; `make setup` satisfies the
 rest (plugin enabled, `public/build/` present, composer deps installed, `admin`/`admin`).
@@ -1454,7 +1470,7 @@ Still uncovered: opt-in, the submission wizard, and register deposit.
 
 ### PHPUnit tests
 
-`make test-php` — 385 tests, green, none skipped.
+`make test-php` — 564 tests, green, none skipped.
 
 PHPUnit needs an OJS installation: the tests load OJS classes and the runner uses the
 PHPUnit shipped in `lib/pkp`. Both `runTests.sh` and `bootstrap.php` honour `OJS_ROOT`,

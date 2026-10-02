@@ -274,7 +274,12 @@ describe('CodecheckMetadataForm Component', () => {
     interceptMetadata(submissionWith({ authors: [], contact: null, authorsWithheld: true }));
     cy.mount(CodecheckMetadataForm, { props: { submission: { id: 1 }, canEdit: true } })
       .then(({ wrapper }) => {
-        cy.wait('@loadMetadata').then(() => wrapper.vm.showYamlModal('paper:\n  title: x\n'));
+        cy.wait('@loadMetadata');
+        // The response is in before the form has applied it, and the preview
+        // reads what the form applied: wait for the form to say so first.
+        cy.get('.read-only-section')
+          .should('contain', 'plugins.generic.codecheck.paperMetadata.authorsWithheld')
+          .then(() => wrapper.vm.showYamlModal('paper:\n  title: x\n'));
       });
 
     cy.get('.pkp-mock-modal .yaml-withheld-notice')
@@ -285,7 +290,9 @@ describe('CodecheckMetadataForm Component', () => {
     interceptMetadata();
     cy.mount(CodecheckMetadataForm, { props: { submission: { id: 1 }, canEdit: true } })
       .then(({ wrapper }) => {
-        cy.wait('@loadMetadata').then(() => wrapper.vm.showYamlModal('paper:\n  title: x\n'));
+        cy.wait('@loadMetadata');
+        // As above, or the notice is absent only because nothing was applied yet.
+        cy.get('.author-item').should('exist').then(() => wrapper.vm.showYamlModal('paper:\n  title: x\n'));
       });
 
     cy.get('.pkp-mock-modal .yaml-preview-content').should('exist');

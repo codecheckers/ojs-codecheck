@@ -58,6 +58,16 @@ describe('CODECHECK UI surfaces', () => {
       .screenshot('01a-settings-doi-deposits', { overwrite: true });
   });
 
+  /** How the journal lists the certificate among an article's references (#183). */
+  it('settings: certificate in the references', () => {
+    cy.openCodecheckSettings();
+    cy.codecheckSettingsForm()
+      .contains('.pkp_form_title', 'Certificate in the References')
+      .closest('.section')
+      .scrollIntoView()
+      .screenshot('01b-settings-certificate-reference', { overwrite: true });
+  });
+
   it('editorial dashboard with the CODECHECK column', () => {
     // "Assigned to me" is empty in the dataset; the published view has rows, so
     // the CODECHECK cells actually render.
@@ -110,6 +120,41 @@ describe('CODECHECK UI surfaces', () => {
     cy.get('input[id^=codecheck-checker-orcid]').type('0000-0002-0024-5046').blur();
     cy.get('.codecheck-github-suggestion').should('be.visible');
     shoot('03a-add-codechecker-dialog');
+    cy.get('body').type('{esc}');
+  });
+
+  /**
+   * The CODECHECK tab's button that lists the certificate among the
+   * references, and what it says it added (#183). The journal's mode and the
+   * endpoint's answer are stubbed: the dataset has the mode off, and pressing
+   * it for real would edit the article. Nothing is written. Submission 2,
+   * because the button waits for a certificate, which not every published
+   * article in the dataset has.
+   */
+  it('certificate reference button and the line it adds', () => {
+    cy.intercept(
+      { method: 'GET', pathname: `/index.php/${JOURNAL}/api/v1/codecheck/metadata` },
+      (req) => req.continue((res) => {
+        res.body.settings = { ...res.body.settings, certificateReferenceMode: 'button' };
+      })
+    );
+    cy.intercept(
+      { method: 'POST', pathname: `/index.php/${JOURNAL}/api/v1/codecheck/references` },
+      {
+        success: true,
+        changed: true,
+        line: 'Eglen, S. J. (2020). CODECHECK certificate 2020-002. Zenodo. https://doi.org/10.5281/zenodo.3750741',
+      }
+    );
+    cy.visit(
+      `/index.php/${JOURNAL}/dashboard/editorial` +
+      '?currentViewId=published&workflowSubmissionId=2&workflowMenuKey=codecheck'
+    );
+    cy.get('.certificate-reference', { timeout: 20000 }).scrollIntoView();
+    shoot('03c-certificate-reference-button');
+    cy.get('.certificate-reference button').click();
+    cy.get('.certificate-reference-line').should('be.visible');
+    shoot('03d-certificate-reference-added');
     cy.get('body').type('{esc}');
   });
 
