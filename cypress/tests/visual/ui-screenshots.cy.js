@@ -70,6 +70,22 @@ describe('CODECHECK UI surfaces', () => {
     shoot('03-workflow-codecheck-tab');
   });
 
+  it('workflow publication Metadata page with the CODECHECK panel', function () {
+    if (!publishedSubmissionId) {
+      this.skip();
+    }
+
+    cy.visit(
+      `/index.php/${JOURNAL}/dashboard/editorial` +
+      `?currentViewId=published&workflowSubmissionId=${publishedSubmissionId}` +
+      `&workflowMenuKey=publication_metadata`
+    );
+    cy.get('.codecheck-publication-info', { timeout: 20000 }).should('exist');
+    // Open the preview so the capture shows the codecheck.yml as well.
+    cy.get('.codecheck-publication-info__yaml summary').click();
+    shoot('03b-workflow-publication-metadata');
+  });
+
   it('published article page with the CODECHECK sidebar', function () {
     if (!publishedSubmissionId) {
       this.skip();

@@ -143,11 +143,28 @@ Hook callbacks return `false` by design so other plugins/OJS continue to run —
 The plugin does **not** mount its own app in the backend. It extends OJS 3.5's Vue/Pinia
 runtime:
 
-- `pkp.registry.registerComponent(...)` for 7 components + 2 inline components
+- `pkp.registry.registerComponent(...)` for 9 components + 2 inline components
   (`CodecheckFileStatus`, `DashboardCellCodecheck`)
 - `pkp.registry.storeExtend("workflow", …)` — adds a **CODECHECK menu item** to the
   workflow sidebar (uses sentinel `stageId: 999`), and injects `CodecheckMetadataForm`
-  (primary) + `CodecheckStatusForm` / `CodecheckGithubIssueDisplay` (secondary)
+  (primary) + `CodecheckStatusForm` / `CodecheckGithubIssueDisplay` (secondary).
+  It also puts `CodecheckPublicationInfo` above OJS's form on **Publication ›
+  Metadata** (#34): that page is the menu state
+  `{primaryMenuItem: "publication", secondaryMenuItem: "metadata"}`, and the
+  component's link to the CODECHECK tab is the store's own
+  `navigateToMenu('codecheck')`. Its journal-level half — badge and the
+  destinations from `CodecheckMetadataDestinations` — arrives as
+  `window.codecheckDashboardConfig.publicationInfo`, because the workflow opens
+  inside the dashboard. **A locale key built at runtime
+  (`'prefix.' + id`) never reaches OJS**: `i18nExtractKeys.vite.js` collects only
+  literal `t('…')`/`tk('…')`, so the component spells its keys out in a `tk()` map,
+  and a ternary *inside* `t(…)` hides both of its keys the same way.
+  **Whether a submission takes part, and why not, is `resources/js/optIn.js`**
+  (`isOptedIn()`, `notOptedInReason()`): the CODECHECK tab's warning, the
+  review stage, this panel and every `codecheckOptIn` gate in the backend ask
+  it, so no two tabs can explain the same submission differently. An unset flag
+  is "no choice recorded", in every mode. The wizard's Smarty templates keep
+  their own wording — that is the author's step, not an editorial view
 - `pkp.registry.storeExtend("dashboard", …)` — adds the CODECHECK column
   (gated on `window.codecheckDashboardConfig.showDashboardColumn`)
 - `pkp.registry.storeExtend("fileManager_SUBMISSION_FILES", …)` — adds a status column
@@ -161,7 +178,8 @@ Components (`resources/js/Components/`):
 `CodecheckMetadataForm.vue` (2.3k lines — the main editorial form),
 `CodecheckStatusForm.vue`, `CodecheckGithubIssueDisplay.vue`, `CodecheckReviewDisplay.vue`,
 `CodecheckRepositoryList.vue`, `CodecheckManifestFiles.vue`,
-`CodecheckDataAndSoftwareAvailability.vue`, and the two dialog bodies
+`CodecheckDataAndSoftwareAvailability.vue`, `CodecheckOrcidSection.vue`,
+`CodecheckPublicationInfo.vue` (the Publication › Metadata panel), and the two dialog bodies
 `CodecheckCodecheckerDialog.vue` / `CodecheckStatusDialog.vue`.
 
 ### Markup and dialogs (`resources/js/markup.js`, `resources/js/dialogs.js`)
@@ -962,7 +980,8 @@ tests/                       PHPUnit (37 test classes, 385 tests)
   SubmissionUnitTests/         AvailabilityStatementField, CodecheckCodecheckers,
                                CodecheckRepositories,
                                CodecheckSubmissionDAO, CodecheckSubmission, Schema
-  WorkflowUnitTests/           CodecheckMetadataHandler, CodecheckPublicationValidator,
+  WorkflowUnitTests/           CodecheckMetadataDestinations, CodecheckMetadataHandler,
+                               CodecheckPublicationValidator,
                                CodecheckStatusRegisterUpdate, CodecheckYamlValidator
   PluginsXmlUnitTest.php       the Plugin Gallery listing against OJS's plugins.xsd
 
@@ -973,8 +992,8 @@ cypress/
   support/e2e.js               login, API and settings-form commands (see "E2E tests"),
                                swallow uncaught exceptions
   support/component-index.html
-  tests/component/*.cy.js      10 specs, 128 tests
-  tests/e2e/*.cy.js            15 specs, 81 tests
+  tests/component/*.cy.js      14 specs, 190 tests
+  tests/e2e/*.cy.js            16 specs, 90 tests
                                yaml-generation, article-sidebar-setting,
                                issue-toc-setting, issue-toc-badge,
                                private-repository, publication-validation,
@@ -1043,7 +1062,9 @@ its dialog body, `CodecheckStatusDialog.vue`.
 
 **Several specs share submission fixtures, and each must restore what it
 changes.** Submissions 8 and 9 are written by `publication-validation`,
-`reviewer-rights` and `status-handler`; submission 10 is deliberately untouched
+`reviewer-rights` and `status-handler`, and `publication-metadata-info` switches
+submission 7 out of CODECHECK and back in, because every seeded submission is
+opted in; submission 10 is deliberately untouched
 by the whole suite, which is what lets `status-handler` assert that it has no
 status history. The status table is append-only with no delete endpoint, so
 "restore" means recording the status the dataset ships with, not removing rows —
@@ -1154,6 +1175,13 @@ broke all of them at once:
   through the form's own endpoint and reaches the article page — and that it is
   not on the other publication forms. Which form the field lands on is unit
   tested; the round trip belongs to OJS, which is why it is pinned here
+- `publication-metadata-info.cy.js` — the CODECHECK panel on Publication ›
+  Metadata (#34): that the journal config reaches the dashboard with nothing
+  but booleans and public addresses in the destinations, that the panel sits
+  above OJS's own form, previews the `codecheck.yml`, moves the workflow to the
+  CODECHECK tab, and that a submission taking no part is explained in the same
+  words there and on the CODECHECK tab — submission 7, switched out through the
+  REST API and back in `after()`
 
 Requires `make serve` running with the dataset loaded; `make setup` satisfies the
 rest (plugin enabled, `public/build/` present, composer deps installed, `admin`/`admin`).
@@ -1544,7 +1572,8 @@ Notes that matter when touching this:
 Two paths, both needing `make serve`:
 
 - `make screenshots` — Cypress pass over settings, dashboard column, workflow
-  CODECHECK tab, article sidebar, issue TOC and info page; full-page PNGs into
+  CODECHECK tab, the publication Metadata panel, article sidebar, issue TOC and
+  info page; full-page PNGs into
   `cypress/ui-screenshots/`. Asserts only that pages load. Captures at
   1920x1200; override with `make screenshots SHOT_WIDTH=… SHOT_HEIGHT=…`.
   Also runs in CI, uploaded as the `ui-screenshots` artifact.

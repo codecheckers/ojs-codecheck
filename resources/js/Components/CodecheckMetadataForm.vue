@@ -11,9 +11,9 @@
     </div>
 
     <div v-else-if="dataLoaded">
-      <!-- Warning box: shown when author opt-in doesn't match journal mode (Issue #30) -->
-      <div v-if="showOptInWarning" class="codecheck-optin-warning">
-        ⚠ {{ optInWarningMessage }}
+      <!-- Warning box: the submission takes no part in a CODECHECK, and why (#30, #34) -->
+      <div v-if="notOptedInReason" class="codecheck-optin-warning">
+        ⚠ {{ t(notOptedInReason) }}
       </div>
       <div class="codecheck-header">
         <div class="header-content">
@@ -445,6 +445,7 @@
 import { html, htmlSentence, MARKUP_PLACEHOLDER, toHtml } from '../markup.js';
 import { isWebUrl } from '../isWebUrl.js';
 import { missingMandatoryFields } from '../configSpec.js';
+import { notOptedInReason } from '../optIn.js';
 import { askForConfirmation, askForInput, showInformation } from '../dialogs.js';
 import CodecheckCodecheckerDialog from './CodecheckCodecheckerDialog.vue';
 
@@ -628,21 +629,10 @@ export default {
       return this.metadata.certificate.trim() !== '';
     },
 
-    showOptInWarning() {
-      const optIn = this.submission?.codecheckOptIn;
-      const mode  = this.codecheckMode;
-      // opt-in journal but author did not opt in
-      if (mode === 'opt-in'  && !optIn)         return true;
-      // opt-out journal but author explicitly opted out
-      if (mode === 'opt-out' && optIn === false) return true;
-      return false;
-    },
-    
-    optInWarningMessage() {
-      if (this.codecheckMode === 'opt-in') {
-        return this.t('plugins.generic.codecheck.warning.notOptedIn');
-      }
-      return this.t('plugins.generic.codecheck.warning.optedOut');
+    // Why the submission takes no part in a CODECHECK, or null when it does —
+    // the rule every backend view shares (#30, #34).
+    notOptedInReason() {
+      return notOptedInReason(this.submission, this.codecheckMode);
     },
 
     identifierInputEmpty() {

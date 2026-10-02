@@ -30,7 +30,7 @@
         </div>
 
         <div v-else-if="dataLoaded">
-            <div v-if="submission?.codecheckOptIn" class="codecheck-info">
+            <div v-if="optedIn" class="codecheck-info">
                 <div class="border-light border-t p-4">
                     <p class="text-base-normal" :class="statusClass">
                         <ul>
@@ -61,6 +61,7 @@
 
 <script>
 import { showInformation } from '../dialogs.js';
+import { isOptedIn } from '../optIn.js';
 
 const { useLocalize } = pkp.modules.useLocalize;
 
@@ -91,6 +92,9 @@ export default {
     }
   },
   computed: {
+    optedIn() {
+      return isOptedIn(this.submission);
+    },
     isConnected() {
         return !!(this.issue?.url);
     },

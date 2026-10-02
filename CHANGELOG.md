@@ -25,6 +25,7 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 #### Frontend
 
 - The editorial CODECHECK form names the submission's primary contact, with a link that emails them about the check (#28)
+- The publication's Metadata page shows the article's CODECHECK badge, certificate identifier, status and `codecheck.yml` preview, and which destinations receive its metadata: the register issue, `register.csv`, ORCID, the article page and the issue table of contents (#34)
 
 #### Under the hood
 
@@ -36,6 +37,7 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 - Checks are recorded against version 2.0 of the CODECHECK config file specification, the only version offered; `latest` and 1.0 are gone and existing records move to 2.0 on upgrade (#185)
 - Saving a check with a config version the plugin does not support is refused with a reason, and the stored version is kept (#185)
 - The paper title check when publishing ignores capitals and spacing (#28)
+- The CODECHECK tab, the review stage and the Metadata page give the same reason for a submission that takes no part in a CODECHECK: not opted in, opted out, or no choice recorded (#34)
 - The metadata form and the YAML preview name the fields version 2.0 requires that a record still lacks, without blocking a save or publication; importing a `codecheck.yml` from a repository does not replace the paper's title, authors and DOI shown in the form (#185)
 
 ### Fixed

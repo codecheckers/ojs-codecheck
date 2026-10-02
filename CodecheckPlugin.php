@@ -8,6 +8,7 @@ use APP\plugins\generic\codecheck\api\v1\CodecheckApiController;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\FrontEnd\ArticleAvailability;
 use APP\plugins\generic\codecheck\classes\FrontEnd\ArticleDetails;
+use APP\plugins\generic\codecheck\classes\FrontEnd\Badge;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\classes\migration\install\CodecheckSchemaMigration;
 use APP\plugins\generic\codecheck\classes\Orcid\OrcidAuthHandler;
@@ -18,11 +19,13 @@ use APP\plugins\generic\codecheck\classes\Submission\AvailabilityStatementField;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckAuthorMetadata;
 use APP\plugins\generic\codecheck\classes\Submission\Schema;
 use APP\plugins\generic\codecheck\classes\Submission\SubmissionWizardHandler;
+use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataDestinations;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckPublicationValidator;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckRegisterDepositService;
 use APP\plugins\generic\codecheck\controllers\page\CodecheckPageHandler;
 use APP\template\TemplateManager;
 use PKP\components\forms\FieldOptions;
+use PKP\context\Context;
 use PKP\core\JSONMessage;
 use PKP\core\Request;
 use PKP\plugins\GenericPlugin;
@@ -409,10 +412,15 @@ class CodecheckPlugin extends GenericPlugin
         // on the other two — which is a second statement of the default, and
         // the opposite one for a journal that switched the column off.
         if ($request->getRequestedPage() == 'dashboard') {
+            // HEX_*: the journal's badge text and URL must not be able to
+            // close the inline script they are written into.
             $dashboardConfig = json_encode([
                 'showDashboardColumn' => (bool) $this->getSettingWithDefault($contextId, Constants::CODECHECK_SHOW_DASHBOARD_COLUMN),
                 'codecheckMode' => $this->getSetting($contextId, Constants::CODECHECK_MODE) ?? 'opt-in',
-            ]);
+                // The workflow opens inside the dashboard: this is for the
+                // panel on its publication Metadata page (#34).
+                'publicationInfo' => $this->getPublicationInfoConfig($context),
+            ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 
             $templateMgr->addJavaScript(
                 'codecheck-dashboard-config',
@@ -505,6 +513,30 @@ class CodecheckPlugin extends GenericPlugin
         }
 
         return false;
+    }
+
+    /**
+     * What the panel on the publication Metadata page needs from the journal:
+     * the badge it shows and where a check's metadata goes (#34).
+     */
+    private function getPublicationInfoConfig(Context $context): array
+    {
+        $contextId = (int) $context->getId();
+        $badge = new Badge($this, $context);
+        $destinations = new CodecheckMetadataDestinations(
+            fn (string $name) => $this->getSettingWithDefault($contextId, $name),
+            $this->isRegisterDepositEnabled($contextId)
+        );
+
+        return [
+            'badge' => [
+                'url' => $badge->getUrl(),
+                'text' => $badge->getText(),
+                'textColor' => $badge->getTextColor(),
+                'style' => $badge->getStyle(),
+            ],
+            'destinations' => $destinations->toArray(),
+        ];
     }
 
     public function getUrlPageRoute(string $page): string

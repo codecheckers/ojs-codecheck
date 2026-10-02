@@ -55,7 +55,7 @@
         </div>
 
         <div v-else-if="dataLoaded">
-            <div v-if="submission?.codecheckOptIn" class="codecheck-info">
+            <div v-if="optedIn" class="codecheck-info">
                 <div class="border-light border-t p-4">
                     <p class="text-base-normal" :class="statusClass">
                         {{ getStatusText() }}
@@ -68,6 +68,7 @@
 
 <script>
 import { html } from '../markup.js';
+import { isOptedIn } from '../optIn.js';
 import { askForInput, showInformation } from '../dialogs.js';
 import CodecheckStatusDialog from './CodecheckStatusDialog.vue';
 
@@ -101,6 +102,9 @@ export default {
     }
   },
   computed: {
+    optedIn() {
+      return isOptedIn(this.submission);
+    },
     codecheckMetadataLastSavedAt() {
         const pinia = pkp.registry._piniaInstance;
         const workflowStore = pinia?._s?.get('workflow');
