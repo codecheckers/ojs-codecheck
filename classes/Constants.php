@@ -361,19 +361,22 @@ class Constants
     /**
      * Every config version the plugin knows about, newest first. A journal may
      * narrow this to a subset; see CODECHECK_ENABLED_CONFIG_VERSIONS.
+     *
+     * Only concrete versions belong here. `latest` was on this list until the
+     * specification's `latest` moved from 1.0 to 2.0, when every record on it
+     * began declaring a version it had not been filled in against. 1.0 left at
+     * the same time, before any journal ran the plugin in production.
      */
     public const CODECHECK_CONFIG_VERSIONS = [
-        'latest',
-        '1.0',
+        '2.0',
     ];
 
     /**
      * What a journal offers before it has chosen: the current stable
-     * specification only. A journal that wants the moving target adds
-     * 'latest' in the settings form.
+     * specification only.
      */
     public const CODECHECK_DEFAULT_CONFIG_VERSIONS = [
-        '1.0',
+        '2.0',
     ];
 
     /** Where the specification for a given config version is published. */
@@ -386,5 +389,29 @@ class Constants
     public static function getConfigSpecUrl(string $version): string
     {
         return self::CODECHECK_CONFIG_SPEC_URL . $version . '/';
+    }
+
+    /**
+     * The version a record is on: the one stored, if the plugin knows it, and
+     * the default otherwise. Applied where a version is written and where one
+     * is read, so a record the upgrade missed, or a version posted by an API
+     * client, cannot declare a specification the plugin does not implement.
+     */
+    public static function resolveConfigVersion(?string $version): string
+    {
+        return self::isKnownConfigVersion($version)
+            ? $version
+            : self::CODECHECK_DEFAULT_CONFIG_VERSIONS[0];
+    }
+
+    /**
+     * Whether $version is a config version the plugin implements. Anything
+     * else — `latest`, 1.0, a version a later release adds, a value that is
+     * not a string — is unknown, and is refused where a record is written and
+     * read as the default where one is read.
+     */
+    public static function isKnownConfigVersion(mixed $version): bool
+    {
+        return in_array($version, self::CODECHECK_CONFIG_VERSIONS, true);
     }
 }

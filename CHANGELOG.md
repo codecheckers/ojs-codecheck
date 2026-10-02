@@ -39,6 +39,12 @@ Therefore version names are of the format `x.y.z(.0)` and incremented as follows
 - The editorial CODECHECK form saves an unfinished check: only an invalid
   entry is refused, where a missing identifier, manifest or summary used to
   block every save. The `codecheck.yml` preview still waits for a complete record
+- Checks are recorded against version 2.0 of the CODECHECK config file specification, the only version offered; `latest` and 1.0 are gone and existing records move to 2.0 on upgrade (#185)
+- Saving a check with a config version the plugin does not support is refused with a reason, and the stored version is kept (#185)
+- The metadata form and the YAML preview name the fields version 2.0 requires that
+  a record still lacks, without blocking a save or publication. Importing a
+  `codecheck.yml` from a repository no longer replaces the paper's title, authors
+  and DOI shown in the form (#185)
 
 ### Fixed
 

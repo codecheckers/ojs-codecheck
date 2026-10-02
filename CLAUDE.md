@@ -84,6 +84,7 @@ Use the Makefile — it sets `OJS_ROOT` and the base URL for you:
 make test              # component tests + PHPUnit (no server needed)
 make test-component    # Cypress component tests — runs anywhere, no OJS needed
 make test-php          # PHPUnit — needs the linked OJS install
+make check-migration   # the #185 upgrade migration against the dev database (writes; asks first)
 make test-e2e          # Cypress e2e — needs `make serve` running
 make test-e2e-reverse  # the same specs backwards, to catch order dependence
 make test-e2e-shuffle  # the same specs in a seeded random order (SEED=n replays one)
@@ -324,10 +325,19 @@ Migration structure (added for issue #94):
   and converts the old `repoWithCodecheckYaml` index into a `containsCodecheckYaml`
   flag on each entry. Its `convert()` is `public static` so the conversion is
   testable without a database
+- `upgrade/I185_MoveRecordsToConfigSpec2` — moves every record on a config
+  version the plugin no longer knows (`latest`, `1.0`) to `2.0`, and the
+  `spec_version` column default with it. Runs after I93, whose column it reads
 - `CodecheckPlugin::setEnabled()` runs the install migration on enable.
   **Nothing in the plugin drops a table** — the settings form's "Clear / Reset
   DB" button did, and was removed in #131; rebuild a development instance with
   `make db-reset` instead.
+- **No automated run sees a legacy row**, because both datasets start on 2.0.
+  `make check-migration` (`dev/check-migration-spec2.php`) seeds `latest` and
+  `1.0` rows and a `latest` column default, runs I185 twice and asserts — and,
+  as it writes to the development database, asks first and refuses unless the OJS
+  plugin symlink points at this checkout. Run it after touching an upgrade
+  migration that moves data.
 
 The migration is the single source of truth for this schema. A stale `schema.xml`
 and a dead `CodecheckMetadataDAO` used to describe two further, contradictory
@@ -641,7 +651,7 @@ creation, so changing one of their defaults needs an upgrade migration.
 **`CODECHECK_ENABLED_CONFIG_VERSIONS` deliberately did not join it**, although
 it has the same shape. A recorded default is a *written* default, and this one
 is expected to change: a row frozen at today's stable specification would still
-offer `1.0` long after `1.1` replaced it, with no way for a migration to tell
+offer `2.0` long after `2.1` replaced it, with no way for a migration to tell
 that row apart from a deliberate choice. It resolves its default in
 `getEnabledConfigVersions()`, which is its only reader, and which also owns the
 two rules that are not the default — narrowing the stored list to the versions
@@ -759,8 +769,40 @@ default in `CODECHECK_GITHUB_SIGNATURE_DEFAULT` — so it is not in
 `CODECHECK_SETTING_DEFAULTS` either, for the badge text's reason.
 
 `CODECHECK_ENABLED_CONFIG_VERSIONS` defaults to `CODECHECK_DEFAULT_CONFIG_VERSIONS`
-— `1.0` alone, not every known version — so a journal that has not chosen records
-checks against the current stable specification rather than a moving target.
+— the current stable specification alone, not every known version.
+
+**The plugin knows `2.0` and nothing else, and never `latest`.** `latest` was on
+the list until the specification moved it from 1.0 to 2.0 (2026-09-11), and
+every record on it then declared a version it had not been filled in against,
+one that makes more fields mandatory. **Only concrete versions belong in
+`CODECHECK_CONFIG_VERSIONS`.** 1.0 was dropped at the same time, since no
+journal ran the plugin in production yet; the setting stays as the way a later
+version is offered next to 2.0. **1.0 is not special**: it is handled as any
+version the plugin does not know, a `2.1` before it is implemented included.
+`Constants::isKnownConfigVersion()` is the one question. **A version posted to
+`saveMetadata()` that is not known is refused with a 400**, before anything is
+written, so it cannot be selected or created; an absent `version` keeps the
+stored one. A version *stored* that is not known reads as the default
+(`Constants::resolveConfigVersion()`), on the `GET metadata` response, in
+`buildYaml()` and in `CodecheckSubmission`, so a record the upgrade missed
+degrades rather than fails. A journal row still holding `['1.0']` needs no
+migration: `narrowConfigVersions()` narrows it to nothing, which resolves to the
+default. That function keeps strings only, because the settings form hands it
+whatever the browser posted.
+
+**What a version requires is warned about, never enforced.**
+`resources/js/configSpec.js` lists, per version, the fields the specification
+makes mandatory, and the metadata form and the YAML preview name the ones a
+record lacks. Nothing refuses a save or a publish on them, because several come
+from OJS rather than from the form — the authors' ORCID iDs, the DOI, which is
+often assigned just before publication — so a refusal would stop a check at a
+point nobody in the form can resolve. The rules judge what `buildYaml()` writes —
+the certificate as stored, an author's iD through `normalizeOrcid()` — and
+`saveMetadata()` trims the certificate so the two agree. A new version with no
+entry there requires nothing the form knows of. The locale keys are named through a local `tk()`,
+which is what puts them into `registry/uiLocaleKeysBackend.json`: the extractor
+only sees literal keys, so a key assembled from a field name would reach the
+browser untranslated.
 
 `Constants::CODECHECK_DEFAULT_CONFIG_VERSIONS` and `getConfigSpecUrl()` are mirrored by
 `CODECHECK_DEFAULT_CONFIG_VERSIONS` / `CODECHECK_SPEC_URL` in `CodecheckMetadataForm.vue`.
@@ -867,7 +909,10 @@ tests/                       PHPUnit (37 test classes, 385 tests)
   ApiUnitTests/                CodecheckApiControllerRoles, CodecheckApiControllerRoutes,
                                IdentifierParameterValidator, JsonResponse
   MigrationUnitTests/          I154_MoveCodecheckYamlFlagOntoRepository (the
-                               index-to-flag conversion, tested without a database)
+                               index-to-flag conversion, tested without a database),
+                               I185_MoveRecordsToConfigSpec2 (how the column default
+                               reads back; the rows and the second run are
+                               `make check-migration`)
   SettingsUnitTests/           Actions, Manage
   OrcidUnitTests/              OrcidDepositService (which codecheckers a deposit
                                run is for — the rule that stands between a
@@ -890,7 +935,7 @@ cypress/
                                swallow uncaught exceptions
   support/component-index.html
   tests/component/*.cy.js      10 specs, 128 tests
-  tests/e2e/*.cy.js            14 specs, 74 tests
+  tests/e2e/*.cy.js            15 specs, 81 tests
                                yaml-generation, article-sidebar-setting,
                                issue-toc-setting, issue-toc-badge,
                                private-repository, publication-validation,
@@ -950,7 +995,7 @@ its dialog body, `CodecheckStatusDialog.vue`.
 
 ### E2E tests
 
-`make test-e2e` — 74 tests across 14 specs, driving a real OJS instance.
+`make test-e2e` — 81 tests across 15 specs, driving a real OJS instance.
 
 **Several specs share submission fixtures, and each must restore what it
 changes.** Submissions 8 and 9 are written by `publication-validation`,
@@ -1044,6 +1089,9 @@ broke all of them at once:
   assigned and then stops deciding once a person has. It writes rows nothing
   deletes — the table is an append-only log with no delete endpoint — so it
   restores only the *current* status of the submissions it touches
+- `config-version.cy.js` — the metadata endpoint refuses a config version the
+  plugin does not know (`latest`, 1.0, a later one, a non-string) with a 400 and
+  leaves the stored version alone. Only refusals are posted, so nothing is restored
 - `settings-roundtrip.cy.js` — every field the settings form renders keeps its value
   across a save. Derives the field list from the rendered form, so a setting added
   without being wired into `readInputData()`/`execute()` fails here automatically
@@ -1094,6 +1142,12 @@ rather than skipped: `PKP\form\Form::__construct` resolves journal locales
 through a database-backed facade, so building one is an integration test, and
 the `*-setting.cy.js` e2e specs already open the settings form, change a value
 and save it. **Prefer an e2e test over booting the application inside PHPUnit.**
+What a form hands to a rule can still be pinned where the rule is a static
+function: `CodecheckPlugin::narrowConfigVersions()` is what the settings form
+applies to the config versions on save, and is unit tested directly. The wiring
+that calls it is not covered while a single version is known, since a stored
+selection and the default are then the same value; the pending multi-version test
+in `settings-roundtrip.cy.js` takes over when a second one is added.
 
 The API's role sets are covered by `CodecheckApiControllerRolesUnitTest`, and the
 absence of the removed file endpoints by `CodecheckApiControllerRoutesUnitTest`.

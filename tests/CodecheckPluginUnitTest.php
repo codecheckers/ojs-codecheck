@@ -102,6 +102,23 @@ class CodecheckPluginUnitTest extends PKPTestCase
     }
 
     /**
+     * The one rule the settings form applies on save and the plugin applies on
+     * read, so it is pinned here rather than through the form, which no unit
+     * test can construct: only known versions survive, once each, in the
+     * plugin's own order, and what a browser posts that is not a version is
+     * dropped.
+     */
+    public function testNarrowConfigVersionsKeepsOnlyKnownVersionsOnce()
+    {
+        $this->assertSame(['2.0'], CodecheckPlugin::narrowConfigVersions(['2.0']));
+        $this->assertSame(['2.0'], CodecheckPlugin::narrowConfigVersions(['latest', '2.0', '0.9', '2.0']));
+        $this->assertSame(['2.0'], CodecheckPlugin::narrowConfigVersions(['2.0', '1.0', '2.1']));
+        $this->assertSame([], CodecheckPlugin::narrowConfigVersions([]));
+        $this->assertSame([], CodecheckPlugin::narrowConfigVersions(['1.0', 'latest', '', '2']));
+        $this->assertSame([], CodecheckPlugin::narrowConfigVersions([['2.0'], null]));
+    }
+
+    /**
      * The version list resolves its default at its single reader rather than
      * from the map, because a written row would freeze today's stable
      * specification into every journal. A stored version the plugin no longer
@@ -114,12 +131,14 @@ class CodecheckPluginUnitTest extends PKPTestCase
         $default = Constants::CODECHECK_DEFAULT_CONFIG_VERSIONS;
 
         $this->assertSame(
-            ['latest'],
-            $this->pluginWithSettings([Constants::CODECHECK_ENABLED_CONFIG_VERSIONS => ['latest', '0.9']])
+            ['2.0'],
+            $this->pluginWithSettings([Constants::CODECHECK_ENABLED_CONFIG_VERSIONS => ['latest', '2.0', '0.9']])
                 ->getEnabledConfigVersions(1)
         );
 
-        foreach ([null, [], ['0.9']] as $stored) {
+        // A row written while 1.0 or `latest` was offered narrows to nothing,
+        // and so to the default: no migration of the setting is needed.
+        foreach ([null, [], ['0.9'], ['1.0'], ['latest', '1.0']] as $stored) {
             $this->assertSame(
                 $default,
                 $this->pluginWithSettings([Constants::CODECHECK_ENABLED_CONFIG_VERSIONS => $stored])

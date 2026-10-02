@@ -85,7 +85,7 @@ describe('A reviewer assigned to a submission', () => {
 
   it('may not touch a submission they are not assigned to', () => {
     post(`metadata?submissionId=${NOT_ASSIGNED}`, {
-      version: '1.0',
+      version: '2.0',
       repository: { repositories: [] },
     }).then((response) => {
       // 401, not 403: the refusal now comes from PKP's SubmissionAccessPolicy

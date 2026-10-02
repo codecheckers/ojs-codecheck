@@ -125,7 +125,7 @@ describe('Live: the register issue', () => {
           url: api(`metadata?submissionId=${SUBMISSION}`),
           headers: { 'X-Csrf-Token': csrfToken, 'Content-Type': 'application/json' },
           body: {
-            version: '1.0',
+            version: '2.0',
             publication_type: 'doi',
             manifest: [],
             repository: { repositories: [] },

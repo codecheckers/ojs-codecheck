@@ -45,7 +45,7 @@ class CodecheckSubmission
     /** The CODECHECK specification this check was recorded against (#93). */
     public function getSpecVersion(): string
     {
-        return $this->data['spec_version'] ?? 'latest';
+        return Constants::resolveConfigVersion($this->data['spec_version'] ?? null);
     }
 
     public function getPublicationType(): string

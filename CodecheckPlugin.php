@@ -291,7 +291,7 @@ class CodecheckPlugin extends GenericPlugin
     {
         // Deliberately not in `CODECHECK_SETTING_DEFAULTS`: a recorded default
         // is written into a row, and the writers never reconcile, so a journal
-        // enabled today would keep being offered 1.0 after 1.1 became the
+        // enabled today would keep being offered 2.0 after 2.1 became the
         // stable specification. This default is expected to change, so it is
         // resolved here, at the one place that reads the setting.
         //
@@ -314,7 +314,12 @@ class CodecheckPlugin extends GenericPlugin
      */
     public static function narrowConfigVersions(array $versions): array
     {
-        return array_values(array_intersect(Constants::CODECHECK_CONFIG_VERSIONS, $versions));
+        // Strings only: the settings form passes on whatever the browser posted,
+        // and `array_intersect()` raises a warning for a nested array.
+        return array_values(array_intersect(
+            Constants::CODECHECK_CONFIG_VERSIONS,
+            array_filter($versions, 'is_string')
+        ));
     }
 
     /**

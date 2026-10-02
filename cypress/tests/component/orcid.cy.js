@@ -37,6 +37,11 @@ describe('isValidOrcid', () => {
 });
 
 describe('normalizeOrcid', () => {
+  it('removes every trailing slash, as the server does', () => {
+    expect(normalizeOrcid('https://orcid.org//')).to.equal('');
+    expect(normalizeOrcid('0000-0002-1825-0097//')).to.equal('0000-0002-1825-0097');
+  });
+
   it('reduces a pasted address to the bare iD, which is what is stored', () => {
     expect(normalizeOrcid('  https://orcid.org/0000-0002-1694-233x ')).to.equal('0000-0002-1694-233X');
   });
