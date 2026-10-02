@@ -314,7 +314,12 @@ class CodecheckPlugin extends GenericPlugin
      */
     public static function narrowConfigVersions(array $versions): array
     {
-        return array_values(array_intersect(Constants::CODECHECK_CONFIG_VERSIONS, $versions));
+        // Strings only: the settings form passes on whatever the browser posted,
+        // and `array_intersect()` raises a warning for a nested array.
+        return array_values(array_intersect(
+            Constants::CODECHECK_CONFIG_VERSIONS,
+            array_filter($versions, 'is_string')
+        ));
     }
 
     /**

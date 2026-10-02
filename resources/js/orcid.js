@@ -22,7 +22,7 @@ export function normalizeOrcid(value) {
     // and the profile page carries a query string an editor copies with it.
     .replace(WITH_HOST, '')
     .replace(/[?#].*$/, '')
-    .replace(/\/$/, '')
+    .replace(/\/+$/, '')
     .toUpperCase();
 }
 

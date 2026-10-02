@@ -123,9 +123,25 @@ class CodecheckMetadataHandler
             ];
         }
 
+        // A version the plugin does not implement cannot be recorded. Reading
+        // it as the default would store a different version than the one sent
+        // and answer success; an absent `version` is not this, and keeps the
+        // stored one below.
+        if (array_key_exists('version', $data) && !Constants::isKnownConfigVersion($data['version'])) {
+            return [
+                'success' => false,
+                'error' => __('plugins.generic.codecheck.configVersion.unknown', [
+                    // Shortened: the client chose it, and it is quoted back in a message.
+                    'version' => is_scalar($data['version']) ? mb_substr((string) $data['version'], 0, 50) : gettype($data['version']),
+                ]),
+                'status' => 400,
+            ];
+        }
+
         $nullIfEmpty = function ($value) {
             return (is_string($value) && trim($value) === '') ? null : $value;
         };
+        $trim = fn ($value) => is_string($value) ? trim($value) : $value;
 
         $stored = DB::table('codecheck_metadata')
             ->where('submission_id', $submissionId)
@@ -172,11 +188,9 @@ class CodecheckMetadataHandler
         $metadataData = [
             'submission_id' => $submissionId,
             // As with `repository` below, a payload with no `version` leaves the
-            // stored one alone; only a value the plugin does not know becomes
-            // the default.
-            'spec_version' => array_key_exists('version', $data)
-                ? Constants::resolveConfigVersion(is_string($data['version']) ? $data['version'] : null)
-                : Constants::resolveConfigVersion($stored->spec_version ?? null),
+            // stored one alone. A stored version the plugin does not know reads
+            // as the default; one in the payload was refused above.
+            'spec_version' => Constants::resolveConfigVersion($data['version'] ?? $stored->spec_version ?? null),
             'publication_type' => $data['publication_type'] ?? 'doi',
             'manifest' => json_encode($data['manifest'] ?? []),
             // A payload with no `repository` key leaves the stored list alone. It
@@ -189,7 +203,9 @@ class CodecheckMetadataHandler
                 : ($stored->repository ?? json_encode(['repositories' => null])),
             'source' => $nullIfEmpty($data['source'] ?? null),
             'codecheckers' => json_encode(CodecheckCodecheckers::withNormalizedOrcids($data['codecheckers'] ?? [])),
-            'certificate' => $nullIfEmpty($data['certificate'] ?? null),
+            // Trimmed so that what is stored is what the generated codecheck.yml
+            // carries, and what the form judges against the specification.
+            'certificate' => $nullIfEmpty($trim($data['certificate'] ?? null)),
             'issue' => json_encode($data['issue'] ?? ['url' => null, 'number' => null, 'labelsSelected' => []]),
             'check_time' => $nullIfEmpty($data['check_time'] ?? null),
             'summary' => $nullIfEmpty($data['summary'] ?? null),

@@ -391,8 +391,19 @@ class Constants
      */
     public static function resolveConfigVersion(?string $version): string
     {
-        return in_array($version, self::CODECHECK_CONFIG_VERSIONS, true)
+        return self::isKnownConfigVersion($version)
             ? $version
             : self::CODECHECK_DEFAULT_CONFIG_VERSIONS[0];
+    }
+
+    /**
+     * Whether $version is a config version the plugin implements. Anything
+     * else — `latest`, 1.0, a version a later release adds, a value that is
+     * not a string — is unknown, and is refused where a record is written and
+     * read as the default where one is read.
+     */
+    public static function isKnownConfigVersion(mixed $version): bool
+    {
+        return in_array($version, self::CODECHECK_CONFIG_VERSIONS, true);
     }
 }

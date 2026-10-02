@@ -1045,6 +1045,11 @@ export default {
         return;
       }
 
+      // What the server stores is the trimmed value, so the form holds that
+      // too: otherwise a padded one keeps the specification warning on after
+      // a successful save.
+      this.metadata.certificate = (this.metadata.certificate ?? '').trim();
+
       this.saving = true;
       this.saveMessage = '';
 

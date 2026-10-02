@@ -107,6 +107,19 @@ class ConstantsUnitTest extends PKPTestCase
         }
     }
 
+    /**
+     * 1.0 and `latest` are not special: like a version a later release adds,
+     * they are simply not known, which is what makes the save refuse them.
+     */
+    public function testOnlyAnImplementedConfigVersionIsKnown()
+    {
+        $this->assertTrue(Constants::isKnownConfigVersion('2.0'));
+
+        foreach (['latest', '1.0', '2.1', '', ' 2.0', '2', 2.0, null, true, ['2.0']] as $version) {
+            $this->assertFalse(Constants::isKnownConfigVersion($version), var_export($version, true));
+        }
+    }
+
     public function testTheDefaultOnlyNamesVersionsThePluginKnows()
     {
         $this->assertNotEmpty(Constants::CODECHECK_DEFAULT_CONFIG_VERSIONS);

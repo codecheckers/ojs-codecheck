@@ -51,7 +51,7 @@ describe('missingMandatoryFields', () => {
 
   it('takes only YYYY-NNN as a certificate identifier', () => {
     const record = complete();
-    ['2025-42', '25-042', 'CODECHECK 2025-042', 'CODECHECK-2025-042'].forEach((certificate) => {
+    ['2025-42', '25-042', 'CODECHECK 2025-042', 'CODECHECK-2025-042', ' 2025-042 '].forEach((certificate) => {
       record.metadata.certificate = certificate;
       expect(keys('2.0', record), certificate).to.deep.equal(['certificate']);
     });
@@ -61,6 +61,20 @@ describe('missingMandatoryFields', () => {
     const record = complete();
     record.metadata.certificate = '2025-1000';
     expect(missingMandatoryFields('2.0', record)).to.deep.equal([]);
+  });
+
+  it('judges an author\'s ORCID iD as the file carries it', () => {
+    const record = complete();
+    record.submission.authors = [
+      { name: 'Bare address', orcid: 'https://orcid.org/' },
+      { name: 'Sandbox address', orcid: 'https://sandbox.orcid.org/0000-0002-1825-0097' },
+      { name: 'Bare iD', orcid: '0000-0002-1825-0097' },
+    ];
+
+    expect(missingMandatoryFields('2.0', record)).to.deep.equal([{
+      key: 'plugins.generic.codecheck.configSpec.missing.authorOrcid',
+      params: { names: 'Bare address' },
+    }]);
   });
 
   it('treats blank text as missing', () => {

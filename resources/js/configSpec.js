@@ -14,6 +14,8 @@
  * @see https://codecheck.org.uk/spec/config/2.0/
  */
 
+import { normalizeOrcid } from './orcid.js';
+
 // Marks a locale key for `i18nExtractKeys.vite.js` without translating it,
 // which is what gets the message into the bundle's key list.
 const tk = (key) => key;
@@ -21,8 +23,8 @@ const tk = (key) => key;
 // The specification's `YYYY-NNN`, as the file carries it. Stricter than
 // `Constants::getRegisterCertificateUrl()`, which tolerates an older record's
 // `CODECHECK-` prefix to build a link: `buildYaml()` writes the stored value
-// verbatim, so a prefixed identifier is one the file gets wrong. Three digits
-// or more, as the register's numbering continues past 999.
+// verbatim, so a prefixed or padded identifier is one the file gets wrong. Three
+// digits or more, as the register's numbering continues past 999.
 const CERTIFICATE_IDENTIFIER = /^\d{4}-\d{3,}$/;
 
 const isBlank = (value) => String(value ?? '').trim() === '';
@@ -37,7 +39,9 @@ const RULES = {
     requires(tk('plugins.generic.codecheck.configSpec.missing.authors'), ({submission}) => isEmpty(submission.authors)),
     ({submission}) => {
       const names = (submission.authors ?? [])
-        .filter((author) => isBlank(author?.orcid))
+        // What the file carries: the iD with any address around it removed,
+        // so a bare `https://orcid.org/` is no iD.
+        .filter((author) => normalizeOrcid(author?.orcid) === '')
         .map((author) => author?.name ?? '');
       return names.length === 0 ? null : {
         key: tk('plugins.generic.codecheck.configSpec.missing.authorOrcid'),
@@ -50,7 +54,7 @@ const RULES = {
     requires(tk('plugins.generic.codecheck.configSpec.missing.summary'), ({metadata}) => isBlank(metadata.summary)),
     requires(
       tk('plugins.generic.codecheck.configSpec.missing.certificate'),
-      ({metadata}) => !CERTIFICATE_IDENTIFIER.test(String(metadata.certificate ?? '').trim())
+      ({metadata}) => !CERTIFICATE_IDENTIFIER.test(String(metadata.certificate ?? ''))
     ),
     requires(tk('plugins.generic.codecheck.configSpec.missing.report'), ({metadata}) => isBlank(metadata.report)),
   ],
