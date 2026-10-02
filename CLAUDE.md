@@ -338,12 +338,15 @@ Migration structure (added for issue #94):
   descriptor's version as OJS's own when it is newer. The wrapper exists because
   `PluginHelper::upgradePlugin()` **deletes the plugin's directory when anything
   throws** and the installer catches only `Exception`: a failure — the old plugin
-  object is still in memory and the migration calls it — is logged instead, and
-  the migration runs again on the next enable. It also upgrades only an install
-  that already has `codecheck_metadata`, because the install migration writes a
-  genre into every journal, which is for a journal that enables the plugin.
-  `UpgradeXmlUnitTest` pins the class, that OJS's parser reads the file and that
-  `git` does not `export-ignore` it; the full gallery path (a packaged zip and a
+  object is still in memory and the migration calls it — is logged instead.
+  **Nothing retries it on its own**: it runs again on an enable or an OJS
+  upgrade, so an enabled journal stays on the old schema until an administrator
+  disables and enables the plugin, and the log line is the only sign. It also
+  upgrades only an install that already has `codecheck_metadata`, so an upgrade
+  never creates the schema where the plugin was not enabled; where it was enabled
+  in any journal the whole install migration runs, genre in every journal
+  included, as it does on enable. `UpgradeXmlUnitTest` pins the class, that OJS's
+  parser reads the file and that `.gitattributes` does not `export-ignore` it; the full gallery path (a packaged zip and a
   version bump) is not exercised, and is worth one run on a release candidate.
   **Nothing in the plugin drops a table** — the settings form's "Clear / Reset
   DB" button did, and was removed in #131; rebuild a development instance with

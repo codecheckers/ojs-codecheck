@@ -71,14 +71,26 @@ class UpgradeXmlUnitTest extends PKPTestCase
 
     /**
      * The release package is a `git archive`, which leaves out what
-     * `.gitattributes` marks `export-ignore`; asking git, rather than reading
-     * the file, also covers a pattern that matches by glob.
+     * `.gitattributes` marks `export-ignore`. The file is read rather than
+     * asked of `git`, so this runs from an exported tree too, and each pattern
+     * is matched as a glob, so a rule such as `/*.xml` is caught.
      */
     public function testTheDescriptorIsNotExcludedFromThePackage()
     {
-        $dir = escapeshellarg(dirname(__DIR__));
-        $answer = trim((string) shell_exec("git -C {$dir} check-attr export-ignore -- upgrade.xml 2>&1"));
+        $lines = file(dirname(__DIR__) . '/.gitattributes', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        $this->assertIsArray($lines, '.gitattributes is missing');
 
-        $this->assertSame('upgrade.xml: export-ignore: unspecified', $answer);
+        foreach ($lines as $line) {
+            $fields = preg_split('/\s+/', trim($line));
+            $pattern = array_shift($fields);
+            if ($pattern === '' || $pattern[0] === '#' || !in_array('export-ignore', $fields, true)) {
+                continue;
+            }
+
+            $this->assertFalse(
+                fnmatch(ltrim($pattern, '/'), 'upgrade.xml'),
+                "upgrade.xml is excluded from the package by `{$line}`"
+            );
+        }
     }
 }
