@@ -22,6 +22,10 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 - Everything the plugin posts to the register (the issue, each status comment, the `register.csv` pull request) ends with a signature naming the plugin and the journal, set by the new setting *Signature on GitHub posts*
 - The register issue's JSON metadata records the journal's address and the OJS and plugin versions
 
+#### Frontend
+
+- The editorial CODECHECK form names the submission's primary contact, with a link that emails them about the check (#28)
+
 #### Under the hood
 
 - Five-minute live demo walkthrough with its own dataset (`make demo-db`) and screenshots of every view for backup slides (`make demo-screenshots`): [dev/live-demo.md](dev/live-demo.md)
@@ -31,10 +35,14 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 - The editorial CODECHECK form saves an unfinished check and refuses only invalid entries; the `codecheck.yml` preview still requires a complete record
 - Checks are recorded against version 2.0 of the CODECHECK config file specification, the only version offered; `latest` and 1.0 are gone and existing records move to 2.0 on upgrade (#185)
 - Saving a check with a config version the plugin does not support is refused with a reason, and the stored version is kept (#185)
+- The paper title check when publishing ignores capitals and spacing (#28)
 - The metadata form and the YAML preview name the fields version 2.0 requires that a record still lacks, without blocking a save or publication; importing a `codecheck.yml` from a repository does not replace the paper's title, authors and DOI shown in the form (#185)
 
 ### Fixed
 
+- A codechecker on a double-anonymous review assignment is not shown the authors in the CODECHECK form or the `codecheck.yml` preview, and is pointed to the handling editor (#28)
+- Loading metadata from a repository in the editorial form works (#28)
+- Importing a `codecheck.yml` from a repository keeps a certificate identifier already linked to its register issue, and is refused when its paper title is missing or differs from the submission's, ignoring capitals and spacing (#28)
 - The repositories and expected outputs an author enters in the submission wizard are saved for a new submission (#170)
 - A comment on an expected output in the submission wizard is kept as the comment and survives reopening the draft
 - A certificate identifier can be reserved before the CODECHECK settings have been saved

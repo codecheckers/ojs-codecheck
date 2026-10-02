@@ -279,6 +279,45 @@ its own CSRF and role checks and `exit`ed after responding (#50).
   hand-rolled checks answered 400 or 403. Nothing in the UI branches on the code;
   the e2e specs assert it.
 
+**Who may know the authors is a second question beside access**, answered
+by `CodecheckSubmissionAccess::mayKnowAuthors()` (#28). `SubmissionAccessPolicy`
+admits a reviewer without asking the review method, so `GET metadata` and
+`GET yaml` gave author names to every codechecker. **OJS hides the authors from
+a reviewer in double-anonymous review only** — method 1 is "Anonymous Reviewer /
+Disclosed Author" — so that is the one case withheld; an early version withheld
+for every non-open assignment and was wrong. The decision follows the user's
+*current* assignment, the one `ReviewAssignmentAccessPolicy` finds (last round,
+none when cancelled or declined). Standing is **per submission, not per journal
+role**: a Manager or site administrator always (the site administrator is asked
+for in the site context, where `hasRole()` with the journal id never finds it);
+an author, Section editor or Assistant only with a stage assignment on *this*
+submission, because a Section editor invited as a blind reviewer reaches the
+submission through that assignment alone. When the answer is no,
+`getMetadata()` sends no authors and no contact and sets `authorsWithheld`, and
+the YAML has no `paper.authors` (the form says so in the preview). **`$revealAuthors`
+has no default** on `getMetadata()`/`generateYaml()`: the journal's own checks
+(validation, register, YAML validation) pass `true`, and `POST status/update`
+passes `false` because it needs only the codecheckers. Only names, ORCIDs and the
+contact are withheld — the availability statement and repository URLs still reach
+a withheld codechecker, since redacting the repositories would defeat the check.
+The contact is the publication's primary contact (`getPrimaryAuthor()`) with its
+email; the email is deliberately not in `getAuthors()`, which feeds the published
+`codecheck.yml`.
+
+**The editorial form's repository import takes only what the form lets an editor
+change** (#28). `POST repository` goes through
+`CodecheckMetadataHandler::importMetadataForSubmission()`, which refuses a
+`codecheck.yml` whose `paper.title` is missing or is not the submission's — the
+title comes from the authorised submission, never the request. The comparison is
+`CodecheckMetadataHandler::titlesMatch()`: whitespace runs (and non-breaking
+spaces) count as one space and capitals are ignored; the extended publication
+validation uses the same function, so the two cannot disagree. The plain
+`importMetadataFromRepository()` stays a bare fetch for the validator and the
+register deposit. In `CodecheckMetadataForm.vue` the import no longer assigns
+`submissionData` (title, authors, DOI are the submission's) and keeps the
+certificate identifier while `certificateLocked` — the same condition that makes
+the field read-only.
+
 Endpoints: `GET labels|metadata|yaml|register|status|status/history|orcid-status|orcid-test`,
 `POST identifier|issue|metadata|repository|repository/validate|yaml/validate|status/update|users/roles/validation|orcid-deposit`.
 
@@ -970,6 +1009,11 @@ behaves in two ways on purpose:
   substituted, and **throws** when the message and the call site disagree — a missing
   parameter, an extra one, or a plugin key with no entry in the `.po` at all. That is
   what stops a renamed placeholder from silently rendering `{$specLink}` to the user
+- the substitution is **OJS's own**: one `String.replace` per parameter with the
+  value as the replacement *string*, so `$&`, `$'` and `$$` in a value are
+  patterns, not text. A call that passes user-supplied text — a paper title in
+  the contact's `mailto:` subject — has to double its `$`, and the mock now
+  fails a spec that does not (#28)
 
 Keys outside `plugins.generic.codecheck.` come from OJS's own locale files
 (`common.loading`), so they are passed through unchecked.

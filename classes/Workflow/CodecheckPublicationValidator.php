@@ -103,7 +103,7 @@ class CodecheckPublicationValidator
      */
     private function getCodecheckMetadata(): array
     {
-        return $this->metadata ??= $this->codecheckMetadataHandler->getMetadata($this->request, $this->getSubmissionId());
+        return $this->metadata ??= $this->codecheckMetadataHandler->getMetadata($this->request, $this->getSubmissionId(), true);
     }
 
     private function validateCodecheckStatus(): bool
@@ -237,7 +237,7 @@ class CodecheckPublicationValidator
 
     /*private function validateCodechecker(array $codecheckMetadata): bool {
         $codecheckersFromRepository = $codecheckMetadata['codechecker'];
-        $codecheckersFromOjsSubmission = $this->codecheckMetadataHandler->getMetadata($this->request, $this->getSubmissionId());
+        $codecheckersFromOjsSubmission = $this->codecheckMetadataHandler->getMetadata($this->request, $this->getSubmissionId(), true);
 
         foreach ($codecheckersFromRepository as $codecheckerFromRepository) {
             foreach ($codecheckersFromOjsSubmission as $codecheckerFromOjsSubmission) {
@@ -259,7 +259,10 @@ class CodecheckPublicationValidator
     private function validatePaperTitle(array $codecheckMetadata): bool
     {
         $metadataFromOjsSubmission = $this->getCodecheckMetadata();
-        return $codecheckMetadata['paper']['title'] === $metadataFromOjsSubmission['submission']['title'];
+        return CodecheckMetadataHandler::titlesMatch(
+            $codecheckMetadata['paper']['title'] ?? null,
+            $metadataFromOjsSubmission['submission']['title']
+        );
     }
 
     private function isExtendedValidation(): bool

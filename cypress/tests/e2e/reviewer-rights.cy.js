@@ -151,6 +151,74 @@ describe('An editor', () => {
 });
 
 /**
+ * Who may know the authors of a submission, and how to reach them (#28).
+ *
+ * A codechecker reaches a submission as an OJS reviewer, and the form offers
+ * them the contact author's address — but only where the review method allows
+ * them to know who the authors are. OJS hides them from a reviewer only in
+ * double-anonymous review, and rreviewer's assignment on submission 9 is that
+ * (`review_method` 2, OJS's default), so rreviewer sees neither the authors nor
+ * the contact, in the form or in the generated `codecheck.yml`. The other
+ * review methods are pinned in `CodecheckSubmissionAccessUnitTest`.
+ */
+describe('Who may know the authors', () => {
+  /** The contact author the dataset gives submission 9. */
+  const CONTACT_EMAIL = 'zliu@mailinator.com';
+
+  it('an editor sees the authors and the contact author\'s address', () => {
+    cy.ojsLogin('admin', 'admin');
+    cy.visit(`/index.php/${JOURNAL}/submissions`);
+
+    api('GET', `metadata?submissionId=${ASSIGNED}`).then((response) => {
+      expect(response.status).to.eq(200);
+      expect(response.body.submission.authorsWithheld).to.eq(false);
+      expect(response.body.submission.authors).to.not.be.empty;
+      expect(response.body.submission.contact.email).to.eq(CONTACT_EMAIL);
+    });
+  });
+
+  it('the submission\'s own author sees the authors and the contact', () => {
+    // dnuest is stage-assigned to submission 9 as an author.
+    cy.ojsLogin('dnuest', 'dnuest');
+    cy.visit(`/index.php/${JOURNAL}/submissions`);
+
+    api('GET', `metadata?submissionId=${ASSIGNED}`).then((response) => {
+      expect(response.status).to.eq(200);
+      expect(response.body.submission.authorsWithheld).to.eq(false);
+      expect(response.body.submission.contact.email).to.eq(CONTACT_EMAIL);
+    });
+  });
+
+  it('a reviewer on a double-anonymous assignment sees neither, in the form or in the codecheck.yml', () => {
+    // The names come from an editor first, so the assertions below cannot pass
+    // merely because the fixture's authors were renamed.
+    cy.ojsLogin('admin', 'admin');
+    cy.visit(`/index.php/${JOURNAL}/submissions`);
+    api('GET', `metadata?submissionId=${ASSIGNED}`).then((response) => {
+      const names = response.body.submission.authors.map((author) => author.name);
+      expect(names, 'the dataset gives submission 9 authors').to.not.be.empty;
+
+      cy.ojsLogin('rreviewer', 'rreviewer');
+      cy.visit(`/index.php/${JOURNAL}/submissions`);
+
+      api('GET', `metadata?submissionId=${ASSIGNED}`).then((reviewerView) => {
+        expect(reviewerView.status).to.eq(200);
+        expect(reviewerView.body.submission.authorsWithheld).to.eq(true);
+        expect(reviewerView.body.submission.authors).to.deep.eq([]);
+        expect(reviewerView.body.submission.contact).to.eq(null);
+        expect(JSON.stringify(reviewerView.body)).to.not.contain(CONTACT_EMAIL);
+      });
+
+      api('GET', `yaml?submissionId=${ASSIGNED}`).then((yamlView) => {
+        expect(yamlView.status).to.eq(200);
+        names.forEach((name) => expect(yamlView.body.yaml).to.not.contain(name));
+        expect(yamlView.body.yaml).to.not.match(/^\s*authors:/m);
+      });
+    });
+  });
+});
+
+/**
  * The ORCID OAuth routes (advisory GHSA-4p3r-qgp4-g74r).
  *
  * These are OJS *page* handlers, not API endpoints, so none of the checks the

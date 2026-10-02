@@ -53,7 +53,7 @@ class CodecheckRegisterDepositService
             return $this->fail("Submission #{$submissionId} not found.");
         }
 
-        $metadataResult = $this->codecheckMetadataHandler->getMetadata($this->request, $submissionId);
+        $metadataResult = $this->codecheckMetadataHandler->getMetadata($this->request, $submissionId, true);
 
         if (isset($metadataResult['error']) || empty($metadataResult['codecheck'])) {
             return $this->fail('No CODECHECK metadata found for submission #' . $submissionId . '.');
