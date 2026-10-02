@@ -3,6 +3,7 @@
 namespace APP\plugins\generic\codecheck\classes\Workflow;
 
 use APP\plugins\generic\codecheck\classes\Constants;
+use APP\plugins\generic\codecheck\classes\DoiDeposit\CodecheckDoiDeposit;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use Illuminate\Support\Facades\DB;
 
@@ -39,6 +40,7 @@ class CodecheckStatusHandler
             'user_id' => $userId
         ];
 
+        $linksBefore = CodecheckDoiDeposit::linksBeforeChange($submissionId);
         $insertWorked = DB::table('codecheck_status')->insert($newRecord);
 
         if (!$insertWorked) {
@@ -49,6 +51,10 @@ class CodecheckStatusHandler
         // about all of them — from the workflow form and from the automatic
         // update alike. Best-effort: it never fails the status change (#150, #174).
         CodecheckStatusRegisterUpdate::apply($submissionId, $status);
+
+        // A certificate published after the article, or a status taken back:
+        // deposit its DOI again, if the journal asked for that (#19).
+        CodecheckDoiDeposit::redepositIfChanged($submissionId, $linksBefore);
 
         return CodecheckStatusHandler::getCurrentStatusData($submissionId);
     }

@@ -241,6 +241,10 @@ class SettingsForm extends Form
             )
         );
 
+        foreach (Constants::CODECHECK_DOI_DEPOSIT_SETTINGS as $name) {
+            $this->setData($name, (bool) $this->plugin->getSetting($context->getId(), $name));
+        }
+
         // ORCID integration settings
         $this->setData(
             Constants::ORCID_ENABLED,
@@ -320,6 +324,7 @@ class SettingsForm extends Form
             Constants::CODECHECK_STATUS_KEYS_SELECTED,
             Constants::CODECHECK_PUBLICATION_VALIDATION_EXTENDED,
             Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED,
+            ...Constants::CODECHECK_DOI_DEPOSIT_SETTINGS,
             Constants::ORCID_ENABLED,
             Constants::ORCID_API_TYPE,
             Constants::ORCID_CLIENT_ID,
@@ -645,6 +650,10 @@ class SettingsForm extends Form
             Constants::CODECHECK_PUBLICATION_VALIDATION_EXTENDED,
             $this->getData(Constants::CODECHECK_PUBLICATION_VALIDATION_EXTENDED)
         );
+
+        foreach (Constants::CODECHECK_DOI_DEPOSIT_SETTINGS as $name) {
+            $this->plugin->updateSetting($context->getId(), $name, (bool) $this->getData($name));
+        }
         // Save ORCID integration settings
         $this->plugin->updateSetting(
             $context->getId(),

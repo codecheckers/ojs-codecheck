@@ -6,6 +6,7 @@ use APP\core\Application;
 use APP\facades\Repo;
 use APP\plugins\generic\codecheck\api\v1\CodecheckApiController;
 use APP\plugins\generic\codecheck\classes\Constants;
+use APP\plugins\generic\codecheck\classes\DoiDeposit\CodecheckDoiDeposit;
 use APP\plugins\generic\codecheck\classes\FrontEnd\ArticleAvailability;
 use APP\plugins\generic\codecheck\classes\FrontEnd\ArticleDetails;
 use APP\plugins\generic\codecheck\classes\FrontEnd\Badge;
@@ -45,6 +46,15 @@ class CodecheckPlugin extends GenericPlugin
         // enabled check for the same reason.
         if ($success) {
             Hook::add('Context::add', $this->writeDefaultSettingsForNewContext(...));
+
+            // CODECHECK links in the Crossref and DataCite deposits (#19). Also
+            // outside the enabled check: deposits are queued jobs that may run
+            // in a CLI worker with no journal, so the journal is read from the
+            // record and asked there. Late, so that a relation another plugin
+            // wrote already exists to be added to.
+            $doiDeposit = new CodecheckDoiDeposit($this);
+            Hook::add('articlecrossrefxmlfilter::execute', $doiDeposit->addToCrossref(...), Hook::SEQUENCE_LATE);
+            Hook::add('datacitexmlfilter::execute', $doiDeposit->addToDatacite(...), Hook::SEQUENCE_LATE);
         }
 
         if ($success && $this->getEnabled()) {
@@ -866,6 +876,41 @@ class CodecheckPlugin extends GenericPlugin
     public function isRegisterDepositEnabled(?int $contextId): bool
     {
         return (bool) $this->getSettingWithDefault($contextId, Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED);
+    }
+
+    /**
+     * Whether a journal's DOI deposits carry the CODECHECK links (#19): the one
+     * reader for the deposit hooks and, through `isDoiRedepositEnabled()`, the
+     * re-deposit. It asks whether the
+     * plugin is enabled in that journal too, because the deposit hooks are
+     * registered for every journal.
+     */
+    public function isDoiDepositLinksEnabled(?int $contextId): bool
+    {
+        return $this->isEnabledIn($contextId)
+            && (bool) $this->getSetting($contextId, Constants::CODECHECK_DOI_DEPOSIT_LINKS);
+    }
+
+    /**
+     * Whether the plugin is enabled in a given journal — the gate for every
+     * hook registered for all journals, outside the enabled check in
+     * `register()`, where `getEnabled()` alone would ask the request's
+     * journal, or the site on the command line.
+     */
+    public function isEnabledIn(?int $contextId): bool
+    {
+        return $contextId !== null && $this->getEnabled($contextId);
+    }
+
+
+    /**
+     * Whether a change to the links sends the article's record again (#19).
+     * Only where the links are deposited at all.
+     */
+    public function isDoiRedepositEnabled(?int $contextId): bool
+    {
+        return $this->isDoiDepositLinksEnabled($contextId)
+            && (bool) $this->getSetting($contextId, Constants::CODECHECK_DOI_REDEPOSIT);
     }
 }
 

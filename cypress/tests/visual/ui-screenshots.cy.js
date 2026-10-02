@@ -48,6 +48,16 @@ describe('CODECHECK UI surfaces', () => {
     shoot('01-plugin-list');
   });
 
+  /** The settings that add the CODECHECK links to Crossref and DataCite deposits (#19). */
+  it('settings: DOI deposits', () => {
+    cy.openCodecheckSettings();
+    cy.codecheckSettingsForm()
+      .contains('.pkp_form_title', 'DOI Deposits')
+      .closest('.section')
+      .scrollIntoView()
+      .screenshot('01a-settings-doi-deposits', { overwrite: true });
+  });
+
   it('editorial dashboard with the CODECHECK column', () => {
     // "Assigned to me" is empty in the dataset; the published view has rows, so
     // the CODECHECK cells actually render.

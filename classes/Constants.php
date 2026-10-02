@@ -296,6 +296,21 @@ class Constants
     /** Deposit to the CODECHECK Register unless a journal says otherwise. */
     public const CODECHECK_REGISTER_DEPOSIT_ENABLED_DEFAULT = true;
 
+    // CODECHECK links in the Crossref and DataCite deposits (#19). Both are off
+    // when unset, which is not ambiguous, so neither is in the defaults map.
+    public const CODECHECK_DOI_DEPOSIT_LINKS = 'codecheckDoiDepositLinks';
+    public const CODECHECK_DOI_REDEPOSIT = 'codecheckDoiRedeposit';
+    public const CODECHECK_DOI_DEPOSIT_SETTINGS = [
+        self::CODECHECK_DOI_DEPOSIT_LINKS,
+        self::CODECHECK_DOI_REDEPOSIT,
+    ];
+
+    /** The statuses at which the certificate is published, and only then linked (#19). */
+    public const CODECHECK_STATUSES_CERTIFICATE_PUBLISHED = [
+        self::CODECHECK_STATUS_PUBLISHED_PARTIAL_REPRODUCTION,
+        self::CODECHECK_STATUS_PUBLISHED_FULL_REPRODUCTION,
+    ];
+
     /**
      * The settings that get a written row, and the value written (#177, #178).
      *

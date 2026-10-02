@@ -134,6 +134,10 @@ See [Testing](#testing) below for what actually runs where.
 - `Template::SubmissionWizard::Section` / `…::Section::Review` → wizard templates
 - `Publication::validatePublish` → `validatePublicationHook()` can **block publication**
 - `Publication::publish` → `depositToRegister()` opens a register.csv PR (best-effort)
+- `articlecrossrefxmlfilter::execute` / `datacitexmlfilter::execute` →
+  `CodecheckDoiDeposit` adds the CODECHECK links to the DOI deposit (#19).
+  Registered **outside** the `getEnabled()` block, like `Context::add`, and
+  `SEQUENCE_LATE`; see "DOI deposits" below
 
 Hook callbacks return `false` by design so other plugins/OJS continue to run —
 `validatePublicationHook()` documents why at `CodecheckPlugin.php:93-102`.
@@ -1025,6 +1029,48 @@ probe is `CodecheckGithubRegisterApiClient::repositoryHasLabel()`, the same one
 the reservation uses, so the settings form and the reservation cannot come to
 disagree about whether a register is usable (#129).
 
+### DOI deposits (`classes/DoiDeposit/`)
+
+With `CODECHECK_DOI_DEPOSIT_LINKS` on, an opted-in article whose status is a
+*published certificate* gets the certificate DOI (`report`) as Crossref
+`hasReview` / DataCite `IsReviewedBy` (`Report`), and every public web-address
+repository as `isSupplementedBy` / `IsSupplementedBy` (#19). OJS 3.5 only;
+what 3.6 changes is collected on #187.
+
+- **The hooks are `Filter::execute()`'s**, raised with the finished document
+  before OJS validates and deposits it, so PKP's Crossref and DataCite plugins
+  are untouched. Deposits are queued jobs, and a CLI worker loads every generic
+  plugin with no journal, so the hooks are registered outside `getEnabled()`
+  and **everything is resolved from the document**: Crossref by its DOI (one
+  join over `dois`, `publications`, `submissions`), DataCite by OJS's
+  `publisherId` alternate identifier, because test mode rewrites the DOI's
+  prefix. `CodecheckPlugin::isDoiDepositLinksEnabled($contextId)` is the one
+  reader and asks `getEnabled()` for that journal too; the opt-in is read from
+  `submission_settings`, since `codecheckOptIn` is on the submission schema
+  only where the plugin registered it.
+- **A job run at the end of a web request for another journal, or a site
+  page, deposits without links**: that request loads only its own journal's
+  enabled plugins, so this plugin is never registered (pkp-lib#9345). Nothing
+  in the plugin reaches it.
+- **Nothing is validated at deposit time.** Both schemas take any text as the
+  related identifier and everything else written is fixed, so a per-deposit
+  check could only repeat the unit tests — while fetching every schema file a
+  second time (about 13 s for Crossref, in a job limited to 30 s by
+  `job_runner_max_execution_time`). `DepositSchemaUnitTest` validates what the
+  writers add against copies of the published schemas in
+  `tests/DoiDepositUnitTests/schemas/` (refresh them with a new schema version);
+  the full record is what OJS validates, and an editor can export it from the
+  DOI list to see the result.
+- `CODECHECK_DOI_REDEPOSIT` marks the current publication's DOI stale when the
+  links a deposit would carry change: `linksBeforeChange()` before the write,
+  `redepositIfChanged()` after it, around the status insert in
+  `CodecheckStatusHandler::updateStatus()` and the record write in
+  `CodecheckMetadataHandler::saveMetadata()`. So a certificate DOI entered after
+  the status, or a status taken back, is deposited too. `markStale()` touches
+  only a submitted or registered DOI, and only automatic deposit re-sends it.
+  The author's wizard save is not wrapped: before publication there is nothing
+  deposited to refresh.
+
 ### Logging
 
 Use `CodecheckLogger::debug|info|warning|error()` (`classes/Log/CodecheckLogger.php`) — writes
@@ -1122,7 +1168,7 @@ cypress/
                                swallow uncaught exceptions
   support/component-index.html
   tests/component/*.cy.js      14 specs, 190 tests
-  tests/e2e/*.cy.js            16 specs, 90 tests
+  tests/e2e/*.cy.js            17 specs, 95 tests
                                yaml-generation, article-sidebar-setting,
                                issue-toc-setting, issue-toc-badge,
                                private-repository, publication-validation,
@@ -1187,7 +1233,7 @@ its dialog body, `CodecheckStatusDialog.vue`.
 
 ### E2E tests
 
-`make test-e2e` — 81 tests across 15 specs, driving a real OJS instance.
+`make test-e2e` — 95 tests across 17 specs, driving a real OJS instance.
 
 **Several specs share submission fixtures, and each must restore what it
 changes.** Submissions 8 and 9 are written by `publication-validation`,
@@ -1311,6 +1357,16 @@ broke all of them at once:
   CODECHECK tab, and that a submission taking no part is explained in the same
   words there and on the CODECHECK tab — submission 7, switched out through the
   REST API and back in `after()`
+- `doi-deposit-links.cy.js` — the CODECHECK links in the Crossref and
+  DataCite records (#19), set up and exported through OJS's own DOI API
+  (`dois/submissions/assignDois`, `contexts/{id}/registrationAgency`,
+  `dois/submissions/export`), which is the DOI list's Export button: no links
+  while the setting is off or the certificate unpublished, the links once both
+  hold, DataCite's test mode found by OJS's identifier rather than the
+  rewritten DOI, and a registered DOI marked stale when the links change.
+  Nothing is deposited: both agencies stay in test mode with credentials that
+  are not real. Submission 4 is left at *completed* — "pending" cannot be
+  recorded, only be the absence of a row
 
 Requires `make serve` running with the dataset loaded; `make setup` satisfies the
 rest (plugin enabled, `public/build/` present, composer deps installed, `admin`/`admin`).

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resource xmlns="http://datacite.org/schema/kernel-4" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://datacite.org/schema/kernel-4 http://schema.datacite.org/meta/kernel-4/metadata.xsd">
+  <identifier identifierType="DOI">10.99999/ccdj.5</identifier>
+  <creators>
+    <creator>
+      <creatorName>Eglen, Stephen</creatorName>
+    </creator>
+  </creators>
+  <titles>
+    <title xml:lang="en">Reproducible research with CODECHECK</title>
+  </titles>
+  <publisher>CODECHECK Demo Journal</publisher>
+  <publicationYear>2026</publicationYear>
+  <dates>
+    <date dateType="Issued">2026-10-02</date>
+  </dates>
+  <language>en</language>
+  <resourceType resourceTypeGeneral="JournalArticle"/>
+  <alternateIdentifiers>
+    <alternateIdentifier alternateIdentifierType="publisherId">1-2-5</alternateIdentifier>
+  </alternateIdentifiers>
+  <rightsList>
+    <rights rightsURI="https://creativecommons.org/licenses/by/4.0">CC BY 4.0</rights>
+  </rightsList>
+</resource>

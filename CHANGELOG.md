@@ -24,6 +24,10 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 - A codechecker can be given a GitHub username, offered from the CODECHECK community list when their ORCID iD is on it. Once the check stands at "codechecker assigned", an editor's change assigns them to the register issue, and the status comment names them with their ORCID iD; a codechecker the register cannot assign is named with a link to the journal's contact page (#186)
 - The register issue lists the codecheckers, and its JSON metadata is brought up to date on every status change and every save of the CODECHECK form, when the journal keeps the issue body up to date (#186)
 
+#### DOI deposits
+
+- With the new setting *Add CODECHECK links to DOI deposits*, an article's Crossref or DataCite record links its published CODECHECK certificate as a review and its public code and data repositories as supplements; *Re-deposit when the CODECHECK links change* sends the record of a published article again when they change, such as a certificate published after the article (#19)
+
 #### Frontend
 
 - The editorial CODECHECK form names the submission's primary contact, with a link that emails them about the check (#28)

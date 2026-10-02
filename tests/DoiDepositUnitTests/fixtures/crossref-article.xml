@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<doi_batch xmlns="http://www.crossref.org/schema/5.4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:jats="http://www.ncbi.nlm.nih.gov/JATS1" xmlns:ai="http://www.crossref.org/AccessIndicators.xsd" version="5.4.0" xsi:schemaLocation="http://www.crossref.org/schema/5.4.0 https://www.crossref.org/schemas/crossref5.4.0.xsd">
+  <head>
+    <doi_batch_id>CCDJ_1790000000</doi_batch_id>
+    <timestamp>20261002120000000</timestamp>
+    <depositor>
+      <depositor_name>CODECHECK Demo Journal</depositor_name>
+      <email_address>editor@example.org</email_address>
+    </depositor>
+    <registrant>CODECHECK Demo Journal</registrant>
+  </head>
+  <body>
+    <journal>
+      <journal_metadata>
+        <full_title>CODECHECK Demo Journal</full_title>
+        <abbrev_title>CCDJ</abbrev_title>
+        <issn media_type="electronic">1234-5679</issn>
+      </journal_metadata>
+      <journal_issue>
+        <publication_date media_type="online">
+          <year>2026</year>
+        </publication_date>
+        <journal_volume>
+          <volume>1</volume>
+        </journal_volume>
+        <issue>1</issue>
+      </journal_issue>
+      <journal_article publication_type="full_text" language="en">
+        <titles>
+          <title>Reproducible research with CODECHECK</title>
+        </titles>
+        <contributors>
+          <person_name contributor_role="author" sequence="first">
+            <given_name>Stephen</given_name>
+            <surname>Eglen</surname>
+          </person_name>
+        </contributors>
+        <jats:abstract>
+          <jats:p>An abstract.</jats:p>
+        </jats:abstract>
+        <publication_date media_type="online">
+          <month>10</month>
+          <day>02</day>
+          <year>2026</year>
+        </publication_date>
+        <ai:program name="AccessIndicators">
+          <ai:license_ref>https://creativecommons.org/licenses/by/4.0</ai:license_ref>
+        </ai:program>
+        <doi_data>
+          <doi>10.99999/ccdj.5</doi>
+          <resource>http://localhost:8350/index.php/codecheck/article/view/5</resource>
+        </doi_data>
+      </journal_article>
+    </journal>
+  </body>
+</doi_batch>

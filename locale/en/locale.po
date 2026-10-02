@@ -1155,6 +1155,21 @@ msgstr "When enabled, publishing a CODECHECK-opted-in submission will automatica
 msgid "plugins.generic.codecheck.settings.registerDeposit.checkboxText"
 msgstr "Automatically deposit to the CODECHECK Register on publication"
 
+msgid "plugins.generic.codecheck.settings.doiDeposit.title"
+msgstr "DOI Deposits"
+
+msgid "plugins.generic.codecheck.settings.doiDeposit.description"
+msgstr "Links an article's Crossref or DataCite record to its CODECHECK once the certificate is published: the certificate DOI as a review of the article, and every public code and data repository as a supplement to it. Requires the Crossref or DataCite plugin to deposit the article's DOI. To see and validate what is deposited, export the article's XML from the DOI list."
+
+msgid "plugins.generic.codecheck.settings.doiDeposit.links"
+msgstr "Add CODECHECK links to DOI deposits"
+
+msgid "plugins.generic.codecheck.settings.doiDeposit.redeposit.description"
+msgstr "Without this, an article deposited before its certificate was published keeps a record without the links. With it, any change to the links of a published article (the certificate published, its DOI entered, a repository added or removed) marks the article's DOI for deposit again; with automatic deposit enabled, OJS sends it in its next daily run."
+
+msgid "plugins.generic.codecheck.settings.doiDeposit.redeposit"
+msgstr "Re-deposit when the CODECHECK links change"
+
 # --- ORCID deposition (PR #126) ---
 
 msgid "plugins.generic.codecheck.review.reportUrl"

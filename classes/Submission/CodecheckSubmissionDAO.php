@@ -23,6 +23,32 @@ class CodecheckSubmissionDAO
 
         return null;
     }
+
+    /**
+     * The journal a submission belongs to, from one column: for hooks that
+     * fire for every journal and must not load a submission to find out
+     * whether they concern this one (#19, #183).
+     */
+    public static function contextIdOf(int $submissionId): ?int
+    {
+        $contextId = DB::table('submissions')->where('submission_id', $submissionId)->value('context_id');
+
+        return $contextId === null ? null : (int) $contextId;
+    }
+
+    /**
+     * Whether the submission takes part in a CODECHECK, read from the settings
+     * table rather than the submission object: the object carries
+     * `codecheckOptIn` only where the plugin extended the schema, which a CLI
+     * worker or a scheduled task never does (#19, #183).
+     */
+    public static function isOptedIn(int $submissionId): bool
+    {
+        return (bool) DB::table('submission_settings')
+            ->where('submission_id', $submissionId)
+            ->where('setting_name', 'codecheckOptIn')
+            ->value('setting_value');
+    }
 }
 
 /**
@@ -200,6 +226,17 @@ class CodecheckSubmission
         // older records carry a CODECHECK- prefix — and the link is its landing
         // page in the register.
         return Constants::getRegisterCertificateUrl($certificate);
+    }
+
+    /**
+     * The report's bare DOI, by the same rule `getDoiLink()` links it, or
+     * `null` when the report is not a DOI.
+     */
+    public function getReportDoi(): ?string
+    {
+        $link = $this->getDoiLink();
+
+        return str_starts_with($link, 'https://doi.org/') ? substr($link, strlen('https://doi.org/')) : null;
     }
 
     /**

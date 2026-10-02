@@ -11,6 +11,7 @@ use APP\plugins\generic\codecheck\api\v1\JsonResponse;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\RegisterCodecheckers;
 use APP\plugins\generic\codecheck\classes\Constants;
+use APP\plugins\generic\codecheck\classes\DoiDeposit\CodecheckDoiDeposit;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckCodecheckerDirectory;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckCodecheckers;
@@ -263,6 +264,7 @@ class CodecheckMetadataHandler
             'updated_at' => date('Y-m-d H:i:s'),
         ];
 
+        $linksBefore = CodecheckDoiDeposit::linksBeforeChange((int) $submissionId);
         if ($stored) {
             DB::table('codecheck_metadata')
                 ->where('submission_id', $submissionId)
@@ -271,6 +273,9 @@ class CodecheckMetadataHandler
             $metadataData['created_at'] = date('Y-m-d H:i:s');
             DB::table('codecheck_metadata')->insert($metadataData);
         }
+        // A certificate DOI or repository entered after the article was
+        // deposited reaches Crossref or DataCite, if the journal asked (#19).
+        CodecheckDoiDeposit::redepositIfChanged((int) $submissionId, $linksBefore);
 
         $this->afterSave($request, $submissionId, $stored, $codecheckers, $metadataData['issue']);
 

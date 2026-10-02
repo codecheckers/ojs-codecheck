@@ -502,6 +502,31 @@
 			{/fbvFormSection}
 		{/fbvFormSection}
 
+		{* CODECHECK links in the Crossref and DataCite deposits (#19) *}
+		{fbvFormSection list=true}
+			<div class="field-header">
+				<label class="pkp_form_title">{translate key="plugins.generic.codecheck.settings.doiDeposit.title"}</label>
+			</div>
+			<label class="description">{translate key="plugins.generic.codecheck.settings.doiDeposit.description"}</label>
+			{fbvFormSection list=true}
+				{fbvElement
+					type="checkbox"
+					id="codecheckDoiDepositLinks"
+					checked=$codecheckDoiDepositLinks
+					label="plugins.generic.codecheck.settings.doiDeposit.links"
+				}
+			{/fbvFormSection}
+			{fbvFormSection list=true}
+				<label class="description">{translate key="plugins.generic.codecheck.settings.doiDeposit.redeposit.description"}</label>
+				{fbvElement
+					type="checkbox"
+					id="codecheckDoiRedeposit"
+					checked=$codecheckDoiRedeposit
+					label="plugins.generic.codecheck.settings.doiDeposit.redeposit"
+				}
+			{/fbvFormSection}
+		{/fbvFormSection}
+
 		{* Badge / Logo — inside the form area, so it gets the same box as every
 		   other group rather than rendering bare at the end of the form *}
 		{fbvFormSection list=true}

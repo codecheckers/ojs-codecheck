@@ -32,6 +32,19 @@ class CodecheckSubmissionUnitTest extends PKPTestCase
         $this->assertSame('2.0', (new CodecheckSubmission(['submission_id' => 1]))->getSpecVersion());
     }
 
+    /** The bare DOI follows the rule that makes the article page's DOI link (#19). */
+    public function testGetReportDoiIsTheDoiTheLinkPointsAt()
+    {
+        foreach ([
+            'https://doi.org/10.5281/zenodo.1' => '10.5281/zenodo.1',
+            '10.5281/zenodo.1' => '10.5281/zenodo.1',
+            'https://example.org/report.pdf' => null,
+            '' => null,
+        ] as $report => $doi) {
+            $this->assertSame($doi, (new CodecheckSubmission(['submission_id' => 1, 'report' => $report]))->getReportDoi(), $report);
+        }
+    }
+
     public function testGetManifestReturnsEmptyArrayWhenNotSet()
     {
         $submission = new CodecheckSubmission(['submission_id' => 1]);
