@@ -1167,6 +1167,9 @@ msgstr "When enabled, publishing a CODECHECK-opted-in submission will automatica
 msgid "plugins.generic.codecheck.settings.registerDeposit.checkboxText"
 msgstr "Automatically deposit to the CODECHECK Register on publication"
 
+msgid "plugins.generic.codecheck.certificateReference.label"
+msgstr "Certificate in the References"
+
 msgid "plugins.generic.codecheck.certificateReference.add"
 msgstr "Add certificate to references"
 
@@ -1219,7 +1222,7 @@ msgid "plugins.generic.codecheck.settings.certificateReference.publish"
 msgstr "Also add or update the reference automatically whenever a version of the article is published"
 
 msgid "plugins.generic.codecheck.settings.certificateReference.notCollected"
-msgstr "This journal does not collect references (Workflow settings, Metadata), so readers will not see the certificate there until it does."
+msgstr "This journal does not collect references (Workflow settings, Metadata), so editors do not see the list of references in the workflow. The article page still lists the certificate among them."
 
 msgid "plugins.generic.codecheck.settings.doiDeposit.title"
 msgstr "DOI Deposits"

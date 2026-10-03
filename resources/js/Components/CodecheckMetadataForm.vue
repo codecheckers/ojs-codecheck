@@ -316,13 +316,14 @@
         </div>
 
         <div v-if="certificateReferenceMode !== 'off'" class="field-group certificate-reference">
+          <label class="field-label">{{ t('plugins.generic.codecheck.certificateReference.label') }}</label>
+          <p class="field-description">{{ certificateReferenceHint }}</p>
           <button
             type="button"
-            class="pkpButton"
+            class="pkpButton codecheck-btn"
             :disabled="!canAddCertificateReference || addingCertificateReference"
             @click="addCertificateReference"
           >{{ t('plugins.generic.codecheck.certificateReference.add') }}</button>
-          <p class="field-description">{{ certificateReferenceHint }}</p>
         </div>
 
         <div class="field-group">
@@ -2000,10 +2001,6 @@ export default {
 
 .codecheck-metadata-form .required {
   color: #d9534f;
-}
-
-.codecheck-metadata-form .certificate-reference .field-description {
-  margin: 0.5rem 0 0 0;
 }
 
 /* In the dialog, outside the form: a reference carries a long address. */
