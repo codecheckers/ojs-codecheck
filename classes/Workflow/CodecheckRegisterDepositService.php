@@ -3,8 +3,6 @@
 namespace APP\plugins\generic\codecheck\classes\Workflow;
 
 use APP\core\Application;
-use APP\core\Request;
-use APP\facades\Repo;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckPostOrigin;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\GithubHttp;
@@ -13,6 +11,8 @@ use APP\plugins\generic\codecheck\classes\Exceptions\GithubUrlParseException;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckRepositories;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
+use APP\submission\Submission;
+use PKP\context\Context;
 
 /**
  * Assembles the register.csv row for a published CODECHECK and deposits it
@@ -27,33 +27,37 @@ use APP\plugins\generic\codecheck\CodecheckPlugin;
 class CodecheckRegisterDepositService
 {
     private CodecheckPlugin $plugin;
-    private Request $request;
     private CodecheckMetadataHandler $codecheckMetadataHandler;
     private array $errors = [];
 
     public function __construct(CodecheckPlugin $plugin)
     {
         $this->plugin = $plugin;
-        $this->request = Application::get()->getRequest();
-        $this->codecheckMetadataHandler = new CodecheckMetadataHandler($this->request, GithubHttp::client());
+        // The handler wants a request to be built; nothing here asks it for
+        // the journal, which is the article's (#188).
+        $this->codecheckMetadataHandler = new CodecheckMetadataHandler(Application::get()->getRequest(), GithubHttp::client());
     }
 
     /**
      * Entry point: build the register row for a submission and open a PR
      * against the configured register repository.
      *
+     * The journal is the article's, never the request's: the scheduled task
+     * publishes on the command line, where there is none (#188).
+     *
      * @return array{success: bool, prUrl?: string, row?: array, error?: string}
      */
-    public function depositForSubmission(int $submissionId): array
+    public function depositForSubmission(Submission $submission): array
     {
         $this->errors = [];
+        $submissionId = (int) $submission->getId();
 
-        $submission = Repo::submission()->get($submissionId);
-        if (!$submission) {
-            return $this->fail("Submission #{$submissionId} not found.");
+        $context = Application::getContextDAO()->getById((int) $submission->getData('contextId'));
+        if (!$context) {
+            return $this->fail("Submission #{$submissionId} belongs to no journal.");
         }
 
-        $metadataResult = $this->codecheckMetadataHandler->getMetadata($this->request, $submissionId, true);
+        $metadataResult = $this->codecheckMetadataHandler->getMetadata(null, $submissionId, true);
 
         if (isset($metadataResult['error']) || empty($metadataResult['codecheck'])) {
             return $this->fail('No CODECHECK metadata found for submission #' . $submissionId . '.');
@@ -105,9 +109,8 @@ class CodecheckRegisterDepositService
             return $this->fail('Could not format repository "' . $repositoryUrl . '" for the register: ' . $e->getMessage());
         }
 
-        $row = $this->buildRegisterRow($submission, $codecheckMetadata, $certificate, $formattedRepository);
+        $row = $this->buildRegisterRow($context, $codecheckMetadata, $certificate, $formattedRepository);
 
-        $context = $this->request->getContext();
         $githubPersonalAccessToken = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_PERSONAL_ACCESS_TOKEN);
         $githubRegisterOrganization = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION);
         $githubRegisterRepository = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY);
@@ -191,9 +194,8 @@ class CodecheckRegisterDepositService
     /**
      * Assemble the 5-column register.csv row: Certificate, Repository, Type, Venue, Issue.
      */
-    private function buildRegisterRow($submission, array $codecheckMetadata, string $certificate, string $formattedRepository): array
+    private function buildRegisterRow(Context $context, array $codecheckMetadata, string $certificate, string $formattedRepository): array
     {
-        $context = $this->request->getContext();
         $issueData = $codecheckMetadata['issue'] ?? [];
         $issueNumber = $issueData['number'] ?? null;
 
@@ -201,7 +203,10 @@ class CodecheckRegisterDepositService
             'Certificate' => $certificate,
             'Repository' => $formattedRepository,
             'Type' => 'journal',
-            'Venue' => $context?->getLocalizedName() ?? 'Unknown Journal',
+            // The journal's own language: the run's interface language is the
+            // editor's on the web and the site's on the command line, and one
+            // journal must not be two venues in the register.
+            'Venue' => $context->getLocalizedName($context->getPrimaryLocale()) ?? 'Unknown Journal',
             'Issue' => $issueNumber !== null ? (string) $issueNumber : 'NA',
         ];
     }

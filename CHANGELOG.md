@@ -53,6 +53,7 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 
 ### Fixed
 
+- An article published by OJS's scheduled publishing run from the command line (cron) is deposited to the CODECHECK Register like one published from the workflow; the register lists the journal under its name in the journal's primary language (#188)
 - A codechecker on a double-anonymous review assignment is not shown the authors in the CODECHECK form or the `codecheck.yml` preview, and is pointed to the handling editor (#28)
 - Loading metadata from a repository in the editorial form works (#28)
 - Importing a `codecheck.yml` from a repository keeps a certificate identifier already linked to its register issue, and is refused when its paper title is missing or differs from the submission's, ignoring capitals and spacing (#28)

@@ -86,6 +86,7 @@ make test              # component tests + PHPUnit (no server needed)
 make test-component    # Cypress component tests — runs anywhere, no OJS needed
 make test-php          # PHPUnit — needs the linked OJS install
 make check-migration   # the #185 upgrade migration against the dev database (writes; asks first)
+make check-scheduled-deposit THROWAWAY=doi   # the register deposit when the scheduled task publishes (#188)
 make throwaway-up THROWAWAY=doi   # a throwaway OJS for anything that writes; see below
 make test-e2e          # Cypress e2e — needs `make serve` running
 make test-e2e-reverse  # the same specs backwards, to catch order dependence
@@ -135,7 +136,9 @@ See [Testing](#testing) below for what actually runs where.
   workflow submission state, status locale keys, wizard steps
 - `Template::SubmissionWizard::Section` / `…::Section::Review` → wizard templates
 - `Publication::validatePublish` → `validatePublicationHook()` can **block publication**
-- `Publication::publish` → `depositToRegister()` opens a register.csv PR (best-effort)
+- `Publication::publish` → `depositToRegister()` opens a register.csv PR (best-effort).
+  Outside the `getEnabled()` block, `SEQUENCE_LATE`, gated on
+  `shouldDepositToRegister()` for the article's own journal (#188); see "Register deposit" below
 - `Publication::publish::before` → `CertificateReferenceUpdate::addOnPublish()`
   lists the certificate among the references (#183). Outside the
   `getEnabled()` block too: the scheduled task publishes on the command line.
@@ -523,6 +526,46 @@ Register deposit fires on `Publication::publish`, is gated by
 `CODECHECK_REGISTER_DEPOSIT_ENABLED`, requires a reserved certificate and a repository
 flagged as containing `codecheck.yml`, re-verifies the `codecheck.yml` is fetchable, and
 **never blocks publication on failure** (logged only).
+
+**It runs for the scheduled task too, which publishes on the command line**
+(#188). There is no journal in the request there, so the hook takes the
+journal from the article (`contextId`), asks `shouldDepositToRegister()` —
+enabled in that journal *and* the deposit setting; `isRegisterDepositEnabled()`
+alone must keep answering the default for no journal, for the #169 gate —
+reads the opt-in from `submission_settings` (`CodecheckSubmissionDAO::isOptedIn()`:
+the submission object carries `codecheckOptIn` only where the schema hook ran),
+and `CodecheckRegisterDepositService::depositForSubmission()` resolves the
+journal from the article, never from the request; `CodecheckPluginHooksUnitTest`
+pins both that and the registration outside the enabled check. It is added
+`SEQUENCE_LATE`, so the ORCID deposit on the same hook still runs first. The
+ORCID deposit deliberately stays where it was: it needs a journal in the
+request and is not meant to run from the scheduled task (the repository
+owner's decision). The register row's `Venue` is the journal's name in its
+primary language, so the publishing path does not decide it.
+
+What was actually broken, established by running the task on `main`: the
+hooks *were* attached on the command line, because the site-level
+`getEnabled()` came out true in the development install, and both deposits
+then logged "No context while publishing" and skipped. An install where the
+site-level check is false never attached them at all; the fix covers both.
+
+**Not covered, and out of the plugin's reach: OJS's web task runner.** With
+`[schedule] task_runner = On`, the default, the scheduled task runs at the end
+of an arbitrary web request, which has loaded only the plugins enabled for its
+own journal (or the site's) — so a scheduled article published at the end of a
+request for another journal is still published without its deposit. That is
+pkp-lib#9345 again, as for the DOI deposits; running the scheduler from cron,
+on the command line, is the case that works.
+
+`make check-scheduled-deposit THROWAWAY=<name>` (`dev/check-scheduled-deposit.php`)
+runs `PublishSubmissions::executeActions()` itself and checks the deposit ran,
+with no call to GitHub: the dataset marks no repository as holding the
+`codecheck.yml`, so the deposit stops at that check, naming the article. The
+script refuses to run if the article marks one, or if anything else is already
+scheduled (the task publishes every due article), and puts the article back in
+a `finally`. **OJS 3.5's `unpublish()` reads the journal from the request and
+fatals on the command line**; its `publish()` does not — so the script
+schedules the article in the tables rather than through `unpublish()`.
 
 `CodecheckStatusRegisterUpdate` carries a recorded status change to the register
 issue: a comment on its timeline (#150) and the labels that say where the check

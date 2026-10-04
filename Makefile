@@ -69,7 +69,8 @@ export OJS_ROOT
         lint lint-deps lint-fix hooks \
         test-php check-migration screenshots inspect social-preview \
         build watch check-ojs clean \
-        throwaway-check throwaway-up throwaway-down doi-test-config doi-export
+        throwaway-check throwaway-up throwaway-down doi-test-config doi-export \
+        check-scheduled-deposit
 
 # --- Entry points -----------------------------------------------------------
 
@@ -119,6 +120,7 @@ help:
 	@echo "    make doi-test-config THROWAWAY=name [AGENCY=datacite] [REGISTERED=1] [CERTIFICATES=\"2 7\"]"
 	@echo "                         Crossref/DataCite in test mode and fake DOIs (#19)"
 	@echo "    make doi-export THROWAWAY=name ARTICLES=\"5 2\" [DOI_OUT=dir]  Crossref and DataCite XML, validated"
+	@echo "    make check-scheduled-deposit THROWAWAY=name  the register deposit when the scheduled task publishes (#188)"
 	@echo
 	@echo "  OJS_ROOT = $(OJS_ROOT)"
 	@echo "  DB       = $(DB_NAME) as $(DB_USER)@$(DB_HOST):$(DB_PORT)"
@@ -634,6 +636,17 @@ doi-test-config: check-ojs
 	fi
 	php dev/doi-test-config.php codecheck $(AGENCY) "$(REGISTERED)" $(CERTIFICATES)
 	@$(MAKE) --no-print-directory clear-cache
+
+# The register deposit when the scheduled task publishes (#188): schedules an
+# opted-in article for yesterday, runs PublishSubmissions as the scheduler
+# does and checks the deposit ran (dev/check-scheduled-deposit.php). Makes no
+# call to GitHub. It writes, so it refuses the shared install unless FORCE=1.
+SCHEDULED_ARTICLE ?= 5
+check-scheduled-deposit: check-ojs
+	@if [ "$(OJS_ROOT)" = "$(SHARED_OJS_ROOT)" ] && [ -z "$(FORCE)" ]; then \
+		echo "This unpublishes and republishes an article; use THROWAWAY=<name>, or FORCE=1"; exit 1; \
+	fi
+	php dev/check-scheduled-deposit.php codecheck $(SCHEDULED_ARTICLE)
 
 # The Crossref and DataCite records OJS would deposit for ARTICLES, built and
 # validated by OJS's own exporters, into DOI_OUT (dev/doi-export.php). Nothing

@@ -64,4 +64,57 @@ class CodecheckPluginHooksUnitTest extends PKPTestCase
             );
         }
     }
+
+    /** A PHP file's code with every comment taken out, so a comment can neither satisfy nor break a check. */
+    private static function codeOf(string $file): string
+    {
+        $code = '';
+        foreach (token_get_all(file_get_contents($file)) as $token) {
+            if (!is_array($token) || !in_array($token[0], [T_COMMENT, T_DOC_COMMENT], true)) {
+                $code .= is_array($token) ? $token[1] : $token;
+            }
+        }
+
+        return $code;
+    }
+
+    /**
+     * Hooks that must run for every journal are added before the enabled
+     * check in `register()`. On the command line, where the scheduled task
+     * publishes, that check asks the site rather than the article's journal
+     * (#188). Each callback checks the article's own journal itself.
+     */
+    public function testHooksForEveryJournalAreAddedBeforeTheEnabledCheck()
+    {
+        $source = self::codeOf(dirname(__DIR__) . '/CodecheckPlugin.php');
+        $this->assertSame(1, preg_match('/if\s*\(\s*\$success\s*&&\s*\$this->getEnabled\(\)\s*\)/', $source, $m, PREG_OFFSET_CAPTURE), 'the enabled check in register() was not found — has it changed?');
+        $enabledBlock = $m[0][1];
+
+        foreach ([
+            'Publication::publish' => '\$this->depositToRegister\(\.\.\.\)',
+            'Publication::publish::before' => '',
+            'articlecrossrefxmlfilter::execute' => '',
+            'datacitexmlfilter::execute' => '',
+            'Context::add' => '',
+        ] as $hook => $callback) {
+            $pattern = "/Hook::add\\(\\s*'" . preg_quote($hook, '/') . "'\\s*,\\s*" . $callback . '/';
+            $this->assertSame(1, preg_match_all($pattern, $source, $all, PREG_OFFSET_CAPTURE), "{$hook} is not registered exactly once");
+            $this->assertLessThan($enabledBlock, $all[0][0][1], "{$hook} is inside the enabled check");
+        }
+    }
+
+    /**
+     * The defect #188 was: the deposit took its journal from the request, which
+     * the scheduled task's command line does not have. Neither the hook nor the
+     * service may ask the request for a journal again.
+     */
+    public function testTheRegisterDepositNeverAsksTheRequestForItsJournal()
+    {
+        $plugin = self::codeOf(dirname(__DIR__) . '/CodecheckPlugin.php');
+        $this->assertSame(1, preg_match('/function depositToRegister\(.*?\n    \}\n/s', $plugin, $hook), 'depositToRegister() was not found');
+        $this->assertStringNotContainsString('getRequest()', $hook[0]);
+
+        $service = self::codeOf(dirname(__DIR__) . '/classes/Workflow/CodecheckRegisterDepositService.php');
+        $this->assertStringNotContainsString('getContext()', $service);
+    }
 }

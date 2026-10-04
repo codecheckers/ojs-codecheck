@@ -19,6 +19,7 @@ use APP\plugins\generic\codecheck\classes\Settings\Actions;
 use APP\plugins\generic\codecheck\classes\Settings\Manage;
 use APP\plugins\generic\codecheck\classes\Submission\AvailabilityStatementField;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckAuthorMetadata;
+use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionDAO;
 use APP\plugins\generic\codecheck\classes\Submission\Schema;
 use APP\plugins\generic\codecheck\classes\Submission\SubmissionWizardHandler;
 use APP\plugins\generic\codecheck\classes\Workflow\CertificateReferenceUpdate;
@@ -62,6 +63,15 @@ class CodecheckPlugin extends GenericPlugin
             // outside: the scheduled task publishes on the command line, and
             // the mode is read for the publication's own journal.
             Hook::add('Publication::publish::before', (new CertificateReferenceUpdate($this))->addOnPublish(...));
+
+            // A register.csv row when an opted-in article is published (#10).
+            // Outside the enabled check as well (#188): on the command line,
+            // where the scheduled task publishes, that check asks the site,
+            // and the deposit took its journal from the request, which has
+            // none there — so every scheduled article went without one. Late,
+            // so the ORCID deposit on the same hook still runs first, as it
+            // did when both were inside.
+            Hook::add('Publication::publish', $this->depositToRegister(...), Hook::SEQUENCE_LATE);
         }
 
         if ($success && $this->getEnabled()) {
@@ -116,9 +126,6 @@ class CodecheckPlugin extends GenericPlugin
 
             // Test if we can hook into the publication to block it if codecheck failed
             Hook::add('Publication::validatePublish', $this->validatePublicationHook(...));
-
-            // Deposit a register.csv row when a CODECHECK-opted-in article is published (Issue #10)
-            Hook::add('Publication::publish', $this->depositToRegister(...));
 
             // Add Localizations to Codecheck Status Preview
             Hook::add('TemplateManager::display', $this->addCodecheckStatusLocalizations(...));
@@ -177,31 +184,25 @@ class CodecheckPlugin extends GenericPlugin
     {
         [$newPublication, $publication, $submission] = $args;
 
+        // Every journal's publishing passes through here, the scheduled task's
+        // too, which runs on the command line with no journal in the request:
+        // the journal and the opt-in are the article's own. The settings
+        // first: they are cached, and the opt-in is a query.
+        if (!$this->shouldDepositToRegister((int) $submission->getData('contextId'))
+            || !CodecheckSubmissionDAO::isOptedIn((int) $submission->getId())) {
+            return false;
+        }
+
         // Publishing an issue publishes every article in one request, and a
         // deposit runs only on publish: one article's timeout must not cost
         // the others theirs, as the breaker would otherwise have it. Each
         // deposit waits out at most one time limit of its own.
         GithubHttp::reset();
 
-        if (!$submission->getData('codecheckOptIn')) {
-            return false;
-        }
-
-        $context = Application::get()->getRequest()->getContext();
-        if (!$context) {
-            CodecheckLogger::warning('No context while publishing submission #' . $submission->getId() . '; skipping the register deposit.');
-            return false;
-        }
-
-        if (!$this->isRegisterDepositEnabled($context->getId())) {
-            CodecheckLogger::debug('Register deposit is disabled for this journal; skipping for submission #' . $submission->getId());
-            return false;
-        }
-
         CodecheckLogger::debug('Depositing register.csv row for submission #' . $submission->getId());
 
         $depositService = new CodecheckRegisterDepositService($this);
-        $result = $depositService->depositForSubmission($submission->getId());
+        $result = $depositService->depositForSubmission($submission);
 
         if (!$result['success']) {
             CodecheckLogger::error('Register deposit failed for submission #' . $submission->getId() . ': ' . ($result['error'] ?? 'unknown error'));
@@ -885,10 +886,27 @@ class CodecheckPlugin extends GenericPlugin
         return $stored ?? (Constants::CODECHECK_SETTING_DEFAULTS[$name] ?? null);
     }
 
-    /** Whether a published article is deposited to the CODECHECK Register. */
+    /**
+     * Whether a published article is deposited to the CODECHECK Register.
+     * Deliberately not asking whether the plugin is enabled, unlike the other
+     * readers of a setting for a hook registered for every journal: with no
+     * journal it must answer the default, on, because the publication gate
+     * reads it and "unknown" must not be the permissive side (#169, #177). The
+     * deposit hook asks `shouldDepositToRegister()` instead (#188).
+     */
     public function isRegisterDepositEnabled(?int $contextId): bool
     {
         return (bool) $this->getSettingWithDefault($contextId, Constants::CODECHECK_REGISTER_DEPOSIT_ENABLED);
+    }
+
+    /**
+     * Whether an article of this journal is deposited when it is published:
+     * the reader for the deposit hook, which is registered for every journal
+     * and so has to ask whether the plugin is enabled there too (#188).
+     */
+    public function shouldDepositToRegister(?int $contextId): bool
+    {
+        return $this->isEnabledIn($contextId) && $this->isRegisterDepositEnabled($contextId);
     }
 
     /**
