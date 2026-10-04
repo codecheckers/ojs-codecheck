@@ -495,7 +495,6 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
         $response = $this->handler->importMetadataFromRepository($repository);
         $actualMetadataReturnArray = json_decode($response->getPayload(), true);
-        print_r($actualMetadataReturnArray);
         $this->assertEquals(200, $response->getHttpResponseCode());
         $this->assertCount(3, $actualMetadataReturnArray);
         $this->assertTrue($actualMetadataReturnArray['success']);

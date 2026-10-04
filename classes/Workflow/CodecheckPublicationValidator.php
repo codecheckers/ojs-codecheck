@@ -215,18 +215,6 @@ class CodecheckPublicationValidator
                 ]);
                 return false;
             }
-
-            /*
-            if(!$this->validateCodechecker($responseArray['metadata'])) {
-                $this->errors[] = __('plugins.generic.codecheck.publication.validation.invalidRepository', [
-                    'repositoryError' => __('plugins.generic.codecheck.publication.validation.invalidCodecheckers')
-                ]);
-                $this->errors[] = __('plugins.generic.codecheck.publication.validation.invalidRepository', [
-                    'repositoryError' => $responseArray['error']
-                ]);
-                return false;
-            }
-            */
             return true;
         }
         $this->errors[] = __('plugins.generic.codecheck.publication.validation.invalidRepository', [
@@ -234,27 +222,6 @@ class CodecheckPublicationValidator
         ]);
         return false;
     }
-
-    /*private function validateCodechecker(array $codecheckMetadata): bool {
-        $codecheckersFromRepository = $codecheckMetadata['codechecker'];
-        $codecheckersFromOjsSubmission = $this->codecheckMetadataHandler->getMetadata($this->request, $this->getSubmissionId(), true);
-
-        foreach ($codecheckersFromRepository as $codecheckerFromRepository) {
-            foreach ($codecheckersFromOjsSubmission as $codecheckerFromOjsSubmission) {
-                if(!isset($codecheckerFromRepository['orcid']) || !isset($codecheckerFromOjsSubmission['orcid'])) {
-                    continue;
-                }
-
-                if($codecheckerFromRepository['orcid'] !== $codecheckerFromOjsSubmission['orcid']) {
-
-                }
-            }
-        }
-
-        $paperTitle = $codecheckMetadata['paper']['title'];
-        error_log($paperTitle);
-        return true;
-    }*/
 
     private function validatePaperTitle(array $codecheckMetadata): bool
     {
