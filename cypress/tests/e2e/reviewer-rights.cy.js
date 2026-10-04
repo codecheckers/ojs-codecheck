@@ -120,6 +120,25 @@ describe('A reviewer assigned to a submission', () => {
     });
   });
 
+  /**
+   * The recorded codecheckers' ORCID iDs decide whose account may be credited
+   * for the check, so a reviewer who could edit the list could name an account
+   * they hold and connect it (GHSA-4p3r-qgp4-g74r). Their save still goes
+   * through — the rest of the record stays theirs to save — and keeps the list
+   * as stored, whatever it posted.
+   */
+  it('may save the record but not change who it names as codecheckers', () => {
+    api('GET', `metadata?submissionId=${ASSIGNED}`).its('body.codecheck').then((stored) => {
+      cy.saveCodecheckRecord(ASSIGNED, stored, [
+        ...stored.codecheckers,
+        { name: 'Josiah Carberry', orcid: '0000-0002-1825-0097' },
+      ]).its('status').should('eq', 200);
+
+      api('GET', `metadata?submissionId=${ASSIGNED}`)
+        .its('body.codecheck.codecheckers').should('deep.equal', stored.codecheckers);
+    });
+  });
+
   it('may still read CODECHECK data — the reviewer tab shows it', () => {
     api('GET', `metadata?submissionId=${ASSIGNED}`).its('status').should('eq', 200);
   });
@@ -333,6 +352,9 @@ describe('The ORCID authorisation routes', () => {
  * dataset happens to carry it, which is why this went unnoticed.
  */
 describe('The ORCID redirect URI', () => {
+  // The record the last test changes, to be put back whether or not it passed.
+  let storedRecord = null;
+
   before(() => {
     cy.ojsLogin('admin', 'admin');
     cy.openCodecheckSettings();
@@ -343,6 +365,13 @@ describe('The ORCID redirect URI', () => {
   });
 
   after(() => {
+    if (storedRecord) {
+      cy.ojsLogin('admin', 'admin');
+      cy.visit(`/index.php/${JOURNAL}/dashboard/editorial`);
+      cy.saveCodecheckRecord(ASSIGNED, storedRecord, storedRecord.codecheckers)
+        .its('status').should('eq', 200);
+    }
+
     // The secret field is write-only — an empty value means "keep", so the
     // dummy secret stays until the dataset is reloaded. Switching ORCID off is
     // what actually restores the journal's behaviour for the other specs.
@@ -368,6 +397,32 @@ describe('The ORCID redirect URI', () => {
 
       expect(redirectUri).to.contain(`/index.php/${JOURNAL}/codecheck/orcid/callback`);
       expect(redirectUri, 'not the site-level path').not.to.contain('/index.php/index/');
+    });
+  });
+
+  /**
+   * An ORCID account is connected only for a codechecker whose iD is on record
+   * (GHSA-4p3r-qgp4-g74r), so a submission whose codecheckers are recorded by
+   * name alone is refused before anyone is sent to ORCID. Which account the
+   * callback accepts is pinned in `OrcidDepositServiceUnitTest` and
+   * `CodecheckCodecheckersUnitTest`; the callback itself needs ORCID to answer.
+   */
+  it('sends nobody to ORCID while no codechecker has an iD on record', () => {
+    cy.ojsLogin('admin', 'admin');
+    cy.visit(`/index.php/${JOURNAL}/dashboard/editorial`);
+
+    api('GET', `metadata?submissionId=${ASSIGNED}`).its('body.codecheck').then((stored) => {
+      storedRecord = stored;
+      cy.saveCodecheckRecord(ASSIGNED, stored, stored.codecheckers.map(({ name }) => ({ name, orcid: '' })))
+        .its('status').should('eq', 200);
+
+      cy.request({
+        url: orcid('startAuth', `?submissionId=${ASSIGNED}`),
+        followRedirect: false,
+      }).then((response) => {
+        expect(response.status, 'not sent on to ORCID').to.eq(200);
+        expect(response.body).to.contain('No codechecker of this submission has an ORCID iD on record');
+      });
     });
   });
 });

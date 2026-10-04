@@ -41,34 +41,9 @@ describe('Codechecker ORCID iDs', () => {
       headers: { 'X-Csrf-Token': csrfToken }
     }).its('body.codecheck');
 
-  const save = (codecheck, failOnStatusCode = true) =>
-    cy.request({
-      method: 'POST',
-      url: `/index.php/${JOURNAL}/api/v1/codecheck/metadata?submissionId=${SUBMISSION}`,
-      headers: { 'X-Csrf-Token': csrfToken },
-      failOnStatusCode,
-      body: codecheck
-    });
-
-  /** The payload the editorial form sends, from the stored record. */
-  const payloadFrom = (stored, codecheckers) => ({
-    version: stored.version,
-    publication_type: stored.publication_type,
-    manifest: stored.manifest,
-    repository: stored.repository,
-    source: stored.source,
-    codecheckers,
-    certificate: stored.certificate,
-    issue: stored.issue,
-    check_time: stored.check_time,
-    summary: stored.summary,
-    report: stored.report,
-    additional_content: stored.additional_content
-  });
-
   it('refuses an iD whose check digit does not agree, and says which', () => {
     readMetadata().then((stored) => {
-      save(payloadFrom(stored, [{ name: 'Mistyped', orcid: '0000-0002-1825-0098' }]), false)
+      cy.saveCodecheckRecord(SUBMISSION, stored, [{ name: 'Mistyped', orcid: '0000-0002-1825-0098' }])
         .then((response) => {
           expect(response.status).to.eq(400);
           expect(response.body.success).to.eq(false);
@@ -82,7 +57,7 @@ describe('Codechecker ORCID iDs', () => {
 
   it('stores an iD pasted as an address in the bare form', () => {
     readMetadata().then((stored) => {
-      save(payloadFrom(stored, [{ name: 'Josiah Carberry', orcid: `https://orcid.org/${CARBERRY}` }]))
+      cy.saveCodecheckRecord(SUBMISSION, stored, [{ name: 'Josiah Carberry', orcid: `https://orcid.org/${CARBERRY}` }])
         .its('status').should('eq', 200);
 
       // Every save stores the GitHub username too, empty when there is none (#186).
@@ -93,7 +68,7 @@ describe('Codechecker ORCID iDs', () => {
       // put the record back, so the rest of the suite sees what it expects —
       // compared without `github`, which the dataset's entries predate
       const withoutUsername = (list) => list.map(({ name, orcid }) => ({ name, orcid }));
-      save(payloadFrom(stored, stored.codecheckers)).its('status').should('eq', 200);
+      cy.saveCodecheckRecord(SUBMISSION, stored, stored.codecheckers).its('status').should('eq', 200);
       readMetadata().its('codecheckers').then((restored) => {
         expect(withoutUsername(restored)).to.deep.equal(withoutUsername(stored.codecheckers));
       });

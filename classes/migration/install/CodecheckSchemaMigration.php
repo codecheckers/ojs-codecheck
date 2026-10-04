@@ -28,6 +28,7 @@ namespace APP\plugins\generic\codecheck\classes\migration\install;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\classes\migration\CodecheckMigration;
+use APP\plugins\generic\codecheck\classes\migration\upgrade\GHSA_4p3r_DeleteUnrecordedOrcidTokens;
 use APP\plugins\generic\codecheck\classes\migration\upgrade\I154_MoveCodecheckYamlFlagOntoRepository;
 use APP\plugins\generic\codecheck\classes\migration\upgrade\I185_MoveRecordsToConfigSpec2;
 use APP\plugins\generic\codecheck\classes\migration\upgrade\I186_AddCodecheckerDirectory;
@@ -120,6 +121,7 @@ class CodecheckSchemaMigration extends CodecheckMigration
         (new I93_RenameVersionToSpecVersion())->up();
         (new I185_MoveRecordsToConfigSpec2())->up();
         (new I186_AddCodecheckerDirectory())->up();
+        (new GHSA_4p3r_DeleteUnrecordedOrcidTokens())->up();
     }
 
     /**

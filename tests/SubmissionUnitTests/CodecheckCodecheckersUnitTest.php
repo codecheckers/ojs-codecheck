@@ -246,4 +246,29 @@ class CodecheckCodecheckersUnitTest extends PKPTestCase
 
         $this->assertSame(['also bad'], CodecheckCodecheckers::newUnusableGithubUsernames($incoming, $stored));
     }
+
+    /**
+     * Who may be credited on ORCID (GHSA-4p3r-qgp4-g74r): the recorded iDs in
+     * the stored form, and nothing for a codechecker recorded by name alone.
+     */
+    public function testRecordedIdentifiersAreTheValidOnesInTheStoredForm(): void
+    {
+        $json = json_encode([
+            ['name' => 'A', 'orcid' => 'https://orcid.org/' . self::CARBERRY],
+            ['name' => 'B', 'orcid' => ''],
+            ['name' => 'C'],
+            ['name' => 'D', 'orcid' => '0000-0002-1825-0098'],
+            ['name' => 'E', 'orcid' => strtolower(self::WITH_X_CHECKSUM)],
+            ['name' => 'F', 'orcid' => self::CARBERRY],
+        ]);
+
+        $this->assertSame([self::CARBERRY, self::WITH_X_CHECKSUM], CodecheckCodecheckers::recordedOrcids($json));
+    }
+
+    public function testNoIdentifierIsRecordedInAnAbsentOrUnreadableList(): void
+    {
+        $this->assertSame([], CodecheckCodecheckers::recordedOrcids(null));
+        $this->assertSame([], CodecheckCodecheckers::recordedOrcids('not json'));
+        $this->assertSame([], CodecheckCodecheckers::recordedOrcids([['name' => 'Only a name']]));
+    }
 }

@@ -667,6 +667,7 @@ function mountCodecheckReviewerForm() {
   const metadataApp = createApp(CodecheckMetadataForm, {
     submission: submission,
     canEdit: true,
+    canEditCodecheckers: false,
   });
   metadataApp.component('pkp-button', pkp.registry.getComponent('PkpButton'));
   metadataApp.mount(metadataDiv);

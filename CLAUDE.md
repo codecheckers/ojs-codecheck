@@ -411,6 +411,10 @@ Migration structure (added for issue #94):
   testable without a database
 - `upgrade/I186_AddCodecheckerDirectory` — creates `codecheck_codecheckers`;
   converts nothing
+- `upgrade/GHSA_4p3r_DeleteUnrecordedOrcidTokens` — deletes every ORCID token
+  whose iD is not a recorded codechecker of its submission, logging each with
+  its put-code. Runs last, on every enable, so it also removes the token of a
+  codechecker since taken off the record (advisory GHSA-4p3r-qgp4-g74r)
 - `upgrade/I185_MoveRecordsToConfigSpec2` — moves every record on a config
   version the plugin no longer knows (`latest`, `1.0`) to `2.0`, and the
   `spec_version` column default with it. Runs after I93, whose column it reads
@@ -654,13 +658,17 @@ import into the form's shape — that is where the second spelling entered, and
 an imported iD was dropped on save while the form held it raw. An imported iD
 that is not one is still dropped, or every later save would be refused, and a
 username already on the form for the same iD (or name) survives the import.
-(`OrcidAuthHandler` and the ORCID status endpoint still accept `ORCID` too;
-they read the stored column, which now only ever holds `orcid`.)
+The ORCID authorisation, the deposit and the ORCID status endpoint read
+`orcid` alone, through `normalizedEntry()`: an entry still spelled `ORCID`, or
+holding an iD that fails the check digit, counts as having none and cannot be
+credited until it is saved again.
 
 **Everything journal-wide or public is for editors** (#173), checked with
 `CodecheckSubmissionAccess::isEditor()`. `POST metadata` and `POST
 status/update` admit an assigned reviewer, so the editor check is inside:
-a reviewer's save neither writes the directory nor assigns anyone, and a
+a reviewer's save neither writes the directory nor assigns anyone — nor may
+it change the codechecker list at all, see `mayEditCodecheckers()`
+(GHSA-4p3r-qgp4-g74r) — and a
 reviewer recording "codechecker assigned" gets the plain status comment (#150)
 without codechecker lines.
 
@@ -788,6 +796,29 @@ zero-width space. **An HTML entity is not enough**: GitHub renders `&#64;name`
 as a mention, and `\#1` still links an issue.
 
 ### ORCID deposit (`classes/Orcid/`)
+
+**Only a recorded codechecker's ORCID account is ever credited**
+(GHSA-4p3r-qgp4-g74r). Who started the authorisation says only that they may
+act on the submission — an editor, or the assigned reviewer — so the account
+that comes back from ORCID must be one whose iD is on the submission's
+codechecker list, `CodecheckCodecheckers::recordedOrcids()`. `startAuth`
+refuses a submission with no recorded iD before sending anyone to ORCID, the
+callback refuses an account not on the list, and `depositTargets()` drops any
+stored token not on it — the guarantee, since a token for a codechecker
+later removed stays in the table until the next enable deletes it. A codechecker
+recorded by name alone cannot be credited until an iD is recorded. **The rule
+is only as strong as who may write the list**, so only an editor may change it,
+judged per submission like `mayKnowAuthors()`:
+`CodecheckSubmissionAccess::mayEditCodecheckers()` — a manager or site
+administrator, or a Section editor or Assistant with a stage assignment here,
+never a journal-wide role reached through a review assignment. Anyone else's
+save keeps the stored column exactly as it is, whatever was posted: their form
+(`canEditCodecheckers: false` on the reviewer's copy) does not offer the list,
+so a different one is stale or crafted, and refusing it would turn away the
+rest of the save. Tokens the rule excludes are deleted
+by `GHSA_4p3r_DeleteUnrecordedOrcidTokens`, which runs with every upgrade step
+on each enable — so a codechecker taken off the record loses their token, and
+has to connect again if added back.
 
 **Nothing in the ORCID deposit contacts ORCID until there is something to
 deposit** (#182). `OrcidDepositService::depositForSubmission()` registered the
@@ -1239,7 +1270,7 @@ README.md; keep `css/codecheck.css` and inline component styles consistent.
 ### Layout
 
 ```
-tests/                       PHPUnit (49 test classes, 564 tests)
+tests/                       PHPUnit (50 test classes, 576 tests)
   bootstrap.php              PKP_STRICT_MODE + BASE_SYS_DIR (OJS_ROOT or ../../../..)
   PKPTestCase.php            local stub extending PHPUnit TestCase
   FakeTranslator.php         minimal translator so __() works without booting OJS
@@ -1263,6 +1294,8 @@ tests/                       PHPUnit (49 test classes, 564 tests)
                                I185_MoveRecordsToConfigSpec2 (how the column default
                                reads back; the rows and the second run are
                                `make check-migration`)
+                               GHSA_4p3r_DeleteUnrecordedOrcidTokens (which tokens
+                               are deleted; the deletion needs a database)
   SettingsUnitTests/           Actions, Manage
   OrcidUnitTests/              OrcidDepositService (which codecheckers a deposit
                                run is for — the rule that stands between a
@@ -1288,8 +1321,8 @@ cypress/
   support/e2e.js               login, API and settings-form commands (see "E2E tests"),
                                swallow uncaught exceptions
   support/component-index.html
-  tests/component/*.cy.js      15 specs, 228 tests
-  tests/e2e/*.cy.js            18 specs, 102 tests
+  tests/component/*.cy.js      16 specs, 230 tests
+  tests/e2e/*.cy.js            18 specs, 104 tests
                                yaml-generation, article-sidebar-setting,
                                issue-toc-setting, issue-toc-badge,
                                private-repository, publication-validation,
@@ -1304,7 +1337,7 @@ dev/
 ### Component tests (the reliable suite)
 
 `npm run test:component` — **passes locally with no OJS, no database, no build step**
-(228/228, about a minute). Cypress mounts the `.vue` sources directly through Vite and stubs the
+(230/230, about a minute). Cypress mounts the `.vue` sources directly through Vite and stubs the
 API with `cy.intercept`.
 
 Covered: metadata form load/render, manifest files add/remove/comment, repository list
@@ -1354,7 +1387,7 @@ its dialog body, `CodecheckStatusDialog.vue`.
 
 ### E2E tests
 
-`make test-e2e` — 102 tests across 18 specs, driving a real OJS instance.
+`make test-e2e` — 104 tests across 18 specs, driving a real OJS instance.
 
 **Several specs share submission fixtures, and each must restore what it
 changes.** Submissions 8 and 9 are written by `publication-validation`,
@@ -1408,6 +1441,11 @@ broke all of them at once:
   token is read off that page's `pkp` object, and a restored `cy.session()`
   leaves the browser on `about:blank`, so visit one first. It fails at once
   when there is no token rather than sending a request that is refused
+- `cy.saveCodecheckRecord(submissionId, stored, codecheckers)` — saves a
+  record as the editorial form does, from what `GET metadata` answered, with
+  the codechecker list replaced. `GET` answers `publicationType` and
+  `additionalContent` while the save takes snake case, so a payload copied key
+  for key reset both fields
 - `cy.publishedArticleId()` — a published submission's id, or `null` when
   there is none; a failed request fails the test rather than reading as none
 
@@ -1513,7 +1551,7 @@ Still uncovered: opt-in, the submission wizard, and register deposit.
 
 ### PHPUnit tests
 
-`make test-php` — 564 tests, green, none skipped.
+`make test-php` — 576 tests, green, none skipped.
 
 PHPUnit needs an OJS installation: the tests load OJS classes and the runner uses the
 PHPUnit shipped in `lib/pkp`. Both `runTests.sh` and `bootstrap.php` honour `OJS_ROOT`,

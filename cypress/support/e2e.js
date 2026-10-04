@@ -54,6 +54,36 @@ Cypress.Commands.add('ojsApi', (method, path, body, options = {}) => {
 });
 
 /**
+ * Save a submission's CODECHECK record as the editorial form does, from the
+ * record `GET metadata` answered, with its codechecker list replaced. Yields the
+ * response whatever its status. Needs a backend page open, as cy.ojsApi() does.
+ *
+ * `GET metadata` answers `publicationType` and `additionalContent` while the
+ * save takes snake case, so a payload copied key for key from the response
+ * reset both fields — which is why this is written once.
+ *
+ * @param {number} submissionId
+ * @param {object} stored       the `codecheck` object from `GET metadata`
+ * @param {Array}  codecheckers the list to save
+ */
+Cypress.Commands.add('saveCodecheckRecord', (submissionId, stored, codecheckers) => {
+  return cy.ojsApi('POST', `api/v1/codecheck/metadata?submissionId=${submissionId}`, {
+    version: stored.version,
+    publication_type: stored.publicationType,
+    manifest: stored.manifest,
+    repository: stored.repository,
+    source: stored.source,
+    codecheckers,
+    certificate: stored.certificate,
+    issue: stored.issue,
+    check_time: stored.check_time,
+    summary: stored.summary,
+    report: stored.report,
+    additional_content: stored.additionalContent,
+  });
+});
+
+/**
  * Yield the id of a published submission, or null when there is none. Needs a
  * backend page open, as cy.ojsApi() does.
  */

@@ -198,6 +198,28 @@ class CodecheckCodecheckers
     }
 
     /**
+     * The ORCID iDs recorded for the codecheckers of a list, in the stored form.
+     *
+     * This is who may be credited for a check on ORCID (GHSA-4p3r-qgp4-g74r):
+     * an ORCID account is connected to a submission, and deposited for, only
+     * when its iD is here. A codechecker recorded by name alone has no iD, and
+     * so cannot be credited until one is recorded. Anything that is not an iD
+     * is left out rather than compared. Each entry's iD is the one
+     * `normalizedEntry()` would store: an entry from before that rule, spelled
+     * `ORCID` or failing the check digit, counts as having none.
+     *
+     * @param mixed $codecheckers the list as stored, JSON or decoded
+     *
+     * @return array<int, string>
+     */
+    public static function recordedOrcids(mixed $codecheckers): array
+    {
+        $orcids = array_column(self::withNormalizedEntries($codecheckers), 'orcid');
+
+        return array_values(array_unique(array_filter($orcids, fn ($orcid) => $orcid !== '')));
+    }
+
+    /**
      * The list with every ORCID iD and GitHub username reduced to the stored
      * form, and each name trimmed.
      *

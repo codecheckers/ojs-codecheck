@@ -179,6 +179,24 @@ class CodecheckMetadataHandler
             }
         }
 
+        // Who the record names as codecheckers is for an editor to decide: their
+        // ORCID iDs are what an ORCID account must match to be credited for the
+        // check, so a reviewer who could edit the list could name an account
+        // they hold and connect it (GHSA-4p3r-qgp4-g74r). Anyone else's save
+        // keeps the stored list exactly as it is, whatever was posted: their
+        // form does not offer the list, so a different one is stale — loaded
+        // before an editor changed it — or crafted, and neither should refuse
+        // the rest of the save. Kept as stored, not normalised, so a legacy
+        // entry is not rewritten by someone who may not change it.
+        $mayEditCodecheckers = CodecheckSubmissionAccess::mayEditCodecheckers(
+            $request->getUser(),
+            (int) $submissionId,
+            (int) $request->getContext()?->getId()
+        );
+        if (!$mayEditCodecheckers) {
+            $data['codecheckers'] = json_decode($stored->codecheckers ?? '[]', true);
+        }
+
         // Refuse addresses that cannot be a repository link rather than storing
         // them and guarding every place they are published (Issue #154) — but
         // only the ones this payload introduces. Refusing the whole record for
@@ -253,7 +271,7 @@ class CodecheckMetadataHandler
                 ? json_encode(CodecheckRepositories::withOneMarked($data['repository'] ?? ['repositories' => null]))
                 : ($stored->repository ?? json_encode(['repositories' => null])),
             'source' => $nullIfEmpty($data['source'] ?? null),
-            'codecheckers' => json_encode($codecheckers),
+            'codecheckers' => $mayEditCodecheckers ? json_encode($codecheckers) : ($stored->codecheckers ?? '[]'),
             // Trimmed so that what is stored is what the generated codecheck.yml
             // carries, and what the form judges against the specification.
             'certificate' => $nullIfEmpty($trim($data['certificate'] ?? null)),

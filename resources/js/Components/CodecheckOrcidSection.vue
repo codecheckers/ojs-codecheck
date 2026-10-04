@@ -38,8 +38,8 @@
 
     <div v-else class="codecheck-orcid-section__list">
       <div
-        v-for="cc in codecheckers"
-        :key="cc.orcidId || cc.name"
+        v-for="(cc, index) in codecheckers"
+        :key="index"
         class="codecheck-orcid-row"
       >
         <!-- Identity -->
@@ -76,8 +76,12 @@
 
         <!-- Actions -->
         <div class="codecheck-orcid-row__actions">
+          <!-- An account can be connected only for a codechecker whose ORCID iD is on record -->
+          <span v-if="!cc.hasOrcid" class="codecheck-orcid-row__auth-note">
+            {{ t('plugins.generic.codecheck.orcid.noOrcidRecorded') }}
+          </span>
           <!-- Auth buttons: only shown to the codechecker, not to editors -->
-          <template v-if="canAuthorise">
+          <template v-else-if="canAuthorise">
             <pkp-button v-if="!cc.orcidId" :is-link="true" class="codecheck-orcid-btn" @click="startAuth(cc)">
               {{ t('plugins.generic.codecheck.orcid.authorise') }}
             </pkp-button>

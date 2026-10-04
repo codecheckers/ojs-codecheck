@@ -271,8 +271,9 @@
         <div class="field-group">
           <div class="field-header">
             <label class="field-label">{{ t('plugins.generic.codecheck.codecheckers.title') }}</label>
-            <button type="button" class="pkpButton btn-add" @click="showCodecheckerModal">{{ t('plugins.generic.codecheck.codecheckers.add') }}</button>
+            <button v-if="canEditCodecheckers" type="button" class="pkpButton btn-add" @click="showCodecheckerModal">{{ t('plugins.generic.codecheck.codecheckers.add') }}</button>
           </div>
+          <p v-if="!canEditCodecheckers" class="field-description">{{ t('plugins.generic.codecheck.codecheckers.editorsOnly') }}</p>
           
           <div v-if="metadata.codecheckers && metadata.codecheckers.length > 0" class="items-list codecheckers-list">
             <div v-for="(checker, index) in metadata.codecheckers" :key="'checker-' + index" class="list-item">
@@ -282,6 +283,7 @@
                 <div class="item-orcid" v-if="checker.github">GitHub: @{{ checker.github }}</div>
               </div>
               <button 
+                v-if="canEditCodecheckers"
                 type="button"
                 class="pkpButton codecheck-btn pkpButton--close" 
                 @click="removeCodechecker(index)"
@@ -476,6 +478,10 @@ export default {
   props: {
     submission: { type: Object, required: true },
     canEdit: { type: Boolean, default: true },
+    // Who the record names as codecheckers is for an editor alone: their ORCID
+    // iDs decide whose account may be credited (GHSA-4p3r-qgp4-g74r), and the
+    // server refuses a reviewer's save that changes the list.
+    canEditCodecheckers: { type: Boolean, default: true },
     name: {type: String},
     value: {type: String},
     codecheckMode: { type: String, default: 'opt-in' },
@@ -859,7 +865,7 @@ export default {
                 manifest: data.metadata?.manifest ?? this.metadata.manifest,
                 repository: this.metadata.repository,
                 source: data.metadata?.source ?? this.metadata.source,
-                codecheckers: Array.isArray(data.metadata?.codechecker)
+                codecheckers: this.canEditCodecheckers && Array.isArray(data.metadata?.codechecker)
                   ? this.importedCodecheckers(data.metadata.codechecker)
                   : this.metadata.codecheckers,
                 certificate: this.certificateLocked

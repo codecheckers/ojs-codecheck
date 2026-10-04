@@ -374,6 +374,9 @@ msgstr "No codechecker has authorised a deposit for this submission yet."
 msgid "plugins.generic.codecheck.orcid.deposit.skipped.notAuthorised"
 msgstr "You have not authorised a deposit for this submission yet."
 
+msgid "plugins.generic.codecheck.orcid.deposit.skipped.notRecorded"
+msgstr "Nothing was deposited: no ORCID account connected to this submission belongs to a codechecker recorded for it."
+
 msgid "plugins.generic.codecheck.orcid.deposit.failed.groupId"
 msgstr "ORCID would not register this journal's peer-review group, so the deposits below may have been refused for that reason."
 
@@ -806,6 +809,9 @@ msgstr "This is not a CODECHECK config version this plugin supports: {$version}.
 
 msgid "plugins.generic.codecheck.configVersion.notOffered"
 msgstr "This journal does not offer CODECHECK config version {$version}."
+
+msgid "plugins.generic.codecheck.codecheckers.editorsOnly"
+msgstr "Only an editor may change the codecheckers of this CODECHECK."
 
 msgid "plugins.generic.codecheck.codecheckers.invalidOrcid"
 msgstr "This is not an ORCID iD: {$orcid}. Enter it as 0000-0000-0000-0000, or leave the field empty."
@@ -1316,6 +1322,9 @@ msgstr "Deposit failed"
 msgid "plugins.generic.codecheck.orcid.authoriseByCodechecker"
 msgstr "Must be authorised by the codechecker."
 
+msgid "plugins.generic.codecheck.orcid.noOrcidRecorded"
+msgstr "Record this codechecker's ORCID iD in the CODECHECK form before connecting an ORCID account."
+
 msgid "plugins.generic.codecheck.orcid.test.title"
 msgstr "Test ORCID Setup"
 
@@ -1366,6 +1375,9 @@ msgstr "Only an editor, or the reviewer assigned to this submission, may connect
 
 msgid "plugins.generic.codecheck.orcid.auth.error.initiatorGone"
 msgstr "The account that started this ORCID authorisation no longer exists."
+
+msgid "plugins.generic.codecheck.orcid.auth.error.noOrcidRecorded"
+msgstr "No codechecker of this submission has an ORCID iD on record. Add the codechecker's ORCID iD in the CODECHECK form first, then connect their ORCID account."
 
 msgid "plugins.generic.codecheck.orcid.auth.error.orcidMismatch"
 msgstr "The ORCID iD you authenticated with ({$orcidId}) does not match any codechecker ORCID on record for this submission. Please sign in with the correct ORCID account."

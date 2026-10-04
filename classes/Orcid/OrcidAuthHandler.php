@@ -28,6 +28,7 @@ use APP\facades\Repo;
 use APP\handler\Handler;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
+use APP\plugins\generic\codecheck\classes\Submission\CodecheckCodecheckers;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionAccess;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
 use APP\submission\Submission;
@@ -217,6 +218,13 @@ class OrcidAuthHandler extends Handler
             return;
         }
 
+        // Before sending anyone to ORCID's consent screen: an account can only
+        // be connected for a codechecker whose iD is on record, so with none
+        // recorded the round trip could only end in a refusal.
+        if ($this->recordedOrcidsOrRefuse($submissionId) === null) {
+            return;
+        }
+
         // Sealed rather than stored in the session: the authorisation should
         // survive a session that lapses while its owner is at ORCID, and the
         // journal is not carried at all — the callback is journal-scoped now,
@@ -275,40 +283,41 @@ class OrcidAuthHandler extends Handler
 
         $contextId = $submission->getData('contextId');
 
+        // Before the code is exchanged, not after: with no iD on record the
+        // answer is a refusal whoever authenticated, and exchanging the code
+        // would leave the journal authorised on their ORCID account for nothing.
+        // Asked again here, not only in startAuth, because the record can
+        // change while the codechecker is at ORCID's consent screen.
+        $recordedOrcids = $this->recordedOrcidsOrRefuse($submissionId);
+        if ($recordedOrcids === null) {
+            return;
+        }
+
         try {
             $client = $this->buildApiClient($contextId);
             $redirectUri = $this->buildRedirectUri($request);
             $tokenData = $client->exchangeCodeForToken($code, $redirectUri);
 
-            $orcidId = $tokenData['orcid'];
+            // Stored in the form the record holds, so one account is one token
+            // row whatever case ORCID answers the check character in.
+            $orcidId = CodecheckCodecheckers::normalizeOrcid($tokenData['orcid']);
             $accessToken = $tokenData['access_token'];
             $refreshToken = $tokenData['refresh_token'] ?? null;
             $expiresAt = null;
 
-            // Verify the authenticated ORCID iD belongs to one of the
-            // codecheckers assigned to this submission. If stored ORCIDs
-            // exist and none match, reject the authorisation.
-            $metadata = DB::table('codecheck_metadata')
-                ->where('submission_id', $submissionId)
-                ->first();
-
-            if ($metadata && $metadata->codecheckers) {
-                $codecheckers = json_decode($metadata->codecheckers, true);
-                if (is_array($codecheckers)) {
-                    $storedOrcids = array_filter(array_map(
-                        fn ($cc) => $cc['orcid'] ?? $cc['ORCID'] ?? null,
-                        $codecheckers
-                    ));
-
-                    if (!empty($storedOrcids) && !in_array($orcidId, $storedOrcids)) {
-                        CodecheckLogger::error(
-                            'ORCID iD mismatch for submission ' . $submissionId .
-                            ': authenticated as ' . $orcidId . ' but not in codechecker list'
-                        );
-                        $this->sendPopupError(__('plugins.generic.codecheck.orcid.auth.error.orcidMismatch', ['orcidId' => $orcidId]));
-                        return;
-                    }
-                }
+            // The authenticated account has to be one the record names as a
+            // codechecker of this submission. This is what ties a token to a
+            // person: who started the flow only says they may act on the
+            // submission, and an editor or the assigned reviewer could
+            // otherwise connect any ORCID account they hold and have it
+            // credited on publication (GHSA-4p3r-qgp4-g74r).
+            if (!in_array($orcidId, $recordedOrcids, true)) {
+                CodecheckLogger::error(
+                    'ORCID iD mismatch for submission ' . $submissionId .
+                    ': authenticated as ' . $orcidId . ' but not in codechecker list'
+                );
+                $this->sendPopupError(__('plugins.generic.codecheck.orcid.auth.error.orcidMismatch', ['orcidId' => $orcidId]));
+                return;
             }
 
             $tokenDAO = new OrcidTokenDAO();
@@ -336,6 +345,27 @@ class OrcidAuthHandler extends Handler
             CodecheckLogger::error('ORCID token exchange failed: ' . $e->getMessage());
             $this->sendPopupError(__('plugins.generic.codecheck.orcid.auth.error.tokenExchange', ['error' => $e->getMessage()]));
         }
+    }
+
+    /**
+     * The ORCID iDs of the codecheckers recorded for a submission, or null with
+     * the popup error sent when there are none — an account can be connected
+     * only for a codechecker whose iD is on record.
+     *
+     * @see CodecheckCodecheckers::recordedOrcids()
+     */
+    private function recordedOrcidsOrRefuse(int $submissionId): ?array
+    {
+        $recorded = CodecheckCodecheckers::recordedOrcids(
+            DB::table('codecheck_metadata')->where('submission_id', $submissionId)->value('codecheckers')
+        );
+
+        if ($recorded === []) {
+            $this->sendPopupError(__('plugins.generic.codecheck.orcid.auth.error.noOrcidRecorded'));
+            return null;
+        }
+
+        return $recorded;
     }
 
     private function buildApiClient(int $contextId): OrcidApiClient

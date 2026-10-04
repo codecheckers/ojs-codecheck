@@ -145,6 +145,15 @@ UPDATE journals SET enabled = 1 WHERE journal_id = 1;
 then `make clear-cache`. Remember to put it back if other specs depend on the
 dataset as shipped.
 
+### 5. The sandbox account must be a recorded codechecker
+
+An ORCID account is connected to a submission only when its iD is recorded for
+one of the submission's codecheckers (GHSA-4p3r-qgp4-g74r): `startAuth` refuses
+a submission with no codechecker iD at all, and the callback refuses an account
+that is not on the list. Neither seeded codechecker of submission 9 is the
+sandbox account, so add it in the CODECHECK form's codechecker dialog — the iD
+in `orcidUserId` — before running.
+
 ## Running it
 
 ```

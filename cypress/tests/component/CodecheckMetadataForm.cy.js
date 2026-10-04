@@ -399,6 +399,40 @@ describe('CodecheckMetadataForm Component', () => {
       });
   });
 
+  /**
+   * Who the record names as codecheckers decides whose ORCID account may be
+   * credited, so a reviewer's copy of the form cannot change the list — the
+   * server refuses such a save (GHSA-4p3r-qgp4-g74r) — and an import keeps it.
+   */
+  it('lets a reviewer neither change nor import the codecheckers', () => {
+    const yml = importedYml();
+    yml.metadata.codechecker = [{ name: 'Someone New', ORCID: '0000-0001-5109-3700' }];
+    cy.intercept('POST', '**/codecheck/repository?submissionId=1*', { statusCode: 200, body: yml });
+    interceptMetadata({
+      codecheck: {
+        ...metadataResponseBody().codecheck,
+        codecheckers: [{ name: 'Recorded', orcid: '0000-0002-1825-0097', github: '' }],
+      },
+    });
+    cy.mount(CodecheckMetadataForm, {
+      props: { submission: { id: 1 }, canEdit: true, canEditCodecheckers: false },
+    }).then(({ wrapper }) => {
+      cy.wait('@loadMetadata');
+      cy.get('.codecheckers-list').closest('.field-group').find('.btn-add').should('not.exist');
+      cy.get('.codecheckers-list .pkpButton--close').should('not.exist');
+      cy.contains('plugins.generic.codecheck.codecheckers.editorsOnly').should('be.visible');
+
+      cy.get('.codecheck-contact-email').should('exist').then(() => {
+        wrapper.vm.repositories = [{ url: 'https://github.com/a/b', hidden: false, containsCodecheckYaml: true }];
+        return wrapper.vm.loadMetadataFromRepository(0);
+      });
+      cy.wrap(wrapper.vm).its('metadata.summary').should('equal', yml.metadata.summary);
+      cy.wrap(wrapper.vm).its('metadata.codecheckers').should('deep.equal', [
+        { name: 'Recorded', orcid: '0000-0002-1825-0097', github: '' },
+      ]);
+    });
+  });
+
   it('shows why a file for another paper was refused, and imports nothing', () => {
     cy.intercept('POST', '**/codecheck/repository?submissionId=1*', {
       statusCode: 422,

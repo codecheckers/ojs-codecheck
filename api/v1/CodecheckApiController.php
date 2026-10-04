@@ -51,6 +51,7 @@ use APP\plugins\generic\codecheck\classes\Orcid\OrcidApiClient;
 use APP\plugins\generic\codecheck\classes\Orcid\OrcidDepositService;
 use APP\plugins\generic\codecheck\classes\Orcid\OrcidTokenDAO;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckCodecheckerDirectory;
+use APP\plugins\generic\codecheck\classes\Submission\CodecheckCodecheckers;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionAccess;
 use APP\plugins\generic\codecheck\classes\Workflow\CertificateReferenceUpdate;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
@@ -396,15 +397,9 @@ class CodecheckApiController extends PKPBaseController
         $submission = $this->getAuthorizedContextObject(Application::ASSOC_TYPE_SUBMISSION);
         $submissionId = $submission->getId();
 
-        $metadata = DB::table('codecheck_metadata')->where('submission_id', $submissionId)->first();
-
-        $codecheckerNames = [];
-        if ($metadata && $metadata->codecheckers) {
-            $decoded = json_decode($metadata->codecheckers, true);
-            if (is_array($decoded)) {
-                $codecheckerNames = $decoded;
-            }
-        }
+        $storedCodecheckers = DB::table('codecheck_metadata')
+            ->where('submission_id', $submissionId)
+            ->value('codecheckers');
 
         $tokenDAO = new OrcidTokenDAO();
         $tokenRows = $tokenDAO->getAllBySubmission($submissionId);
@@ -412,38 +407,28 @@ class CodecheckApiController extends PKPBaseController
         $tokensByOrcid = [];
         foreach ($tokenRows as $row) {
             if ($row->orcid_id) {
-                $tokensByOrcid[$row->orcid_id] = $row;
+                $tokensByOrcid[CodecheckCodecheckers::normalizeOrcid($row->orcid_id)] = $row;
             }
         }
 
+        // One row per recorded codechecker, and none for a token that matches
+        // no codechecker: such a token is never deposited for
+        // (GHSA-4p3r-qgp4-g74r), so listing it would offer a button that can
+        // only answer that it was skipped. `hasOrcid` is whether an account can
+        // be connected at all — only for a codechecker whose iD is on record.
         $codecheckers = [];
+        foreach (CodecheckCodecheckers::withNormalizedEntries($storedCodecheckers) as $cc) {
+            $tokenRow = $tokensByOrcid[$cc['orcid']] ?? null;
 
-        if (!empty($codecheckerNames)) {
-            foreach ($codecheckerNames as $cc) {
-                $name = is_array($cc) ? ($cc['name'] ?? '') : (string) $cc;
-                $orcidId = is_array($cc) ? ($cc['orcid'] ?? $cc['ORCID'] ?? null) : null;
-                $tokenRow = $orcidId ? ($tokensByOrcid[$orcidId] ?? null) : null;
-
-                $codecheckers[] = [
-                    'name' => $name,
-                    'orcidId' => $tokenRow->orcid_id ?? null,
-                    'depositStatus' => $tokenRow->deposit_status ?? null,
-                    'putCode' => $tokenRow->put_code ?? null,
-                    'depositedAt' => $tokenRow->deposited_at ?? null,
-                    'errorMessage' => $tokenRow->error_message ?? null,
-                ];
-            }
-        } else {
-            foreach ($tokenRows as $row) {
-                $codecheckers[] = [
-                    'name' => $row->orcid_id ?? 'Unknown',
-                    'orcidId' => $row->orcid_id,
-                    'depositStatus' => $row->deposit_status,
-                    'putCode' => $row->put_code,
-                    'depositedAt' => $row->deposited_at,
-                    'errorMessage' => $row->error_message,
-                ];
-            }
+            $codecheckers[] = [
+                'name' => $cc['name'],
+                'hasOrcid' => $cc['orcid'] !== '',
+                'orcidId' => $tokenRow->orcid_id ?? null,
+                'depositStatus' => $tokenRow->deposit_status ?? null,
+                'putCode' => $tokenRow->put_code ?? null,
+                'depositedAt' => $tokenRow->deposited_at ?? null,
+                'errorMessage' => $tokenRow->error_message ?? null,
+            ];
         }
 
         $journalConfigError = null;

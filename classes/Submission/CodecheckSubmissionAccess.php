@@ -107,8 +107,30 @@ class CodecheckSubmissionAccess
         }
 
         return self::isJournalManager($user, $contextId)
-            || self::hasStageAssignment($user, $submissionId)
+            || self::hasStageAssignment($user, $submissionId, [Role::ROLE_ID_AUTHOR, Role::ROLE_ID_SUB_EDITOR, Role::ROLE_ID_ASSISTANT])
             || self::authorsVisible(false, self::currentReviewMethod($user, $submissionId));
+    }
+
+    /**
+     * May this user change who the record names as codecheckers
+     * (GHSA-4p3r-qgp4-g74r)?
+     *
+     * Their ORCID iDs decide whose account may be credited for the check, so
+     * this is the editorial question asked per submission, as
+     * mayKnowAuthors() asks it: a manager or site administrator always, a
+     * Section editor or Assistant only with a stage assignment on this
+     * submission. A journal-wide role is not enough — one invited as a reviewer
+     * reaches the submission through that assignment alone, and could
+     * otherwise name an account they hold and connect it.
+     */
+    public static function mayEditCodecheckers(?User $user, int $submissionId, int $contextId): bool
+    {
+        if (!$user || $submissionId <= 0) {
+            return false;
+        }
+
+        return self::isJournalManager($user, $contextId)
+            || self::hasStageAssignment($user, $submissionId, [Role::ROLE_ID_SUB_EDITOR, Role::ROLE_ID_ASSISTANT]);
     }
 
     /**
@@ -138,12 +160,12 @@ class CodecheckSubmissionAccess
             || $user->hasRole([Role::ROLE_ID_SITE_ADMIN], Application::SITE_CONTEXT_ID);
     }
 
-    /** Is this user assigned to the submission as an author, editor or assistant? */
-    private static function hasStageAssignment(User $user, int $submissionId): bool
+    /** Is this user assigned to the submission in one of these roles? */
+    private static function hasStageAssignment(User $user, int $submissionId, array $roleIds): bool
     {
         return StageAssignment::withSubmissionIds([$submissionId])
             ->withUserId($user->getId())
-            ->withRoleIds([Role::ROLE_ID_AUTHOR, Role::ROLE_ID_SUB_EDITOR, Role::ROLE_ID_ASSISTANT])
+            ->withRoleIds($roleIds)
             ->exists();
     }
 

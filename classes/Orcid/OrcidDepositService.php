@@ -69,18 +69,19 @@ class OrcidDepositService
             return [['status' => 'failed', 'error' => __('plugins.generic.codecheck.orcid.test.error.noCredentials')]];
         }
 
-        // One narrow column rather than `loadCodecheckMeta()`'s `SELECT *`: this
+        // Two narrow columns rather than `loadCodecheckMeta()`'s `SELECT *`: this
         // is the common path for a journal with ORCID on, and the metadata row
         // carries the manifest, repositories, summary and report as TEXT. The
         // whole row is read below, once there is something to deposit.
-        $certificate = DB::table('codecheck_metadata')
+        $record = DB::table('codecheck_metadata')
             ->where('submission_id', $submissionId)
-            ->value('certificate');
+            ->select('certificate', 'codecheckers')
+            ->first();
 
         // No row at all is a different thing from a row without a certificate,
         // and saying "no certificate yet" for a submission that has no CODECHECK
         // record sends the reader looking for the wrong thing.
-        if ($certificate === null && !$this->hasCodecheckRecord($submissionId)) {
+        if (!$record) {
             CodecheckLogger::info("ORCID deposit skipped for submission {$submissionId}: no CODECHECK record.");
 
             return [[
@@ -95,7 +96,7 @@ class OrcidDepositService
         // that value: the second deposit was rejected as a duplicate, the
         // put-code of somebody else's item was read out of the error, and the
         // result was reported as a success. Skipping says what is true (#175).
-        if (empty($certificate)) {
+        if (empty($record->certificate)) {
             CodecheckLogger::info("ORCID deposit skipped for submission {$submissionId}: no certificate identifier yet.");
 
             return [[
@@ -105,26 +106,39 @@ class OrcidDepositService
         }
 
         $authorized = $this->tokenDAO->getAuthorizedBySubmission($submissionId);
-        $targets = self::depositTargets($authorized, $onlyOrcidId);
+        $recordedOrcids = CodecheckCodecheckers::recordedOrcids($record->codecheckers);
+        $targets = self::depositTargets($authorized, $recordedOrcids, $onlyOrcidId);
 
         // Answered a bare `[]`, which the workflow panel renders as nothing at
         // all — it shows only failures — so the button appeared to do nothing.
-        // The two reasons are also different things: nobody has authorised, or
-        // the person asking has not.
+        // The three reasons are different things: nobody has authorised, the
+        // person asking has not, or an account was connected that belongs to no
+        // codechecker recorded for this submission.
         if ($targets === []) {
-            $nobodyAuthorized = count($authorized) === 0;
-            CodecheckLogger::info(sprintf(
-                'ORCID deposit skipped for submission %d: %s.',
-                $submissionId,
-                $nobodyAuthorized ? 'no codechecker has authorised one' : 'the requested ORCID iD has not authorised one'
-            ));
+            $wanted = $onlyOrcidId === null ? null : CodecheckCodecheckers::normalizeOrcid($onlyOrcidId);
+            $askerAuthorized = $wanted === null || in_array(
+                $wanted,
+                array_map(fn ($row) => CodecheckCodecheckers::normalizeOrcid($row->orcid_id ?? null), iterator_to_array($authorized, false)),
+                true
+            );
 
-            return [[
-                'status' => 'skipped',
-                'error' => __($nobodyAuthorized
-                    ? 'plugins.generic.codecheck.orcid.deposit.skipped.noCodechecker'
-                    : 'plugins.generic.codecheck.orcid.deposit.skipped.notAuthorised'),
-            ]];
+            [$reason, $message] = match (true) {
+                count($authorized) === 0 => [
+                    'no codechecker has authorised one',
+                    'plugins.generic.codecheck.orcid.deposit.skipped.noCodechecker',
+                ],
+                !$askerAuthorized => [
+                    'the requested ORCID iD has not authorised one',
+                    'plugins.generic.codecheck.orcid.deposit.skipped.notAuthorised',
+                ],
+                default => [
+                    'no authorised ORCID iD is a recorded codechecker\'s',
+                    'plugins.generic.codecheck.orcid.deposit.skipped.notRecorded',
+                ],
+            };
+            CodecheckLogger::info("ORCID deposit skipped for submission {$submissionId}: {$reason}.");
+
+            return [['status' => 'skipped', 'error' => __($message)]];
         }
 
         // Only now is the submission fetched, the whole metadata row read and
@@ -210,18 +224,6 @@ class OrcidDepositService
     }
 
     /**
-     * Whether a CODECHECK record exists for a submission at all.
-     *
-     * Only asked when the certificate came back null, to tell "no record" from
-     * "a record with no certificate yet" — they need different answers, and a
-     * `value()` cannot distinguish them.
-     */
-    private function hasCodecheckRecord(int $submissionId): bool
-    {
-        return DB::table('codecheck_metadata')->where('submission_id', $submissionId)->exists();
-    }
-
-    /**
      * Which authorised codecheckers this run deposits for.
      *
      * Pure, and public so it can be pinned without a database or ORCID: an
@@ -235,18 +237,20 @@ class OrcidDepositService
      * @param iterable $tokenRows `stdClass` rows as
      *   `OrcidTokenDAO::getAuthorizedBySubmission()` answers them; each carries
      *   an `orcid_id`, the query having excluded the rest
+     * @param array $recordedOrcids the codecheckers' iDs as
+     *   `CodecheckCodecheckers::recordedOrcids()` answers them. A token whose
+     *   iD is not among them is never a target (GHSA-4p3r-qgp4-g74r): the
+     *   callback refuses to store one, but a token stored before it did, or
+     *   for a codechecker since taken off the record, would otherwise credit
+     *   someone the check does not name
      * @param string|null $onlyOrcidId deposit only this record — a reviewer may
      *   deposit their own codechecking activity and nobody else's (#173)
      *
      * @return array the rows to deposit for, in the order given
      */
-    public static function depositTargets(iterable $tokenRows, ?string $onlyOrcidId = null): array
+    public static function depositTargets(iterable $tokenRows, array $recordedOrcids, ?string $onlyOrcidId = null): array
     {
         $rows = is_array($tokenRows) ? $tokenRows : iterator_to_array($tokenRows, false);
-
-        if ($onlyOrcidId === null) {
-            return array_values($rows);
-        }
 
         // **Both sides are normalised, because they arrive in different
         // shapes.** `codecheck_orcid_tokens.orcid_id` is the bare
@@ -255,12 +259,13 @@ class OrcidDepositService
         // is not an editor, which OJS stores as the full `https://orcid.org/…`
         // URI. Compared as given, a reviewer's own deposit matched nothing and
         // the button did nothing at all, silently.
-        $wanted = CodecheckCodecheckers::normalizeOrcid($onlyOrcidId);
+        $wanted = $onlyOrcidId === null ? null : CodecheckCodecheckers::normalizeOrcid($onlyOrcidId);
 
-        return array_values(array_filter(
-            $rows,
-            fn ($row) => CodecheckCodecheckers::normalizeOrcid($row->orcid_id ?? null) === $wanted
-        ));
+        return array_values(array_filter($rows, function ($row) use ($recordedOrcids, $wanted) {
+            $orcid = CodecheckCodecheckers::normalizeOrcid($row->orcid_id ?? null);
+
+            return in_array($orcid, $recordedOrcids, true) && ($wanted === null || $orcid === $wanted);
+        }));
     }
 
     /**

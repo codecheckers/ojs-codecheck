@@ -13,7 +13,8 @@
  * `depositForSubmission()` itself cannot be reached from here — its first lines
  * want a journal context, `Repo::submission()` and the database — so what is
  * pinned is the rule it now asks before touching ORCID at all: whether there is
- * anything to deposit (#182). The ordering that rule enforces is covered by the
+ * anything to deposit (#182), and whether a token belongs to a codechecker
+ * the record names (GHSA-4p3r-qgp4-g74r). The ordering that rule enforces is covered by the
  * live ORCID test, `dev/live-orcid-tests.md`.
  */
 
@@ -25,6 +26,9 @@ use PKP\tests\PKPTestCase;
 
 class OrcidDepositServiceUnitTest extends PKPTestCase
 {
+    /** Both of ORCID's test identifiers used below, recorded as codecheckers. */
+    private const RECORDED = ['0000-0002-1825-0097', '0000-0001-5109-3700'];
+
     /** A token row in the shape the DAO answers with. */
     private function row(string $orcidId): object
     {
@@ -35,7 +39,7 @@ class OrcidDepositServiceUnitTest extends PKPTestCase
     {
         $rows = [$this->row('0000-0002-1825-0097'), $this->row('0000-0001-5109-3700')];
 
-        $this->assertSame($rows, OrcidDepositService::depositTargets($rows));
+        $this->assertSame($rows, OrcidDepositService::depositTargets($rows, self::RECORDED));
     }
 
     /** A reviewer may deposit their own activity and nobody else's (#173). */
@@ -46,7 +50,7 @@ class OrcidDepositServiceUnitTest extends PKPTestCase
 
         $this->assertSame(
             [$mine],
-            OrcidDepositService::depositTargets([$theirs, $mine], '0000-0002-1825-0097')
+            OrcidDepositService::depositTargets([$theirs, $mine], self::RECORDED, '0000-0002-1825-0097')
         );
     }
 
@@ -56,14 +60,14 @@ class OrcidDepositServiceUnitTest extends PKPTestCase
      */
     public function testNothingIsATargetWithoutAnAuthorizedCodechecker(): void
     {
-        $this->assertSame([], OrcidDepositService::depositTargets([]));
+        $this->assertSame([], OrcidDepositService::depositTargets([], self::RECORDED));
     }
 
     public function testNothingIsATargetWhenTheNamedRecordIsNotAmongThem(): void
     {
         $this->assertSame(
             [],
-            OrcidDepositService::depositTargets([$this->row('0000-0001-5109-3700')], '0000-0002-1825-0097')
+            OrcidDepositService::depositTargets([$this->row('0000-0001-5109-3700')], self::RECORDED, '0000-0002-1825-0097')
         );
     }
 
@@ -77,13 +81,13 @@ class OrcidDepositServiceUnitTest extends PKPTestCase
         $mine = $this->row('0000-0002-1825-0097');
         $rows = new Collection([$this->row('0000-0001-5109-3700'), $mine]);
 
-        $this->assertSame([$mine], OrcidDepositService::depositTargets($rows, '0000-0002-1825-0097'));
-        $this->assertCount(2, OrcidDepositService::depositTargets($rows));
+        $this->assertSame([$mine], OrcidDepositService::depositTargets($rows, self::RECORDED, '0000-0002-1825-0097'));
+        $this->assertCount(2, OrcidDepositService::depositTargets($rows, self::RECORDED));
     }
 
     public function testAnEmptyCollectionIsNoTargets(): void
     {
-        $this->assertSame([], OrcidDepositService::depositTargets(new Collection()));
+        $this->assertSame([], OrcidDepositService::depositTargets(new Collection(), self::RECORDED));
     }
 
     /**
@@ -102,7 +106,7 @@ class OrcidDepositServiceUnitTest extends PKPTestCase
 
         $this->assertSame(
             [$mine],
-            OrcidDepositService::depositTargets([$mine], 'https://orcid.org/0000-0002-1825-0097')
+            OrcidDepositService::depositTargets([$mine], self::RECORDED, 'https://orcid.org/0000-0002-1825-0097')
         );
     }
 
@@ -112,7 +116,7 @@ class OrcidDepositServiceUnitTest extends PKPTestCase
 
         $this->assertSame(
             [$mine],
-            OrcidDepositService::depositTargets([$mine], 'https://sandbox.orcid.org/0000-0002-1825-0097')
+            OrcidDepositService::depositTargets([$mine], self::RECORDED, 'https://sandbox.orcid.org/0000-0002-1825-0097')
         );
     }
 
@@ -123,8 +127,52 @@ class OrcidDepositServiceUnitTest extends PKPTestCase
             [],
             OrcidDepositService::depositTargets(
                 [$this->row('0000-0001-5109-3700')],
+                self::RECORDED,
                 'https://orcid.org/0000-0002-1825-0097'
             )
         );
+    }
+
+    /**
+     * A token is credited only to someone the record names as a codechecker
+     * (GHSA-4p3r-qgp4-g74r). One stored before the callback refused such
+     * accounts, or for a codechecker since removed, must not be deposited for.
+     */
+    public function testATokenForSomeoneTheRecordDoesNotNameIsNoTarget(): void
+    {
+        $recorded = $this->row('0000-0002-1825-0097');
+        $stranger = $this->row('0000-0002-1694-233X');
+
+        $this->assertSame(
+            [$recorded],
+            OrcidDepositService::depositTargets([$stranger, $recorded], ['0000-0002-1825-0097'])
+        );
+    }
+
+    /** Codecheckers recorded by name alone credit nobody. */
+    public function testNothingIsATargetWhenNoCodecheckerHasAnIdentifierOnRecord(): void
+    {
+        $this->assertSame([], OrcidDepositService::depositTargets([$this->row('0000-0002-1825-0097')], []));
+    }
+
+    /** Asking for one's own record does not get round the record. */
+    public function testTheNamedRecordIsNoTargetWhenTheRecordDoesNotNameIt(): void
+    {
+        $this->assertSame(
+            [],
+            OrcidDepositService::depositTargets(
+                [$this->row('0000-0002-1694-233X')],
+                ['0000-0002-1825-0097'],
+                '0000-0002-1694-233X'
+            )
+        );
+    }
+
+    /** The token column holds what ORCID answered, which may differ in case. */
+    public function testATokenIsMatchedToTheRecordInTheStoredForm(): void
+    {
+        $row = $this->row('0000-0002-1694-233x');
+
+        $this->assertSame([$row], OrcidDepositService::depositTargets([$row], ['0000-0002-1694-233X']));
     }
 }
