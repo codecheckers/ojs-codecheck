@@ -97,9 +97,17 @@ const useAgency = (name) => {
   }).its('status').should('eq', 200);
 };
 
-/** Export the article's record as the DOI list does, and yield it parsed. */
+/**
+ * Export the article's record as the DOI list does, and yield it parsed.
+ *
+ * Two minutes rather than Cypress's 30 seconds: OJS validates every export
+ * against the agency's published schema, fetching it and everything it imports
+ * each time, and a Crossref export takes 20 to 35 seconds. One that ran past 30
+ * failed the test and left the DOI half-changed for the next.
+ */
+const EXPORT_TIMEOUT = 120000;
 const exportRecord = () =>
-  cy.ojsApi('PUT', 'api/v1/dois/submissions/export', { ids: [SUBMISSION] }).then((response) => {
+  cy.ojsApi('PUT', 'api/v1/dois/submissions/export', { ids: [SUBMISSION] }, { timeout: EXPORT_TIMEOUT }).then((response) => {
     expect(response.status, JSON.stringify(response.body)).to.eq(200);
     return cy.ojsApi('GET', `api/v1/dois/exports/${response.body.temporaryFileId}`).then((file) => {
       expect(file.status).to.eq(200);

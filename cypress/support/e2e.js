@@ -37,8 +37,9 @@ Cypress.Commands.add('getCsrfToken', () => {
  * @param {string} method HTTP method
  * @param {string} path   relative to the journal, e.g. 'api/v1/submissions/8'
  * @param {object} body   request body, if any
+ * @param {object} options further `cy.request()` options, e.g. a longer `timeout`
  */
-Cypress.Commands.add('ojsApi', (method, path, body) => {
+Cypress.Commands.add('ojsApi', (method, path, body, options = {}) => {
   return cy.getCsrfToken().then((csrfToken) => {
     expect(csrfToken, 'a CSRF token, from a backend page').to.exist;
     return cy.request({
@@ -47,6 +48,7 @@ Cypress.Commands.add('ojsApi', (method, path, body) => {
       headers: { 'X-Csrf-Token': csrfToken },
       body,
       failOnStatusCode: false,
+      ...options,
     });
   });
 });
