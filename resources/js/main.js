@@ -174,6 +174,23 @@ pkp.registry.storeExtend("workflow", (piniaContext) => {
 // -----------------------------------------------------------------------
 // Submission wizard: save/load field data via API
 // -----------------------------------------------------------------------
+/**
+ * Whether this page is OJS's submission wizard, `…/submission?id=N` or
+ * `…/submission/index?id=N` — or `?page=submission&id=N` without path info. The helpers below belong there
+ * alone: started everywhere, they read `reviewId=1` on the reviewer page and
+ * `workflowSubmissionId=8` on the dashboard as a submission id (#65).
+ */
+function onSubmissionWizard() {
+  const params = new URLSearchParams(window.location.search);
+  return /\/submission(\/index)?\/?$/.test(window.location.pathname) || params.get('page') === 'submission';
+}
+
+/** The submission the wizard is open for, or null on any other page. */
+function wizardSubmissionId() {
+  const id = new URLSearchParams(window.location.search).get('id');
+  return onSubmissionWizard() && /^\d+$/.test(id ?? '') ? id : null;
+}
+
 class CodecheckWizardManager {
   constructor() {
     this.textareas = {};
@@ -378,8 +395,7 @@ class CodecheckWizardManager {
   }
 
   getSubmissionId() {
-    const match = window.location.search.match(/id=(\d+)/);
-    return match ? match[1] : null;
+    return wizardSubmissionId();
   }
 
   setupButtonListener() {
@@ -529,8 +545,7 @@ class CodecheckReviewRefresher {
   }
 
   getSubmissionId() {
-    const match = window.location.search.match(/id=(\d+)/);
-    return match ? match[1] : null;
+    return wizardSubmissionId();
   }
 }
 
@@ -538,14 +553,18 @@ class CodecheckReviewRefresher {
 // Initialization
 // -----------------------------------------------------------------------
 window.addEventListener('DOMContentLoaded', () => {
-  setTimeout(async () => {
-    const manager = new CodecheckWizardManager();
-    await manager.init();
-    mountCodecheckVueComponents();
-  }, 100);
+  if (onSubmissionWizard()) {
+    setTimeout(async () => {
+      const manager = new CodecheckWizardManager();
+      await manager.init();
+      mountCodecheckVueComponents();
+    }, 100);
+  }
 
   setTimeout(() => {
-    new CodecheckReviewRefresher();
+    if (onSubmissionWizard()) {
+      new CodecheckReviewRefresher();
+    }
 
     if (window.codecheckReviewerData) {
       const tab3Link = document.querySelector('#reviewTabs ul li:nth-child(3) a');
