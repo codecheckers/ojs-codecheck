@@ -6,6 +6,7 @@ use APP\core\Application;
 use APP\facades\Repo;
 use APP\plugins\generic\codecheck\api\v1\CodecheckApiController;
 use APP\plugins\generic\codecheck\classes\Codecheckers\CodecheckerJournalSetup;
+use APP\plugins\generic\codecheck\classes\Codecheckers\GithubUsernameField;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\GithubHttp;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\DoiDeposit\CodecheckDoiDeposit;
@@ -88,6 +89,9 @@ class CodecheckPlugin extends GenericPlugin implements HasTaskScheduler
             Hook::add('Templates::Article::Details', $articleDetails->addCodecheckInfo(...));
             // Fires inside .main_entry after the abstract, unlike the sidebar hook above
             Hook::add('Templates::Article::Main', $articleAvailability->addAvailabilityStatement(...));
+
+            // The GitHub username on the user's account (#13)
+            (new GithubUsernameField($this))->register();
 
             // Opt-in checkbox on submission start
             Hook::add('Schema::get::submission', $this->addOptInToSchema(...));

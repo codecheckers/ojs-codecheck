@@ -71,6 +71,18 @@ msgstr "Create what is missing"
 msgid "plugins.generic.codecheck.settings.codecheckers.recreate.failed"
 msgstr "The role or the template could not be created. Reload the page and try again; if it fails again, the server log says why."
 
+msgid "plugins.generic.codecheck.githubUsername.label"
+msgstr "GitHub username"
+
+msgid "plugins.generic.codecheck.githubUsername.description"
+msgstr "For codecheckers: the CODECHECK register issue of a check is assigned to this GitHub account. Optional."
+
+msgid "plugins.generic.codecheck.githubUsername.invalid"
+msgstr "This is not a GitHub username. Enter the username alone, for example octocat, or leave the field empty."
+
+msgid "plugins.generic.codecheck.githubUsername.taken"
+msgstr "Another account already has this GitHub username."
+
 msgid "plugins.generic.codecheck.codecheckerRole.name"
 msgstr "Codechecker"
 

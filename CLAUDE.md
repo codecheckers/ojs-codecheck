@@ -86,6 +86,12 @@ make test-live GITHUB_TOKEN=… / test-orcid-live    # live tests; read dev/live
 - `Publication::publish::before` → `CertificateReferenceUpdate::addOnPublish()` (#183)
 - `articlecrossrefxmlfilter::execute` / `datacitexmlfilter::execute` → `CodecheckDoiDeposit` (#19)
 - `Context::add` → `writeDefaultSettings()`
+- `Schema::get::user`, `publicprofileform::…`/`userdetailsform::…` and the
+  profile/user-details template hooks → `GithubUsernameField` (#13). `Form`
+  lower-cases `initdata`, `readuservars`, `execute`, but not `::Constructor`.
+  The logged-in user is read before plugins load, against a schema without
+  the property, so the value is read and written through `user_settings`
+  directly (`readFor()`, `writeFor()`), never through a user object alone.
 
 **Registered outside the `getEnabled()` block** (and must stay there): register
 deposit, `Publication::publish::before`, the DOI filter hooks and `Context::add`.
