@@ -36,8 +36,10 @@ final class GitlabRepositoryAddress
         }
 
         $project = preg_replace('/\.git$/', '', $matches[1]);
-        // GitLab's own older addresses for a file or an issue, without `/-/`.
-        if (preg_match('#/(?:blob|tree|raw|issues|merge_requests|commits?|wikis?)(?:/|$)#', $project)) {
+        // GitLab's own older addresses for a file or an issue, without `/-/`:
+        // the keyword follows a group and a project and is followed by a ref
+        // or a number. Anywhere else it is a project's or subgroup's name.
+        if (preg_match('#^[^/]+/.+/(?:blob|tree|raw|issues|merge_requests|commits?|wikis)/[^/]+#', $project)) {
             return null;
         }
         $parts = ['project' => $project, 'ref' => null, 'path' => '', 'file' => null];

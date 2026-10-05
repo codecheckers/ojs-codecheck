@@ -28,6 +28,9 @@ class GitlabRepositoryAddressUnitTest extends PKPTestCase
             'file' => ['https://gitlab.com/codecheckers/Piccolo-2020/-/blob/main/reports/check.yaml', $parts('codecheckers/Piccolo-2020', 'main', 'reports', 'check.yaml')],
             'folder on a branch' => ['https://gitlab.com/codecheckers/Piccolo-2020/-/tree/dev/reports/08', $parts('codecheckers/Piccolo-2020', 'dev', 'reports/08')],
             'branch' => ['https://gitlab.com/codecheckers/Piccolo-2020/-/tree/dev', $parts('codecheckers/Piccolo-2020', 'dev')],
+            'a project named like a keyword' => ['https://gitlab.com/somegroup/wiki', $parts('somegroup/wiki')],
+            'a subgroup named like a keyword' => ['https://gitlab.com/org/raw/check', $parts('org/raw/check')],
+            'a project named like a keyword, in a subgroup' => ['https://gitlab.com/org/sub/issues', $parts('org/sub/issues')],
         ];
     }
 
@@ -47,6 +50,7 @@ class GitlabRepositoryAddressUnitTest extends PKPTestCase
             'plain http' => ['http://gitlab.com/codecheckers/Piccolo-2020'],
             'an older file address, without -/' => ['https://gitlab.com/g/p/blob/main/codecheck.yml'],
             'an older issue address, without -/' => ['https://gitlab.com/g/p/issues/1'],
+            'an older commit address, without -/' => ['https://gitlab.com/g/sub/p/commit/abc123'],
             'a comma in the project' => ['https://gitlab.com/codecheckers/a,b'],
         ];
     }
