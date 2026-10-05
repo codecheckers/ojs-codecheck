@@ -783,6 +783,27 @@ msgstr "Report URL"
 msgid "plugins.generic.codecheck.certificate.reportDescription"
 msgstr "Link to the published CODECHECK report (e.g., Zenodo)."
 
+msgid "plugins.generic.codecheck.certificate.sharePreview"
+msgstr "Share Preview"
+
+msgid "plugins.generic.codecheck.certificate.sharePreviewTitle"
+msgstr "Share a preview of the certificate"
+
+msgid "plugins.generic.codecheck.certificate.sharePreviewIntro"
+msgstr "If you publish the certificate outside of OJS, editors and authors can inspect it before it goes live when you share a preview link."
+
+msgid "plugins.generic.codecheck.certificate.sharePreviewZenodo"
+msgstr "Create the preview link at your repository. For Zenodo, see {$link}."
+
+msgid "plugins.generic.codecheck.certificate.sharePreviewZenodoLink"
+msgstr "Zenodo's guide to link sharing"
+
+msgid "plugins.generic.codecheck.certificate.sharePreviewDiscussions"
+msgstr "Then post the link in a discussion of this submission, where editors and authors can read it: {$link}."
+
+msgid "plugins.generic.codecheck.certificate.sharePreviewDiscussionsLink"
+msgstr "How to start a discussion in OJS"
+
 msgid "plugins.generic.codecheck.identifier.saved"
 msgstr "Identifier \"{$identifier}\" saved!"
 

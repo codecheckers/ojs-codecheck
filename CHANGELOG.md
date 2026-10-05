@@ -30,6 +30,10 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 
 - With the new setting *Add CODECHECK links to DOI deposits*, an article's Crossref or DataCite record links its published CODECHECK certificate as a review and its public code and data repositories as supplements; *Re-deposit when the CODECHECK links change* sends the record of a published article again when they change, such as a certificate published after the article (#19)
 
+#### Editorial workflow
+
+- A *Share Preview* button next to the report field explains how to share a draft certificate with editors and authors through a repository preview link and a submission discussion (#39)
+
 #### Frontend
 
 - With the new setting *Certificate in the References*, the published CODECHECK certificate is listed among the article's references, from a button on the CODECHECK tab or also automatically whenever a version is published; a line already citing the certificate is updated where it stands and no other reference is changed (#183)
