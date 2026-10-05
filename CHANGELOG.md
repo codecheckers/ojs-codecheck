@@ -69,7 +69,7 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 - The register issue's JSON metadata is valid JSON
 - A codechecker's ORCID iD imported from a repository's `codecheck.yml` is kept when the form is saved (#186)
 - A reviewer's CODECHECK form opens without an error; when the venue list cannot be read the editorial form offers the venue labels it already has, or the journal's own labels with a warning (#65)
-- The CODECHECK panel on the review stage shows the check's certificate identifier, files, codecheckers, repositories and summary beside its status (#65)
+- The CODECHECK panel on the review stage shows the check's certificate identifier, files, codecheckers, repositories and summary beside its status, and marks a repository hidden from the public record as such (#65)
 
 ### Security
 

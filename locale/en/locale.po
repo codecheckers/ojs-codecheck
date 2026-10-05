@@ -1149,6 +1149,9 @@ msgstr "Hidden"
 msgid "plugins.generic.codecheck.repositories.hiddenCannotHoldCodecheckYaml"
 msgstr "A repository marked \"{$hideLabel}\" cannot be the one containing the 'codecheck.yml' file: that repository is named in the public CODECHECK Register when the submission is published. Clear \"{$hideLabel}\" for this repository, or choose a different repository as the one containing the 'codecheck.yml' file."
 
+msgid "plugins.generic.codecheck.repository.hiddenMarker"
+msgstr "(hidden from the public record)"
+
 msgid "plugins.generic.codecheck.repository.markAsHidden"
 msgstr "Hide from public record"
 

@@ -54,11 +54,14 @@
           </ul>
         </div>
         
-        <div class="info-section" v-if="repositoryUrls.length > 0">
+        <div class="info-section" v-if="repositories.length > 0">
           <h4>{{ t("plugins.generic.codecheck.repositories.title") }}</h4>
           <ul>
-            <li v-for="(url, index) in repositoryUrls" :key="index">
-              <a :href="url" target="_blank" rel="noopener">{{ url }}</a>
+            <li v-for="(repository, index) in repositories" :key="index">
+              <a :href="repository.url" target="_blank" rel="noopener">{{ repository.url }}</a>
+              <span v-if="repository.hidden" class="codecheck-hidden-marker">
+                {{ t("plugins.generic.codecheck.repository.hiddenMarker") }}
+              </span>
             </li>
           </ul>
         </div>
@@ -132,11 +135,21 @@ onMounted(async () => {
   }
 });
 
-const repositoryUrls = computed(() =>
+/**
+ * The record's repositories, hidden ones marked: the panel is not public, but
+ * an author can reach it, and an entry withheld from readers must not read as
+ * public here (#65).
+ */
+const repositories = computed(() =>
   (metadata.value.repository?.repositories ?? [])
-    .map((repository) => repository?.url)
-    .filter(isWebUrl)
+    .filter((repository) => isWebUrl(repository?.url))
+    .map((repository) => ({ url: repository.url, hidden: isHidden(repository.hidden) }))
 );
+
+/** Hidden as the server reads it, PHP's `!empty()`: `"0"` is not, `1` and `"1"` are. */
+function isHidden(value) {
+  return ![undefined, null, false, 0, '', '0'].includes(value);
+}
 
 function formatDate(dateString) {
   if (!dateString) return '';
@@ -185,6 +198,12 @@ const viewFullMetadata = openCodecheckTab;
 
 .info-section a:hover {
   text-decoration: underline;
+}
+
+.codecheck-hidden-marker {
+  margin-left: 0.5rem;
+  color: var(--text-color-secondary);
+  font-style: italic;
 }
 
 .orcid-badge {

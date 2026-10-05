@@ -200,6 +200,7 @@
   "plugins.generic.codecheck.repositories.removeConfirm",
   "plugins.generic.codecheck.repositories.title",
   "plugins.generic.codecheck.repository.addButton",
+  "plugins.generic.codecheck.repository.hiddenMarker",
   "plugins.generic.codecheck.repository.markAsHidden",
   "plugins.generic.codecheck.repository.markAsHidden.tooltip",
   "plugins.generic.codecheck.repository.placeholder",

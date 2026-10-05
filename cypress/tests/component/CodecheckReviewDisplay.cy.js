@@ -49,6 +49,8 @@ describe('CodecheckReviewDisplay Component', () => {
         repository: {
           repositories: [
             { url: 'https://github.com/test/repo', hidden: false },
+            { url: 'https://github.com/test/private', hidden: true },
+            { url: 'https://github.com/test/legacy', hidden: '1' },
             { url: 'javascript:alert(1)', hidden: false },
           ],
         },
@@ -67,6 +69,13 @@ describe('CodecheckReviewDisplay Component', () => {
     cy.contains('Code executed successfully').should('exist');
     cy.get('a[href="https://github.com/test/repo"]').should('exist');
     cy.get('a[href="https://doi.org/10.5281/zenodo.1"]').should('exist');
+    // A repository withheld from readers says so; a public one does not.
+    cy.get('a[href="https://github.com/test/private"]').closest('li')
+      .should('contain', 'plugins.generic.codecheck.repository.hiddenMarker');
+    cy.get('a[href="https://github.com/test/legacy"]').closest('li')
+      .should('contain', 'plugins.generic.codecheck.repository.hiddenMarker');
+    cy.get('a[href="https://github.com/test/repo"]').closest('li')
+      .should('not.contain', 'plugins.generic.codecheck.repository.hiddenMarker');
     // A stored address that is not a web address is not made a link.
     cy.contains('javascript:alert(1)').should('not.exist');
   });
