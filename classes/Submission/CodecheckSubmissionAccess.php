@@ -134,6 +134,20 @@ class CodecheckSubmissionAccess
     }
 
     /**
+     * May this user reserve, link or remove the certificate identifier, and so
+     * write the register issue (#65)?
+     *
+     * The identifier and its issue are published under the journal's name in
+     * the public register, so this is the question the `identifier` and
+     * `issue` endpoints already ask by role (#173): a journal manager or a site
+     * administrator, and nobody else.
+     */
+    public static function mayManageIdentifier(?User $user, int $contextId): bool
+    {
+        return $user !== null && self::isJournalManager($user, $contextId);
+    }
+
+    /**
      * The rule of mayKnowAuthors(), without the lookups.
      *
      * Without a standing on the submission, authors are visible only through a

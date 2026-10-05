@@ -446,6 +446,9 @@ msgstr "ID of the CODECHECK certificate - e.g.: 2025-001"
 msgid "plugins.generic.codecheck.identifier.venue.fetch.error.curl"
 msgstr "Venue Data Error"
 
+msgid "plugins.generic.codecheck.identifier.managersOnly"
+msgstr "Only a journal manager or an administrator can reserve, link or remove the certificate identifier."
+
 msgid "plugins.generic.codecheck.identifier.venue.unavailable"
 msgstr "The CODECHECK list of venues could not be read, so only this journal's own labels are offered. Try again later."
 

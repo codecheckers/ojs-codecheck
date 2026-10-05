@@ -189,6 +189,15 @@ class CodecheckMetadataHandler
             $data['codecheckers'] = json_decode($stored->codecheckers ?? '[]', true);
         }
 
+        // The certificate identifier and the register issue it names are a
+        // journal manager's (#65), as reserving one is: anyone else's form
+        // shows them read-only, so their save keeps what is stored, the same
+        // way as the codecheckers above.
+        if (!CodecheckSubmissionAccess::mayManageIdentifier($request->getUser(), (int) $request->getContext()?->getId())) {
+            $data['certificate'] = $stored->certificate ?? null;
+            $data['issue'] = json_decode($stored->issue ?? 'null', true);
+        }
+
         // Refuse addresses that cannot be a repository link rather than storing
         // them and guarding every place they are published (Issue #154) — but
         // only the ones this payload introduces. Refusing the whole record for

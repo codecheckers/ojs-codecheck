@@ -151,4 +151,21 @@ class CodecheckSubmissionAccessUnitTest extends PKPTestCase
 
         $this->assertTrue(CodecheckSubmissionAccess::mayKnowAuthors($siteAdmin, 42, 1));
     }
+
+    /** The identifier is a journal manager's or a site administrator's alone (#65). */
+    public function testOnlyAManagerOrASiteAdministratorMayManageTheIdentifier()
+    {
+        $this->assertTrue(CodecheckSubmissionAccess::mayManageIdentifier($this->userWithRoles([Role::ROLE_ID_MANAGER]), 1));
+
+        $siteAdmin = $this->createMock(User::class);
+        $siteAdmin->method('hasRole')->willReturnCallback(
+            fn (array $asked, $contextId) => $contextId === null && in_array(Role::ROLE_ID_SITE_ADMIN, $asked, true)
+        );
+        $this->assertTrue(CodecheckSubmissionAccess::mayManageIdentifier($siteAdmin, 1));
+
+        foreach ([Role::ROLE_ID_SUB_EDITOR, Role::ROLE_ID_ASSISTANT, Role::ROLE_ID_REVIEWER, Role::ROLE_ID_AUTHOR] as $role) {
+            $this->assertFalse(CodecheckSubmissionAccess::mayManageIdentifier($this->userWithRoles([$role]), 1));
+        }
+        $this->assertFalse(CodecheckSubmissionAccess::mayManageIdentifier(null, 1));
+    }
 }

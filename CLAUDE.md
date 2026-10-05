@@ -192,7 +192,7 @@ assignment):
 `codecheck.yml` whose `paper.title` is missing or not the submission's
 (`titlesMatch()`: whitespace-collapsed, case-insensitive; also used by extended
 validation). The form import does not overwrite submission data and keeps the
-identifier while `certificateLocked`.
+identifier while `certificateReadonly` (linked, or not the user's to manage).
 
 ### Persistence
 

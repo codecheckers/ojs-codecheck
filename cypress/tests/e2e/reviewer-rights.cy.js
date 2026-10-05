@@ -139,6 +139,30 @@ describe('A reviewer assigned to a submission', () => {
     });
   });
 
+  /**
+   * The certificate identifier and the register issue it names are a journal
+   * manager's (#65): the reviewer's form shows them read-only, and their save
+   * keeps what is stored, as it does the codecheckers.
+   */
+  it('may neither manage the identifier nor change it by saving', () => {
+    api('GET', 'labels').its('status').should('eq', 401);
+
+    api('GET', `metadata?submissionId=${ASSIGNED}`).then(({ body }) => {
+      expect(body.canManageIdentifier).to.eq(false);
+      const stored = body.codecheck;
+      cy.saveCodecheckRecord(ASSIGNED, {
+        ...stored,
+        certificate: '1999-001',
+        issue: { url: 'https://github.com/someone/else/issues/1', number: 1, labelsSelected: [] },
+      }, stored.codecheckers).its('status').should('eq', 200);
+
+      api('GET', `metadata?submissionId=${ASSIGNED}`).its('body.codecheck').should((after) => {
+        expect(after.certificate).to.eq(stored.certificate);
+        expect(after.issue).to.deep.equal(stored.issue);
+      });
+    });
+  });
+
   it('may still read CODECHECK data — the reviewer tab shows it', () => {
     api('GET', `metadata?submissionId=${ASSIGNED}`).its('status').should('eq', 200);
   });
@@ -151,6 +175,10 @@ describe('An editor', () => {
   });
 
   after(restoreStatuses);
+
+  it('may manage the certificate identifier', () => {
+    api('GET', `metadata?submissionId=${NOT_ASSIGNED}`).its('body.canManageIdentifier').should('eq', true);
+  });
 
   it('may write a submission they were never assigned to', () => {
     post(`status/update?submissionId=${NOT_ASSIGNED}`, {

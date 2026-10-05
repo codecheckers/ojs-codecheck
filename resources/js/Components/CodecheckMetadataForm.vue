@@ -370,10 +370,10 @@
                 type="text"
                 v-model="metadata.certificate"
                 :placeholder="t('plugins.generic.codecheck.identifier.label')"
-                :readonly="certificateLocked"
+                :readonly="certificateReadonly"
                 class="certificate-identifier-input"
               />
-              <fieldset :disabled="!identifierInputEmpty || certificateIdentifier.isReserved">
+              <fieldset v-if="canManageIdentifier" :disabled="!identifierInputEmpty || certificateIdentifier.isReserved">
                 <div class="certificate-identifier-select dropdown">
                   <button class="dropbtn">{{ t('plugins.generic.codecheck.identifier.labels') }} ⚙</button>
                   <div class="dropdown-content">
@@ -386,7 +386,7 @@
               </fieldset>
             </div>
 
-            <div class="identifier-actions" id="certificate-identifier-button-wrapper">
+            <div v-if="canManageIdentifier" class="identifier-actions" id="certificate-identifier-button-wrapper">
               <button
                 type="button"
                 class="pkpButton codecheck-btn certificate-identifier-button"
@@ -422,6 +422,9 @@
                 {{ t('plugins.generic.codecheck.identifier.remove') }}
               </button>
             </div>
+            <p v-else class="field-description codecheck-identifier-managers-only">
+              {{ t('plugins.generic.codecheck.identifier.managersOnly') }}
+            </p>
           </div>
         </div>
       </div>
@@ -508,6 +511,10 @@ export default {
       // The journal's "Certificate in the References" setting (#183), from
       // the metadata response; off until it says otherwise.
       certificateReferenceMode: 'off',
+      // Whether reserving, linking and removing the identifier is offered: a
+      // journal manager's, answered by the server with the record (#65).
+      canManageIdentifier: false,
+      labelsRequested: false,
       addingCertificateReference: false,
       hasUnsavedChanges: false,
       submissionData: {
@@ -682,6 +689,15 @@ export default {
       return this.metadata.certificate.trim() === '';
     },
 
+    /**
+     * The identifier cannot be changed here: it is linked to its register
+     * issue, or the user may not manage it (#65), in which case the save keeps
+     * what is stored whatever the field holds.
+     */
+    certificateReadonly() {
+      return this.certificateLocked || !this.canManageIdentifier;
+    },
+
     /** The identifier is linked to its register issue, so the field cannot be changed. */
     certificateLocked() {
       return (this.certificateIdentifier.issue?.url ?? '').trim() !== '' && !this.identifierInputEmpty;
@@ -689,11 +705,6 @@ export default {
   },
   mounted() {
     this.loadData();
-    // The labels are for reserving an identifier, which is the editors'; the
-    // reviewer's copy would be refused, and said so above the form (#65).
-    if (this.canEditCodecheckers) {
-      this.getCodecheckIssueLabels();
-    }
   },
   watch: {
     metadata: {
@@ -747,6 +758,14 @@ export default {
           this.enabledConfigVersions = data.settings.enabledConfigVersions;
         }
         this.certificateReferenceMode = data.settings?.certificateReferenceMode ?? 'off';
+        this.canManageIdentifier = data.canManageIdentifier === true;
+        // The labels are only for reserving an identifier, which is a journal
+        // manager's; anyone else would be refused (#65). Asked here rather than
+        // on mounting, so a load that succeeds only on Retry still asks.
+        if (this.canManageIdentifier && !this.labelsRequested) {
+          this.labelsRequested = true;
+          this.getCodecheckIssueLabels();
+        }
 
         this.submissionData = {
           id: data.submission?.id || submissionId,
@@ -853,8 +872,9 @@ export default {
               // authors and DOI stay OJS's: they are what `buildYaml()` writes
               // whatever the imported file says, and what the warning about the
               // specification's mandatory fields reads.
-              // A certificate identifier already linked to its register issue is
-              // read-only in the form, so it is kept as well (#28).
+              // A certificate identifier the form shows read-only — linked to
+              // its register issue, or not the user's to manage — is kept as
+              // well (#28, #65).
               this.metadata = {
                 // The record's own version, not the one the imported file
                 // declares: that is what the form is filled in against, and a
@@ -867,7 +887,7 @@ export default {
                 codecheckers: this.canEditCodecheckers && Array.isArray(data.metadata?.codechecker)
                   ? this.importedCodecheckers(data.metadata.codechecker)
                   : this.metadata.codecheckers,
-                certificate: this.certificateLocked
+                certificate: this.certificateReadonly
                   ? this.metadata.certificate
                   : (data.metadata?.certificate ?? this.metadata.certificate),
                 check_time: this.formatDateTimeLocal(data.metadata?.check_time) ?? this.metadata.check_time,
@@ -1236,7 +1256,9 @@ export default {
         // Only once the save succeeded: the register issue is public, and
         // updating it first published repository addresses the save then
         // refused (Issue #154).
-        const issueProblem = data.registerUnreachable ? null : await this.updateGithubIssueContents();
+        const issueProblem = data.registerUnreachable || !this.canManageIdentifier
+          ? null
+          : await this.updateGithubIssueContents();
 
         this.triggerCodecheckStatusUpdateEvent();
         this.triggerRegisterIssueDisplayUpdateEvent();
@@ -1356,7 +1378,9 @@ export default {
 
           if (data.success) {
               this.certificateIdentifier.issue.labels = data.labels;
-              if (data.labelsWarning) {
+              // Only where the labels can still be chosen: once an identifier
+              // is reserved the picker is disabled and the warning moot.
+              if (data.labelsWarning && this.identifierInputEmpty && !this.certificateIdentifier.isReserved) {
                   this.showMessage(data.labelsWarning, 'warning');
               }
           } else {

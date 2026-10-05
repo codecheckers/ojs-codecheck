@@ -114,6 +114,8 @@ class CodecheckApiControllerRoutesUnitTest extends PKPTestCase
         $this->assertSame('admin', $tiers['POST identifier'] ?? null);
         $this->assertSame('admin', $tiers['POST issue'] ?? null);
         $this->assertSame('admin', $tiers['GET orcid-test'] ?? null);
+        // The venue labels exist only for reserving an identifier (#65).
+        $this->assertSame('admin', $tiers['GET labels'] ?? null);
 
         // The record, its status and the ORCID deposit: a reviewer may reach
         // these, scoped to their own submission by the policy.

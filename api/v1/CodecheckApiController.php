@@ -214,8 +214,9 @@ class CodecheckApiController extends PKPBaseController
         $editor = [self::roleAuthorizer(self::EDITOR_ROLES)];
         $admin = [self::roleAuthorizer(self::ADMIN_ROLES)];
 
+        // The venue labels are offered only for reserving an identifier (#65).
         Route::get('labels', $this->getCodecheckIssueLabels(...))
-            ->name('codecheck.labels')->middleware($editor);
+            ->name('codecheck.labels')->middleware($admin);
 
         // The journal's directory spans every submission, so it stays with the
         // editors: a reviewer is held to one submission everywhere else (#186).
@@ -320,6 +321,12 @@ class CodecheckApiController extends PKPBaseController
             'enabledConfigVersions' => $this->plugin->getEnabledConfigVersions($request->getContext()?->getId()),
             'certificateReferenceMode' => $this->plugin->getCertificateReferenceMode($request->getContext()?->getId()),
         ];
+        // Whether the form offers reserving, linking and removing the
+        // identifier; the endpoints and the save enforce it either way (#65).
+        $result['canManageIdentifier'] = CodecheckSubmissionAccess::mayManageIdentifier(
+            $request->getUser(),
+            (int) $request->getContext()?->getId()
+        );
 
         return response()->json(array_merge($result, ['success' => true]), 200);
     }

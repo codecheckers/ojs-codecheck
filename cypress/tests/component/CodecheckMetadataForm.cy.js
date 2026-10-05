@@ -9,6 +9,7 @@ import CodecheckMetadataForm from '../../../resources/js/Components/CodecheckMet
 const metadataResponseBody = () => ({
   success: true,
   submissionId: 1,
+  canManageIdentifier: true,
   submission: {
     id: 1,
     title: 'Test Article Title',
@@ -434,23 +435,57 @@ describe('CodecheckMetadataForm Component', () => {
   });
 
   /**
-   * The venue labels are for reserving an identifier, which is the editors';
-   * the endpoint refuses a reviewer, and asking anyway put that refusal above
-   * the reviewer's form every time it opened (#65).
+   * Reserving, linking and removing the identifier are a journal manager's;
+   * anyone else sees it read-only, and the form neither asks for the venue
+   * labels nor writes the register issue on save (#65).
    */
-  it("does not ask for the venue labels in a reviewer's copy", () => {
-    let labelsRequested = false;
+  it('shows the identifier read-only to someone who may not manage it', () => {
+    const requested = [];
     cy.intercept('GET', '**/codecheck/labels*', (req) => {
-      labelsRequested = true;
-      req.reply({ statusCode: 401, body: { error: 'user.authorization.roleBasedAccessDenied' } });
+      requested.push('labels');
+      req.reply({ statusCode: 401, body: {} });
     });
-    cy.mount(CodecheckMetadataForm, {
-      props: { submission: { id: 1 }, canEdit: true, canEditCodecheckers: false },
+    cy.intercept('POST', '**/codecheck/issue*', (req) => {
+      requested.push('issue');
+      req.reply({ statusCode: 401, body: {} });
     });
+    cy.intercept('POST', '**/codecheck/metadata*', { statusCode: 200, body: { success: true } }).as('save');
+    interceptMetadata({
+      canManageIdentifier: false,
+      // No register issue, so the field is not read-only because it is linked:
+      // only the missing permission can make it so.
+      codecheck: {
+        ...metadataResponseBody().codecheck,
+        certificate: '2025-042',
+        issue: { url: '', number: null, labels: [], labelsSelected: [] },
+      },
+    });
+    cy.mount(CodecheckMetadataForm, { props: { submission: { id: 1 }, canEdit: true } });
     cy.wait('@loadMetadata');
-    cy.get('.codecheck-contact-email').should('exist').then(() => {
-      expect(labelsRequested).to.equal(false);
+
+    cy.get('.certificate-identifier-input').should('have.value', '2025-042').and('have.attr', 'readonly');
+    cy.get('.certificate-identifier-button').should('not.exist');
+    cy.get('.certificate-identifier-select').should('not.exist');
+    cy.contains('plugins.generic.codecheck.identifier.managersOnly').should('be.visible');
+
+    cy.get('.footer-actions button').contains(/save/i).click();
+    cy.wait('@save');
+    // The issue update would follow the save's answer, before the message.
+    cy.get('.save-message').should('exist').then(() => {
+      expect(requested).to.deep.equal([]);
     });
+  });
+
+  /** Once an identifier is reserved the labels cannot be chosen, so a missing venue list is not worth a warning (#65). */
+  it('does not warn about the venue list once an identifier is reserved', () => {
+    cy.intercept('GET', '**/codecheck/labels*', {
+      statusCode: 200,
+      body: { success: true, labels: [], labelsWarning: 'The venue list could not be read.' },
+    }).as('loadLabelsWithWarning');
+    interceptMetadata({ codecheck: { ...metadataResponseBody().codecheck, certificate: '2025-042' } });
+    cy.mount(CodecheckMetadataForm, { props: { submission: { id: 1 }, canEdit: true } });
+    cy.wait('@loadLabelsWithWarning');
+    cy.get('.certificate-identifier-input').should('have.value', '2025-042');
     cy.get('.save-message').should('not.exist');
   });
 
