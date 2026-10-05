@@ -196,6 +196,13 @@ ojs-link: check-ojs
 # Point the OJS config at our database, files directory and base URL. The
 # dataset ships a config.inc.php with a MAMP files_dir and root credentials,
 # so it cannot be used as-is.
+#
+# A throwaway instance is a test instance, so it runs in OJS's sandbox mode: OJS
+# runs no scheduled task or queued job from the web, sends no e-mail and makes
+# no DOI deposit, and the plugin reads neither CODECHECK list (#65). The
+# plugin's own writes (register issue, register.csv, ORCID) still go out, so
+# they stay testable against a testing register and the ORCID sandbox. The
+# shared install is left as it is.
 ojs-config: check-ojs
 	@test -f "$(OJS_ROOT)/config.inc.php" || cp "$(OJS_ROOT)/config.TEMPLATE.inc.php" "$(OJS_ROOT)/config.inc.php"
 	@mkdir -p "$(OJS_ROOT)/files" "$(OJS_ROOT)/public"
@@ -209,11 +216,13 @@ ojs-config: check-ojs
 		-e 's|^name = .*|name = $(DB_NAME)|' \
 		-e 's|^;\? *port = [0-9]*$$|port = $(DB_PORT)|' \
 		-e 's|^files_dir = .*|files_dir = $(OJS_ROOT)/files|' \
+		$(if $(THROWAWAY),-e 's|^sandbox = .*|sandbox = On|') \
 		"$(OJS_ROOT)/config.inc.php"
 	@# OJS 3.5 ships an empty app_key and refuses to serve any page without it
 	@# (Laravel's encrypter throws during bootstrap, producing a bare HTTP 500).
 	@grep -q '^app_key = .\+' "$(OJS_ROOT)/config.inc.php" \
 		|| (cd "$(OJS_ROOT)" && php lib/pkp/tools/appKey.php generate >/dev/null && echo "Generated app_key")
+	$(if $(THROWAWAY),@grep -q '^sandbox = On' "$(OJS_ROOT)/config.inc.php" || { echo "Could not put $(OJS_ROOT) into sandbox mode"; exit 1; })
 	@echo "Configured $(OJS_ROOT)/config.inc.php"
 
 # --- Database ---------------------------------------------------------------

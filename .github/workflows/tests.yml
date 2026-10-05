@@ -216,6 +216,13 @@ jobs:
           sed -i 's/host = localhost/host = 127.0.0.1/' config.inc.php
           sed -i 's/name = ojs$/name = ojs_dump/' config.inc.php
           sed -i 's|files_dir = .*|files_dir = /home/runner/work/ojs-codecheck/ojs-codecheck/ojs/files|' config.inc.php
+          # Sandbox mode: OJS runs no scheduled task or queued job from the web,
+          # sends no e-mail and makes no DOI deposit, and the plugin reads
+          # neither CODECHECK list (#65). Its register and ORCID writes are not
+          # stopped; the dataset configures neither. Fails here if the config
+          # has no sandbox line to set.
+          sed -i 's/^sandbox = .*/sandbox = On/' config.inc.php
+          grep -q '^sandbox = On' config.inc.php
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2

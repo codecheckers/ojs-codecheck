@@ -556,7 +556,8 @@ files, public), runs MariaDB in Docker (port 3307) and serves on 8352; pass the
 same `THROWAWAY=` to `serve`, `test-e2e`, `db-reset` etc. **Never write into an
 OJS file in place there** (hard links; `sed -i` is fine). Throwaways run in
 sandbox mode: no scheduled tasks or jobs from the web, no DOI deposits, no
-venue/codechecker list fetches.
+venue/codechecker list fetches — but the plugin's register and ORCID writes
+still go out.
 
 `make doi-test-config` sets up DOIs (Crossref prefix 10.5555, DataCite test
 prefix 10.5072, test-mode agencies with fake credentials; `AGENCY=`,
