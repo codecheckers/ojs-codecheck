@@ -83,7 +83,6 @@ export default {
   name: 'CodecheckStatusForm',
   props: {
     submission: { type: Object, required: true },
-    canEdit: { type: Boolean, default: true },
     name: {type: String},
     value: {type: String},
   },
@@ -276,10 +275,6 @@ export default {
     async updateStatus(status, user) {
         // Whatever comes of this one, the last one's warning is not about it.
         this.registerWarning = null;
-
-        if (!this.canUpdate && user.id !== -1) {
-            return this.t('plugins.generic.codecheck.status.update.notPermitted');
-        }
 
         if (!this.submission?.id) {
             console.error('CODECHECK: no submission to record a status against');

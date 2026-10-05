@@ -478,14 +478,43 @@ describe('CodecheckMetadataForm Component', () => {
     cy.mount(CodecheckMetadataForm, { props: { submission: { id: 1 }, canEdit: true } });
     cy.wait('@loadMetadata');
 
+    // Rendered first, so the negatives below are not met before the form is.
+    cy.get('.codecheck-header').should('exist');
     cy.contains('plugins.generic.codecheck.form.readOnly').should('be.visible');
     cy.get('.codecheck-form-fields').should('have.attr', 'disabled');
-    cy.get('.codecheck-form-fields input, .codecheck-form-fields select, .codecheck-form-fields textarea')
-      .each(($field) => expect($field.closest('fieldset[disabled]').length).to.eq(1));
+    // Not a restatement of the attribute: a control left outside the fieldset
+    // would be enabled.
+    cy.get('.codecheck-metadata-form').find('input, select, textarea, button')
+      .should(($controls) => {
+        const enabled = [...$controls].filter((el) => !el.matches(':disabled'))
+          .map((el) => el.getAttribute('data-testid') || el.className);
+        // The YAML preview sits outside the fieldset but is disabled by its own
+        // condition for this incomplete record; nothing else may be enabled.
+        expect(enabled, 'enabled controls').to.deep.equal([]);
+      });
     cy.get('.footer-actions button').contains(/save/i).should('not.exist');
     cy.contains('plugins.generic.codecheck.codecheckers.editorsOnly').should('be.visible');
     // Reading the record stays possible.
     cy.get('[data-testid="preview-yaml-button"]').should('exist');
+  });
+
+  it('refuses to save or import without writing permission, whatever calls it', () => {
+    const requests = [];
+    cy.intercept('POST', '**/codecheck/**', (req) => {
+      requests.push(req.url);
+      req.reply({ statusCode: 200, body: { success: true } });
+    });
+    interceptMetadata({ permissions: { write: false, editCodecheckers: false, manageIdentifier: false, addCertificateReference: false } });
+    cy.mount(CodecheckMetadataForm, { props: { submission: { id: 1 }, canEdit: true } }).then(({ wrapper }) => {
+      cy.wait('@loadMetadata');
+      cy.get('.codecheck-header').should('exist').then(async () => {
+        await wrapper.vm.saveMetadata();
+        const error = await wrapper.vm.importMetadataFrom('https://github.com/a/b');
+        expect(error).to.eq('plugins.generic.codecheck.form.readOnly');
+        await wrapper.vm.addCertificateReference();
+        expect(requests).to.deep.equal([]);
+      });
+    });
   });
 
   it('offers Save and no note to someone who may write the record', () => {
@@ -1860,6 +1889,7 @@ describe('CodecheckMetadataForm certificate reference', () => {
     cy.intercept('GET', '**/codecheck/metadata*', { statusCode: 200, body }).as('loadMetadata');
     mountForm();
     cy.wait('@loadMetadata');
+    cy.get('.codecheck-header').should('exist');
     cy.get('.certificate-reference').should('not.exist');
   });
 

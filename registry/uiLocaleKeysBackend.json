@@ -241,7 +241,6 @@
   "plugins.generic.codecheck.status.modal.title",
   "plugins.generic.codecheck.status.update.failed",
   "plugins.generic.codecheck.status.update.noStatuses",
-  "plugins.generic.codecheck.status.update.notPermitted",
   "plugins.generic.codecheck.viewFullMetadata",
   "plugins.generic.codecheck.warning.noChoice",
   "plugins.generic.codecheck.warning.notOptedIn",

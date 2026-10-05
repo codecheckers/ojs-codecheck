@@ -632,9 +632,6 @@ msgstr "The list of CODECHECK statuses could not be loaded. Close this dialog an
 msgid "plugins.generic.codecheck.status.update.failed"
 msgstr "The CODECHECK status could not be recorded."
 
-msgid "plugins.generic.codecheck.status.update.notPermitted"
-msgstr "You are not permitted to change the CODECHECK status of this submission."
-
 msgid "plugins.generic.codecheck.status.modal.label"
 msgstr "Select the new CODECHECK Status for this Submission"
 

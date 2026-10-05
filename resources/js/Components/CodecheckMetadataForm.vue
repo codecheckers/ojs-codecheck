@@ -194,12 +194,18 @@
         <div class="field-group">
           <div class="field-header">
             <div class="field-label">{{ t('plugins.generic.codecheck.repositories.title') }} 
-              <button
+              <!-- Not a form control, so a disabled fieldset leaves it usable: it only explains. -->
+              <span
+                role="button"
+                tabindex="0"
+                :aria-label="t('plugins.generic.codecheck.repositories.title')"
                 class="info-button"
                 @click="showRepositoryInfoModal()"
+                @keydown.enter.prevent="showRepositoryInfoModal()"
+                @keydown.space.prevent="showRepositoryInfoModal()"
               >
                 ℹ️
-              </button>
+              </span>
             </div>
             <button type="button" class="pkpButton btn-add" @click="addRepository">{{ t('plugins.generic.codecheck.repositories.add') }}</button>
           </div>
@@ -910,6 +916,12 @@ export default {
      * @returns {Promise<string|null>} why nothing was imported, or null
      */
     async importMetadataFrom(address) {
+      // The fieldset keeps the controls from reaching this; the server refuses
+      // the request either way (#127).
+      if (!this.permissions.write) {
+        return this.t('plugins.generic.codecheck.form.readOnly');
+      }
+
       const apiUrl = pkp.context.apiBaseUrl + 'codecheck';
       // Either load replaces the form, so neither one's old message stands.
       this.repositoryWarning = {message: null, isWarning: true};
@@ -930,7 +942,9 @@ export default {
 
           if (!data.success) {
               console.error('Error:', data.error);
-              return data.error;
+              // A refusal comes with its translated sentence; the rest with the
+              // server's own English.
+              return data.errorMessage || data.error;
           }
 
           // Only the CODECHECK fields are taken over. The paper's title,
@@ -1221,6 +1235,9 @@ export default {
      * which is why the button waits for unsaved changes to be saved.
      */
     async addCertificateReference() {
+      if (!this.permissions.addCertificateReference) {
+        return;
+      }
       this.addingCertificateReference = true;
       const title = this.t('plugins.generic.codecheck.certificateReference.add');
       try {
@@ -1271,6 +1288,11 @@ export default {
     },
 
     async saveMetadata() {
+      if (!this.permissions.write) {
+        this.showMessage(this.t('plugins.generic.codecheck.form.readOnly'), 'error');
+        return;
+      }
+
       if (!this.validateForm()) {
         return;
       }
@@ -1319,7 +1341,7 @@ export default {
         const data = await response.json();
 
         if (!response.ok || !data.success) {
-          throw new Error(`[HTTP ${response.status}] ${data.error}`);
+          throw new Error(`[HTTP ${response.status}] ${data.errorMessage || data.error}`);
         }
 
         this.hasUnsavedChanges = false;

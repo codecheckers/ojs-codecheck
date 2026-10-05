@@ -154,7 +154,6 @@ pkp.registry.storeExtend("workflow", (piniaContext) => {
           component: "CodecheckStatusForm",
           props: {
             submission: submission,
-            canEdit: true
           },
         },
         {
