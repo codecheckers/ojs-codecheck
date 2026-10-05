@@ -24,6 +24,12 @@ class CurlApiClient implements ApiClientInterface
     /** As many as cURL followed here; repository downloads pass through CDNs. */
     private const MAX_REDIRECTS = 10;
 
+    /**
+     * DOIs resolved in this request: a publish asks for the same one up to
+     * four times. Only a resolution is remembered, so a failure is tried again.
+     */
+    private static array $resolvedDois = [];
+
     /** OJS's client, built on first use: building it reads the version from the database. */
     public function __construct(private ?Client $client = null)
     {
@@ -80,6 +86,9 @@ class CurlApiClient implements ApiClientInterface
         // form the input came in as (bare DOI, doi.org/..., etc.)
         $doi = preg_replace('#^(?:https?://)?(?:dx\.)?(?:doi\.org/)?#i', '', $possibleDoiUrl);
         $url = 'https://doi.org/' . $doi;
+        if (isset(self::$resolvedDois[$doi])) {
+            return self::$resolvedDois[$doi];
+        }
 
         $effectiveUrl = null;
         try {
@@ -100,6 +109,12 @@ class CurlApiClient implements ApiClientInterface
             return $possibleDoiUrl;
         }
 
-        return $effectiveUrl ?: $possibleDoiUrl;
+        // Resolved once the redirect leaves doi.org, whatever the landing page
+        // then answers: Zenodo refuses a crawler now and then.
+        if (!$effectiveUrl || preg_match('#^https?://(?:dx\.)?doi\.org/#i', $effectiveUrl)) {
+            return $possibleDoiUrl;
+        }
+
+        return self::$resolvedDois[$doi] = $effectiveUrl;
     }
 }

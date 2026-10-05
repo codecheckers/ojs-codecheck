@@ -309,17 +309,31 @@
         <div class="field-group">
           <label class="field-label">{{ t('plugins.generic.codecheck.certificate.report') }}</label>
           <p class="field-description">{{ t('plugins.generic.codecheck.certificate.reportDescription') }}</p>
-          <input
-            type="url"
-            v-model="metadata.report"
-            class="pkpFormField__input full-width"
-            placeholder="https://zenodo.org/record/12345"
-          />
-          <button
-            type="button"
-            class="pkpButton codecheck-btn"
-            @click="showSharePreviewModal"
-          >{{ t('plugins.generic.codecheck.certificate.sharePreview') }}</button>
+          <div class="report-field">
+            <input
+              type="url"
+              v-model="metadata.report"
+              class="pkpFormField__input full-width"
+              placeholder="https://zenodo.org/record/12345"
+            />
+            <button
+              v-if="reportAddress !== ''"
+              type="button"
+              class="pkpButton btn-add codecheck-report-load"
+              @click="loadMetadataFromReport"
+            >
+              {{ t('plugins.generic.codecheck.repositories.loadMetadata') }}
+            </button>
+            <button
+              type="button"
+              class="pkpButton codecheck-btn"
+              @click="showSharePreviewModal"
+            >{{ t('plugins.generic.codecheck.certificate.sharePreview') }}</button>
+          </div>
+          <p class="field-description">{{ t('plugins.generic.codecheck.certificate.reportLoadDescription') }}</p>
+          <p v-if="reportError !== null" class="codecheck-repository-error codecheck-report-error">
+            ⚠ {{ reportError }}
+          </p>
         </div>
 
         <div v-if="certificateReferenceMode !== 'off'" class="field-group certificate-reference">
@@ -561,9 +575,15 @@ export default {
         message: null,
         isWarning: true,
       },
+      /** Why loading the metadata from the report address failed (#36). */
+      reportError: null,
     }
   },
   computed: {
+    /** The report's address as the load button sends it. */
+    reportAddress() {
+      return (this.metadata.report || '').trim();
+    },
     hasCertificate() {
       return Boolean((this.metadata.certificate || '').trim());
     },
@@ -853,11 +873,37 @@ export default {
 
     async loadMetadataFromRepository(repo_index) {
       if (!this.repositories[repo_index]?.containsCodecheckYaml) {
-        throw new Error(t('plugins.generic.codecheck.repositories.doesntContainCodecheckYamlError'));
+        throw new Error(this.t('plugins.generic.codecheck.repositories.doesntContainCodecheckYamlError'));
       }
 
-      let repository = this.repositories[repo_index].url;
-      let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
+      const error = await this.importMetadataFrom(this.repositories[repo_index].url);
+      this.repositoryWarning = error === null
+        ? {message: null, isWarning: true}
+        : {message: this.t('plugins.generic.codecheck.repositories.error', {error}), isWarning: false};
+    },
+
+    /**
+     * The certificate is where a check's `codecheck.yml` is kept when there is
+     * no code or data repository to keep it in, so its address — usually a
+     * DOI — loads the metadata as a repository's does (#36).
+     */
+    async loadMetadataFromReport() {
+      const error = await this.importMetadataFrom(this.reportAddress);
+      this.reportError = error === null
+        ? null
+        : this.t('plugins.generic.codecheck.certificate.reportLoadError', {error});
+    },
+
+    /**
+     * Fills the form from the `codecheck.yml` the server finds at an address.
+     *
+     * @returns {Promise<string|null>} why nothing was imported, or null
+     */
+    async importMetadataFrom(address) {
+      const apiUrl = pkp.context.apiBaseUrl + 'codecheck';
+      // Either load replaces the form, so neither one's old message stands.
+      this.repositoryWarning = {message: null, isWarning: true};
+      this.reportError = null;
 
       try {
           const response = await fetch(`${apiUrl}/repository?submissionId=${this.submission.id}`, {
@@ -867,56 +913,47 @@ export default {
               'X-Csrf-Token': pkp.currentUser.csrfToken,
               },
               body: JSON.stringify({
-                repository: repository,
+                repository: address,
               }),
           });
           const data = await response.json();
 
-          if (data.success) {
-              // Only the CODECHECK fields are taken over. The paper's title,
-              // authors and DOI stay OJS's: they are what `buildYaml()` writes
-              // whatever the imported file says, and what the warning about the
-              // specification's mandatory fields reads.
-              // A certificate identifier the form shows read-only — linked to
-              // its register issue, or not the user's to manage — is kept as
-              // well (#28, #65).
-              this.metadata = {
-                // The record's own version, not the one the imported file
-                // declares: that is what the form is filled in against, and a
-                // file's version may be one the plugin does not offer.
-                version: this.metadata.version,
-                publicationType: data.metadata?.publicationType ?? this.metadata.publicationType,
-                manifest: data.metadata?.manifest ?? this.metadata.manifest,
-                repository: this.metadata.repository,
-                source: data.metadata?.source ?? this.metadata.source,
-                codecheckers: this.canEditCodecheckers && Array.isArray(data.metadata?.codechecker)
-                  ? this.importedCodecheckers(data.metadata.codechecker)
-                  : this.metadata.codecheckers,
-                certificate: this.certificateReadonly
-                  ? this.metadata.certificate
-                  : (data.metadata?.certificate ?? this.metadata.certificate),
-                check_time: this.formatDateTimeLocal(data.metadata?.check_time) ?? this.metadata.check_time,
-                summary: data.metadata?.summary ?? this.metadata.summary,
-                report: data.metadata?.report ?? this.metadata.report,
-                additionalContent: data.metadata?.additionalContent ?? this.metadata.additionalContent,
-              };
-              this.repositoryWarning = {
-                message: null,
-                isWarning: true,
-              };
-          } else {
-              this.repositoryWarning = {
-                message: this.t('plugins.generic.codecheck.repositories.error', {error: data.error}),
-                isWarning: false,
-              };
+          if (!data.success) {
               console.error('Error:', data.error);
+              return data.error;
           }
-      } catch (error) {
-          this.repositoryWarning = {
-            message: this.t('plugins.generic.codecheck.repositories.error', {error: error}),
-            isWarning: false,
+
+          // Only the CODECHECK fields are taken over. The paper's title,
+          // authors and DOI stay OJS's: they are what `buildYaml()` writes
+          // whatever the imported file says, and what the warning about the
+          // specification's mandatory fields reads.
+          // A certificate identifier the form shows read-only — linked to
+          // its register issue, or not the user's to manage — is kept as
+          // well (#28, #65).
+          this.metadata = {
+            // The record's own version, not the one the imported file
+            // declares: that is what the form is filled in against, and a
+            // file's version may be one the plugin does not offer.
+            version: this.metadata.version,
+            publicationType: data.metadata?.publicationType ?? this.metadata.publicationType,
+            manifest: data.metadata?.manifest ?? this.metadata.manifest,
+            repository: this.metadata.repository,
+            source: data.metadata?.source ?? this.metadata.source,
+            codecheckers: this.canEditCodecheckers && Array.isArray(data.metadata?.codechecker)
+              ? this.importedCodecheckers(data.metadata.codechecker)
+              : this.metadata.codecheckers,
+            certificate: this.certificateReadonly
+              ? this.metadata.certificate
+              : (data.metadata?.certificate ?? this.metadata.certificate),
+            check_time: this.formatDateTimeLocal(data.metadata?.check_time) ?? this.metadata.check_time,
+            summary: data.metadata?.summary ?? this.metadata.summary,
+            report: data.metadata?.report ?? this.metadata.report,
+            additionalContent: data.metadata?.additionalContent ?? this.metadata.additionalContent,
           };
-          console.error('Failed to fetch metadata from existing Repository:', error);
+          return null;
+      } catch (error) {
+          console.error('Failed to fetch metadata from an existing codecheck.yml:', error);
+          return String(error);
       }
     },
 
@@ -2191,13 +2228,15 @@ export default {
   gap: 0.75rem;
 }
 
-.codecheck-metadata-form .repository-item {
+.codecheck-metadata-form .repository-item,
+.codecheck-metadata-form .report-field {
   display: flex;
   gap: 0.75rem;
   align-items: center;
 }
 
-.codecheck-metadata-form .repository-item input {
+.codecheck-metadata-form .repository-item input,
+.codecheck-metadata-form .report-field input {
   flex: 1;
 }
 
