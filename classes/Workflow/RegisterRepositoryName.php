@@ -2,8 +2,10 @@
 
 namespace APP\plugins\generic\codecheck\classes\Workflow;
 
+use APP\plugins\generic\codecheck\classes\Exceptions\GithubUnreachableException;
 use APP\plugins\generic\codecheck\classes\Exceptions\UnsupportedRepositoryAddressException;
 use APP\plugins\generic\codecheck\classes\Submission\GithubRepositoryAddress;
+use APP\plugins\generic\codecheck\classes\Submission\GitlabRepositoryAddress;
 use APP\plugins\generic\codecheck\classes\Submission\OsfRepositoryAddress;
 use APP\plugins\generic\codecheck\classes\Submission\ZenodoRepositoryAddress;
 
@@ -12,8 +14,9 @@ use APP\plugins\generic\codecheck\classes\Submission\ZenodoRepositoryAddress;
  * and the one answer to whether it can name it at all (#36).
  *
  * The register names a GitHub repository or a folder in it, read on its
- * default branch, an OSF project, read at its top level, and a Zenodo record;
- * in each it reads the file called `codecheck.yml`. An import takes more than that — a branch,
+ * default branch, an OSF project, read at its top level, a Zenodo record, and
+ * a GitLab project, read at its top level on `main`; in each it reads the file
+ * called `codecheck.yml`. An import takes more than that — a branch,
  * a file of another name, a file anywhere in an OSF project — so an address
  * the register would resolve to a different file is refused rather than
  * written as the nearest thing it can name. Publication validation and the
@@ -36,9 +39,10 @@ final class RegisterRepositoryName
      *        could not say; asked only for an address that names a branch, and
      *        may refuse in its own words by throwing
      * @param bool $acceptUnconfirmedBranch Whether a branch GitHub could not
-     *        compare with the default is accepted rather than refused: for a
-     *        check that must not stop on GitHub's availability, behind one
-     *        that refuses
+     *        compare with the default — no answer, or no default named — is
+     *        accepted rather than refused: for a check that must not stop on
+     *        GitHub's availability, behind one that refuses. A repository
+     *        GitHub says is not there is refused either way.
      *
      * @throws UnsupportedRepositoryAddressException When the address is of no kind the register names
      * @throws \UnexpectedValueException With the reason, for the editor, when the register would read it elsewhere
@@ -55,7 +59,7 @@ final class RegisterRepositoryName
                 $branch = preg_replace('#^refs/heads/#', '', $github['ref']);
                 try {
                     $defaultBranch = $defaultBranchOf($github['owner'], $github['repo']);
-                } catch (\UnexpectedValueException $e) {
+                } catch (GithubUnreachableException $e) {
                     if (!$acceptUnconfirmedBranch) {
                         throw $e;
                     }
@@ -93,9 +97,21 @@ final class RegisterRepositoryName
             return ($zenodo['sandbox'] ? 'zenodo-sandbox::' : 'zenodo::') . $zenodo['record'];
         }
 
-        // The register names a GitLab project by its whole path.
-        if (preg_match('#^https://gitlab\.com/(cdchck/community-codechecks/[^/]+)/?$#', $repository, $matches)) {
-            return "gitlab::{$matches[1]}";
+        // The register names a GitLab project by its whole path, and reads the
+        // `codecheck.yml` at its top level on one branch.
+        $gitlab = GitlabRepositoryAddress::parse($repository);
+        if ($gitlab !== null) {
+            if (
+                $gitlab['path'] !== ''
+                || !in_array($gitlab['file'], [null, 'codecheck.yml'], true)
+                || !in_array($gitlab['ref'], [null, GitlabRepositoryAddress::REGISTER_BRANCH], true)
+            ) {
+                throw new \UnexpectedValueException(__('plugins.generic.codecheck.register.repository.gitlabElsewhere', [
+                    'branch' => GitlabRepositoryAddress::REGISTER_BRANCH,
+                    'project' => "https://gitlab.com/{$gitlab['project']}",
+                ]));
+            }
+            return "gitlab::{$gitlab['project']}";
         }
 
         throw new UnsupportedRepositoryAddressException(__('plugins.generic.codecheck.register.repository.unsupported'));

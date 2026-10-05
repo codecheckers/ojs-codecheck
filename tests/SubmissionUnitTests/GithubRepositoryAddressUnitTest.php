@@ -57,6 +57,8 @@ class GithubRepositoryAddressUnitTest extends PKPTestCase
             'a line break in a folder' => ['https://github.com/o/r/tree/main/x%0A2099-999'],
             'a quote in a folder' => ['https://github.com/o/r/tree/main/x%22'],
             'a comma in a folder' => ['https://github.com/o/r/tree/main/a%2Cb'],
+            'the register separator in a folder' => ['https://github.com/o/r/tree/main/a%7Cb'],
+            'the register separator, unencoded' => ['https://github.com/o/r/tree/main/a|b'],
             'a hash in a folder' => ['https://github.com/o/r/tree/main/C%23'],
             'bytes outside UTF-8' => ['https://github.com/o/r/blob/main/%FF.yml'],
         ];

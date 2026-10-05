@@ -195,11 +195,11 @@ class CodecheckPublicationValidator
      * Asked only while the journal deposits to the register, and of a marked
      * repository that is public: a private one is the check above's subject.
      * The "contains codecheck.yml" checkbox asks it of the address being
-     * marked, before anything is saved.
+     * marked, before anything is saved, and not `$forPublication`: there a
+     * branch GitHub cannot confirm is refused, and the reason is plain text.
      */
-    public function validateSelectedRepositoryCanBeNamedInRegister(?string $repository = null): bool
+    public function validateSelectedRepositoryCanBeNamedInRegister(?string $repository = null, bool $forPublication = true): bool
     {
-        $isPublishing = $repository === null;
 
         if ($this->context === null || !$this->plugin->isRegisterDepositEnabled($this->context->getId())) {
             return true;
@@ -213,16 +213,16 @@ class CodecheckPublicationValidator
         try {
             // Publication does not wait on GitHub: a branch it could not
             // compare is the deposit's to refuse.
-            $this->codecheckMetadataHandler->registerRepositoryName($repository, acceptUnconfirmedBranch: $isPublishing);
+            $this->codecheckMetadataHandler->registerRepositoryName($repository, acceptUnconfirmedBranch: $forPublication);
         } catch (UnsupportedRepositoryAddressException $e) {
             // An address of no kind the register names is left to the deposit,
             // as before, so it does not start blocking publication.
             return true;
         } catch (\UnexpectedValueException $e) {
             // The reason names a file or branch from the address, and the
-            // publish dialog renders the errors as HTML.
+            // publish dialog renders the errors as HTML; the checkbox, as text.
             $this->errors[] = __('plugins.generic.codecheck.publication.validation.invalidRepository', [
-                'repositoryError' => htmlspecialchars($e->getMessage()),
+                'repositoryError' => $forPublication ? htmlspecialchars($e->getMessage()) : $e->getMessage(),
             ]);
             return false;
         } catch (\Throwable $e) {

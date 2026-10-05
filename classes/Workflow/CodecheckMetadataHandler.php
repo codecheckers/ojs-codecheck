@@ -12,12 +12,14 @@ use APP\plugins\generic\codecheck\classes\CodecheckRegister\GithubHttp;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\RegisterCodecheckers;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\DoiDeposit\CodecheckDoiDeposit;
+use APP\plugins\generic\codecheck\classes\Exceptions\GithubUnreachableException;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckCodecheckerDirectory;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckCodecheckers;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckRepositories;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionAccess;
 use APP\plugins\generic\codecheck\classes\Submission\GithubRepositoryAddress;
+use APP\plugins\generic\codecheck\classes\Submission\GitlabRepositoryAddress;
 use APP\plugins\generic\codecheck\classes\Submission\OsfRepositoryAddress;
 use APP\plugins\generic\codecheck\classes\Submission\ZenodoRepositoryAddress;
 use Github\Client;
@@ -653,10 +655,8 @@ class CodecheckMetadataHandler
             return $this->importMetadataFromOSF($repository, $osfAddress);
         }
         // Check if the Repository is a GitLab Repository
-        elseif (preg_match('#^https://gitlab\.com/cdchck/community-codechecks/([^/]+)/?$#', $repository)) {
-            // Remove trailing / if it exists
-            $repository = rtrim($repository, '/');
-            return $this->importMetadataFromGitLab($repository);
+        elseif (($gitlabAddress = GitlabRepositoryAddress::parse($repository)) !== null) {
+            return $this->readYamlContent(GitlabRepositoryAddress::downloadUrl($gitlabAddress), $repository);
         } else {
             return new JsonResponse([
                 'success' => false,
@@ -691,7 +691,7 @@ class CodecheckMetadataHandler
             $branch = $this->client->api('repo')->show($owner, $repo)['default_branch'] ?? null;
         } catch (\Exception $e) {
             if (GithubHttp::wasUnreachable()) {
-                throw new \UnexpectedValueException(GithubHttp::unreachableMessage('plugins.generic.codecheck.repositories.githubUnreachable'));
+                throw new GithubUnreachableException(GithubHttp::unreachableMessage('plugins.generic.codecheck.repositories.githubUnreachable'));
             }
             // Unauthenticated, GitHub answers 404 for a private repository too.
             if ($e->getCode() === 404) {
@@ -810,21 +810,6 @@ class CodecheckMetadataHandler
             'error' => "{$filename} not found",
             'repository' => $repository,
         ], 404);
-    }
-
-    /**
-     * Import the codecheck metadata from an existing `codecheck.yml` from the CODECHECK GitLab Repository
-     *
-     * @param string $repository The GitLab Repository
-     *
-     * @return JsonResponse The Metadata from the Repositories `codecheck.yml`
-     */
-    private function importMetadataFromGitLab(string $repository): JsonResponse
-    {
-        $filename = 'codecheck.yml';
-        $pathToCodecheckYaml = $repository . '/-/raw/main/' . $filename . '?ref_type=heads&inline=false';
-
-        return $this->readYamlContent($pathToCodecheckYaml, $repository);
     }
 
     /**

@@ -1068,7 +1068,7 @@ class CodecheckApiController extends PKPBaseController
         // The address being marked as holding the `codecheck.yml` must also be
         // one the register can name, or the deposit refuses it later (#36).
         // That needs no request for most addresses, so it is asked first.
-        if ($publicationValidator->validateSelectedRepositoryCanBeNamedInRegister($repository)) {
+        if ($publicationValidator->validateSelectedRepositoryCanBeNamedInRegister($repository, forPublication: false)) {
             $publicationValidator->validateMetadataFromRepository($repository);
         }
         $errors = $publicationValidator->getErrors();

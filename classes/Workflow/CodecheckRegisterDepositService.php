@@ -91,7 +91,7 @@ class CodecheckRegisterDepositService
         // Convert the URL into the register's `Repository` column format
         // (e.g. github::org/repo, zenodo::id, osf::id, gitlab::path) first, so
         // an address the register cannot name is refused before the file is
-        // fetched; only a GitHub address naming a branch costs a request.
+        // fetched; only a DOI and a GitHub address naming a branch cost a request.
         try {
             $formattedRepository = $this->codecheckMetadataHandler->registerRepositoryName($repositoryUrl);
         } catch (\Throwable $e) {

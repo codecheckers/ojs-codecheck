@@ -53,7 +53,7 @@ final class GithubRepositoryAddress
         $segments = array_map('rawurldecode', explode('/', trim($rest, '/')));
         // Nothing decoded may break the `register.csv` row it ends up in.
         foreach ($segments as $segment) {
-            if (preg_match('/[\x00-\x1f\x7f",#]/', $segment) || !mb_check_encoding($segment, 'UTF-8')) {
+            if (preg_match('/[\x00-\x1f\x7f",#|]/', $segment) || !mb_check_encoding($segment, 'UTF-8')) {
                 return null;
             }
         }

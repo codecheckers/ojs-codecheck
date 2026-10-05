@@ -630,22 +630,28 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $this->assertEquals($errorMessage, $actualMetadataReturnArray['error']);
     }
 
-    public function testImportMetadataFromGitlab()
+    public static function gitlabAddressProvider(): array
     {
-        $repository = 'https://gitlab.com/cdchck/community-codechecks/2022-svaRetro-svaNUMT';
-        $client = $this->createMock(\Github\Client::class);
-        $request = new Request();
-        $curlApiClient = $this->createMock(CurlApiClient::class);
-        $curlApiClient->method('resolveDoi')->willReturn($repository);
-        $curlApiClient->method('fetch')->willReturn('test: yaml');
-        $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
+        return [
+            'project' => ['https://gitlab.com/cdchck/community-codechecks/2022-svaRetro-svaNUMT', 'https://gitlab.com/cdchck/community-codechecks/2022-svaRetro-svaNUMT/-/raw/main/codecheck.yml?inline=false'],
+            'project of another group' => ['https://gitlab.com/codecheckers/Piccolo-2020', 'https://gitlab.com/codecheckers/Piccolo-2020/-/raw/main/codecheck.yml?inline=false'],
+            'file on a branch' => ['https://gitlab.com/codecheckers/Piccolo-2020/-/blob/dev/7/codecheck.yml', 'https://gitlab.com/codecheckers/Piccolo-2020/-/raw/dev/7/codecheck.yml?inline=false'],
+        ];
+    }
+
+    #[DataProvider('gitlabAddressProvider')]
+    public function testImportMetadataFromGitlab(string $repository, string $download)
+    {
+        $this->handler = $this->handlerAnswering(['test: yaml'], $fetched);
+
         $response = $this->handler->importMetadataFromRepository($repository);
-        $actualMetadataReturnArray = json_decode($response->getPayload(), true);
+
+        $this->assertSame([$download], $fetched);
         $this->assertEquals(200, $response->getHttpResponseCode());
-        $this->assertCount(3, $actualMetadataReturnArray);
-        $this->assertTrue($actualMetadataReturnArray['success']);
-        $this->assertEquals($repository, $actualMetadataReturnArray['repository']);
-        $this->assertEquals(['test' => 'yaml'], $actualMetadataReturnArray['metadata']);
+        $this->assertSame(
+            ['success' => true, 'repository' => $repository, 'metadata' => ['test' => 'yaml']],
+            $response->getPayloadArray()
+        );
     }
 
     public function testReadYamlContentFetchRefused()

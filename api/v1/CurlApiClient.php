@@ -104,13 +104,14 @@ class CurlApiClient implements ApiClientInterface
                     $effectiveUrl = (string) $stats->getEffectiveUri();
                 },
             ]);
-            $status = $response->getStatusCode();
             $response->getBody()->close();
         } catch (\Throwable $e) {
             return $possibleDoiUrl;
         }
 
-        if (!$effectiveUrl || $status >= 400) {
+        // Resolved once the redirect leaves doi.org, whatever the landing page
+        // then answers: Zenodo refuses a crawler now and then.
+        if (!$effectiveUrl || preg_match('#^https?://(?:dx\.)?doi\.org/#i', $effectiveUrl)) {
             return $possibleDoiUrl;
         }
 

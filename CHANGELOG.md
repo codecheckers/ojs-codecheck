@@ -27,7 +27,7 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 - A save or status change that could not bring the register issue up to date says so beside its result; calls to GitHub give up after 10 seconds (#186)
 - The CODECHECK venue list and the community's lists of codecheckers are refreshed by an OJS scheduled task, daily or weekly as chosen by the new setting *Refresh of the CODECHECK lists* (#65)
 - In OJS's sandbox mode the plugin reads neither the CODECHECK venue list nor the lists of codecheckers (#65)
-- While the journal deposits to the register, publishing is refused, and marking a repository as containing the `codecheck.yml` warns, with the reason, for an address the register cannot name: an OSF file link, a GitHub address on a branch other than the default, or a file not called `codecheck.yml`. A GitLab project is deposited by its whole path (#36)
+- While the journal deposits to the register, publishing is refused, and marking a repository as containing the `codecheck.yml` warns, with the reason, for an address the register cannot name: an OSF file link, a GitHub address on a branch other than the default, a GitLab address other than a project with its `codecheck.yml` at the top level of `main`, or a file not called `codecheck.yml` (#36)
 
 #### DOI deposits
 
@@ -36,6 +36,7 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 #### Frontend
 
 - With the new setting *Certificate in the References*, the published CODECHECK certificate is listed among the article's references, from a button on the CODECHECK tab or also automatically whenever a version is published; a line already citing the certificate is updated where it stands and no other reference is changed (#183)
+- Loading metadata from GitLab works for any gitlab.com project, including its clone address and links to a branch, a folder or the `codecheck.yml` itself; the register is given only a project with its `codecheck.yml` at the top level of `main`, by its whole path (#36)
 - Loading metadata from Zenodo works for records of any age, from the older `record/` addresses, from a link to a file in the record and from the Zenodo sandbox, which is deposited to the register as `zenodo-sandbox::` (#36)
 - Loading metadata from OSF works for a link to the `codecheck.yml`'s file page, and finds the `codecheck.yml` in a project with many files (#36)
 - Loading metadata from GitHub works for a repository of any owner, and for a link to a branch, a folder or the `codecheck.yml` itself, `raw.githubusercontent.com` links included; such a repository is named by its folder in `register.csv` (#36)
