@@ -102,9 +102,8 @@ describe('CODECHECK UI surfaces', () => {
   });
 
   /**
-   * The add-codechecker dialog with the journal's directory and an offered
-   * GitHub username (#186). Both answers are stubbed: the directory is empty on
-   * a fresh dataset, and the real offer comes from GitHub, which no capture
+   * The add-codechecker dialog with an offered GitHub username (#186). The
+   * answer is stubbed: the real offer comes from GitHub, which no capture
    * pass reaches. Nothing is added.
    */
   it('add-codechecker dialog with an offered GitHub username', function () {
@@ -113,12 +112,8 @@ describe('CODECHECK UI surfaces', () => {
     }
 
     cy.intercept(
-      { method: 'GET', pathname: `/index.php/${JOURNAL}/api/v1/codecheck/codecheckers` },
-      { success: true, codecheckers: [{ name: 'Stephen J. Eglen', orcid: '0000-0001-8607-8025', github: 'sje30' }] }
-    );
-    cy.intercept(
       { method: 'GET', pathname: `/index.php/${JOURNAL}/api/v1/codecheck/codecheckers/lookup` },
-      { success: true, github: 'nuest', source: 'community' }
+      { success: true, github: 'nuest' }
     );
     cy.visit(
       `/index.php/${JOURNAL}/dashboard/editorial` +

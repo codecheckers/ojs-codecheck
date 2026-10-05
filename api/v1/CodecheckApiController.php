@@ -44,13 +44,13 @@ use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegis
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterIssue;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckIssueLabels;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckPostOrigin;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\CommunityCodecheckers;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\GithubHttp;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\classes\Orcid\OrcidApiClient;
 use APP\plugins\generic\codecheck\classes\Orcid\OrcidDepositService;
 use APP\plugins\generic\codecheck\classes\Orcid\OrcidTokenDAO;
-use APP\plugins\generic\codecheck\classes\Submission\CodecheckCodecheckerDirectory;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckCodecheckers;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionAccess;
 use APP\plugins\generic\codecheck\classes\Workflow\CertificateReferenceUpdate;
@@ -217,11 +217,7 @@ class CodecheckApiController extends PKPBaseController
         Route::get('labels', $this->getCodecheckIssueLabels(...))
             ->name('codecheck.labels')->middleware($admin);
 
-        // The journal's directory spans every submission, so it stays with the
-        // editors: a reviewer is held to one submission everywhere else (#186).
-        Route::get('codecheckers', $this->getCodecheckerDirectory(...))
-            ->name('codecheck.codecheckers.list')->middleware($editor);
-
+        // The community list is for an editor adding a codechecker (#186).
         Route::get('codecheckers/lookup', $this->lookupGithubUsername(...))
             ->name('codecheck.codecheckers.lookup')->middleware($editor);
 
@@ -800,41 +796,17 @@ class CodecheckApiController extends PKPBaseController
     }
 
     /**
-     * GET api/v1/codecheck/codecheckers
-     *
-     * The journal's directory of codecheckers, for the "add codechecker"
-     * dialog to pick from (#186).
-     */
-    public function getCodecheckerDirectory(): \Illuminate\Http\JsonResponse
-    {
-        $context = Application::get()->getRequest()->getContext();
-
-        return response()->json([
-            'success' => true,
-            'codecheckers' => CodecheckCodecheckerDirectory::listForContext($context->getId()),
-        ], 200);
-    }
-
-    /**
      * GET api/v1/codecheck/codecheckers/lookup?orcid=…
      *
-     * The GitHub username to suggest for an ORCID iD: the journal's own record
-     * first, then the CODECHECK community list. Answers `github: null` when
-     * neither knows one, including for something that is not an iD — the
-     * dialog has already said so beside the field.
+     * The GitHub username the CODECHECK community list records for an ORCID
+     * iD. Answers `github: null` when it knows none, including for something
+     * that is not an iD — the dialog has already said so beside the field.
      */
     public function lookupGithubUsername(IlluminateRequest $illuminateRequest): \Illuminate\Http\JsonResponse
     {
-        $context = Application::get()->getRequest()->getContext();
-        $suggestion = CodecheckCodecheckerDirectory::suggestGithubUsername(
-            $context->getId(),
-            (string) $illuminateRequest->query('orcid', '')
-        );
-
         return response()->json([
             'success' => true,
-            'github' => $suggestion['github'] ?? null,
-            'source' => $suggestion['source'] ?? null,
+            'github' => CommunityCodecheckers::githubUsernameFor((string) $illuminateRequest->query('orcid', '')),
         ], 200);
     }
 

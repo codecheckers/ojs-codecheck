@@ -14,7 +14,6 @@ use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\DoiDeposit\CodecheckDoiDeposit;
 use APP\plugins\generic\codecheck\classes\Exceptions\GithubUnreachableException;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
-use APP\plugins\generic\codecheck\classes\Submission\CodecheckCodecheckerDirectory;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckCodecheckers;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckRepositories;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionAccess;
@@ -311,13 +310,9 @@ class CodecheckMetadataHandler
 
     /**
      * What a save sets off beyond the record (#186), for an
-     * editor only: the journal's directory and the register issue are both
-     * journal-wide, and a reviewer is held to one submission everywhere else
-     * (#173).
+     * editor only: the register issue is journal-wide, and a reviewer is held
+     * to one submission everywhere else (#173).
      *
-     * - The directory learns the entries this save brings in or changes, not
-     *   the ones it carries unchanged: an older record re-saved must not put
-     *   back a name or username a newer check replaced.
      * - The register issue is assigned when this save brings in a username, or
      *   records the issue for the first time — the identifier is reserved
      *   before the record holds the issue, so the assignment waits for this
@@ -332,11 +327,6 @@ class CodecheckMetadataHandler
         }
 
         $storedCodecheckers = CodecheckCodecheckers::withNormalizedEntries($stored->codecheckers ?? null);
-
-        CodecheckCodecheckerDirectory::rememberAll(
-            $context->getId(),
-            array_values(array_filter($codecheckers, fn (array $entry) => !in_array($entry, $storedCodecheckers, true)))
-        );
 
         $newUsernames = array_diff(RegisterCodecheckers::usernames($codecheckers), RegisterCodecheckers::usernames($storedCodecheckers));
         $storedIssueNumber = json_decode($stored->issue ?? '', true)['number'] ?? null;

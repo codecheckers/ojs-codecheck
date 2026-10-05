@@ -46,7 +46,6 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 - Loading metadata from OSF works for a link to the `codecheck.yml`'s file page, and finds the `codecheck.yml` in a project with many files (#36)
 - Loading metadata from GitHub works for a repository of any owner, and for a link to a branch, a folder or the `codecheck.yml` itself, `raw.githubusercontent.com` links included; such a repository is named by its folder in `register.csv` (#36)
 - The editorial CODECHECK form names the submission's primary contact, with a link that emails them about the check (#28)
-- The "add codechecker" dialog offers the codecheckers the journal has recorded since this release (#186)
 - The publication's Metadata page shows the article's CODECHECK badge, certificate identifier, status and `codecheck.yml` preview, and which destinations receive its metadata: the register issue, `register.csv`, ORCID, the article page and the issue table of contents (#34)
 
 #### Under the hood

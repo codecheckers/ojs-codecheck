@@ -771,20 +771,11 @@ msgstr "GitHub username (optional)"
 msgid "plugins.generic.codecheck.codecheckers.githubHint"
 msgstr "The register issue is assigned to this account. Without one, the issue names the codechecker and refers readers to the journal."
 
-msgid "plugins.generic.codecheck.codecheckers.githubSuggested.directory"
-msgstr "This journal has recorded the GitHub username {$username} for this ORCID iD."
-
 msgid "plugins.generic.codecheck.codecheckers.githubSuggested.community"
 msgstr "The CODECHECK community list gives the GitHub username {$username} for this ORCID iD."
 
 msgid "plugins.generic.codecheck.codecheckers.githubSuggestion.use"
 msgstr "Use it"
-
-msgid "plugins.generic.codecheck.codecheckers.directory"
-msgstr "Choose a codechecker this journal has worked with"
-
-msgid "plugins.generic.codecheck.codecheckers.directory.none"
-msgstr "Someone new"
 
 msgid "plugins.generic.codecheck.codecheckers.validation.githubInvalid"
 msgstr "This is not a GitHub username. Enter the username alone, for example octocat, or leave the field empty."

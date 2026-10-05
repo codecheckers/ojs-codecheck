@@ -160,7 +160,7 @@ Roles per route: `READ_ROLES` (admits authors), `WRITE_ROLES`, `EDITOR_ROLES`
 and add the method to `SUBMISSION_SCOPED` if it acts on a submission —
 otherwise it answers for any submission in the journal.
 
-Endpoints: `GET labels|metadata|yaml|register|status|status/history|orcid-status|orcid-test|codecheckers|codecheckers/lookup`,
+Endpoints: `GET labels|metadata|yaml|register|status|status/history|orcid-status|orcid-test|codecheckers/lookup`,
 `POST identifier|issue|metadata|references|repository|repository/validate|yaml/validate|status/update|orcid-deposit`.
 
 **There is deliberately no file upload/download endpoint**
@@ -185,7 +185,7 @@ assignment):
   and sends no `issue` update; `saveMetadata()` keeps the stored `certificate` and `issue`
   for anyone else. Automatic register writes (status comment, labels, JSON
   block) are not covered by it.
-- `isEditor()` — gates directory writes and GitHub assignment.
+- `isEditor()` — gates GitHub assignment.
 - `permissions()` (#127) — what the forms offer, built from the rules above:
   `GET metadata` answers `permissions` (`write`, `editCodecheckers`,
   `manageIdentifier`, `addCertificateReference`), `GET status` `canUpdate`,
@@ -219,8 +219,6 @@ Tables (`classes/migration/install/CodecheckSchemaMigration.php`):
 - `codecheck_status` — append-only status history (FK, cascade delete)
 - `codecheck_issue_labels` — venue labels, replaced by the scheduled refresh
 - `codecheck_orcid_tokens` — ORCID tokens per codechecker
-- `codecheck_codecheckers` — per-journal directory (#186), unique on ORCID iD
-  and on username
 
 Migrations: `CodecheckMigration` base (`runUp()`; `down()` throws). No install of a
 release exists (decision 2026-10-05), so the install migration creates the final schema directly (each
@@ -315,10 +313,9 @@ end of a request for another journal (pkp-lib#9345) — cron works.
 digit computed locally, not `ValidatorORCID`, which needs a booted app; stored
 bare). Imported `codecheck.yml` spells it `ORCID` — `importedCodecheckers()`
 maps it. `buildYaml()` normalises author (URI) and codechecker (bare) iDs to
-one shape. `CodecheckCodecheckerDirectory` remembers entries from editorial
-saves for the dialog's picker; checks never read from it. Username suggestion
-order: directory, then community list (`suggestGithubUsername()`); the dialog
-offers a suggestion with "Use it", never fills it in.
+one shape. A username is suggested from the community list
+(`GET codecheckers/lookup`); the dialog offers it with "Use it", never fills
+it in.
 
 ### ORCID deposit (`classes/Orcid/`)
 

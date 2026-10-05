@@ -97,24 +97,6 @@ class CodecheckSchemaMigration extends CodecheckMigration
             });
         }
 
-        // codecheck_codecheckers — per-journal directory of codecheckers (#186)
-        if (!Schema::hasTable('codecheck_codecheckers')) {
-            Schema::create('codecheck_codecheckers', function (Blueprint $table) {
-                $table->bigIncrements('codechecker_id');
-                $table->bigInteger('context_id');
-                $table->string('name', 255);
-                // Bare form, as `CodecheckCodecheckers::normalizeOrcid()` stores it.
-                $table->string('orcid', 19)->nullable();
-                // GitHub allows 39 characters.
-                $table->string('github_username', 39)->nullable();
-                $table->timestamps();
-                // Each unique key admits any number of NULLs, so an entry known by
-                // only one of the two identifiers is fine.
-                $table->unique(['context_id', 'orcid'], 'codecheck_codecheckers_orcid');
-                $table->unique(['context_id', 'github_username'], 'codecheck_codecheckers_github');
-            });
-        }
-
         $this->createCodecheckGenres();
         $this->writeDefaultSettings();
     }

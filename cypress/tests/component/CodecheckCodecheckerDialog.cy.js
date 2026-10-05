@@ -28,16 +28,12 @@ describe('CodecheckCodecheckerDialog', () => {
 
   const submit = () => cy.contains('.modal-actions button', 'Add').click();
 
-  // Matched on the path alone: a URL string matches by substring, so the
-  // directory's would answer the lookup's requests too.
-  const DIRECTORY = { method: 'GET', pathname: '/api/v1/codecheck/codecheckers' };
   const LOOKUP = { method: 'GET', pathname: '/api/v1/codecheck/codecheckers/lookup' };
 
-  // No directory and no suggestion unless a test says otherwise, so no test
-  // reaches past the mock.
+  // No suggestion unless a test says otherwise, so no test reaches past the
+  // mock.
   beforeEach(() => {
-    cy.intercept(DIRECTORY, { success: true, codecheckers: [] }).as('directory');
-    cy.intercept(LOOKUP, { success: true, github: null, source: null }).as('lookup');
+    cy.intercept(LOOKUP, { success: true, github: null }).as('lookup');
   });
 
   it('hands over the name and the ORCID it was given, then closes', () => {
@@ -194,8 +190,8 @@ describe('CodecheckCodecheckerDialog', () => {
      * Offered, never filled in: the blur that asks is also the one pressing
      * Add causes, so a value filled in then would be added unseen.
      */
-    it('offers a username for a known ORCID iD, says where from, and fills it only when taken', () => {
-      cy.intercept(LOOKUP, { success: true, github: 'jcarberry', source: 'community' }).as('lookup');
+    it('offers a username for a known ORCID iD and fills it only when taken', () => {
+      cy.intercept(LOOKUP, { success: true, github: 'jcarberry' }).as('lookup');
       mountDialog();
       cy.get('input[id^=codecheck-checker-name]').type('Josiah Carberry');
       cy.get('input[id^=codecheck-checker-orcid]').type('0000-0002-1825-0097').blur();
@@ -217,7 +213,7 @@ describe('CodecheckCodecheckerDialog', () => {
     });
 
     it('adds no username the editor did not take', () => {
-      cy.intercept(LOOKUP, { success: true, github: 'jcarberry', source: 'community' }).as('lookup');
+      cy.intercept(LOOKUP, { success: true, github: 'jcarberry' }).as('lookup');
       mountDialog();
       cy.get('input[id^=codecheck-checker-name]').type('Josiah Carberry');
       cy.get('input[id^=codecheck-checker-orcid]').type('0000-0002-1825-0097');
@@ -229,7 +225,7 @@ describe('CodecheckCodecheckerDialog', () => {
     });
 
     it('withdraws the offer when the ORCID iD changes', () => {
-      cy.intercept(LOOKUP, { success: true, github: 'jcarberry', source: 'community' }).as('lookup');
+      cy.intercept(LOOKUP, { success: true, github: 'jcarberry' }).as('lookup');
       mountDialog();
       cy.get('input[id^=codecheck-checker-orcid]').type('0000-0002-1825-0097').blur();
       cy.get('.codecheck-github-suggestion').should('exist');
@@ -238,7 +234,7 @@ describe('CodecheckCodecheckerDialog', () => {
     });
 
     it('never replaces a username the editor typed', () => {
-      cy.intercept(LOOKUP, { success: true, github: 'jcarberry', source: 'community' }).as('lookup');
+      cy.intercept(LOOKUP, { success: true, github: 'jcarberry' }).as('lookup');
       mountDialog();
       cy.get('input[id^=codecheck-checker-github]').type('typed-by-hand');
       cy.get('input[id^=codecheck-checker-orcid]').type('0000-0002-1825-0097').blur();
@@ -268,61 +264,4 @@ describe('CodecheckCodecheckerDialog', () => {
       ]));
     });
   });
-
-  describe("the journal's directory (#186)", () => {
-    it('offers no picker while the journal has no codecheckers on file', () => {
-      mountDialog();
-      cy.wait('@directory');
-      cy.get('select[id^=codecheck-checker-directory]').should('not.exist');
-    });
-
-    it('fills all three fields from a codechecker on file', () => {
-      cy.intercept(DIRECTORY, {
-        success: true,
-        codecheckers: [
-          { name: 'Daniel Nüst', orcid: '0000-0002-0024-5046', github: 'nuest' },
-          { name: 'Josiah Carberry', orcid: '0000-0002-1825-0097', github: '' }
-        ]
-      }).as('directory');
-      mountDialog();
-      cy.get('select[id^=codecheck-checker-directory]').select('Daniel Nüst · 0000-0002-0024-5046 · @nuest');
-
-      cy.get('input[id^=codecheck-checker-name]').should('have.value', 'Daniel Nüst');
-      cy.get('input[id^=codecheck-checker-orcid]').should('have.value', '0000-0002-0024-5046');
-      cy.get('input[id^=codecheck-checker-github]').should('have.value', 'nuest');
-      submit();
-
-      cy.then(() => expect(submitted).to.deep.equal([
-        { name: 'Daniel Nüst', orcid: '0000-0002-0024-5046', github: 'nuest' }
-      ]));
-    });
-  
-    it('offers the username the journal has on file without asking the server', () => {
-      cy.intercept(DIRECTORY, {
-        success: true,
-        codecheckers: [{ name: 'Daniel Nüst', orcid: '0000-0002-0024-5046', github: 'nuest' }]
-      }).as('directory');
-      mountDialog();
-      cy.wait('@directory');
-      cy.get('input[id^=codecheck-checker-orcid]').type('0000-0002-0024-5046').blur();
-
-      cy.get('.codecheck-github-suggestion')
-        .should('contain.text', 'This journal has recorded the GitHub username nuest');
-      cy.get('@lookup.all').should('have.length', 0);
-    });
-
-    it('empties the fields an earlier pick filled when "someone new" is chosen', () => {
-      cy.intercept(DIRECTORY, {
-        success: true,
-        codecheckers: [{ name: 'Daniel Nüst', orcid: '0000-0002-0024-5046', github: 'nuest' }]
-      }).as('directory');
-      mountDialog();
-      cy.get('select[id^=codecheck-checker-directory]').select('Daniel Nüst · 0000-0002-0024-5046 · @nuest');
-      cy.get('select[id^=codecheck-checker-directory]').select('plugins.generic.codecheck.codecheckers.directory.none');
-
-      cy.get('input[id^=codecheck-checker-name]').should('have.value', '');
-      cy.get('input[id^=codecheck-checker-orcid]').should('have.value', '');
-      cy.get('input[id^=codecheck-checker-github]').should('have.value', '');
-    });
-});
 });

@@ -20,7 +20,7 @@ describe('The add-codechecker dialog', () => {
     // call, so the answer is stubbed (#186).
     cy.intercept(
       { method: 'GET', pathname: '/index.php/codecheck/api/v1/codecheck/codecheckers/lookup' },
-      { success: true, github: null, source: null }
+      { success: true, github: null }
     );
     cy.ojsLogin('admin', 'admin');
     cy.visit(
