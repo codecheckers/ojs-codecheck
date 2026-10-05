@@ -72,11 +72,24 @@ class CodecheckSubmissionAccessUnitTest extends PKPTestCase
         ];
     }
 
-    public function testAnEditorMayWriteAnySubmissionInTheirJournal()
+    /**
+     * A manager writes any submission in their journal; a Section editor or
+     * Assistant only with a stage assignment on it, which is a lookup; no test
+     * logs in as such a user yet, as the dataset has none (#127).
+     */
+    public function testAManagerMayWriteAnySubmissionInTheirJournal()
     {
-        $editor = $this->userWithRoles([Role::ROLE_ID_SUB_EDITOR]);
+        $manager = $this->userWithRoles([Role::ROLE_ID_MANAGER]);
 
-        $this->assertTrue(CodecheckSubmissionAccess::canWriteMetadata($editor, 42, 1));
+        $this->assertTrue(CodecheckSubmissionAccess::canWriteMetadata($manager, 42, 1));
+        $this->assertTrue(CodecheckSubmissionAccess::isEditorOn($manager, 42, 1));
+    }
+
+    /** No user and no submission are refused before any lookup (#127). */
+    public function testNobodyIsAnEditorOnNothing()
+    {
+        $this->assertFalse(CodecheckSubmissionAccess::isEditorOn(null, 42, 1));
+        $this->assertFalse(CodecheckSubmissionAccess::isEditorOn($this->userWithRoles([Role::ROLE_ID_MANAGER]), 0, 1));
     }
 
     /** No user, no access — and no database query to find that out. */

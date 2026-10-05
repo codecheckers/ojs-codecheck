@@ -90,6 +90,7 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 - An ORCID account can be connected to a submission, and is credited for its check on ORCID, only when its iD is recorded for one of the submission's codecheckers (advisory GHSA-4p3r-qgp4-g74r)
 - Only an editor can change a CODECHECK's codecheckers; the assigned reviewer's form shows them read-only (advisory GHSA-4p3r-qgp4-g74r)
 - Only a journal manager or an administrator can reserve, link or remove a certificate identifier; everyone else's form shows it read-only (#65)
+- A section editor or assistant can change a CODECHECK, record its status and deposit for all its codecheckers only on a submission they are assigned to as an editor, not on one they reach as its author or as an invited reviewer (#127)
 
 ## [0.1.0.0] - 2026-09-30
 

@@ -185,7 +185,12 @@ assignment):
   and sends no `issue` update; `saveMetadata()` keeps the stored `certificate` and `issue`
   for anyone else. Automatic register writes (status comment, labels, JSON
   block) are not covered by it.
-- `isEditor()` — gates directory writes and GitHub assignment.
+- `isEditor()` — journal-wide: gates directory writes and GitHub assignment.
+- `isEditorOn()` (#127) — per submission: manager/site admin, or Section
+  editor/Assistant with a stage assignment on it. `canWriteMetadata()` (an
+  editor on it, or the assigned reviewer) and the ORCID deposit scope use it,
+  so a journal-wide Section editor who reaches a submission only as its author
+  or as an invited reviewer is not treated as its editor.
 - `permissions()` (#127) — what the forms offer, built from the rules above:
   `GET metadata` answers `permissions` (`write`, `editCodecheckers`,
   `manageIdentifier`, `addCertificateReference`), `GET status` `canUpdate`,

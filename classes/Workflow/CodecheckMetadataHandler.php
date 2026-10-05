@@ -327,7 +327,7 @@ class CodecheckMetadataHandler
     private function afterSave($request, int $submissionId, ?object $stored, array $codecheckers, string $issue): void
     {
         $context = $request->getContext();
-        if (!$context || !CodecheckSubmissionAccess::isEditor($request->getUser(), $context->getId())) {
+        if (!$context || !CodecheckSubmissionAccess::isEditorOn($request->getUser(), $submissionId, $context->getId())) {
             return;
         }
 

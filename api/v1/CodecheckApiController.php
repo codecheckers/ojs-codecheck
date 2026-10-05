@@ -330,7 +330,8 @@ class CodecheckApiController extends PKPBaseController
         $result['permissions'] = CodecheckSubmissionAccess::permissions(
             $request->getUser(),
             (int) $submission->getId(),
-            (int) $request->getContext()?->getId()
+            (int) $request->getContext()?->getId(),
+            ($result['settings']['certificateReferenceMode'] ?? null) === Constants::CODECHECK_CERTIFICATE_REFERENCE_OFF
         );
 
         return response()->json(array_merge($result, ['success' => true]), 200);
@@ -346,6 +347,12 @@ class CodecheckApiController extends PKPBaseController
     {
         $request = Application::get()->getRequest();
         $submission = $this->getAuthorizedContextObject(Application::ASSOC_TYPE_SUBMISSION);
+
+        // The route's role list is journal-wide: a Section editor who reaches
+        // this submission only as its author or an invited reviewer is not its editor (#127).
+        if (!CodecheckSubmissionAccess::isEditorOn($request->getUser(), (int) $submission->getId(), (int) $request->getContext()?->getId())) {
+            return $this->roleRefusal();
+        }
 
         $result = (new CertificateReferenceUpdate($this->plugin))->addToLatestPublication($submission, (int) $request->getUser()->getId());
 
@@ -409,6 +416,12 @@ class CodecheckApiController extends PKPBaseController
             return null;
         }
 
+        return $this->roleRefusal();
+    }
+
+    /** The answer PKP's role authorizer gives, for a refusal made inside a handler. */
+    private function roleRefusal(): \Illuminate\Http\JsonResponse
+    {
         return response()->json([
             'success' => false,
             'error' => 'user.authorization.roleBasedAccessDenied',
@@ -604,15 +617,9 @@ class CodecheckApiController extends PKPBaseController
         $onlyOrcidId = is_string($requested) && $requested !== '' ? $requested : null;
 
         if ($scope === 'none') {
-            // SubmissionAccessPolicy has already refused a reviewer who is not
-            // assigned here — depositToOrcid is in SUBMISSION_SCOPED — so this is
-            // the second lock rather than the one holding the door. It stays
-            // because dropping this route from that list would otherwise open
-            // the deposit silently (#175).
-            return response()->json([
-                'success' => false,
-                'error' => 'Only an editor, or a reviewer assigned to this submission, may deposit to ORCID.',
-            ], 403);
+            // The policy has already refused a reviewer not assigned here; this
+            // is the second lock, kept in case the route leaves SUBMISSION_SCOPED (#175).
+            return $this->roleRefusal();
         }
 
         if ($scope === 'own') {
