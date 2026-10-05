@@ -53,6 +53,7 @@ use APP\plugins\generic\codecheck\classes\Orcid\OrcidTokenDAO;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckCodecheckerDirectory;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckCodecheckers;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionAccess;
+use APP\plugins\generic\codecheck\classes\Tasks\RefreshCodecheckLists;
 use APP\plugins\generic\codecheck\classes\Workflow\CertificateReferenceUpdate;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckPublicationValidator;
@@ -63,7 +64,6 @@ use APP\plugins\generic\codecheck\CodecheckPlugin;
 use Illuminate\Http\Request as IlluminateRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Schema;
 use PKP\core\PKPBaseController;
 use PKP\core\PKPRequest;
 use PKP\security\authorization\ContextAccessPolicy;
@@ -694,57 +694,50 @@ class CodecheckApiController extends PKPBaseController
 
 
     /**
-     * Gets the Issue Labels of the CODECHECK API
+     * GET api/v1/codecheck/labels
      *
+     * The venue labels the scheduled refresh stored (#65), with the journal's
+     * own. The list is read here only while nothing is stored, or what is
+     * stored has outlived the backstop: a failure then keeps the stored labels,
+     * and with none stored answers the journal's own and a `labelsWarning`,
+     * since the form still works without the venues.
      */
     public function getCodecheckIssueLabels(): \Illuminate\Http\JsonResponse
     {
-        $request = Application::get()->getRequest();
-        $dbLabelsOutdated = false;
-
-        try {
-            $issueLabelsLastUpdated = strtotime($this->getIssueLabelsLastUpdated());
-        } catch (\Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage(),
-            ], JsonResponse::errorStatus($e));
-        }
-        $now = strtotime(date('Y-m-d H:i:s'));
-        $timeDifferenceInHours = round(($now - $issueLabelsLastUpdated) / 3600);
-
-        if ($timeDifferenceInHours > 6) {
-            $dbLabelsOutdated = true;
-        }
+        $context = Application::get()->getRequest()->getContext();
 
         $codecheckIssueLabels = CodecheckIssueLabels::fromDB();
+        $labelsWarning = null;
 
-        if ($dbLabelsOutdated) {
+        // A failed read holds off the next for an hour, here as in the task, so
+        // an unreachable list costs one timeout an hour, not one per form load.
+        $lastUpdated = CodecheckIssueLabels::lastUpdated();
+        if ($lastUpdated === null || time() - $lastUpdated > CodecheckIssueLabels::STORED_LABELS_BACKSTOP_SECONDS) {
             try {
-                $codecheckIssueLabels = CodecheckIssueLabels::fromApi('https://codecheck.org.uk/register/venues/index.json');
+                if (RefreshCodecheckLists::failedRecently()) {
+                    throw new \RuntimeException('a read failed within the last hour');
+                }
+                $codecheckIssueLabels = CodecheckIssueLabels::fromApi();
             } catch (\Throwable $e) {
-                return response()->json([
-                    'success' => false,
-                    'error' => $e->getMessage(),
-                ], JsonResponse::errorStatus($e));
+                CodecheckLogger::warning('Could not read the CODECHECK venue list: ' . $e->getMessage());
+                RefreshCodecheckLists::recordFailure();
+                if ($lastUpdated === null) {
+                    $labelsWarning = __('plugins.generic.codecheck.identifier.venue.unavailable');
+                }
             }
         }
 
-        // add the github custom labels specified in the plugin settings form to the Label Array returned back to the user
-        $context = $request->getContext();
         // Unset until the settings form is first saved, and unset means none:
         // passing null on threw, so no identifier could be reserved at all.
         $githubCustomLabels = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_GITHUB_CUSTOM_LABELS);
         $codecheckIssueLabels->addLabelArray(is_array($githubCustomLabels) ? $githubCustomLabels : []);
 
-        $codecheckStatuses = $this->plugin->getSetting($context->getId(), Constants::CODECHECK_STATUS_KEYS_SELECTED);
-        CodecheckLogger::debug('Selected status keys: ' . json_encode($codecheckStatuses));
+        $answer = ['success' => true, 'labels' => $codecheckIssueLabels->get()->toArray()];
+        if ($labelsWarning !== null) {
+            $answer['labelsWarning'] = $labelsWarning;
+        }
 
-        // Serve the getCodecheckIssueLabels API route
-        return response()->json([
-            'success' => true,
-            'labels' => $codecheckIssueLabels->get()->toArray(),
-        ], 200);
+        return response()->json($answer, 200);
     }
 
     /**
@@ -1361,32 +1354,5 @@ class CodecheckApiController extends PKPBaseController
             'issueUrl' => $issue['issueUrl'],
             'issueNumber' => $issue['issueNumber'],
         ], 200);
-    }
-
-    /**
-     * This function gets when the Codecheck Issue Labels where last updated
-     *
-     * @return string The Date when the issues where last updated
-     */
-    private function getIssueLabelsLastUpdated(): string
-    {
-        if (!Schema::hasTable('codecheck_issue_labels')) {
-            // The issue labels table doesn't exist
-            CodecheckLogger::error("CODECHECK API: The Issue Label table doesn't exist");
-            throw new \Exception("The table 'codecheck_issue_labels' doesn't exist.", 500);
-        }
-
-        $labelsLastUpdated = DB::table('codecheck_issue_labels')
-            ->select(['labels_last_updated'])
-            ->first();
-
-        CodecheckLogger::debug('Labels: ' . print_r(DB::table('codecheck_issue_labels')->select(['*'])->get()->toArray(), true));
-
-        // If Labels weren't updated yet, set last updated to earliest date possible, so they will definitely get updated
-        $labelsLastUpdated = $labelsLastUpdated->labels_last_updated ?? date('Y-m-d H:i:s', 0);
-
-        CodecheckLogger::debug('CODECHECK API: Codecheck Issues Last Updated: ' . json_encode($labelsLastUpdated));
-
-        return $labelsLastUpdated;
     }
 }

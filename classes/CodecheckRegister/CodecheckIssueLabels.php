@@ -4,14 +4,17 @@ namespace APP\plugins\generic\codecheck\classes\CodecheckRegister;
 
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\DataStructures\UniqueArray;
-use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitException;
-use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
-use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 class CodecheckIssueLabels
 {
+    /**
+     * How old stored labels may grow before the labels endpoint reads the list
+     * itself. The scheduled refresh keeps them far younger; this is for an
+     * install whose scheduler never runs.
+     */
+    public const STORED_LABELS_BACKSTOP_SECONDS = 30 * 24 * 60 * 60;
+
     private UniqueArray $uniqueArray;
 
     /**
@@ -23,100 +26,83 @@ class CodecheckIssueLabels
         $this->uniqueArray = UniqueArray::from($issueLabelArray);
     }
 
-    public static function fromApi(string $url, ?CodecheckApiClient $apiClient = null): CodecheckIssueLabels
+    /**
+     * Reads the venue list and stores its labels in place of the stored ones.
+     *
+     * Called by the scheduled refresh (#65), and by the labels endpoint only
+     * while nothing is stored, or what is stored has outlived
+     * `STORED_LABELS_BACKSTOP_SECONDS`. A failed read throws and leaves the
+     * stored labels as they were, so the form keeps offering them.
+     *
+     * @throws \Throwable when the list cannot be read or names no venue
+     */
+    public static function fromApi(): CodecheckIssueLabels
     {
-        $issueLabelArray = [];
+        $codecheckApiClient = new CodecheckApiClient();
+        $codecheckApiClient->fetch(Constants::CODECHECK_VENUES_URL);
 
-        // fetch CODECHECK Certificate GitHub Labels
-        // Intialize API caller
-        $codecheckApiClient = $apiClient ?? new CodecheckApiClient();
-        // fetch CODECHECK Type data
-        try {
-            $codecheckApiClient->fetch($url);
-        } catch (CurlInitException $curlInitException) {
-            // TODO: Implement that the user gets notified, that the fetching of the Labels didn't work
-            CodecheckLogger::error('CurlInit Exception: ' . $curlInitException->getMessage());
-            throw $curlInitException;
-        } catch (CurlReadException $curlReadException) {
-            // TODO: Implement that the user gets notified, that the fetching of the Labels didn't work
-            CodecheckLogger::error('CurlRead Exception: ' . $curlReadException->getMessage());
-            throw $curlReadException;
+        $labels = self::labelsFrom($codecheckApiClient->getData());
+        if ($labels === []) {
+            // An empty list would replace every stored label with none.
+            throw new \UnexpectedValueException('The venue list names no issue label.');
         }
-        // get json Data from API call
-        $data = $codecheckApiClient->getData();
 
-        foreach ($data as $venue) {
-            $label = $venue['Issue label'];
+        self::store($labels);
 
-            if (self::isAssignedByThePlugin($label)) {
-                continue;
+        return new CodecheckIssueLabels($labels);
+    }
+
+    /**
+     * The issue labels the venue list names, without those the plugin assigns
+     * itself; an entry without a label is skipped.
+     *
+     * @return string[]
+     */
+    public static function labelsFrom(array $venues): array
+    {
+        $labels = [];
+        foreach ($venues as $venue) {
+            $label = is_array($venue) && is_string($venue['Issue label'] ?? null) ? trim($venue['Issue label']) : '';
+            if ($label !== '' && !self::isAssignedByThePlugin($label)) {
+                $labels[] = $label;
             }
-            // add Label to Venue Names
-            $issueLabelArray[] = $label;
         }
 
-        $codecheckIssueLabels = new CodecheckIssueLabels($issueLabelArray);
+        return array_values(array_unique($labels));
+    }
 
-        $codecheckIssueLabels->saveIssueLabelsToDB();
+    /**
+     * When the stored labels were last read, or `null` when none are stored.
+     */
+    public static function lastUpdated(): ?int
+    {
+        $lastUpdated = DB::table('codecheck_issue_labels')->max('labels_last_updated');
 
-        return $codecheckIssueLabels;
+        return $lastUpdated === null ? null : (strtotime((string) $lastUpdated) ?: null);
     }
 
     public static function fromDB(): CodecheckIssueLabels
     {
-        $issueLabelRecords = DB::table('codecheck_issue_labels')
-            ->pluck('label')
-            ->toArray();
-
-        CodecheckLogger::debug('Issue Label Records: ' . json_encode($issueLabelRecords));
-
-        $codecheckIssueLabels = new CodecheckIssueLabels($issueLabelRecords ?? []);
-        return $codecheckIssueLabels;
+        return new CodecheckIssueLabels(DB::table('codecheck_issue_labels')->pluck('label')->toArray());
     }
 
     /**
-     * This function saves all the Codecheck Issue Labels to the Database
+     * Stores these labels in place of the stored ones, so a venue taken off
+     * the list is no longer offered.
      *
+     * @param string[] $labels
      */
-    public function saveIssueLabelsToDB(): bool
+    private static function store(array $labels): void
     {
-        CodecheckLogger::debug('Saving Issue Label data to DB: ' . print_r($this->uniqueArray->toArray(), true));
-
-        $tableName = 'codecheck_issue_labels';
-
-        $tableExists = Schema::hasTable('codecheck_issue_labels');
-
-        if (!$tableExists) {
-            CodecheckLogger::debug('Issue Label Table doesnt exist');
-            return !$tableExists;
-        }
-
         $labelsLastUpdated = date('Y-m-d H:i:s');
 
-        foreach ($this->uniqueArray->toArray() as $label) {
-            if (is_string($label)) {
-                $dbLabelRecord = [
-                    'label' => $label,
-                    'labels_last_updated' => $labelsLastUpdated
-                ];
-
-                $recordExists = DB::table($tableName)
-                    ->where('label', $label)
-                    ->exists();
-
-                if ($recordExists) {
-                    DB::table($tableName)
-                        ->where('label', $label)
-                        ->update($dbLabelRecord);
-                    CodecheckLogger::debug('Updated existing label record');
-                } else {
-                    DB::table($tableName)->insert($dbLabelRecord);
-                    CodecheckLogger::debug('Created new label record');
-                }
-            }
-        }
-
-        return true;
+        DB::transaction(function () use ($labels, $labelsLastUpdated) {
+            DB::table('codecheck_issue_labels')->delete();
+            DB::table('codecheck_issue_labels')->insert(array_map(
+                fn (string $label) => ['label' => $label, 'labels_last_updated' => $labelsLastUpdated],
+                $labels
+            ));
+        });
     }
 
     public function add(string $issue): void

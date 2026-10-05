@@ -315,4 +315,14 @@ class ConstantsUnitTest extends PKPTestCase
             Constants::CODECHECK_SETTING_DEFAULTS
         );
     }
+
+    /** Only the two choices are stored as such; anything else reads as daily (#65). */
+    public function testNormalizeListsRefresh()
+    {
+        $this->assertSame('weekly', Constants::normalizeListsRefresh('weekly'));
+        $this->assertSame('daily', Constants::normalizeListsRefresh('daily'));
+        foreach ([null, '', 'hourly', 'Weekly', ['weekly'], 7] as $stored) {
+            $this->assertSame('daily', Constants::normalizeListsRefresh($stored));
+        }
+    }
 }

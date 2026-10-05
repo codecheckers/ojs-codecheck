@@ -117,4 +117,23 @@ class CodecheckPluginHooksUnitTest extends PKPTestCase
         $service = self::codeOf(dirname(__DIR__) . '/classes/Workflow/CodecheckRegisterDepositService.php');
         $this->assertStringNotContainsString('getContext()', $service);
     }
+
+    /**
+     * The scheduled refresh of the CODECHECK lists (#65) is registered by OJS
+     * calling `registerSchedules()` on every *loaded* plugin, and on the
+     * command line OJS loads a lazy-load plugin only where it is enabled for
+     * the whole site, which a per-journal install is not. The plugin declares
+     * no `lazy-load`, so it is always loaded and the task always registered;
+     * declaring it would stop the refresh without a sign.
+     */
+    public function testTheScheduledRefreshIsRegisteredOnEveryInstall()
+    {
+        $this->assertContains(
+            \PKP\plugins\interfaces\HasTaskScheduler::class,
+            class_implements(\APP\plugins\generic\codecheck\CodecheckPlugin::class)
+        );
+
+        $version = simplexml_load_file(dirname(__DIR__) . '/version.xml');
+        $this->assertNotSame('1', trim((string) $version->{'lazy-load'}));
+    }
 }

@@ -133,6 +133,14 @@ class Constants
         return preg_match('/^\d{4}-\d+$/', $identifier) ? $identifier : null;
     }
 
+    /** A stored refresh choice (#65), anything unknown read as daily. */
+    public static function normalizeListsRefresh(mixed $choice): string
+    {
+        return is_string($choice) && isset(self::CODECHECK_LISTS_REFRESH_SECONDS[$choice])
+            ? $choice
+            : self::CODECHECK_LISTS_REFRESH_DAILY;
+    }
+
     /** A stored reference mode (#183), anything unknown read as off. */
     public static function normalizeCertificateReferenceMode(mixed $mode): string
     {
@@ -336,6 +344,22 @@ class Constants
         self::CODECHECK_CERTIFICATE_REFERENCE_BUTTON,
         self::CODECHECK_CERTIFICATE_REFERENCE_PUBLISH,
     ];
+
+    /**
+     * How often the venue list and the community's lists of codecheckers are
+     * read again (#65). Daily when unset, which is not ambiguous, so not in the
+     * defaults map; anything else stored reads as daily.
+     */
+    public const CODECHECK_LISTS_REFRESH = 'codecheckListsRefresh';
+    public const CODECHECK_LISTS_REFRESH_DAILY = 'daily';
+    public const CODECHECK_LISTS_REFRESH_WEEKLY = 'weekly';
+    public const CODECHECK_LISTS_REFRESH_SECONDS = [
+        self::CODECHECK_LISTS_REFRESH_DAILY => 24 * 60 * 60,
+        self::CODECHECK_LISTS_REFRESH_WEEKLY => 7 * 24 * 60 * 60,
+    ];
+
+    /** The register's list of venues, whose issue labels the editorial form offers. */
+    public const CODECHECK_VENUES_URL = 'https://codecheck.org.uk/register/venues/index.json';
 
     /** The statuses at which the certificate is published, and only then linked (#19). */
     public const CODECHECK_STATUSES_CERTIFICATE_PUBLISHED = [

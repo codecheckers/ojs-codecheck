@@ -17,10 +17,12 @@
  * clear it, and nothing is assigned on the strength of it alone.
  *
  * The lists are read from `raw.githubusercontent.com`, which is not the GitHub
- * API and does not count against its unauthenticated 60 requests an hour, and
- * the result is kept for six hours — the venue labels' refresh interval — in
- * Laravel's cache. A list that cannot be read means no suggestion from it,
- * never an error, because the dialog works without one.
+ * API and does not count against its unauthenticated 60 requests an hour, by
+ * the scheduled refresh (#65), and kept in Laravel's cache. A lookup reads them
+ * itself only when nothing is cached: before the first refresh, after the
+ * cache was cleared, or where the scheduler never runs. A list that cannot be
+ * read means no suggestion from it, never an error, because the dialog works
+ * without one.
  */
 
 namespace APP\plugins\generic\codecheck\classes\CodecheckRegister;
@@ -47,6 +49,13 @@ class CommunityCodecheckers
 
     private const CACHE_KEY = 'codecheck-community-codecheckers';
 
+    /**
+     * The scheduled refresh's read is kept far longer than the refresh
+     * interval, so the next refresh replaces it rather than it expiring.
+     */
+    private const REFRESH_CACHE_SECONDS = 30 * 24 * 60 * 60;
+
+    /** A lookup's own read, where the scheduler did not provide one. */
     private const CACHE_SECONDS = 6 * 60 * 60;
 
     private const RETRY_SECONDS = 5 * 60;
@@ -65,27 +74,76 @@ class CommunityCodecheckers
     }
 
     /**
-     * ORCID iD → GitHub username, from all three lists, fetched at once so a
-     * cold cache costs the slowest list rather than the sum of them.
+     * ORCID iD → GitHub username, from the cache or, when nothing is cached,
+     * from the lists themselves.
      *
-     * A complete read is kept for six hours. One that failed in part keeps
-     * what did load, for a few minutes only: long enough that an outage costs
-     * one timeout per few minutes rather than one per editor leaving the ORCID
-     * field, short enough that the missing list is soon asked for again.
+     * A read that failed in part keeps what did load for a few minutes only:
+     * long enough that an outage costs one timeout per few minutes rather than
+     * one per editor leaving the ORCID field, short enough that the missing
+     * list is soon asked for again.
      *
      * @return array<string, string>
      */
     private static function usernamesByOrcid(): array
     {
-        try {
-            $cached = Cache::get(self::CACHE_KEY);
-            if (is_array($cached)) {
-                return $cached;
-            }
-        } catch (\Throwable $e) {
-            CodecheckLogger::warning('Could not read the cached CODECHECK community lists: ' . $e->getMessage());
+        $cached = self::cached();
+        if ($cached !== null) {
+            return $cached;
         }
 
+        ['usernames' => $usernames, 'complete' => $complete] = self::read();
+        self::cache($usernames, $complete ? self::CACHE_SECONDS : self::RETRY_SECONDS);
+
+        return $usernames;
+    }
+
+    /**
+     * Reads the lists again and caches them, for the scheduled refresh. Only
+     * a complete read replaces what is cached: a partial one would trade a
+     * whole list for part of it until the next refresh.
+     *
+     * @return bool whether every list was read
+     */
+    public static function refresh(): bool
+    {
+        ['usernames' => $usernames, 'complete' => $complete] = self::read();
+        if ($complete) {
+            self::cache($usernames, self::REFRESH_CACHE_SECONDS);
+        }
+
+        return $complete;
+    }
+
+    /** @return array<string, string>|null */
+    private static function cached(): ?array
+    {
+        try {
+            $cached = Cache::get(self::CACHE_KEY);
+            return is_array($cached) ? $cached : null;
+        } catch (\Throwable $e) {
+            CodecheckLogger::warning('Could not read the cached CODECHECK community lists: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /** @param array<string, string> $usernames */
+    private static function cache(array $usernames, int $seconds): void
+    {
+        try {
+            Cache::put(self::CACHE_KEY, $usernames, $seconds);
+        } catch (\Throwable $e) {
+            CodecheckLogger::warning('Could not cache the CODECHECK community lists: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Reads all three lists at once, so a read costs the slowest list rather
+     * than the sum of them.
+     *
+     * @return array{usernames: array<string, string>, complete: bool}
+     */
+    private static function read(): array
+    {
         $usernames = [];
         $complete = true;
         try {
@@ -108,13 +166,7 @@ class CommunityCodecheckers
             CodecheckLogger::warning('Could not read the CODECHECK community lists of codecheckers: ' . $e->getMessage());
         }
 
-        try {
-            Cache::put(self::CACHE_KEY, $usernames, $complete ? self::CACHE_SECONDS : self::RETRY_SECONDS);
-        } catch (\Throwable $e) {
-            CodecheckLogger::warning('Could not cache the CODECHECK community lists: ' . $e->getMessage());
-        }
-
-        return $usernames;
+        return ['usernames' => $usernames, 'complete' => $complete];
     }
 
     /**

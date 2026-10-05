@@ -68,6 +68,17 @@ describe('CODECHECK UI surfaces', () => {
       .screenshot('01b-settings-certificate-reference', { overwrite: true });
   });
 
+  /** How often the venue list and the lists of codecheckers are refreshed (#65). */
+  it('settings: refresh of the CODECHECK lists', () => {
+    cy.openCodecheckSettings();
+    cy.codecheckSettingsForm()
+      .find('[name="codecheckListsRefresh"]')
+      .first()
+      .closest('.section')
+      .scrollIntoView()
+      .screenshot('01c-settings-lists-refresh', { overwrite: true });
+  });
+
   it('editorial dashboard with the CODECHECK column', () => {
     // "Assigned to me" is empty in the dataset; the published view has rows, so
     // the CODECHECK cells actually render.

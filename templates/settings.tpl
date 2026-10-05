@@ -440,6 +440,30 @@
 				<label class="description">{translate key="plugins.generic.codecheck.settings.github.signature.description" journal=$githubSignaturePlaceholders.journal|escape journalUrl=$githubSignaturePlaceholders.journalUrl|escape default=$githubSignatureDefault|escape}</label>
 				<textarea id="githubSignature" name="githubSignature" rows="3" class="pkpFormField__input">{$githubSignature|escape}</textarea>
 			{/fbvFormSection}
+
+			{* How often the venue list and the community's lists of codecheckers are read (#65) *}
+			{fbvFormSection
+				list=true
+			}
+				<div class="field-header">
+					<label class="pkp_form_label">{translate key="plugins.generic.codecheck.settings.listsRefresh.title"}</label>
+				</div>
+				<label class="description">{translate key="plugins.generic.codecheck.settings.listsRefresh.description"}</label>
+				<fieldset class="codecheck-choice-list">
+					{foreach from=$codecheckListsRefreshChoices item=refreshChoice}
+						<div class="codecheck-choice">
+							<input
+								type="radio"
+								name="codecheckListsRefresh"
+								id="listsRefresh-{$refreshChoice|escape}"
+								value="{$refreshChoice|escape}"
+								{if $codecheckListsRefresh == $refreshChoice}checked{/if}
+							/>
+							<label for="listsRefresh-{$refreshChoice|escape}">{translate key="plugins.generic.codecheck.settings.listsRefresh."|cat:$refreshChoice}</label>
+						</div>
+					{/foreach}
+				</fieldset>
+			{/fbvFormSection}
 		{/fbvFormSection}
 
 		{fbvFormSection list=true}

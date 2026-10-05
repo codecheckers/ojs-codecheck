@@ -391,7 +391,8 @@ Tables are created by `classes/migration/install/CodecheckSchemaMigration.php`:
   and is a `TEXT` column — it held `varchar(500)` until four GitHub addresses
   overflowed it (#154)
 - `codecheck_status` — status history (FK → `codecheck_metadata`, cascade delete)
-- `codecheck_issue_labels` — cached GitHub labels (refreshed if >6h old)
+- `codecheck_issue_labels` — the venue list's issue labels, replaced by the
+  scheduled refresh (see "Scheduled refresh of the CODECHECK lists")
 - `codecheck_orcid_tokens` — created but currently unused
 - `codecheck_codecheckers` — the journal's directory of codecheckers (#186):
   `context_id, name, orcid, github_username`, unique per journal on the ORCID
@@ -692,9 +693,10 @@ causes could fill it, and the editor added a username they never saw.
 **The suggestion is the only server call to `raw.githubusercontent.com`.**
 `CommunityCodecheckers` reads the three lists in `codecheckers/codecheckers`
 at `HEAD` — the default branch is `master`, and a guessed `main` answered 404
-for every list — concurrently, with columns found by header. A complete read is
-cached for six hours in Laravel's cache, a partial or failed one for five
-minutes. The e2e suite must make no external call, so a spec driving the
+for every list — concurrently, with columns found by header. The scheduled
+refresh reads them (below); a lookup reads them itself only when nothing is
+cached, and a partial read is then kept for five minutes. The e2e suite must
+make no external call, so a spec driving the
 dialog against a real OJS intercepts `codecheckers/lookup`
 (`codechecker-dialog.cy.js` does).
 
@@ -1173,6 +1175,56 @@ repository actually changed. It makes **two** unauthenticated requests, for
 probe is `CodecheckGithubRegisterApiClient::repositoryHasLabel()`, the same one
 the reservation uses, so the settings form and the reservation cannot come to
 disagree about whether a register is usable (#129).
+
+### Scheduled refresh of the CODECHECK lists (`classes/Tasks/`)
+
+`RefreshCodecheckLists` reads the two lists the plugin keeps a copy of — the
+register's venues (`codecheck_issue_labels`, offered when reserving an
+identifier) and the community's lists of codecheckers (Laravel's cache) — as an
+OJS 3.5 scheduled task, registered through `HasTaskScheduler::registerSchedules()`
+(#65). `CODECHECK_LISTS_REFRESH` picks daily or weekly per journal; the copies
+are site-wide, so the shortest choice among the journals with the plugin
+enabled applies, and none enabled means no refresh at all.
+
+Three things about it are not guessable:
+
+- **It is registered `everyMinute()` and filtered by `isDue()`.** OJS's web
+  task runner runs only what Laravel finds due in the minute a request arrives,
+  so a `daily()` task — midnight — runs only if a page is opened at midnight.
+  Until a day has passed the filter reads one cache entry and when the venue
+  labels were stored, which is what "last refreshed" means, and a filtered run
+  writes no scheduled task log; a run writes one. A failure is retried after an
+  hour.
+- **The task is registered only because the plugin declares no `lazy-load`.**
+  OJS calls `registerSchedules()` on *loaded* plugins, and on the command line
+  loads a lazy-load plugin only where it is enabled site-wide, which a
+  per-journal install is not. `version.xml` has no `lazy-load`, so the plugin is
+  loaded everywhere, as Crossref and DataCite are;
+  `CodecheckPluginHooksUnitTest` pins it. Established on a throwaway instance by
+  deleting the site-level `enabled` row: `scheduler.php list` still lists it.
+- **What it reads is still read on demand when nothing is stored**: the labels
+  endpoint while the table is empty or older than 30 days, a username lookup
+  while the cache holds nothing — so a fresh install, a cleared cache and an
+  install whose scheduler never runs all keep working. A failed read keeps what
+  is stored; the labels endpoint answers `labelsWarning` only when there is
+  nothing stored to fall back on.
+
+- **Neither a failure nor the filter may surface.** `isDue()` never throws:
+  Laravel's scheduler does not catch a filter's exception, and one aborts the
+  whole run, every other plugin's task included. And a run whose lists could
+  not be read still returns `true`, logging why to its execution log, because
+  OJS emails the site administrator about every task that returns `false`, and
+  the stored copies are still offered. A failed read, here or in the labels
+  endpoint, holds off the next for an hour (`recordFailure()`).
+
+Nothing else that reaches GitHub belongs in it: reserving an identifier must
+read the register as it is, and the rest are writes that follow an editor's
+action. `CodecheckGithubRegisterApiClient::fetchLabels()` read the register's
+labels and is called by nothing.
+
+`php lib/pkp/tools/scheduler.php list` shows the task and `… run` runs what is
+due. Changing a setting straight in `plugin_settings` needs `make clear-cache`
+before the scheduler sees it.
 
 ### DOI deposits (`classes/DoiDeposit/`)
 

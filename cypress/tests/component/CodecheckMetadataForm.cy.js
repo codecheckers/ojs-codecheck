@@ -433,6 +433,40 @@ describe('CodecheckMetadataForm Component', () => {
     });
   });
 
+  /**
+   * The venue labels are for reserving an identifier, which is the editors';
+   * the endpoint refuses a reviewer, and asking anyway put that refusal above
+   * the reviewer's form every time it opened (#65).
+   */
+  it("does not ask for the venue labels in a reviewer's copy", () => {
+    let labelsRequested = false;
+    cy.intercept('GET', '**/codecheck/labels*', (req) => {
+      labelsRequested = true;
+      req.reply({ statusCode: 401, body: { error: 'user.authorization.roleBasedAccessDenied' } });
+    });
+    cy.mount(CodecheckMetadataForm, {
+      props: { submission: { id: 1 }, canEdit: true, canEditCodecheckers: false },
+    });
+    cy.wait('@loadMetadata');
+    cy.get('.codecheck-contact-email').should('exist').then(() => {
+      expect(labelsRequested).to.equal(false);
+    });
+    cy.get('.save-message').should('not.exist');
+  });
+
+  /** Without the venue list the form still offers the journal's own labels, and says why the rest are missing (#65). */
+  it('offers the labels it got and warns when the venue list could not be read', () => {
+    cy.intercept('GET', '**/codecheck/labels*', {
+      statusCode: 200,
+      body: { success: true, labels: ['journal-own'], labelsWarning: 'The venue list could not be read.' },
+    }).as('loadLabelsWithWarning');
+    cy.mount(CodecheckMetadataForm, { props: { submission: { id: 1 }, canEdit: true } }).then(({ wrapper }) => {
+      cy.wait('@loadLabelsWithWarning');
+      cy.get('.save-message.warning').should('contain', 'The venue list could not be read.');
+      cy.wrap(wrapper.vm).its('certificateIdentifier.issue.labels').should('deep.equal', ['journal-own']);
+    });
+  });
+
   it('shows why a file for another paper was refused, and imports nothing', () => {
     cy.intercept('POST', '**/codecheck/repository?submissionId=1*', {
       statusCode: 422,

@@ -22,6 +22,7 @@ use APP\plugins\generic\codecheck\classes\Submission\CodecheckAuthorMetadata;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionDAO;
 use APP\plugins\generic\codecheck\classes\Submission\Schema;
 use APP\plugins\generic\codecheck\classes\Submission\SubmissionWizardHandler;
+use APP\plugins\generic\codecheck\classes\Tasks\RefreshCodecheckLists;
 use APP\plugins\generic\codecheck\classes\Workflow\CertificateReferenceUpdate;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataDestinations;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckPublicationValidator;
@@ -34,8 +35,10 @@ use PKP\core\JSONMessage;
 use PKP\core\Request;
 use PKP\plugins\GenericPlugin;
 use PKP\plugins\Hook;
+use PKP\plugins\interfaces\HasTaskScheduler;
+use PKP\scheduledTask\PKPScheduler;
 
-class CodecheckPlugin extends GenericPlugin
+class CodecheckPlugin extends GenericPlugin implements HasTaskScheduler
 {
     public function register($category, $path, $mainContextId = null): bool
     {
@@ -943,6 +946,49 @@ class CodecheckPlugin extends GenericPlugin
     {
         return Constants::normalizeCertificateReferenceMode(
             $this->isEnabledIn($contextId) ? $this->getSetting($contextId, Constants::CODECHECK_CERTIFICATE_REFERENCE) : null
+        );
+    }
+
+    /**
+     * The refresh of the venue list and the community's lists of codecheckers
+     * (#65). OJS calls this for every journal's task run and on the command
+     * line alike: the plugin declares no `lazy-load`, so it is loaded whether
+     * or not anyone enabled it, and `isDue()` asks which journals did.
+     */
+    public function registerSchedules(PKPScheduler $scheduler): void
+    {
+        $scheduler
+            ->addSchedule(new RefreshCodecheckLists())
+            ->everyMinute()
+            ->when(fn () => RefreshCodecheckLists::isDue($this->listsRefreshInterval(...)))
+            ->name(RefreshCodecheckLists::class)
+            ->withoutOverlapping();
+    }
+
+    /**
+     * The shortest refresh interval, in seconds, among the journals that have
+     * the plugin enabled, or `null` when none has.
+     */
+    public function listsRefreshInterval(): ?int
+    {
+        $choices = [];
+        foreach (Application::getContextDAO()->getAll()->toIterator() as $context) {
+            if ($this->isEnabledIn($context->getId())) {
+                $choices[] = $this->getListsRefresh($context->getId());
+            }
+        }
+
+        return RefreshCodecheckLists::shortestInterval($choices);
+    }
+
+    /**
+     * How often a journal asks for the CODECHECK lists to be refreshed (#65):
+     * the one reader for the settings form and the scheduled refresh.
+     */
+    public function getListsRefresh(?int $contextId): string
+    {
+        return Constants::normalizeListsRefresh(
+            $contextId === null ? null : $this->getSetting($contextId, Constants::CODECHECK_LISTS_REFRESH)
         );
     }
 

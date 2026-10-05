@@ -2,7 +2,6 @@
 
 namespace APP\plugins\generic\codecheck\tests;
 
-use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckApiClient;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckIssueLabels;
 use PKP\tests\PKPTestCase;
 
@@ -29,39 +28,32 @@ class CodecheckIssueLabelsUnitTest extends PKPTestCase
         $this->assertCount(5, $codecheckIssueLabels->get()->toArray());
     }
 
-    /*public function testIssueLabels()
+    /**
+     * The venue list's labels, without the plugin's own and without entries
+     * that carry none. Reading and storing the list needs the network and the
+     * database, so only what is taken from it is tested here.
+     */
+    public function testLabelsFromTheVenueList()
     {
-        $jsonApiMockVenueTypes = $this->createMock(CodecheckApiClient::class);
-        $jsonApiMockVenueTypes->expects($this->once())
-                                ->method('fetch')
-                                ->with('https://codecheck.org.uk/register/venues/index.json');
-
-        $jsonApiMockVenueTypes->method('getData')->willReturn([
-            ['Venue type' => 'journal'],
-            ['Venue type' => 'community'],
-        ]);
-
-        $jsonApiMockVenueNames = $this->createMock(CodecheckApiClient::class);
-        $jsonApiMockVenueNames->expects($this->once())
-                                ->method('fetch')
-                                ->with('https://codecheck.org.uk/register/venues/index.json');
-
-        $jsonApiMockVenueNames->method('getData')->willReturn([
-            ["Issue label" => 'journal'],
-            ["Issue label" => 'lifecycle journal'],
-            ["Issue label" => 'community'],
-            ["Issue label" => 'conference'],
-            ["Issue label" => 'check-nl'],
-            ["Issue label" => 'preprint'],
-            ["Issue label" => 'development'],
-        ]);
-
-        $venueNames = CodecheckIssueLabels::fromApi('https://codecheck.org.uk/register/venues/index.json', $jsonApiMockVenueNames);
-        $result = $venueNames->get()->toArray();
-
-        $this->assertEquals(
-            ['lifecycle journal', 'conference', 'check-nl', 'preprint'],
-            $result
+        $this->assertSame(
+            ['lifecycle journal', 'check-nl', 'preprint'],
+            CodecheckIssueLabels::labelsFrom([
+                ['Issue label' => 'lifecycle journal'],
+                ['Issue label' => ' check-nl '],
+                ['Issue label' => 'development'],
+                ['Issue label' => 'id assigned'],
+                ['Issue label' => 'preprint'],
+                ['Issue label' => 'preprint'],
+                ['Issue label' => ''],
+                ['Venue type' => 'journal'],
+                'not a venue',
+            ])
         );
-    }*/
+    }
+
+    public function testAListWithoutLabelsGivesNone()
+    {
+        $this->assertSame([], CodecheckIssueLabels::labelsFrom([]));
+        $this->assertSame([], CodecheckIssueLabels::labelsFrom(['error' => 'Not Found']));
+    }
 }

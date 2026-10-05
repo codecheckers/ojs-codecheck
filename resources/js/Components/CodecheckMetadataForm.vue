@@ -689,7 +689,11 @@ export default {
   },
   mounted() {
     this.loadData();
-    this.getCodecheckIssueLabels();
+    // The labels are for reserving an identifier, which is the editors'; the
+    // reviewer's copy would be refused, and said so above the form (#65).
+    if (this.canEditCodecheckers) {
+      this.getCodecheckIssueLabels();
+    }
   },
   watch: {
     metadata: {
@@ -1352,6 +1356,9 @@ export default {
 
           if (data.success) {
               this.certificateIdentifier.issue.labels = data.labels;
+              if (data.labelsWarning) {
+                  this.showMessage(data.labelsWarning, 'warning');
+              }
           } else {
               this.showMessage(`${this.t('plugins.generic.codecheck.identifier.venue.fetch.error.curl')}\n${data.error}`, 'error');
               console.error(`${this.t('plugins.generic.codecheck.identifier.venue.fetch.error.curl')}:`, data.error);

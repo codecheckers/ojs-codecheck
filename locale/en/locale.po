@@ -125,6 +125,21 @@ msgstr "Signature on GitHub posts"
 msgid "plugins.generic.codecheck.settings.github.signature.description"
 msgstr "Closes everything the plugin writes to the register — the issue, each status comment and the register deposit — below a separating line, so readers of the register can see which journal it came from. Markdown is allowed; {$journal} is replaced by the journal's name and {$journalUrl} by its address. Left empty, the default is used: {$default}"
 
+msgid "plugins.generic.codecheck.settings.listsRefresh.title"
+msgstr "Refresh of the CODECHECK lists"
+
+msgid "plugins.generic.codecheck.settings.listsRefresh.description"
+msgstr "How often the plugin reads the register's list of venues, whose labels are offered when reserving a certificate identifier, and the CODECHECK community's lists of codecheckers, which suggest a codechecker's GitHub username. Both are kept for every journal on this site, so the most frequent choice among the journals using the plugin applies. The refresh runs as a scheduled task."
+
+msgid "plugins.generic.codecheck.settings.listsRefresh.daily"
+msgstr "Daily"
+
+msgid "plugins.generic.codecheck.settings.listsRefresh.weekly"
+msgstr "Weekly"
+
+msgid "plugins.generic.codecheck.task.refreshLists"
+msgstr "Refresh the CODECHECK venue list and lists of codecheckers"
+
 msgid "plugins.generic.codecheck.settings.github.labels"
 msgstr "GitHub Register Labels"
 
@@ -430,6 +445,9 @@ msgstr "ID of the CODECHECK certificate - e.g.: 2025-001"
 
 msgid "plugins.generic.codecheck.identifier.venue.fetch.error.curl"
 msgstr "Venue Data Error"
+
+msgid "plugins.generic.codecheck.identifier.venue.unavailable"
+msgstr "The CODECHECK list of venues could not be read, so only this journal's own labels are offered. Try again later."
 
 msgid "plugins.generic.codecheck.identifier.venue.fetch.error.codecheckAPI"
 msgstr "Failed to fetch venue data"

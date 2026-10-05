@@ -25,6 +25,7 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 - The register issue lists the codecheckers, and its JSON metadata is brought up to date on every status change and every save of the CODECHECK form, when the journal keeps the issue body up to date (#186)
 - The register issue's JSON metadata says that it is the source of truth for the check's metadata, and when it was last updated (#186)
 - A save or status change that could not bring the register issue up to date says so beside its result; calls to GitHub give up after 10 seconds (#186)
+- The CODECHECK venue list and the community's lists of codecheckers are refreshed by an OJS scheduled task, daily or weekly as chosen by the new setting *Refresh of the CODECHECK lists* (#65)
 
 #### DOI deposits
 
@@ -62,6 +63,7 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 - A certificate identifier can be reserved before the CODECHECK settings have been saved
 - The register issue's JSON metadata is valid JSON
 - A codechecker's ORCID iD imported from a repository's `codecheck.yml` is kept when the form is saved (#186)
+- A reviewer's CODECHECK form opens without an error; when the venue list cannot be read the editorial form offers the venue labels it already has, or the journal's own labels with a warning (#65)
 
 ### Security
 

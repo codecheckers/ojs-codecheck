@@ -250,6 +250,11 @@ class SettingsForm extends Form
             $this->plugin->getCertificateReferenceMode($context->getId())
         );
 
+        $this->setData(
+            Constants::CODECHECK_LISTS_REFRESH,
+            $this->plugin->getListsRefresh($context->getId())
+        );
+
         // ORCID integration settings
         $this->setData(
             Constants::ORCID_ENABLED,
@@ -313,6 +318,7 @@ class SettingsForm extends Form
             Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY,
             Constants::CODECHECK_GITHUB_CUSTOM_LABELS,
             Constants::CODECHECK_GITHUB_SIGNATURE,
+            Constants::CODECHECK_LISTS_REFRESH,
             Constants::CODECHECK_BADGE_TYPE,
             Constants::CODECHECK_BADGE_TEXT,
             Constants::CODECHECK_BADGE_TEXT_COLOR,
@@ -378,6 +384,7 @@ class SettingsForm extends Form
         $templateMgr = TemplateManager::getManager($request);
         $templateMgr->assign('pluginName', $this->plugin->getName());
         $templateMgr->assign('codecheckCertificateReferenceModes', Constants::CODECHECK_CERTIFICATE_REFERENCE_MODES);
+        $templateMgr->assign('codecheckListsRefreshChoices', array_keys(Constants::CODECHECK_LISTS_REFRESH_SECONDS));
         // The journal's own References switch: off means nobody can see the list.
         $templateMgr->assign('codecheckJournalCollectsReferences', (bool) $request->getContext()?->getData('citations'));
         $templateMgr->assign(
@@ -584,6 +591,12 @@ class SettingsForm extends Form
             $context->getId(),
             Constants::CODECHECK_GITHUB_SIGNATURE,
             trim((string) $this->getData(Constants::CODECHECK_GITHUB_SIGNATURE))
+        );
+
+        $this->plugin->updateSetting(
+            $context->getId(),
+            Constants::CODECHECK_LISTS_REFRESH,
+            Constants::normalizeListsRefresh($this->getData(Constants::CODECHECK_LISTS_REFRESH))
         );
 
         $this->plugin->updateSetting(
