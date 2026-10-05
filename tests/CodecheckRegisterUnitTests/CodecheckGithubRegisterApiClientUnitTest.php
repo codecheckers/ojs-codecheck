@@ -53,19 +53,6 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
         ];
     }
 
-    public function testGithubRegisterClientGetEmptyLabels()
-    {
-        $apiParser = new CodecheckGithubRegisterApiClient(
-            $this->githubPAT,
-            $this->githubRegisterOrganization,
-            $this->githubRegisterRepository,
-            $this->submissionId,
-            $this->origin
-        );
-
-        $this->assertSame([], $apiParser->getLabels()->toArray());
-    }
-
     public function testGithubRegisterClientGetEmptyIssues()
     {
         $apiParser = new CodecheckGithubRegisterApiClient(
@@ -101,34 +88,6 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
 
         $this->assertCount(1, $issues);
         $this->assertEquals('Alice | 2025-001', $issues[0]['title']);
-    }
-
-    public function testGithubRegisterClientFetchLabels()
-    {
-        $labelsApiMock = $this->createMock(\Github\Api\Issue\Labels::class);
-        $labelsApiMock->method('all')->willReturn([
-            ['name' => 'institution'],
-            ['name' => 'check-nl'],
-        ]);
-        $issueApiMock = $this->createMock(\Github\Api\Issue::class);
-        $issueApiMock->method('labels')->willReturn($labelsApiMock);
-        $clientMock = $this->createMock(\Github\Client::class);
-        $clientMock->method('api')->with('issue')->willReturn($issueApiMock);
-
-        $parser = new CodecheckGithubRegisterApiClient(
-            $this->githubPAT,
-            $this->githubRegisterOrganization,
-            $this->githubRegisterRepository,
-            $this->submissionId,
-            $this->origin,
-            $clientMock
-        );
-        $parser->fetchLabels();
-        $labels = $parser->getLabels()->toArray();
-
-        $this->assertCount(2, $labels);
-        $this->assertContains('institution', $labels);
-        $this->assertContains('check-nl', $labels);
     }
 
     public function testAddIssueCreatesIssueAndReturnsUrl()

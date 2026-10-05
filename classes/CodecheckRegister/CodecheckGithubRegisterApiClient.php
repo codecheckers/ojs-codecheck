@@ -5,7 +5,6 @@ namespace APP\plugins\generic\codecheck\classes\CodecheckRegister;
 require __DIR__ . '/../../vendor/autoload.php';
 
 use APP\plugins\generic\codecheck\classes\Constants;
-use APP\plugins\generic\codecheck\classes\DataStructures\UniqueArray;
 use APP\plugins\generic\codecheck\classes\Exceptions\ApiCreateException;
 use APP\plugins\generic\codecheck\classes\Exceptions\ApiFetchException;
 use APP\plugins\generic\codecheck\classes\Exceptions\ApiUpdateException;
@@ -21,7 +20,6 @@ class CodecheckGithubRegisterApiClient
 
     private $issues = [];
     private int $labelledIssuesSeen = 0;
-    private UniqueArray $labels;
     private $client;
     private string $githubPAT;
     private string $githubRegisterOrganization;
@@ -41,7 +39,6 @@ class CodecheckGithubRegisterApiClient
     public function __construct(string $githubPersonalAccessToken, string $githubRegisterOrganization, string $githubRegisterRepository, string $submissionID, CodecheckPostOrigin $origin, ?Client $client = null)
     {
         $this->client = $client ?? GithubHttp::client();
-        $this->labels = new UniqueArray();
         $this->githubPAT = $githubPersonalAccessToken;
         $this->githubRegisterOrganization = $githubRegisterOrganization;
         $this->githubRegisterRepository = $githubRegisterRepository;
@@ -282,22 +279,6 @@ class CodecheckGithubRegisterApiClient
         }
 
         return $names;
-    }
-
-    /**
-     * Fetches a Issue Labels from the CODECHECK GitHub Register
-     */
-    public function fetchLabels(): void
-    {
-        try {
-            $fetchedLabels = $this->client->api('issue')->labels()->all($this->githubRegisterOrganization, $this->githubRegisterRepository);
-        } catch (\Throwable $e) {
-            throw new ApiFetchException("Failed fetching the GitHub Issue Labels for the Venue Names\n" . $e->getMessage());
-        }
-
-        foreach (self::labelNames($fetchedLabels) as $name) {
-            $this->labels->add($name);
-        }
     }
 
     /**
@@ -869,15 +850,5 @@ class CodecheckGithubRegisterApiClient
     public function getIssues(): array
     {
         return $this->issues;
-    }
-
-    /**
-     * Gets all fetched CODECHECK GtiHub Register Issue Labels
-     *
-     * @return UniqueArray Returns a `UniqueArray` of all CODECHECK GtiHub Register Issue Labels
-     */
-    public function getLabels(): UniqueArray
-    {
-        return $this->labels;
     }
 }
