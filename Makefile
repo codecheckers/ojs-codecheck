@@ -67,7 +67,7 @@ export OJS_ROOT
         test-orcid-live \
         clear-cache serve test test-component test-e2e test-e2e-reverse test-e2e-shuffle \
         lint lint-deps lint-fix hooks \
-        test-php check-migration screenshots inspect social-preview \
+        test-php screenshots inspect social-preview \
         build watch check-ojs clean \
         throwaway-check throwaway-up throwaway-down doi-test-config doi-export \
         check-scheduled-deposit
@@ -100,7 +100,6 @@ help:
 	@echo "    make test            component + PHPUnit (everything not needing a server)"
 	@echo "    make test-component  Cypress component tests"
 	@echo "    make test-php        PHPUnit"
-	@echo "    make check-migration run the #185 upgrade migration against the dev database"
 	@echo "    make test-e2e        Cypress e2e (needs 'make serve' running)"
 	@echo "    make test-e2e-reverse  the same specs backwards, to catch order dependence"
 	@echo "    make test-e2e-shuffle [SEED=n]  the same specs in a seeded random order"
@@ -418,21 +417,6 @@ serve: check-ojs
 	@echo "OJS at $(BASE_URL)  (admin / admin)"
 	@echo "Journal: $(BASE_URL)/index.php/codecheck"
 	PHP_CLI_SERVER_WORKERS=$(SERVER_WORKERS) php -S localhost:$(PORT) -t "$(OJS_ROOT)"
-
-# The #185 upgrade migration, run for real: seeds legacy rows and a legacy
-# column default, runs it twice and asserts (dev/check-migration-spec2.php).
-# Outside every suite because it writes to the development database and moves
-# any real `latest` or `1.0` record in it. Refuses unless the OJS plugin symlink
-# points at this checkout. FORCE=1 skips the prompt; UPGRADE_XML=1 runs it the
-# way a Plugin Gallery upgrade does, through the plugin's upgrade.xml.
-check-migration: check-ojs
-	@if [ -z "$(FORCE)" ]; then \
-		echo "This runs the upgrade migration against $(DB_NAME): it moves every \`latest\` and \`1.0\` record to 2.0."; \
-		printf "Type 'yes' to continue: "; \
-		read answer; \
-		[ "$$answer" = "yes" ] || (echo "Cancelled; nothing was run." && exit 1); \
-	fi
-	@php dev/check-migration-spec2.php "$(OJS_ROOT)" $(if $(UPGRADE_XML),--upgrade-xml)
 
 # --- Code style -------------------------------------------------------------
 

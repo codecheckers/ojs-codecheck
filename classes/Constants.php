@@ -465,7 +465,7 @@ class Constants
     /**
      * The version a record is on: the one stored, if the plugin knows it, and
      * the default otherwise. Applied where a version is written and where one
-     * is read, so a record the upgrade missed, or a version posted by an API
+     * is read, so a stored version the plugin does not know, or a version posted by an API
      * client, cannot declare a specification the plugin does not implement.
      */
     public static function resolveConfigVersion(?string $version): string

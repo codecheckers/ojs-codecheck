@@ -13,8 +13,7 @@ use PKP\xml\PKPXMLParser;
  * version, and runs a migration only if the package carries `upgrade.xml`. The
  * file names a class, so a rename would turn it into a migration that fails —
  * or, if the element went missing, into one that runs nothing — and only a
- * journal that upgrades would find out. These tests are that check; running it
- * against a database is `make check-migration UPGRADE_XML=1`.
+ * journal that upgrades would find out. These tests are that check.
  */
 class UpgradeXmlUnitTest extends PKPTestCase
 {
@@ -30,7 +29,7 @@ class UpgradeXmlUnitTest extends PKPTestCase
     {
         $migrations = $this->loadDescriptor()->getElementsByTagName('migration');
 
-        $this->assertSame(1, $migrations->length, 'one migration element: it runs the install migration, which calls every upgrade step');
+        $this->assertSame(1, $migrations->length, 'one migration element: it runs the install migration');
         $this->assertSame(GalleryUpgradeMigration::class, $migrations->item(0)->getAttribute('class'));
     }
 

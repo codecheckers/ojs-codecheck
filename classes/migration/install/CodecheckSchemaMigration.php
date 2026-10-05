@@ -8,19 +8,12 @@
  *
  * @class CodecheckSchemaMigration
  *
- * @brief Create all CODECHECK database tables on fresh install.
- *        Also calls all upgrade migrations so that fresh installs
- *        and existing installs both end up at the same schema state.
+ * @brief Create all CODECHECK database tables, each only if missing, so it
+ *        is safe to run on every enable.
  *
- * Upgrade migrations are called at the end of runUp() in the order
- * they are listed. This order matters — later migrations may depend
- * on changes made by earlier ones.
- *
- * Upgrade scripts can do more than add columns. They may also:
- * - Rename columns or tables
- * - Migrate or transform existing data values
- * - Insert default content (e.g. initial settings or lookup data)
- * - Remove columns, tables, or fields no longer in use
+ *        No install of a release exists (decision 2026-10-05), so this creates
+ *        the final schema directly. Once one does, a change to it needs a step
+ *        that alters an existing table, called at the end of runUp().
  */
 
 namespace APP\plugins\generic\codecheck\classes\migration\install;
@@ -28,12 +21,6 @@ namespace APP\plugins\generic\codecheck\classes\migration\install;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\classes\migration\CodecheckMigration;
-use APP\plugins\generic\codecheck\classes\migration\upgrade\GHSA_4p3r_DeleteUnrecordedOrcidTokens;
-use APP\plugins\generic\codecheck\classes\migration\upgrade\I154_MoveCodecheckYamlFlagOntoRepository;
-use APP\plugins\generic\codecheck\classes\migration\upgrade\I185_MoveRecordsToConfigSpec2;
-use APP\plugins\generic\codecheck\classes\migration\upgrade\I186_AddCodecheckerDirectory;
-use APP\plugins\generic\codecheck\classes\migration\upgrade\I93_RenameVersionToSpecVersion;
-use APP\plugins\generic\codecheck\classes\migration\upgrade\I94_AddMissingColumns;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
@@ -46,8 +33,7 @@ class CodecheckSchemaMigration extends CodecheckMigration
             Schema::create('codecheck_metadata', function (Blueprint $table) {
                 $table->bigInteger('submission_id')->primary();
                 // The CODECHECK configuration specification this check was
-                // recorded against — see Constants::getConfigSpecUrl(). It was
-                // `version`, which read as a version of the record (#93).
+                // recorded against — see Constants::getConfigSpecUrl() (#93).
                 $table->string('spec_version', 50)->default(Constants::CODECHECK_DEFAULT_CONFIG_VERSIONS[0]);
                 $table->string('publication_type', 50)->default('doi');
                 $table->text('manifest')->nullable();
@@ -111,17 +97,26 @@ class CodecheckSchemaMigration extends CodecheckMigration
             });
         }
 
+        // codecheck_codecheckers — per-journal directory of codecheckers (#186)
+        if (!Schema::hasTable('codecheck_codecheckers')) {
+            Schema::create('codecheck_codecheckers', function (Blueprint $table) {
+                $table->bigIncrements('codechecker_id');
+                $table->bigInteger('context_id');
+                $table->string('name', 255);
+                // Bare form, as `CodecheckCodecheckers::normalizeOrcid()` stores it.
+                $table->string('orcid', 19)->nullable();
+                // GitHub allows 39 characters.
+                $table->string('github_username', 39)->nullable();
+                $table->timestamps();
+                // Each unique key admits any number of NULLs, so an entry known by
+                // only one of the two identifiers is fine.
+                $table->unique(['context_id', 'orcid'], 'codecheck_codecheckers_orcid');
+                $table->unique(['context_id', 'github_username'], 'codecheck_codecheckers_github');
+            });
+        }
+
         $this->createCodecheckGenres();
         $this->writeDefaultSettings();
-
-        // Run upgrade migrations in order — each is idempotent so safe to run
-        // on both fresh installs and existing ones. Add new migrations here.
-        (new I94_AddMissingColumns())->up();
-        (new I154_MoveCodecheckYamlFlagOntoRepository())->up();
-        (new I93_RenameVersionToSpecVersion())->up();
-        (new I185_MoveRecordsToConfigSpec2())->up();
-        (new I186_AddCodecheckerDirectory())->up();
-        (new GHSA_4p3r_DeleteUnrecordedOrcidTokens())->up();
     }
 
     /**

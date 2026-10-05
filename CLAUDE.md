@@ -38,7 +38,6 @@ make test-e2e       # Cypress e2e, needs `make serve`
 make test-e2e-reverse / test-e2e-shuffle [SEED=n]   # catch order dependence
 make screenshots    # every UI surface -> cypress/ui-screenshots/
 make inspect URL=…  # Playwright: screenshot + DOM + console/network -> dev/out/
-make check-migration [UPGRADE_XML=1]               # I185 against the dev DB (writes; asks first)
 make check-scheduled-deposit THROWAWAY=<name>      # register deposit from the scheduled task
 make throwaway-up / throwaway-down THROWAWAY=<name>
 make db-reset / db-load / db-credentials / clear-cache
@@ -207,16 +206,15 @@ Tables (`classes/migration/install/CodecheckSchemaMigration.php`):
 - `codecheck_codecheckers` — per-journal directory (#186), unique on ORCID iD
   and on username
 
-Migrations: `CodecheckMigration` base (`runUp()`; `down()` throws). The install
-migration creates tables and the `codecheck.yml` genre, then **calls every
-upgrade in order** — register new upgrades at the end of its `runUp()`.
-Upgrades: `I93`, `I94`, `I154`, `I186`, `I185` (moves `latest`/`1.0` records to
-`2.0`; runs after I93), `GHSA_4p3r_DeleteUnrecordedOrcidTokens` (runs last, on
-every enable). It runs on `setEnabled()` and, via `upgrade.xml` →
-`GalleryUpgradeMigration`, on a Plugin Gallery upgrade (no `version` attribute;
-failures are logged, not thrown, because OJS deletes the plugin directory on
-an exception; only runs where `codecheck_metadata` exists). Nothing in the
-plugin drops a table.
+Migrations: `CodecheckMigration` base (`runUp()`; `down()` throws). No install of a
+release exists (decision 2026-10-05), so the install migration creates the final schema directly (each
+table only if missing) plus the `codecheck.yml` genre and default settings. It
+runs on `setEnabled()` and, via `upgrade.xml` → `GalleryUpgradeMigration`, on a
+Plugin Gallery upgrade (no `version` attribute; failures are logged, not
+thrown, because OJS deletes the plugin directory on an exception; only runs
+where `codecheck_metadata` exists). **Once an install exists, a schema change
+needs an idempotent step added at the end of `runUp()`**; until then, edit the
+create block and the `testData` dump. Nothing in the plugin drops a table.
 
 **Writes** go through `CodecheckMetadataHandler::saveMetadata()` (editorial) and
 `CodecheckAuthorMetadata` (wizard), which enforce the repository rules.

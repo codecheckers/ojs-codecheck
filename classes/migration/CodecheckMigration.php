@@ -29,7 +29,7 @@ abstract class CodecheckMigration extends Migration
 
     /**
      * Runs the migration with start/end logging.
-     * Call this — not runUp() — when chaining migrations.
+     * Call this, not runUp().
      */
     public function up(): void
     {

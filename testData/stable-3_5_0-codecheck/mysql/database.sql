@@ -444,8 +444,7 @@ CREATE TABLE `codecheck_issue_labels` (
 --
 -- Table structure for table `codecheck_codecheckers`
 --
--- The journal's directory of codecheckers (#186), from
--- I186_AddCodecheckerDirectory. Left empty on purpose: it fills from the
+-- The journal's directory of codecheckers (#186). Left empty on purpose: it fills from the
 -- editorial saves, which is the path worth exercising.
 --
 

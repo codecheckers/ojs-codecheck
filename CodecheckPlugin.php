@@ -806,7 +806,7 @@ class CodecheckPlugin extends GenericPlugin implements HasTaskScheduler
         RefreshCodecheckLists::forgetInterval();
 
         if ($enabled) {
-            // Single entry point — install migration calls upgrade migrations internally.
+            // Idempotent: creates whatever tables and the genre are missing.
             $this->getInstallMigration()->up();
             $this->writeDefaultSettings($this->getCurrentContextId());
         }
