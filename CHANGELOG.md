@@ -71,6 +71,7 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 - A reviewer's CODECHECK form opens without an error; when the venue list cannot be read the editorial form offers the venue labels it already has, or the journal's own labels with a warning (#65)
 - The CODECHECK panel on the review stage shows the check's certificate identifier, files, codecheckers, repositories and summary beside its status, and marks a repository hidden from the public record as such (#65)
 - The reviewer's page and the dashboard load only their own submission's CODECHECK data (#65)
+- Importing a `codecheck.yml` from a repository, and resolving a repository's DOI, go through OJS's proxy setting (#65)
 
 ### Security
 

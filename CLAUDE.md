@@ -480,10 +480,14 @@ the plugin namespace to this checkout regardless of the symlink, and binds a
 
 Not unit-testable (DB/network/booted app in the first lines), covered by e2e
 instead or not at all: API endpoint bodies, `CodecheckStatusHandler`,
-`CodecheckRegisterDepositService`, `SubmissionWizardHandler`, `CurlApiClient`,
+`CodecheckRegisterDepositService`, `SubmissionWizardHandler`,
 migrations, `CodecheckPageHandler`, `OrcidDepositService` beyond
 `depositTargets()`. **Prefer e2e over booting the application in PHPUnit**;
-extract pure static rules to unit-test them. `TemplateManager` cannot be mocked
+extract pure static rules to unit-test them. `CurlApiClient` takes a Guzzle
+client, so its tests use Guzzle's `MockHandler`; **a test that uses Guzzle
+must `require` the plugin's `vendor/autoload.php` first**, as the production
+classes do, or classes from OJS's older copy mix with the plugin's and break
+later tests. `TemplateManager` cannot be mocked
 (hand-written stand-in). OJS's router answers unknown routes/methods with
 `api.404.endpointNotFound` before the plugin is reached.
 

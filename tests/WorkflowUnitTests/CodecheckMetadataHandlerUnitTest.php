@@ -4,8 +4,7 @@ namespace APP\plugins\generic\codecheck\tests\WorkflowUnitTests;
 
 use APP\core\Request;
 use APP\plugins\generic\codecheck\api\v1\CurlApiClient;
-use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitException;
-use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
+use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlHttpException;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PKP\tests\PKPTestCase;
@@ -595,7 +594,7 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $this->assertEquals('codecheck.yml not found', $actualMetadataReturnArray['error']);
     }
 
-    public function testImportMetadataFromOsfCurlInitException()
+    public function testImportMetadataFromOsfFetchRefused()
     {
         $errorCode = 500;
         $errorMessage = 'Error initializing the cURL API';
@@ -606,7 +605,7 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $curlApiClient = $this->createMock(CurlApiClient::class);
         $curlApiClient->method('resolveDoi')->willReturn($repository);
         $curlApiClient->method('fetch')
-            ->will($this->throwException(new CurlInitException($errorMessage, $errorCode)));
+            ->will($this->throwException(new CurlHttpException($errorMessage, $errorCode)));
 
         $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
         $response = $this->handler->importMetadataFromRepository($osfNodeId);
@@ -618,10 +617,9 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $this->assertEquals($errorMessage, $actualMetadataReturnArray['error']);
     }
 
-    public function testImportMetadataFromOsfCurlReadException()
+    public function testImportMetadataFromOsfHostDidNotAnswer()
     {
-        $curlHandle = curl_init();
-        $errorMessage = curl_error($curlHandle);
+        $errorMessage = 'https://example.org did not answer';
         $osfNodeId = 'ymc3t';
         $repository = "https://osf.io/{$osfNodeId}/";
         $client = $this->createMock(\Github\Client::class);
@@ -629,14 +627,14 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $curlApiClient = $this->createMock(CurlApiClient::class);
         $curlApiClient->method('resolveDoi')->willReturn($repository);
         $curlApiClient->method('fetch')
-            ->will($this->throwException(new CurlReadException($curlHandle)));
+            ->will($this->throwException(new CurlHttpException($errorMessage, 504)));
 
         $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
         $response = $this->handler->importMetadataFromRepository($osfNodeId);
         $actualMetadataReturnArray = json_decode($response->getPayload(), true);
         // A cURL error number is not an HTTP status, so the response carries
         // a 500 rather than the code the exception happened to have (#130).
-        $this->assertEquals(500, $response->getHttpResponseCode());
+        $this->assertEquals(504, $response->getHttpResponseCode());
         $this->assertCount(3, $actualMetadataReturnArray);
         $this->assertFalse($actualMetadataReturnArray['success']);
         $this->assertEquals($repository, $actualMetadataReturnArray['repository']);
@@ -661,7 +659,7 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $this->assertEquals(['test' => 'yaml'], $actualMetadataReturnArray['metadata']);
     }
 
-    public function testReadYamlContentCurlInitException()
+    public function testReadYamlContentFetchRefused()
     {
         $repository = 'https://gitlab.com/cdchck/community-codechecks/2022-svaRetro-svaNUMT';
         $errorCode = 500;
@@ -671,7 +669,7 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $curlApiClient = $this->createMock(CurlApiClient::class);
         $curlApiClient->method('resolveDoi')->willReturn($repository);
         $curlApiClient->method('fetch')
-            ->will($this->throwException(new CurlInitException($errorMessage, $errorCode)));
+            ->will($this->throwException(new CurlHttpException($errorMessage, $errorCode)));
         $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
         $response = $this->handler->importMetadataFromRepository($repository);
         $actualMetadataReturnArray = json_decode($response->getPayload(), true);
@@ -682,23 +680,22 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $this->assertEquals($errorMessage, $actualMetadataReturnArray['error']);
     }
 
-    public function testReadYamlContentCurlReadException()
+    public function testReadYamlContentHostDidNotAnswer()
     {
         $repository = 'https://gitlab.com/cdchck/community-codechecks/2022-svaRetro-svaNUMT';
-        $curlHandle = curl_init();
-        $errorMessage = curl_error($curlHandle);
+        $errorMessage = 'https://example.org did not answer';
         $client = $this->createMock(\Github\Client::class);
         $request = new Request();
         $curlApiClient = $this->createMock(CurlApiClient::class);
         $curlApiClient->method('resolveDoi')->willReturn($repository);
         $curlApiClient->method('fetch')
-            ->will($this->throwException(new CurlReadException($curlHandle)));
+            ->will($this->throwException(new CurlHttpException($errorMessage, 504)));
         $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
         $response = $this->handler->importMetadataFromRepository($repository);
         $actualMetadataReturnArray = json_decode($response->getPayload(), true);
         // A cURL error number is not an HTTP status, so the response carries
         // a 500 rather than the code the exception happened to have (#130).
-        $this->assertEquals(500, $response->getHttpResponseCode());
+        $this->assertEquals(504, $response->getHttpResponseCode());
         $this->assertCount(3, $actualMetadataReturnArray);
         $this->assertFalse($actualMetadataReturnArray['success']);
         $this->assertEquals($repository, $actualMetadataReturnArray['repository']);

@@ -2,51 +2,67 @@
 
 namespace APP\plugins\generic\codecheck\api\v1;
 
+use APP\core\Application;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\GithubHttp;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlHttpException;
-use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlInitException;
-use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlReadException;
-use CurlHandle;
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\ConnectException;
+use GuzzleHttp\RequestOptions;
+use GuzzleHttp\TransferStats;
 
+/**
+ * Fetches a repository's `codecheck.yml` and resolves DOIs to the repository
+ * they name.
+ *
+ * Through OJS's own HTTP client, so its `[proxy]` setting applies (#65); the
+ * name is from when this was a cURL client, kept for its callers.
+ */
 class CurlApiClient implements ApiClientInterface
 {
-    private function initialize(string $url): CurlHandle
+    private const USER_AGENT = 'Mozilla/5.0 (compatible; Codecheck/1.0; +https://codecheck.org.uk)';
+
+    /** As many as cURL followed here; repository downloads pass through CDNs. */
+    private const MAX_REDIRECTS = 10;
+
+    /** OJS's client, built on first use: building it reads the version from the database. */
+    public function __construct(private ?Client $client = null)
     {
-        $curl_handle = curl_init($url);
-        if ($curl_handle === false) {
-            throw new CurlInitException('Error initializing cURL Session', 500);
-        }
-        return $curl_handle;
     }
 
+    private function client(): Client
+    {
+        return $this->client ??= Application::get()->getHttpClient();
+    }
+
+    /**
+     * @throws CurlHttpException carrying the answer's status, or 504 when the
+     *   host did not answer and 502 when the request failed otherwise
+     */
     public function fetch(string $url): string
     {
-        $curlHandle = $this->initialize($url);
-
-        curl_setopt_array($curlHandle, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_FOLLOWLOCATION => true, // follow redirects
-            // A repository host that never answers must not hold the editor's
-            // request, or a publication, for as long as PHP lets it run.
-            CURLOPT_CONNECTTIMEOUT => GithubHttp::CONNECT_TIMEOUT_SECONDS,
-            CURLOPT_TIMEOUT => GithubHttp::TIMEOUT_SECONDS,
-            CURLOPT_USERAGENT => 'Mozilla/5.0 (compatible; Codecheck/1.0; +https://codecheck.org.uk)', // Set the User Agent
-            CURLOPT_HTTPHEADER => ['Accept: */*'],
-        ]);
-
-        $response = curl_exec($curlHandle);
-        if ($response === false) {
-            throw new CurlReadException($curlHandle);
+        try {
+            $response = $this->client()->request('GET', $url, [
+                // A repository host that never answers must not hold the editor's
+                // request, or a publication, for as long as PHP lets it run.
+                RequestOptions::CONNECT_TIMEOUT => GithubHttp::CONNECT_TIMEOUT_SECONDS,
+                RequestOptions::TIMEOUT => GithubHttp::TIMEOUT_SECONDS,
+                RequestOptions::ALLOW_REDIRECTS => ['max' => self::MAX_REDIRECTS],
+                RequestOptions::HEADERS => ['User-Agent' => self::USER_AGENT, 'Accept' => '*/*'],
+                RequestOptions::HTTP_ERRORS => false,
+            ]);
+        } catch (ConnectException $e) {
+            // Unreachable or too slow: the plugin's word for that is 504, as for GitHub.
+            throw new CurlHttpException("{$url} did not answer: " . $e->getMessage(), 504, $e);
+        } catch (\Throwable $e) {
+            throw new CurlHttpException("Request to {$url} failed: " . $e->getMessage(), 502, $e);
         }
 
-        $httpCode = curl_getinfo($curlHandle, CURLINFO_HTTP_CODE);
+        $httpCode = $response->getStatusCode();
         if ($httpCode >= 400) {
-            throw new CurlHttpException(
-                "Request to {$url} failed with HTTP status {$httpCode}. " . curl_error($curlHandle),
-                $httpCode
-            );
+            throw new CurlHttpException("Request to {$url} failed with HTTP status {$httpCode}.", $httpCode);
         }
-        return $response;
+
+        return (string) $response->getBody();
     }
 
     /**
@@ -60,32 +76,30 @@ class CurlApiClient implements ApiClientInterface
             return $possibleDoiUrl;
         }
 
-        // Normalize into a fully-qualified URL for cURL, regardless of what
-        // scheme/host form the input came in as (bare DOI, doi.org/..., etc.)
+        // Normalize into a fully-qualified URL, regardless of what scheme/host
+        // form the input came in as (bare DOI, doi.org/..., etc.)
         $doi = preg_replace('#^(?:https?://)?(?:dx\.)?(?:doi\.org/)?#i', '', $possibleDoiUrl);
         $url = 'https://doi.org/' . $doi;
 
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_HTTPGET => true,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 10,
-            CURLOPT_SSL_VERIFYPEER => true,
-            CURLOPT_USERAGENT => 'Mozilla/5.0 (compatible; Codecheck/1.0; +https://codecheck.org.uk)',
-        ]);
-
-        curl_exec($ch);
-        $effectiveUrl = curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $error = curl_errno($ch);
-        curl_close($ch);
-
-        if ($error || !$effectiveUrl) {
+        $effectiveUrl = null;
+        try {
+            $response = $this->client()->request('GET', $url, [
+                RequestOptions::ALLOW_REDIRECTS => ['max' => self::MAX_REDIRECTS],
+                RequestOptions::CONNECT_TIMEOUT => GithubHttp::CONNECT_TIMEOUT_SECONDS,
+                RequestOptions::TIMEOUT => GithubHttp::TIMEOUT_SECONDS,
+                RequestOptions::HEADERS => ['User-Agent' => self::USER_AGENT],
+                RequestOptions::HTTP_ERRORS => false,
+                // Only where it ends up is wanted, not the landing page itself.
+                RequestOptions::STREAM => true,
+                RequestOptions::ON_STATS => function (TransferStats $stats) use (&$effectiveUrl) {
+                    $effectiveUrl = (string) $stats->getEffectiveUri();
+                },
+            ]);
+            $response->getBody()->close();
+        } catch (\Throwable $e) {
             return $possibleDoiUrl;
         }
 
-        return $effectiveUrl;
+        return $effectiveUrl ?: $possibleDoiUrl;
     }
 }
