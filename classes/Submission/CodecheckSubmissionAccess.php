@@ -70,12 +70,12 @@ class CodecheckSubmissionAccess
     /**
      * Does this user act editorially on this submission?
      *
-     * Judged per submission, as mayEditCodecheckers() is: a manager or site
-     * administrator always (a site administrator holds no journal role, which
-     * isEditor() asks for), a Section editor or Assistant only with a stage
-     * assignment here. Their journal-wide role alone also covers a submission
-     * they reach as its author or as an invited reviewer, where it is not an
-     * editor's standing.
+     * Judged per submission: a manager or site administrator always, a
+     * Section editor or Assistant only with a stage assignment here. Their
+     * journal-wide role alone also covers a submission they reach as its
+     * author or as an invited reviewer, where it is not an editor's standing.
+     * Anything published under the journal's name in the register is an
+     * editor's, not a reviewer's and not the codechecker's.
      */
     public static function isEditorOn(?User $user, int $submissionId, int $contextId): bool
     {
@@ -85,21 +85,6 @@ class CodecheckSubmissionAccess
 
         return self::isJournalManager($user, $contextId)
             || self::hasStageAssignment($user, $submissionId, [Role::ROLE_ID_SUB_EDITOR, Role::ROLE_ID_ASSISTANT]);
-    }
-
-    /**
-     * The journal roles that act editorially.
-     *
-     * Interactions with the public CODECHECK register are reserved to these —
-     * not to reviewers, and not to the codechecker either, because an entry in
-     * the register is published under the journal's name.
-     */
-    public static function isEditor(?User $user, int $contextId): bool
-    {
-        return (bool) $user?->hasRole(
-            [Role::ROLE_ID_MANAGER, Role::ROLE_ID_SITE_ADMIN, Role::ROLE_ID_SUB_EDITOR, Role::ROLE_ID_ASSISTANT],
-            $contextId
-        );
     }
 
     /**
