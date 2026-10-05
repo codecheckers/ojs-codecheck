@@ -56,8 +56,10 @@ class CodecheckSubmissionAccess
     /**
      * May this user write CODECHECK data for this submission?
      *
-     * Editors may, for any submission in their journal. A reviewer may only for
-     * the submission they are assigned to. Nothing else may.
+     * Editors may, for any submission in their journal, and so may a site
+     * administrator, who holds no journal role (isEditor() asks the journal's
+     * context). A reviewer may only for the submission they are assigned to.
+     * Nothing else may.
      */
     public static function canWriteMetadata(?User $user, int $submissionId, int $contextId): bool
     {
@@ -65,7 +67,7 @@ class CodecheckSubmissionAccess
             return false;
         }
 
-        if (self::isEditor($user, $contextId)) {
+        if (self::isEditor($user, $contextId) || self::isJournalManager($user, $contextId)) {
             return true;
         }
 
@@ -145,6 +147,61 @@ class CodecheckSubmissionAccess
     public static function mayManageIdentifier(?User $user, int $contextId): bool
     {
         return $user !== null && self::isJournalManager($user, $contextId);
+    }
+
+    /**
+     * What the user may do with this submission's CODECHECK record, for the
+     * forms to offer only that (#127).
+     *
+     * These are hints that save a request the server would refuse: every
+     * endpoint enforces its own rule whatever the form showed. They mirror
+     * those rules: `write` is what the write endpoints ask of the user, while
+     * `addCertificateReference` leaves out the journal's mode, the opt-in and
+     * the publication's state, which the form checks itself.
+     *
+     * @return array{write: bool, editCodecheckers: bool, manageIdentifier: bool, addCertificateReference: bool}
+     */
+    public static function permissions(?User $user, int $submissionId, int $contextId): array
+    {
+        return [
+            'write' => self::canWriteMetadata($user, $submissionId, $contextId),
+            'editCodecheckers' => self::mayEditCodecheckers($user, $submissionId, $contextId),
+            'manageIdentifier' => self::mayManageIdentifier($user, $contextId),
+            // `references` is an editors' route; the publication must also be
+            // one the user may edit (CertificateReferenceUpdate asks the same).
+            'addCertificateReference' => $user !== null
+                && self::isEditor($user, $contextId)
+                && Repo::submission()->canEditPublication($submissionId, $user->getId()),
+        ];
+    }
+
+    /**
+     * Whose ORCID deposit the user may trigger on this submission: the one
+     * place `orcid-status` and `orcid-deposit` both ask. The reviewer lookup
+     * is only made for someone who is not an editor.
+     *
+     * @return 'all'|'own'|'none'
+     */
+    public static function orcidDepositScopeFor(?User $user, int $submissionId, int $contextId): string
+    {
+        $isEditor = self::isEditor($user, $contextId);
+
+        return self::orcidDepositScope($isEditor, !$isEditor && self::isAssignedReviewer($user, $submissionId));
+    }
+
+    /**
+     * Whose ORCID deposit the user may trigger: every codechecker's (`all`,
+     * an editor), only their own (`own`, an assigned reviewer) or none.
+     *
+     * @return 'all'|'own'|'none'
+     */
+    public static function orcidDepositScope(bool $isEditor, bool $isAssignedReviewer): string
+    {
+        if ($isEditor) {
+            return 'all';
+        }
+
+        return $isAssignedReviewer ? 'own' : 'none';
     }
 
     /**

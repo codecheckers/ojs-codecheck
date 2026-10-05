@@ -9,7 +9,12 @@ import CodecheckMetadataForm from '../../../resources/js/Components/CodecheckMet
 const metadataResponseBody = () => ({
   success: true,
   submissionId: 1,
-  canManageIdentifier: true,
+  permissions: {
+    write: true,
+    editCodecheckers: true,
+    manageIdentifier: true,
+    addCertificateReference: true,
+  },
   submission: {
     id: 1,
     title: 'Test Article Title',
@@ -435,6 +440,43 @@ describe('CodecheckMetadataForm Component', () => {
   });
 
   /**
+   * Someone who may not write the record — an author in the workflow, say —
+   * is shown it read-only: no field to edit, no Save, no import, and a note
+   * saying why. The server would refuse the save (#127).
+   */
+  it('shows the record read-only to someone who may not write it', () => {
+    interceptMetadata({
+      permissions: {
+        write: false,
+        editCodecheckers: false,
+        manageIdentifier: false,
+        addCertificateReference: false,
+      },
+    });
+    cy.mount(CodecheckMetadataForm, { props: { submission: { id: 1 }, canEdit: true } });
+    cy.wait('@loadMetadata');
+
+    cy.contains('plugins.generic.codecheck.form.readOnly').should('be.visible');
+    cy.get('.codecheck-form-fields').should('have.attr', 'disabled');
+    cy.get('.codecheck-form-fields input, .codecheck-form-fields select, .codecheck-form-fields textarea')
+      .each(($field) => expect($field.closest('fieldset[disabled]').length).to.eq(1));
+    cy.get('.footer-actions button').contains(/save/i).should('not.exist');
+    cy.contains('plugins.generic.codecheck.codecheckers.editorsOnly').should('be.visible');
+    // Reading the record stays possible.
+    cy.get('[data-testid="preview-yaml-button"]').should('exist');
+  });
+
+  it('offers Save and no note to someone who may write the record', () => {
+    interceptMetadata();
+    cy.mount(CodecheckMetadataForm, { props: { submission: { id: 1 }, canEdit: true } });
+    cy.wait('@loadMetadata');
+
+    cy.contains('plugins.generic.codecheck.form.readOnly').should('not.exist');
+    cy.get('.codecheck-form-fields').should('not.have.attr', 'disabled');
+    cy.get('.footer-actions button').contains(/save/i).should('exist');
+  });
+
+  /**
    * Reserving, linking and removing the identifier are a journal manager's;
    * anyone else sees it read-only, and the form neither asks for the venue
    * labels nor writes the register issue on save (#65).
@@ -451,7 +493,7 @@ describe('CodecheckMetadataForm Component', () => {
     });
     cy.intercept('POST', '**/codecheck/metadata*', { statusCode: 200, body: { success: true } }).as('save');
     interceptMetadata({
-      canManageIdentifier: false,
+      permissions: { ...metadataResponseBody().permissions, manageIdentifier: false },
       // No register issue, so the field is not read-only because it is linked:
       // only the missing permission can make it so.
       codecheck: {
@@ -1632,6 +1674,7 @@ describe('CodecheckMetadataForm Component', () => {
         body: {
           success: true,
           submissionId: 1,
+          permissions: metadataResponseBody().permissions,
           submission: { id: 1, title: 'Test Article Title', authors: [], doi: null },
           codecheck: {
             version: '2.0',
@@ -1782,6 +1825,17 @@ describe('CodecheckMetadataForm certificate reference', () => {
 
   it('offers no button when the response does not say', () => {
     interceptMetadata();
+    mountForm();
+    cy.wait('@loadMetadata');
+    cy.get('.certificate-reference').should('not.exist');
+  });
+
+  it('offers no button to someone the server does not allow to add it (#127)', () => {
+    const body = metadataResponseBody();
+    body.codecheck.certificate = '2026-001';
+    body.settings = { enabledConfigVersions: ['2.0'], certificateReferenceMode: 'button' };
+    body.permissions.addCertificateReference = false;
+    cy.intercept('GET', '**/codecheck/metadata*', { statusCode: 200, body }).as('loadMetadata');
     mountForm();
     cy.wait('@loadMetadata');
     cy.get('.certificate-reference').should('not.exist');

@@ -159,7 +159,7 @@ and add the method to `SUBMISSION_SCOPED` if it acts on a submission —
 otherwise it answers for any submission in the journal.
 
 Endpoints: `GET labels|metadata|yaml|register|status|status/history|orcid-status|orcid-test|codecheckers|codecheckers/lookup`,
-`POST identifier|issue|metadata|references|repository|repository/validate|yaml/validate|status/update|users/roles/validation|orcid-deposit`.
+`POST identifier|issue|metadata|references|repository|repository/validate|yaml/validate|status/update|orcid-deposit`.
 
 **There is deliberately no file upload/download endpoint**
 (`CodecheckApiControllerRoutesUnitTest` asserts it). Use OJS file services and
@@ -179,11 +179,25 @@ assignment):
   codechecker list, whatever was posted.
 - `mayManageIdentifier()` (#65) — journal manager or site admin. `identifier`,
   `issue`, `labels` are `ADMIN_ROLES`; `GET metadata` answers
-  `canManageIdentifier`; the form then shows the identifier read-only and sends
-  no `issue` update; `saveMetadata()` keeps the stored `certificate` and `issue`
+  `permissions.manageIdentifier`; the form then shows the identifier read-only
+  and sends no `issue` update; `saveMetadata()` keeps the stored `certificate` and `issue`
   for anyone else. Automatic register writes (status comment, labels, JSON
   block) are not covered by it.
 - `isEditor()` — gates directory writes and GitHub assignment.
+- `permissions()` (#127) — what the forms offer, built from the rules above:
+  `GET metadata` answers `permissions` (`write`, `editCodecheckers`,
+  `manageIdentifier`, `addCertificateReference`), `GET status` `canUpdate`,
+  `GET orcid-status` `depositScope` (`all`/`own`/`none`, from
+  `orcidDepositScopeFor()`, which `orcid-deposit` asks too). They are hints that save a refused
+  request; the endpoints enforce their own rules, which the hints mirror
+  (`saveMetadata`, `repository` and `status/update` ask `canWriteMetadata()`
+  after the route's role list; `addCertificateReference` is only part of its
+  endpoint's rule). **A form offers only what the
+  server said**: closed until it answers, no role logic in JS; without
+  `write` the fields sit in a disabled `<fieldset>` and Save is gone. A new
+  action in a form needs its flag here, not a JS role check. Not rendered
+  into the page: OJS 3.5's workflow is the dashboard's side panel, so the
+  submission is unknown at render time.
 
 `POST repository` imports via `importMetadataForSubmission()`, which refuses a
 `codecheck.yml` whose `paper.title` is missing or not the submission's

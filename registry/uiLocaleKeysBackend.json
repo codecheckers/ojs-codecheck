@@ -81,6 +81,7 @@
   "plugins.generic.codecheck.dialog.submitFailed",
   "plugins.generic.codecheck.form.intro",
   "plugins.generic.codecheck.form.intro.specLinkLabel",
+  "plugins.generic.codecheck.form.readOnly",
   "plugins.generic.codecheck.github.issue.display",
   "plugins.generic.codecheck.github.issue.display.button.viewIssue",
   "plugins.generic.codecheck.github.issue.display.certificateIdentifier",

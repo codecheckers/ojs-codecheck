@@ -62,6 +62,7 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 - The paper title check when publishing ignores capitals and spacing (#28)
 - The CODECHECK tab, the review stage and the Metadata page give the same reason for a submission that takes no part in a CODECHECK: not opted in, opted out, or no choice recorded (#34)
 - The metadata form and the YAML preview name the fields version 2.0 requires that a record still lacks, without blocking a save or publication; importing a `codecheck.yml` from a repository does not replace the paper's title, authors and DOI shown in the form (#185)
+- The CODECHECK form offers only what the signed-in user may do: someone who may not change the check, an author for instance, sees it read-only without Save, and the change of status, the certificate reference and the ORCID deposits are offered only to those the journal allows (#127)
 
 ### Removed
 

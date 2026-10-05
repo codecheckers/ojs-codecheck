@@ -148,7 +148,7 @@ describe('A reviewer assigned to a submission', () => {
     api('GET', 'labels').its('status').should('eq', 401);
 
     api('GET', `metadata?submissionId=${ASSIGNED}`).then(({ body }) => {
-      expect(body.canManageIdentifier).to.eq(false);
+      expect(body.permissions.manageIdentifier).to.eq(false);
       const stored = body.codecheck;
       cy.saveCodecheckRecord(ASSIGNED, {
         ...stored,
@@ -161,6 +161,18 @@ describe('A reviewer assigned to a submission', () => {
         expect(after.issue).to.deep.equal(stored.issue);
       });
     });
+  });
+
+  /** What the form offers follows what the endpoints accept (#127). */
+  it('is offered writing the assigned submission, and little else', () => {
+    api('GET', `metadata?submissionId=${ASSIGNED}`).its('body.permissions').should('include', {
+      write: true,
+      editCodecheckers: false,
+      manageIdentifier: false,
+      addCertificateReference: false,
+    });
+    api('GET', `status?submissionId=${ASSIGNED}`).its('body.canUpdate').should('eq', true);
+    api('GET', `orcid-status?submissionId=${ASSIGNED}`).its('body.depositScope').should('eq', 'own');
   });
 
   it('may still read CODECHECK data — the reviewer tab shows it', () => {
@@ -177,7 +189,16 @@ describe('An editor', () => {
   after(restoreStatuses);
 
   it('may manage the certificate identifier', () => {
-    api('GET', `metadata?submissionId=${NOT_ASSIGNED}`).its('body.canManageIdentifier').should('eq', true);
+    api('GET', `metadata?submissionId=${NOT_ASSIGNED}`).its('body.permissions.manageIdentifier').should('eq', true);
+  });
+
+  it('is offered every action of the form (#127)', () => {
+    api('GET', `metadata?submissionId=${NOT_ASSIGNED}`).its('body.permissions').should('include', {
+      write: true,
+      editCodecheckers: true,
+      manageIdentifier: true,
+    });
+    api('GET', `status?submissionId=${NOT_ASSIGNED}`).its('body.canUpdate').should('eq', true);
   });
 
   it('may write a submission they were never assigned to', () => {
@@ -234,6 +255,20 @@ describe('Who may know the authors', () => {
       expect(response.body.submission.authorsWithheld).to.eq(false);
       expect(response.body.submission.contact.email).to.eq(CONTACT_EMAIL);
     });
+  });
+
+  it('the submission\'s own author is offered no writing (#127)', () => {
+    cy.ojsLogin('dnuest', 'dnuest');
+    cy.visit(`/index.php/${JOURNAL}/submissions`);
+
+    api('GET', `metadata?submissionId=${ASSIGNED}`).its('body.permissions').should('deep.equal', {
+      write: false,
+      editCodecheckers: false,
+      manageIdentifier: false,
+      addCertificateReference: false,
+    });
+    api('GET', `status?submissionId=${ASSIGNED}`).its('body.canUpdate').should('eq', false);
+    api('GET', `orcid-status?submissionId=${ASSIGNED}`).its('body.depositScope').should('eq', 'none');
   });
 
   it('a reviewer on a double-anonymous assignment sees neither, in the form or in the codecheck.yml', () => {

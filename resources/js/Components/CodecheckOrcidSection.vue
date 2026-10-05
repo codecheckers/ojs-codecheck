@@ -93,9 +93,9 @@
             {{ t('plugins.generic.codecheck.orcid.authoriseByCodechecker') }}
           </span>
 
-          <!-- Deposit button: only shown to editors who can trigger deposition -->
+          <!-- Deposit button: for the codecheckers the user may deposit for (#127) -->
           <pkp-button
-            v-if="cc.orcidId"
+            v-if="cc.orcidId && mayDeposit(cc)"
             :is-primary="cc.depositStatus !== 'success'"
             :disabled="isDepositing || !!journalConfigError"
             class="codecheck-orcid-btn"
@@ -117,7 +117,7 @@
     </div>
 
     <!-- Deposit all button: only for editors -->
-    <div v-if="hasAuthorised && !canAuthorise" class="codecheck-orcid-section__footer">
+    <div v-if="hasAuthorised && depositScope === 'all'" class="codecheck-orcid-section__footer">
       <pkp-button
         :disabled="isDepositing || !!journalConfigError"
         class="codecheck-orcid-btn"
@@ -149,6 +149,9 @@ export default {
       authError: null,
       journalConfigError: null,
       depositError: null,
+      // Whose deposit the user may trigger, as the server answers it; none
+      // until it has (#127).
+      depositScope: 'none',
     };
   },
 
@@ -197,6 +200,7 @@ export default {
           const data = await response.json();
           this.codecheckers       = data.codecheckers ?? [];
           this.journalConfigError = data.journalConfigError ?? null;
+          this.depositScope       = data.depositScope ?? 'none';
         } else {
           // Without this a failed request left the list empty, which the
           // template renders as "No codecheckers have been assigned yet" —
@@ -208,6 +212,11 @@ export default {
       } finally {
         this.isLoading = false;
       }
+    },
+
+    /** An editor deposits for every codechecker, a reviewer for their own row. */
+    mayDeposit(cc) {
+      return this.depositScope === 'all' || (this.depositScope === 'own' && cc.isCurrentUser === true);
     },
 
     startAuth(cc) {

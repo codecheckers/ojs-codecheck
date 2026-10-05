@@ -237,9 +237,6 @@ class CodecheckApiController extends PKPBaseController
         Route::post('yaml/validate', $this->validateYamlStructure(...))
             ->name('codecheck.yaml.validate')->middleware($read);
 
-        Route::post('users/roles/validation', $this->validateUserAccessRightsToStatus(...))
-            ->name('codecheck.roles.validate')->middleware($read);
-
         // Anything published under the journal's name in the public CODECHECK
         // register stays with a journal editor or an administrator (#173).
         Route::post('identifier', $this->reserveIdentifier(...))
@@ -258,12 +255,20 @@ class CodecheckApiController extends PKPBaseController
      */
     public function getCurrentStatus(): \Illuminate\Http\JsonResponse
     {
+        $request = Application::get()->getRequest();
         $submission = $this->getAuthorizedContextObject(Application::ASSOC_TYPE_SUBMISSION);
 
         return response()->json([
             'success' => true,
             'statusRecord' => CodecheckStatusHandler::getCurrentStatusData($submission->getId()),
             'allStatuses' => Constants::CODECHECK_STATUSES,
+            // Whether the form offers recording a status; `status/update`
+            // enforces it either way (#127).
+            'canUpdate' => CodecheckSubmissionAccess::canWriteMetadata(
+                $request->getUser(),
+                (int) $submission->getId(),
+                (int) $request->getContext()?->getId()
+            ),
         ], 200);
     }
 
@@ -320,10 +325,11 @@ class CodecheckApiController extends PKPBaseController
             'enabledConfigVersions' => $this->plugin->getEnabledConfigVersions($request->getContext()?->getId()),
             'certificateReferenceMode' => $this->plugin->getCertificateReferenceMode($request->getContext()?->getId()),
         ];
-        // Whether the form offers reserving, linking and removing the
-        // identifier; the endpoints and the save enforce it either way (#65).
-        $result['canManageIdentifier'] = CodecheckSubmissionAccess::mayManageIdentifier(
+        // What the form offers this user; the endpoints and the save enforce
+        // it either way (#65, #127).
+        $result['permissions'] = CodecheckSubmissionAccess::permissions(
             $request->getUser(),
+            (int) $submission->getId(),
             (int) $request->getContext()?->getId()
         );
 
@@ -384,6 +390,33 @@ class CodecheckApiController extends PKPBaseController
     }
 
     /**
+     * The refusal for a user who may not write this submission's CODECHECK
+     * record, or null when they may.
+     *
+     * The rule is the one the forms' `write`/`canUpdate` hints state (#127): an
+     * editor or administrator, or the reviewer assigned here. The route's role
+     * list and `SubmissionAccessPolicy` already refuse nearly everyone else;
+     * this keeps the endpoints and the hints on the same predicate. It answers
+     * as PKP's role authorizer does.
+     */
+    private function refuseUnlessMayWrite(PKPRequest $request, $submission): ?\Illuminate\Http\JsonResponse
+    {
+        if (CodecheckSubmissionAccess::canWriteMetadata(
+            $request->getUser(),
+            (int) $submission->getId(),
+            (int) $request->getContext()?->getId()
+        )) {
+            return null;
+        }
+
+        return response()->json([
+            'success' => false,
+            'error' => 'user.authorization.roleBasedAccessDenied',
+            'errorMessage' => __('user.authorization.roleBasedAccessDenied'),
+        ], 401);
+    }
+
+    /**
      * The metadata handler, built per request because it reads the request.
      */
     private function metadataHandler(): CodecheckMetadataHandler
@@ -422,12 +455,18 @@ class CodecheckApiController extends PKPBaseController
         // (GHSA-4p3r-qgp4-g74r), so listing it would offer a button that can
         // only answer that it was skipped. `hasOrcid` is whether an account can
         // be connected at all — only for a codechecker whose iD is on record.
+        $request = Application::get()->getRequest();
+        $user = $request->getUser();
+        $ownOrcid = CodecheckCodecheckers::normalizeOrcid($user?->getOrcid());
+
         $codecheckers = [];
         foreach (CodecheckCodecheckers::withNormalizedEntries($storedCodecheckers) as $cc) {
             $tokenRow = $tokensByOrcid[$cc['orcid']] ?? null;
 
             $codecheckers[] = [
                 'name' => $cc['name'],
+                // The row a reviewer may deposit for: their own (#127).
+                'isCurrentUser' => $ownOrcid !== '' && $cc['orcid'] === $ownOrcid,
                 'hasOrcid' => $cc['orcid'] !== '',
                 'orcidId' => $tokenRow->orcid_id ?? null,
                 'depositStatus' => $tokenRow->deposit_status ?? null,
@@ -450,6 +489,13 @@ class CodecheckApiController extends PKPBaseController
             'submissionId' => $submissionId,
             'codecheckers' => $codecheckers,
             'journalConfigError' => $journalConfigError,
+            // Whose deposit the form offers this user; `orcid-deposit`
+            // enforces it either way (#127).
+            'depositScope' => CodecheckSubmissionAccess::orcidDepositScopeFor(
+                $user,
+                (int) $submissionId,
+                (int) $request->getContext()?->getId()
+            ),
         ], 200);
     }
 
@@ -460,6 +506,10 @@ class CodecheckApiController extends PKPBaseController
     {
         $request = Application::get()->getRequest();
         $submission = $this->getAuthorizedContextObject(Application::ASSOC_TYPE_SUBMISSION);
+
+        if ($refusal = $this->refuseUnlessMayWrite($request, $submission)) {
+            return $refusal;
+        }
 
         $result = $this->metadataHandler()->saveMetadata(
             $request,
@@ -496,6 +546,12 @@ class CodecheckApiController extends PKPBaseController
      */
     public function loadMetadataFromRepository(): \Illuminate\Http\JsonResponse
     {
+        $submission = $this->getAuthorizedContextObject(Application::ASSOC_TYPE_SUBMISSION);
+
+        if ($refusal = $this->refuseUnlessMayWrite(Application::get()->getRequest(), $submission)) {
+            return $refusal;
+        }
+
         $postParams = json_decode(file_get_contents('php://input'), true);
         $repository = $postParams['repository'] ?? null;
 
@@ -507,7 +563,6 @@ class CodecheckApiController extends PKPBaseController
         }
 
         // The title comes from the authorised submission, never from the request.
-        $submission = $this->getAuthorizedContextObject(Application::ASSOC_TYPE_SUBMISSION);
         $title = (string) $submission->getCurrentPublication()?->getLocalizedTitle();
 
         $response = $this->metadataHandler()->importMetadataForSubmission($repository, $title);
@@ -538,7 +593,7 @@ class CodecheckApiController extends PKPBaseController
         }
 
         $user = $request->getUser();
-        $isEditor = CodecheckSubmissionAccess::isEditor($user, $context->getId());
+        $scope = CodecheckSubmissionAccess::orcidDepositScopeFor($user, $submissionId, $context->getId());
 
         // The per-row button names an ORCID iD; "Deposit to all" sends none. The
         // endpoint used to ignore it either way and deposit for every authorised
@@ -548,19 +603,19 @@ class CodecheckApiController extends PKPBaseController
         $requested = $postParams['orcidId'] ?? null;
         $onlyOrcidId = is_string($requested) && $requested !== '' ? $requested : null;
 
-        if (!$isEditor) {
+        if ($scope === 'none') {
             // SubmissionAccessPolicy has already refused a reviewer who is not
             // assigned here — depositToOrcid is in SUBMISSION_SCOPED — so this is
             // the second lock rather than the one holding the door. It stays
             // because dropping this route from that list would otherwise open
             // the deposit silently (#175).
-            if (!CodecheckSubmissionAccess::isAssignedReviewer($user, $submissionId)) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Only an editor, or a reviewer assigned to this submission, may deposit to ORCID.',
-                ], 403);
-            }
+            return response()->json([
+                'success' => false,
+                'error' => 'Only an editor, or a reviewer assigned to this submission, may deposit to ORCID.',
+            ], 403);
+        }
 
+        if ($scope === 'own') {
             // A reviewer deposits their own record whatever the payload asked
             // for, so a crafted request cannot deposit on a colleague's behalf.
             $onlyOrcidId = $user?->getOrcid();
@@ -598,6 +653,10 @@ class CodecheckApiController extends PKPBaseController
         $request = Application::get()->getRequest();
         $submission = $this->getAuthorizedContextObject(Application::ASSOC_TYPE_SUBMISSION);
         $submissionId = $submission->getId();
+
+        if ($refusal = $this->refuseUnlessMayWrite($request, $submission)) {
+            return $refusal;
+        }
 
         $postParams = json_decode(file_get_contents('php://input'), true) ?? [];
         $status = $postParams['status'] ?? null;
@@ -1111,34 +1170,6 @@ class CodecheckApiController extends PKPBaseController
 
         return response()->json([
             'success' => true,
-        ], 200);
-    }
-
-    /**
-     * Whether the caller may set the CODECHECK status.
-     *
-     * The answer comes from the session. It used to be read out of the request
-     * body — the caller sent its own `user.roles` and the server looked for 16
-     * in the list — so the question "may I?" was answered by whoever asked. The
-     * client still posts `pkp.currentUser`; that body is now ignored rather than
-     * trusted, and an honest client gets the same answer as before.
-     *
-     * This only shows and hides a control. The enforcement is
-     * assertMayWriteMetadata() on the endpoints themselves.
-     */
-    public function validateUserAccessRightsToStatus(): \Illuminate\Http\JsonResponse
-    {
-        $request = Application::get()->getRequest();
-        $context = $request->getContext();
-        $user = $request->getUser();
-
-        $allowedToAccess = $user
-            && $context
-            && $user->hasRole([Role::ROLE_ID_MANAGER], $context->getId());
-
-        return response()->json([
-            'success' => true,
-            'userAllowedToAccess' => $allowedToAccess,
         ], 200);
     }
 

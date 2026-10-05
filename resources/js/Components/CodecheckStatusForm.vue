@@ -29,7 +29,7 @@
                     {{ t('plugins.generic.codecheck.status.buttons.history') }}
                 </button>
                 <button
-                    v-if="userAllowedToAccess && hasStatusHistory"
+                    v-if="canUpdate && hasStatusHistory"
                     class="
                         pkpButton
                         pkpButton--isPrimary
@@ -100,7 +100,7 @@ export default {
       hasUnsavedChanges: false,
       statusData: [],
       allStatuses: [],
-      userAllowedToAccess: false,
+      canUpdate: false,
       hasStatusHistory: false,
     }
   },
@@ -116,7 +116,6 @@ export default {
     }
   },
   mounted() {
-    this.validateUserAccessRights();
     this.getStatusHistory();
     this.loadStatusData();
   },
@@ -128,29 +127,6 @@ export default {
     }
   },
   methods: {
-    async validateUserAccessRights() {
-        try {
-            if (!this.submission?.id) return;
-
-            const submissionId = this.submission.id;
-            const apiUrl = `${pkp.context.apiBaseUrl}codecheck/users/roles/validation`;
-            
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Csrf-Token': pkp.currentUser.csrfToken,
-                },
-                body: JSON.stringify({ user: pkp.currentUser }),
-            });
-
-            const data = await response.json();
-
-            this.userAllowedToAccess = data.userAllowedToAccess;
-        } catch (error) {
-            console.error('User Role Validation error:', error);
-        }
-    },
     async loadStatusData() {
         try {
             if (!this.submission?.id) return;
@@ -166,6 +142,8 @@ export default {
             const data = await response.json();
             this.statusData = data.statusRecord;
             this.allStatuses = data.allStatuses;
+            // The server says whether it would accept a change (#127).
+            this.canUpdate = data.canUpdate === true;
 
             this.dataLoaded = true;
         } catch (error) {
@@ -318,7 +296,7 @@ export default {
         // Whatever comes of this one, the last one's warning is not about it.
         this.registerWarning = null;
 
-        if (!this.userAllowedToAccess && user.id !== -1) {
+        if (!this.canUpdate && user.id !== -1) {
             return this.t('plugins.generic.codecheck.status.update.notPermitted');
         }
 
