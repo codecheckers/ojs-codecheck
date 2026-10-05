@@ -598,15 +598,23 @@ class CodecheckApiController extends PKPBaseController
         $submission = $this->getAuthorizedContextObject(Application::ASSOC_TYPE_SUBMISSION);
         $submissionId = $submission->getId();
 
+        $user = $request->getUser();
+        $scope = CodecheckSubmissionAccess::orcidDepositScopeFor($user, $submissionId, $context->getId());
+
+        // Before the journal's setting is judged, so a refused caller learns
+        // nothing about it.
+        if ($scope === 'none') {
+            // The policy has already refused a reviewer not assigned here; this
+            // is the second lock, kept in case the route leaves SUBMISSION_SCOPED (#175).
+            return $this->roleRefusal();
+        }
+
         if (!$this->plugin->getSetting($context->getId(), Constants::ORCID_ENABLED)) {
             return response()->json([
                 'success' => false,
                 'error' => 'ORCID deposition is not enabled for this journal.',
             ], 400);
         }
-
-        $user = $request->getUser();
-        $scope = CodecheckSubmissionAccess::orcidDepositScopeFor($user, $submissionId, $context->getId());
 
         // The per-row button names an ORCID iD; "Deposit to all" sends none. The
         // endpoint used to ignore it either way and deposit for every authorised
@@ -615,12 +623,6 @@ class CodecheckApiController extends PKPBaseController
         $postParams = json_decode(file_get_contents('php://input'), true) ?? [];
         $requested = $postParams['orcidId'] ?? null;
         $onlyOrcidId = is_string($requested) && $requested !== '' ? $requested : null;
-
-        if ($scope === 'none') {
-            // The policy has already refused a reviewer not assigned here; this
-            // is the second lock, kept in case the route leaves SUBMISSION_SCOPED (#175).
-            return $this->roleRefusal();
-        }
 
         if ($scope === 'own') {
             // A reviewer deposits their own record whatever the payload asked
