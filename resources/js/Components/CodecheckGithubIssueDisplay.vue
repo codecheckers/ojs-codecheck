@@ -112,7 +112,6 @@ export default {
     async codecheckMetadataLastSavedAt(newMetadataSaved) {
         if (newMetadataSaved !== null) {
             await this.loadData();
-            console.log("Identifier Save button hit: ", this.issue, this.certificateIdentifier);
         }
     }
   },
@@ -142,7 +141,6 @@ export default {
 
                 const data = await response.json();
 
-                console.log("issue repository: ", data);
 
                 if (!response.ok || !data.success) {
                     throw new Error(`[HTTP ${response.status}] ${data.error}`);
@@ -167,7 +165,6 @@ export default {
             this.loading = false;
         }
 
-        console.log("Loaded updated github register issue data: ", this.issue, this.repository);
     },
     async viewIssue() {
         if(this.isConnected) {

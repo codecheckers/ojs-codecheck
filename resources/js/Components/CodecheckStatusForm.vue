@@ -152,7 +152,6 @@ export default {
         }
     },
     async loadStatusData() {
-        console.log('Loading the status Data', this.submission.id);
         try {
             if (!this.submission?.id) return;
 
@@ -165,7 +164,6 @@ export default {
             });
 
             const data = await response.json();
-            console.log("Status data", data);
             this.statusData = data.statusRecord;
             this.allStatuses = data.allStatuses;
 

@@ -165,7 +165,6 @@ function viewFullMetadata() {
   const codecheckLink = Array.from(allLinks).find(el => 
     el.textContent.trim().includes(t("plugins.generic.codecheck.workflow.label"))
   );
-  console.log('codecheck link:', codecheckLink);
   if (codecheckLink) codecheckLink.click();
 }
 </script>

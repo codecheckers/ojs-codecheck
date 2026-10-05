@@ -1219,8 +1219,9 @@ what 3.6 changes is collected on #187.
 ### Logging
 
 Use `CodecheckLogger::debug|info|warning|error()` (`classes/Log/CodecheckLogger.php`) — writes
-`[codecheck][level] …` via `error_log()`. Do not add bare `error_log()` calls; a few
-legacy one remains, inside a commented-out block in `CodecheckPublicationValidator`.
+`[codecheck][level] …` via `error_log()`. Do not add bare `error_log()` calls,
+and no `console.log` in the Vue layer either: a failure goes to `console.error` and
+to the editor, never to the console alone.
 
 ### i18n
 

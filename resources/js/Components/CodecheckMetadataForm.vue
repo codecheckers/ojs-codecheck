@@ -715,9 +715,6 @@ export default {
       this.error = null;
       this.dataLoaded = false;
       
-      console.log((this.certificateIdentifier.issue?.url ?? '').trim() !== '');
-      console.log(this.identifierInputEmpty);
-      console.log((this.certificateIdentifier.issue?.url ?? '').trim() !== '' && !this.identifierInputEmpty);
 
       try {
         if (!this.submission || !this.submission.id) {
@@ -832,7 +829,6 @@ export default {
       }
 
       let repository = this.repositories[repo_index].url;
-      console.log(repository);
       let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
 
       try {
@@ -849,7 +845,6 @@ export default {
           const data = await response.json();
 
           if (data.success) {
-              console.log('Success:', data.repository);
               // Only the CODECHECK fields are taken over. The paper's title,
               // authors and DOI stay OJS's: they are what `buildYaml()` writes
               // whatever the imported file says, and what the warning about the
@@ -961,7 +956,6 @@ export default {
       // The endpoint validates an address; sending the whole entry made it
       // answer "must be of the type string" on every click (Issue #154).
       let repository = this.repositories[repo_index].url;
-      console.log(repository);
       let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
       const submissionId = this.submission.id;
       try {
@@ -1122,7 +1116,6 @@ export default {
         workflowStore.codecheck.registerIssueDisplayUpdateEvent = Date.now();
         workflowStore.codecheck.certificateIdentifier = this.metadata.certificate;
         workflowStore.codecheck.issue = this.certificateIdentifier.issue;
-        console.log("Workflow Store: ", workflowStore?.codecheck);
       }
     },
 
@@ -1213,7 +1206,6 @@ export default {
           additional_content: this.metadata.additionalContent
         };
 
-        console.log('Saving CODECHECK data:', dataToSave);
 
         const submissionId = this.submission.id;
         let apiUrl = pkp.context.apiBaseUrl;
@@ -1359,13 +1351,10 @@ export default {
           const data = await response.json();
 
           if (data.success) {
-              console.log('Success:', data.message);
               this.certificateIdentifier.issue.labels = data.labels;
-              console.log('CODECHECK Issue Labels:', this.certificateIdentifier.issue.labels);
           } else {
               this.showMessage(`${this.t('plugins.generic.codecheck.identifier.venue.fetch.error.curl')}\n${data.error}`, 'error');
               console.error(`${this.t('plugins.generic.codecheck.identifier.venue.fetch.error.curl')}:`, data.error);
-              console.log('Custom journal Labels:', this.certificateIdentifier.customLabels);
           }
       } catch (error) {
           console.error(`${this.t('plugins.generic.codecheck.identifier.venue.fetch.error.codecheckAPI')}:`, error);
@@ -1464,7 +1453,6 @@ export default {
               this.certificateIdentifier.isLinked = true;
               this.$emit('update', this.metadata.certificate);
               this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.success.message')}: ${data.identifier}`, 'success');
-              console.log('New Certificate Identifier reserved: ', data.identifier, data.issueUrl, data.issueNumber);
             } else {
               this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.fail.message')}\n${data.error}`, 'error');
               console.error('Error while reserving the Certificate Identifier:', data.error);
@@ -1487,7 +1475,6 @@ export default {
               this.certificateIdentifier.venueType = 'default';
               this.certificateIdentifier.isLinked = true;
               this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.linkExistingIdentifier.success.message')}: ${data.identifier}`, 'success');
-              console.log('The GitHub Issue was linked to OJS with the Certificate Identifier: ', data.identifier, data.issueUrl, data.issueNumber);
             } else {
               this.showMessage(`${this.t('plugins.generic.codecheck.identifier.reserve.linkExistingIdentifier.fail.message')}\n${data.error}`, 'error');
               console.error('Error while linking an existing GitHub Issue: ', data.error);
@@ -1498,7 +1485,6 @@ export default {
           }
 
           if(data.success) {
-            console.log("Certificate: ", this.metadata.certificate);
             this.triggerRegisterIssueDisplayUpdateEvent();
           }
       } catch (error) {
@@ -1618,7 +1604,6 @@ export default {
 
     async validateGeneratedYamlFile(yamlContent) {
       try {
-        console.log('Validating the created codecheck.yml file');
         
         let apiUrl = pkp.context.apiBaseUrl;
         apiUrl += 'codecheck';
@@ -1638,7 +1623,6 @@ export default {
         const data = await response.json();
 
         if (data.success) {
-            console.log(this.t('plugins.generic.codecheck.yaml.valid'), 'success');
             return true;
         } else {
             console.error('Structural Validation error:', data.error);

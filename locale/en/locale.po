@@ -539,9 +539,6 @@ msgstr "GitHub Labels"
 msgid "plugins.generic.codecheck.previewYaml"
 msgstr "Preview CODECHECK metadata file"
 
-msgid "plugins.generic.codecheck.yaml.valid"
-msgstr "codecheck.yml is valid."
-
 msgid "plugins.generic.codecheck.yaml.invalid"
 msgstr "The provided CODECHECK metadata creates a structurally invalid codecheck.yml file. Please check the following error message for further details.\nError: {$errorMessage}"
 
@@ -620,9 +617,6 @@ msgstr "The repository marked as containing the 'codecheck.yml' file is also mar
 msgid "plugins.generic.codecheck.publication.validation.noRepositoryWithCodecheckYmlSelected"
 msgstr "Couldn't validate metadata from repository, as for no repository it was selected, that it contains the 'codecheck.yml' file with the CODECHECK metadata."
 
-
-msgid "plugins.generic.codecheck.publication.validation.invalidCodecheckers"
-msgstr "The ORCIDs of the codecheckers specified in this submissions CODECHECK metadata from are not matching the codecheckers ORCIDs in the provided repository"
 
 msgid "plugins.generic.codecheck.status.pending"
 msgstr "Pending"

@@ -38,14 +38,6 @@ class CodecheckMetadataHandler
         $this->client = $client ?? GithubHttp::client();
         $this->submissionId = $request->getUserVar('submissionId');
         $this->curlApiClient = $curlApiClient;
-
-        // Load Composer dependencies if not already loaded
-        if (!class_exists('Symfony\Component\Yaml\Yaml')) {
-            $autoloadPath = __DIR__ . '/../../vendor/autoload.php';
-            if (file_exists($autoloadPath)) {
-                require_once($autoloadPath);
-            }
-        }
     }
 
     /**
