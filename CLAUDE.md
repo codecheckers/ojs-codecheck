@@ -110,8 +110,6 @@ A TypeError inside a hook is swallowed by PKP — check the server log.
 - `storeExtend("dashboard")` — CODECHECK column, gated on
   `codecheckDashboardConfig.showDashboardColumn`, which is injected on **every**
   dashboard view (#178)
-- `storeExtend("fileManager_SUBMISSION_FILES")` — status column and a
-  "mark as output" action (placeholder, logs only)
 - Submission wizard: DOM-scraping helpers `CodecheckWizardManager` and
   `CodecheckReviewRefresher` — fragile, OJS markup changes break them
 - `resources/js/optIn.js` (`isOptedIn()`, `notOptedInReason()`) is the one

@@ -3,7 +3,6 @@ import CodecheckManifestFiles from "./Components/CodecheckManifestFiles.vue";
 import CodecheckRepositoryList from "./Components/CodecheckRepositoryList.vue";
 import { authorProvidedLines } from "./authorEntries.js";
 import { html, raw, toHtml } from "./markup.js";
-import { askForConfirmation } from "./dialogs.js";
 import CodecheckReviewDisplay from "./Components/CodecheckReviewDisplay.vue";
 import CodecheckDataAndSoftwareAvailability from "./Components/CodecheckDataAndSoftwareAvailability.vue";
 import CodecheckOrcidSection from "./Components/CodecheckOrcidSection.vue";
@@ -169,52 +168,6 @@ pkp.registry.storeExtend("workflow", (piniaContext) => {
     }
 
     return sidebarItems;
-  });
-});
-
-pkp.registry.storeExtend("fileManager_SUBMISSION_FILES", (piniaContext) => {
-  const fileStore = piniaContext.store;
-  
-  const workflowStore = pkp.registry.getPiniaStore("workflow");
-  const submission = workflowStore?.submission;
-  
-  if (!isOptedIn(submission)) {
-    return;
-  }
-
-  fileStore.extender.extendFn("getColumns", (columns, args) => {
-    const newColumns = [...columns];
-
-    newColumns.splice(newColumns.length - 1, 0, {
-      header: t("plugins.generic.codecheck.codecheckStatus"),
-      component: "CodecheckFileStatus",
-      props: {},
-    });
-
-    return newColumns;
-  });
-
-  fileStore.extender.extendFn("getItemActions", (originalResult, args) => {
-    if (args.file) {
-      return [
-        ...originalResult,
-        {
-          label: t("plugins.generic.codecheck.markAsOutput"),
-          name: "markCodecheckOutput",
-          icon: "CheckCircle",
-          actionFn: ({ file }) => {
-            const { localize } = useLocalize();
-
-            askForConfirmation({
-              title: t("plugins.generic.codecheck.markAsOutputTitle"),
-              question: t("plugins.generic.codecheck.markAsOutputConfirm", { fileName: localize(file.name) }),
-              onConfirm: () => console.log("Marking file as CODECHECK output:", file),
-            });
-          },
-        },
-      ];
-    }
-    return originalResult;
   });
 });
 
@@ -754,28 +707,6 @@ function mountCodecheckVueComponents() {
     });
   }
 }
-
-const CodecheckFileStatus = {
-  template: `
-    <pkp-table-cell>
-      <span class="codecheck-status" :class="statusClass">{{ statusText }}</span>
-    </pkp-table-cell>
-  `,
-  props: ['file'],
-  computed: {
-    statusText() {
-      if (this.file.codecheckOutput) {
-        return t("plugins.generic.codecheck.status.marked");
-      }
-      return t("plugins.generic.codecheck.status.notMarked");
-    },
-    statusClass() {
-      return this.file.codecheckOutput ? 'status-marked' : 'status-not-marked';
-    }
-  }
-};
-
-pkp.registry.registerComponent("CodecheckFileStatus", CodecheckFileStatus);
 
 // -----------------------------------------------------------------------
 // Issue #30: Dashboard CODECHECK status column

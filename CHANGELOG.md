@@ -53,6 +53,10 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 - The CODECHECK tab, the review stage and the Metadata page give the same reason for a submission that takes no part in a CODECHECK: not opted in, opted out, or no choice recorded (#34)
 - The metadata form and the YAML preview name the fields version 2.0 requires that a record still lacks, without blocking a save or publication; importing a `codecheck.yml` from a repository does not replace the paper's title, authors and DOI shown in the form (#185)
 
+### Removed
+
+- The "Mark as CODECHECK Output" action and the "CODECHECK Status" column in the workflow's file lists (#65)
+
 ### Fixed
 
 - An article published by OJS's scheduled publishing run from the command line (cron) is deposited to the CODECHECK Register like one published from the workflow; the register lists the journal under its name in the journal's primary language (#188)

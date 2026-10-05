@@ -690,24 +690,6 @@ msgstr "CODECHECK documentation"
 msgid "plugins.generic.codecheck.workflow.label"
 msgstr "CODECHECK"
 
-msgid "plugins.generic.codecheck.codecheckStatus"
-msgstr "CODECHECK Status"
-
-msgid "plugins.generic.codecheck.markAsOutput"
-msgstr "Mark as CODECHECK Output"
-
-msgid "plugins.generic.codecheck.markAsOutputTitle"
-msgstr "Mark as CODECHECK Output"
-
-msgid "plugins.generic.codecheck.markAsOutputConfirm"
-msgstr "Do you want to mark \"{$fileName}\" as a CODECHECK output file?"
-
-msgid "plugins.generic.codecheck.status.marked"
-msgstr "Marked"
-
-msgid "plugins.generic.codecheck.status.notMarked"
-msgstr "Not Marked"
-
 msgid "plugins.generic.codecheck.paperMetadata.readOnlyNotice"
 msgstr "This information comes from the original submission and cannot be edited here."
 
