@@ -10,6 +10,7 @@ import CodecheckMetadataForm from './Components/CodecheckMetadataForm.vue';
 import CodecheckStatusForm from './Components/CodecheckStatusForm.vue';
 import CodecheckGithubIssueDisplay from "./Components/CodecheckGithubIssueDisplay.vue";
 import { isOptedIn } from "./optIn.js";
+import { getCodecheckJson } from "./codecheckApi.js";
 import CodecheckPublicationInfo from "./Components/CodecheckPublicationInfo.vue";
 
 pkp.registry.registerComponent("CodecheckReviewDisplay", CodecheckReviewDisplay);
@@ -233,14 +234,8 @@ class CodecheckWizardManager {
    */
   async loadAuthorEntries(submissionId) {
     try {
-      const response = await fetch(
-        `${pkp.context.apiBaseUrl}codecheck/metadata?submissionId=${submissionId}`
-      );
-
-      if (!response.ok) return;
-
-      const data = await response.json();
-      const codecheck = data?.codecheck;
+      const data = await getCodecheckJson('metadata', submissionId);
+      const codecheck = data.codecheck;
 
       // A read that succeeded and found no record is a new submission: the
       // author has no entries yet, which is known, not "not loaded". Returning
@@ -474,14 +469,11 @@ class CodecheckReviewRefresher {
     try {
       // Repositories and the manifest live in codecheck_metadata now; the
       // availability statement is still publication data.
-      const [metadataResponse, submissionResponse] = await Promise.all([
-        fetch(`${pkp.context.apiBaseUrl}codecheck/metadata?submissionId=${submissionId}`, {
-          headers: { 'X-Csrf-Token': pkp.currentUser.csrfToken }
-        }),
+      const [metadata, submissionResponse] = await Promise.all([
+        getCodecheckJson('metadata', submissionId),
         fetch(`${pkp.context.apiBaseUrl}/submissions/${submissionId}`)
       ]);
 
-      const metadata = await metadataResponse.json();
       const submission = await submissionResponse.json();
       const publication = submission.publications?.find(p => p.id === submission.currentPublicationId);
 
@@ -570,7 +562,7 @@ window.addEventListener('DOMContentLoaded', () => {
       const tab3Link = document.querySelector('#reviewTabs ul li:nth-child(3) a');
       if (tab3Link) {
         const badge = document.createElement('span');
-        badge.style.cssText = 'margin-left: 0.4rem; font-size: 0.7rem; background: #008033; color: white; padding: 0.1rem 0.3rem; border-radius: 3px; vertical-align: middle;';
+        badge.className = 'codecheck-reviewer-tab-badge';
         badge.textContent = 'CODECHECK';
         tab3Link.appendChild(badge);
       }
@@ -743,11 +735,7 @@ const DashboardCellCodecheck = {
   },
   async mounted() {
     try {
-      const apiUrl = pkp.context.apiBaseUrl + 'codecheck/metadata?submissionId=' + this.item.id;
-      const response = await fetch(apiUrl, {
-        headers: { 'X-Csrf-Token': pkp.currentUser.csrfToken }
-      });
-      const data = await response.json();
+      const data = await getCodecheckJson('metadata', this.item.id);
       if (data.codecheck) {
         this.codecheckData = data.codecheck;
       }

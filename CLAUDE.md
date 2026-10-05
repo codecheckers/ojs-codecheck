@@ -136,9 +136,11 @@ Shared JS rules mirrored from PHP: `orcid.js` ↔ `CodecheckCodecheckers`,
     `{valid, value}`, own `setup()` returning `t` — Vue 3 ignores a mixin's
     `setup`). An invalid value or an `onSubmit` returning a message keeps the
     dialog open with the error shown.
-  - `closeDialog()` goes through `pkp.registry._piniaInstance._s`
-    (`getPiniaStore('modal')` throws), falling back to `close-dialog-vue`.
+  - `closeDialog()` uses the modal store, falling back to `close-dialog-vue`.
 - No `alert()`/`confirm()`/`prompt()` fallbacks.
+- **OJS's Pinia stores are reached only through `resources/js/piniaStore.js`**
+  (`piniaStore(name)`, `workflowStore()`): the one place naming the private
+  `pkp.registry._piniaInstance._s` (`getPiniaStore()` throws for `modal`).
 
 ### API (`api/v1/`)
 

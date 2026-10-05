@@ -586,6 +586,17 @@ textarea[name="dataAvailabilityStatement"] {
   padding: 1rem;
 }
 
+/* The mark on the reviewer's "Download & Review" tab */
+.codecheck-reviewer-tab-badge {
+  margin-left: 0.4rem;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+  background: #008033;
+  color: #fff;
+  font-size: 0.7rem;
+  vertical-align: middle;
+}
+
 /* The submission wizard's review step, when the author entered nothing */
 .codecheck-review-empty {
   color: #d00a0a;

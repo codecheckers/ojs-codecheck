@@ -1,4 +1,5 @@
 import { html, toHtml } from './markup.js';
+import { piniaStore } from './piniaStore.js';
 
 /**
  * Every dialog the plugin opens goes through here, and nothing else names
@@ -128,17 +129,14 @@ export function showInformation({ title, text, body, actionLabel, onAction }) {
  *
  * `useModal()` exposes no closer — OJS closes a dialog through the `close` it
  * hands an action callback, and the dialogs that ask for something have no
- * actions — so this goes to the modal store directly, the way the rest of the
- * plugin reaches the workflow store. `pkp.registry.getPiniaStore()` is *not*
- * the way: it looks the name up in a registry only OJS's own component stores
- * are entered in, and throws for `modal`.
+ * actions — so this goes to the modal store directly (see piniaStore.js).
  *
  * The event bus is the fallback, since that is how OJS's legacy code closes a
  * dialog from outside the Vue app.
  */
 function closeDialog() {
   try {
-    const store = pkp.registry._piniaInstance?._s?.get('modal');
+    const store = piniaStore('modal');
     if (store?.closeDialog) {
       store.closeDialog();
       return;

@@ -7,25 +7,14 @@
  * than an error.
  */
 
-async function get(path) {
-  const response = await fetch(pkp.context.apiBaseUrl + 'codecheck/' + path, {
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Csrf-Token': pkp.currentUser.csrfToken
-    }
-  });
-  if (!response.ok) {
-    return null;
-  }
-  return response.json();
-}
+import { getCodecheckApi } from './codecheckApi.js';
 
 /**
  * @returns {Promise<Array<{name: string, orcid: string, github: string}>>}
  */
 export async function fetchCodecheckerDirectory() {
   try {
-    const data = await get('codecheckers');
+    const data = await getCodecheckApi('codecheckers');
     return Array.isArray(data?.codecheckers) ? data.codecheckers : [];
   } catch (e) {
     return [];
@@ -38,7 +27,7 @@ export async function fetchCodecheckerDirectory() {
  */
 export async function lookupGithubUsername(orcid) {
   try {
-    const data = await get('codecheckers/lookup?orcid=' + encodeURIComponent(orcid));
+    const data = await getCodecheckApi('codecheckers/lookup?orcid=' + encodeURIComponent(orcid));
     return data?.github ? { github: data.github, source: data.source } : null;
   } catch (e) {
     return null;

@@ -130,6 +130,8 @@
 </template>
 
 <script>
+import { getCodecheckJson } from '../codecheckApi.js';
+
 export default {
   name: 'CodecheckOrcidSection',
 
@@ -192,22 +194,15 @@ export default {
     async loadTokenStatus() {
       this.isLoading = true;
       try {
-        const response = await fetch(
-          this.ojsApiBaseUrl + '/api/v1/codecheck/orcid-status?submissionId=' + this.submission.id,
-          { headers: { 'X-Csrf-Token': pkp.currentUser.csrfToken } }
-        );
-        if (response.ok) {
-          const data = await response.json();
-          this.codecheckers       = data.codecheckers ?? [];
-          this.journalConfigError = data.journalConfigError ?? null;
-          this.depositScope       = data.depositScope ?? 'none';
-        } else {
-          // Without this a failed request left the list empty, which the
-          // template renders as "No codecheckers have been assigned yet" —
-          // indistinguishable from an answer (#175).
-          this.depositError = this.t('plugins.generic.codecheck.orcid.status.loadFailed');
-        }
+        const data = await getCodecheckJson('orcid-status', this.submission.id);
+        this.codecheckers       = data.codecheckers ?? [];
+        this.journalConfigError = data.journalConfigError ?? null;
+        this.depositScope       = data.depositScope ?? 'none';
       } catch (err) {
+        // Without this a failed request left the list empty, which the
+        // template renders as "No codecheckers have been assigned yet" —
+        // indistinguishable from an answer (#175).
+        this.depositError = this.t('plugins.generic.codecheck.orcid.status.loadFailed');
         console.error('[CODECHECK ORCID] Load error', err);
       } finally {
         this.isLoading = false;
