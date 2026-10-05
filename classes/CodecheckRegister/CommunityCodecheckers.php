@@ -30,6 +30,7 @@ namespace APP\plugins\generic\codecheck\classes\CodecheckRegister;
 use APP\core\Application;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckCodecheckers;
+use APP\plugins\generic\codecheck\classes\Tasks\RefreshCodecheckLists;
 use GuzzleHttp\Promise\PromiseInterface;
 use GuzzleHttp\Promise\Utils;
 use Illuminate\Support\Facades\Cache;
@@ -144,22 +145,37 @@ class CommunityCodecheckers
      */
     private static function read(): array
     {
+        // Not in OJS's sandbox mode; the dialog then suggests no username.
+        if (!RefreshCodecheckLists::listsReadable()) {
+            return ['usernames' => [], 'complete' => false];
+        }
+
         $usernames = [];
         $complete = true;
         try {
             $client = Application::get()->getHttpClient();
             $results = Utils::settle(array_map(
-                fn (string $url) => $client->requestAsync('GET', $url, ['timeout' => 5]),
+                fn (string $url) => $client->requestAsync('GET', $url, ['timeout' => RefreshCodecheckLists::READ_TIMEOUT_SECONDS]),
                 self::LIST_URLS
             ))->wait();
 
             foreach ($results as $result) {
-                if ($result['state'] === PromiseInterface::FULFILLED) {
-                    $usernames += self::parse((string) $result['value']->getBody());
-                } else {
+                if ($result['state'] !== PromiseInterface::FULFILLED) {
                     $complete = false;
                     CodecheckLogger::warning('Could not read a CODECHECK community list of codecheckers: ' . $result['reason']->getMessage());
+                    continue;
                 }
+                $parsed = self::parse((string) $result['value']->getBody());
+                if ($parsed === []) {
+                    CodecheckLogger::warning('A CODECHECK community list of codecheckers had no codechecker in it.');
+                }
+                $usernames += $parsed;
+            }
+            // Lists that answer but yield nobody at all — renamed columns, error
+            // pages served with 200 — are not a read, or a refresh would replace
+            // a good copy with an empty one. One emptied list is just empty.
+            if ($usernames === []) {
+                $complete = false;
             }
         } catch (\Throwable $e) {
             $complete = false;

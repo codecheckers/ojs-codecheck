@@ -2,8 +2,11 @@
 
 namespace APP\plugins\generic\codecheck\classes\CodecheckRegister;
 
+use APP\core\Application;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\DataStructures\UniqueArray;
+use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
+use APP\plugins\generic\codecheck\classes\Tasks\RefreshCodecheckLists;
 use Illuminate\Support\Facades\DB;
 
 class CodecheckIssueLabels
@@ -38,10 +41,16 @@ class CodecheckIssueLabels
      */
     public static function fromApi(): CodecheckIssueLabels
     {
-        $codecheckApiClient = new CodecheckApiClient();
-        $codecheckApiClient->fetch(Constants::CODECHECK_VENUES_URL);
+        // OJS's own client, so its [proxy] setting applies.
+        $response = Application::get()->getHttpClient()->request('GET', Constants::CODECHECK_VENUES_URL, [
+            'timeout' => RefreshCodecheckLists::READ_TIMEOUT_SECONDS,
+        ]);
+        $venues = json_decode((string) $response->getBody(), true);
+        if (!is_array($venues)) {
+            throw new \UnexpectedValueException('The venue list is not JSON.');
+        }
 
-        $labels = self::labelsFrom($codecheckApiClient->getData());
+        $labels = self::labelsFrom($venues);
         if ($labels === []) {
             // An empty list would replace every stored label with none.
             throw new \UnexpectedValueException('The venue list names no issue label.');
@@ -50,6 +59,28 @@ class CodecheckIssueLabels
         self::store($labels);
 
         return new CodecheckIssueLabels($labels);
+    }
+
+    /**
+     * Reads the venue list on demand, for the labels endpoint, unless a read
+     * failed within the hour or the lists may not be read. Only a read tried
+     * and failed starts the hour, so a skipped one cannot push the next back.
+     *
+     * @return ?CodecheckIssueLabels the labels read, `null` when none were
+     */
+    public static function refresh(): ?CodecheckIssueLabels
+    {
+        if (!RefreshCodecheckLists::listsReadable() || RefreshCodecheckLists::failedRecently()) {
+            return null;
+        }
+
+        try {
+            return self::fromApi();
+        } catch (\Throwable $e) {
+            CodecheckLogger::warning('Could not read the CODECHECK venue list: ' . $e->getMessage());
+            RefreshCodecheckLists::recordFailure();
+            return null;
+        }
     }
 
     /**
@@ -96,13 +127,15 @@ class CodecheckIssueLabels
     {
         $labelsLastUpdated = date('Y-m-d H:i:s');
 
+        // Tried twice: the scheduled refresh and a form load can store at once,
+        // and two such transactions on the unindexed table can deadlock.
         DB::transaction(function () use ($labels, $labelsLastUpdated) {
             DB::table('codecheck_issue_labels')->delete();
             DB::table('codecheck_issue_labels')->insert(array_map(
                 fn (string $label) => ['label' => $label, 'labels_last_updated' => $labelsLastUpdated],
                 $labels
             ));
-        });
+        }, 2);
     }
 
     public function add(string $issue): void

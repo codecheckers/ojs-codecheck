@@ -53,7 +53,6 @@ use APP\plugins\generic\codecheck\classes\Orcid\OrcidTokenDAO;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckCodecheckerDirectory;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckCodecheckers;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionAccess;
-use APP\plugins\generic\codecheck\classes\Tasks\RefreshCodecheckLists;
 use APP\plugins\generic\codecheck\classes\Workflow\CertificateReferenceUpdate;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckPublicationValidator;
@@ -716,21 +715,15 @@ class CodecheckApiController extends PKPBaseController
         $codecheckIssueLabels = CodecheckIssueLabels::fromDB();
         $labelsWarning = null;
 
-        // A failed read holds off the next for an hour, here as in the task, so
-        // an unreachable list costs one timeout an hour, not one per form load.
+        // A failed read holds off the next for an hour, so an unreachable list
+        // costs one timeout an hour, not one per form load.
         $lastUpdated = CodecheckIssueLabels::lastUpdated();
         if ($lastUpdated === null || time() - $lastUpdated > CodecheckIssueLabels::STORED_LABELS_BACKSTOP_SECONDS) {
-            try {
-                if (RefreshCodecheckLists::failedRecently()) {
-                    throw new \RuntimeException('a read failed within the last hour');
-                }
-                $codecheckIssueLabels = CodecheckIssueLabels::fromApi();
-            } catch (\Throwable $e) {
-                CodecheckLogger::warning('Could not read the CODECHECK venue list: ' . $e->getMessage());
-                RefreshCodecheckLists::recordFailure();
-                if ($lastUpdated === null) {
-                    $labelsWarning = __('plugins.generic.codecheck.identifier.venue.unavailable');
-                }
+            $read = CodecheckIssueLabels::refresh();
+            if ($read !== null) {
+                $codecheckIssueLabels = $read;
+            } elseif ($lastUpdated === null) {
+                $labelsWarning = __('plugins.generic.codecheck.identifier.venue.unavailable');
             }
         }
 

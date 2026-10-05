@@ -375,9 +375,15 @@ Refreshes venue labels and community codechecker lists, daily or weekly per
   off for an hour (`recordFailure()`).
 - Only registered because `version.xml` has no `lazy-load` (pinned by
   `CodecheckPluginHooksUnitTest`).
-- Readers fall back to on-demand fetches when nothing is stored.
+- Readers fall back to on-demand fetches when nothing is stored (labels also
+  when older than 30 days), through `CodecheckIssueLabels::refresh()`, which
+  owns the hold-off: only a read tried and failed starts the hour.
+- `RefreshCodecheckLists::listsReadable()` is the one sandbox check.
+- The journals' interval is cached for an hour; saving the setting clears it.
 - In sandbox mode neither list is fetched. `scheduler.php run` refuses in
-  sandbox mode.
+  sandbox mode. The plugin's writes (register, `register.csv`, ORCID) are not
+  sandboxed on purpose: they are tested against `testing-dev-register` and the
+  ORCID sandbox.
 
 ### Settings
 

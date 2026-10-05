@@ -34,6 +34,7 @@ use APP\plugins\generic\codecheck\classes\CodecheckRegister\CommunityCodechecker
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use Illuminate\Support\Facades\Cache;
+use PKP\config\Config;
 use PKP\scheduledTask\ScheduledTask;
 use PKP\scheduledTask\ScheduledTaskHelper;
 
@@ -41,6 +42,22 @@ class RefreshCodecheckLists extends ScheduledTask
 {
     /** Set for an hour after a failed refresh, so it is not tried every minute. */
     private const FAILED_CACHE_KEY = 'codecheck-lists-refresh-failed';
+
+    /**
+     * The journals' shortest interval, kept for an hour: once a day has passed
+     * the schedule's filter asks for it every minute, and finding it means
+     * reading every journal. 0 stands for none, since a cached null reads as
+     * nothing cached.
+     */
+    private const INTERVAL_CACHE_KEY = 'codecheck-lists-refresh-interval';
+
+    private const INTERVAL_CACHE_SECONDS = 60 * 60;
+
+    /**
+     * The time limit for reading either list, which an editor may be waiting
+     * on: the labels endpoint and a username lookup read them on demand.
+     */
+    public const READ_TIMEOUT_SECONDS = 5;
 
     /** How long a failed refresh waits before it is tried again. */
     public const RETRY_SECONDS = 60 * 60;
@@ -85,6 +102,58 @@ class RefreshCodecheckLists extends ScheduledTask
         return true;
     }
 
+    /**
+     * The interval `$compute` finds, from the cache when it holds one.
+     *
+     * @param callable(): ?int $compute
+     */
+    public static function cachedInterval(callable $compute): ?int
+    {
+        try {
+            $cached = Cache::get(self::INTERVAL_CACHE_KEY);
+        } catch (\Throwable $e) {
+            $cached = null;
+        }
+        if (is_int($cached)) {
+            return $cached > 0 ? $cached : null;
+        }
+
+        $seconds = $compute();
+        try {
+            Cache::put(self::INTERVAL_CACHE_KEY, $seconds ?? 0, self::INTERVAL_CACHE_SECONDS);
+        } catch (\Throwable $e) {
+            CodecheckLogger::warning('Could not cache the CODECHECK lists refresh interval: ' . $e->getMessage());
+        }
+
+        return $seconds;
+    }
+
+    /**
+     * Whether the CODECHECK lists may be read at all: not in OJS's sandbox
+     * mode, which keeps a test instance from reaching anyone. Only the reads
+     * are stopped — the plugin's writes to the register and ORCID are tested
+     * against a testing register and the ORCID sandbox.
+     */
+    public static function listsReadable(): bool
+    {
+        try {
+            return !Config::getVar('general', 'sandbox', false);
+        } catch (\Throwable $e) {
+            // No configuration to read, as under PHPUnit.
+            return true;
+        }
+    }
+
+    /** Forgets the cached interval, so a journal's new choice applies at once. */
+    public static function forgetInterval(): void
+    {
+        try {
+            Cache::forget(self::INTERVAL_CACHE_KEY);
+        } catch (\Throwable $e) {
+            CodecheckLogger::warning('Could not forget the CODECHECK lists refresh interval: ' . $e->getMessage());
+        }
+    }
+
     /** Whether a read of the lists failed within the last hour. */
     public static function failedRecently(): bool
     {
@@ -114,8 +183,8 @@ class RefreshCodecheckLists extends ScheduledTask
      *
      * It never throws: it runs as the schedule's filter, which nothing in OJS
      * or Laravel catches, so an exception here would end the whole scheduler
-     * run. On an install where no journal ever enabled the plugin, the labels
-     * table does not exist and the answer is no.
+     * run. Where no journal ever enabled the plugin the labels table does not
+     * exist, and the answer is no.
      */
     public static function isDue(callable $interval): bool
     {

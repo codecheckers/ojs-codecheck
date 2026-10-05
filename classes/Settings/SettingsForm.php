@@ -20,6 +20,7 @@ use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegis
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\GithubHttp;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
+use APP\plugins\generic\codecheck\classes\Tasks\RefreshCodecheckLists;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
 use APP\template\TemplateManager;
 use PKP\form\Form;
@@ -598,6 +599,7 @@ class SettingsForm extends Form
             Constants::CODECHECK_LISTS_REFRESH,
             Constants::normalizeListsRefresh($this->getData(Constants::CODECHECK_LISTS_REFRESH))
         );
+        RefreshCodecheckLists::forgetInterval();
 
         $this->plugin->updateSetting(
             $context->getId(),

@@ -26,6 +26,7 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 - The register issue's JSON metadata says that it is the source of truth for the check's metadata, and when it was last updated (#186)
 - A save or status change that could not bring the register issue up to date says so beside its result; calls to GitHub give up after 10 seconds (#186)
 - The CODECHECK venue list and the community's lists of codecheckers are refreshed by an OJS scheduled task, daily or weekly as chosen by the new setting *Refresh of the CODECHECK lists* (#65)
+- In OJS's sandbox mode the plugin reads neither the CODECHECK venue list nor the lists of codecheckers (#65)
 
 #### DOI deposits
 

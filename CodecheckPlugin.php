@@ -802,6 +802,8 @@ class CodecheckPlugin extends GenericPlugin implements HasTaskScheduler
         // passing $contextId there would be silently discarded — the two writes
         // would then be able to land in different journals.
         $result = parent::setEnabled($enabled);
+        // Which journals have the plugin decides how often the lists refresh.
+        RefreshCodecheckLists::forgetInterval();
 
         if ($enabled) {
             // Single entry point — install migration calls upgrade migrations internally.
@@ -971,14 +973,16 @@ class CodecheckPlugin extends GenericPlugin implements HasTaskScheduler
      */
     public function listsRefreshInterval(): ?int
     {
-        $choices = [];
-        foreach (Application::getContextDAO()->getAll()->toIterator() as $context) {
-            if ($this->isEnabledIn($context->getId())) {
-                $choices[] = $this->getListsRefresh($context->getId());
+        return RefreshCodecheckLists::cachedInterval(function () {
+            $choices = [];
+            foreach (Application::getContextDAO()->getAll()->toIterator() as $context) {
+                if ($this->isEnabledIn($context->getId())) {
+                    $choices[] = $this->getListsRefresh($context->getId());
+                }
             }
-        }
 
-        return RefreshCodecheckLists::shortestInterval($choices);
+            return RefreshCodecheckLists::shortestInterval($choices);
+        });
     }
 
     /**
