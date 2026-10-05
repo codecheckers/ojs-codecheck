@@ -15,6 +15,13 @@
       <div v-if="notOptedInReason" class="codecheck-optin-warning">
         ⚠ {{ t(notOptedInReason) }}
       </div>
+      <p v-if="!permissions.write" class="codecheck-readonly-note">
+        {{ t('plugins.generic.codecheck.form.readOnly') }}
+      </p>
+
+      <!-- Disabled as a whole when the user may not save: the server would
+           refuse the save, so no field invites an edit (#127). -->
+      <fieldset class="codecheck-form-fields" :disabled="!permissions.write">
       <div class="codecheck-header">
         <div class="header-content">
           <p class="codecheck-intro" v-html="introText"></p>
@@ -271,9 +278,9 @@
         <div class="field-group">
           <div class="field-header">
             <label class="field-label">{{ t('plugins.generic.codecheck.codecheckers.title') }}</label>
-            <button v-if="canEditCodecheckers" type="button" class="pkpButton btn-add" @click="showCodecheckerModal">{{ t('plugins.generic.codecheck.codecheckers.add') }}</button>
+            <button v-if="codecheckersEditable" type="button" class="pkpButton btn-add" @click="showCodecheckerModal">{{ t('plugins.generic.codecheck.codecheckers.add') }}</button>
           </div>
-          <p v-if="!canEditCodecheckers" class="field-description">{{ t('plugins.generic.codecheck.codecheckers.editorsOnly') }}</p>
+          <p v-if="!codecheckersEditable" class="field-description">{{ t('plugins.generic.codecheck.codecheckers.editorsOnly') }}</p>
           
           <div v-if="metadata.codecheckers && metadata.codecheckers.length > 0" class="items-list codecheckers-list">
             <div v-for="(checker, index) in metadata.codecheckers" :key="'checker-' + index" class="list-item">
@@ -283,7 +290,7 @@
                 <div class="item-orcid" v-if="checker.github">GitHub: @{{ checker.github }}</div>
               </div>
               <button 
-                v-if="canEditCodecheckers"
+                v-if="codecheckersEditable"
                 type="button"
                 class="pkpButton codecheck-btn pkpButton--close" 
                 @click="removeCodechecker(index)"
@@ -317,7 +324,7 @@
           />
         </div>
 
-        <div v-if="certificateReferenceMode !== 'off'" class="field-group certificate-reference">
+        <div v-if="certificateReferenceMode !== 'off' && permissions.addCertificateReference" class="field-group certificate-reference">
           <label class="field-label">{{ t('plugins.generic.codecheck.certificateReference.label') }}</label>
           <p class="field-description">{{ certificateReferenceHint }}</p>
           <button
@@ -373,7 +380,7 @@
                 :readonly="certificateReadonly"
                 class="certificate-identifier-input"
               />
-              <fieldset v-if="canManageIdentifier" :disabled="!identifierInputEmpty || certificateIdentifier.isReserved">
+              <fieldset v-if="permissions.manageIdentifier" :disabled="!identifierInputEmpty || certificateIdentifier.isReserved">
                 <div class="certificate-identifier-select dropdown">
                   <button class="dropbtn">{{ t('plugins.generic.codecheck.identifier.labels') }} ⚙</button>
                   <div class="dropdown-content">
@@ -386,7 +393,7 @@
               </fieldset>
             </div>
 
-            <div v-if="canManageIdentifier" class="identifier-actions" id="certificate-identifier-button-wrapper">
+            <div v-if="permissions.manageIdentifier" class="identifier-actions" id="certificate-identifier-button-wrapper">
               <button
                 type="button"
                 class="pkpButton codecheck-btn certificate-identifier-button"
@@ -429,6 +436,8 @@
         </div>
       </div>
 
+      </fieldset>
+
       <div class="form-footer">
         <div class="footer-actions">
           <button 
@@ -444,6 +453,7 @@
           <button 
             type="button"
             class="pkpButton codecheck-btn pkpButton--isPrimary" 
+            v-if="permissions.write"
             @click="saveMetadata"
             :disabled="saving"
           >
@@ -468,6 +478,14 @@ import { askForConfirmation, askForInput, showInformation } from '../dialogs.js'
 import CodecheckCodecheckerDialog from './CodecheckCodecheckerDialog.vue';
 
 const { useLocalize } = pkp.modules.useLocalize;
+
+// What the form offers until the server has said (#127).
+const CLOSED_PERMISSIONS = {
+  write: false,
+  editCodecheckers: false,
+  manageIdentifier: false,
+  addCertificateReference: false,
+};
 
 // Mirrors Constants::CODECHECK_CONFIG_SPEC_URL / getConfigSpecUrl() on the PHP side.
 const CODECHECK_SPEC_URL = 'https://codecheck.org.uk/spec/config/';
@@ -511,9 +529,10 @@ export default {
       // The journal's "Certificate in the References" setting (#183), from
       // the metadata response; off until it says otherwise.
       certificateReferenceMode: 'off',
-      // Whether reserving, linking and removing the identifier is offered: a
-      // journal manager's, answered by the server with the record (#65).
-      canManageIdentifier: false,
+      // What the user may do with this record, answered by the server with
+      // it and closed until it has: the endpoints refuse the rest either way
+      // (#65, #127).
+      permissions: { ...CLOSED_PERMISSIONS },
       labelsRequested: false,
       addingCertificateReference: false,
       hasUnsavedChanges: false,
@@ -689,13 +708,18 @@ export default {
       return this.metadata.certificate.trim() === '';
     },
 
+    /** The record's codecheckers can be changed: an editor's, unless the page holds them read-only. */
+    codecheckersEditable() {
+      return this.canEditCodecheckers && this.permissions.editCodecheckers;
+    },
+
     /**
      * The identifier cannot be changed here: it is linked to its register
      * issue, or the user may not manage it (#65), in which case the save keeps
      * what is stored whatever the field holds.
      */
     certificateReadonly() {
-      return this.certificateLocked || !this.canManageIdentifier;
+      return this.certificateLocked || !this.permissions.manageIdentifier;
     },
 
     /** The identifier is linked to its register issue, so the field cannot be changed. */
@@ -758,11 +782,11 @@ export default {
           this.enabledConfigVersions = data.settings.enabledConfigVersions;
         }
         this.certificateReferenceMode = data.settings?.certificateReferenceMode ?? 'off';
-        this.canManageIdentifier = data.canManageIdentifier === true;
+        this.permissions = { ...CLOSED_PERMISSIONS, ...data.permissions };
         // The labels are only for reserving an identifier, which is a journal
         // manager's; anyone else would be refused (#65). Asked here rather than
         // on mounting, so a load that succeeds only on Retry still asks.
-        if (this.canManageIdentifier && !this.labelsRequested) {
+        if (this.permissions.manageIdentifier && !this.labelsRequested) {
           this.labelsRequested = true;
           this.getCodecheckIssueLabels();
         }
@@ -884,7 +908,7 @@ export default {
                 manifest: data.metadata?.manifest ?? this.metadata.manifest,
                 repository: this.metadata.repository,
                 source: data.metadata?.source ?? this.metadata.source,
-                codecheckers: this.canEditCodecheckers && Array.isArray(data.metadata?.codechecker)
+                codecheckers: this.codecheckersEditable && Array.isArray(data.metadata?.codechecker)
                   ? this.importedCodecheckers(data.metadata.codechecker)
                   : this.metadata.codecheckers,
                 certificate: this.certificateReadonly
@@ -1256,7 +1280,7 @@ export default {
         // Only once the save succeeded: the register issue is public, and
         // updating it first published repository addresses the save then
         // refused (Issue #154).
-        const issueProblem = data.registerUnreachable || !this.canManageIdentifier
+        const issueProblem = data.registerUnreachable || !this.permissions.manageIdentifier
           ? null
           : await this.updateGithubIssueContents();
 
@@ -1718,6 +1742,7 @@ export default {
 }
 
 .codecheck-optin-warning,
+.codecheck-readonly-note,
 .codecheck-spec-warning {
   box-sizing: border-box;
   margin: 0 0 1rem 0;
@@ -1727,6 +1752,14 @@ export default {
   border-radius: 3px;
   font-size: 14px;
   color: #856404;
+}
+
+/* The fields' fieldset only carries `disabled`: no border, padding or minimum width of its own. */
+.codecheck-form-fields {
+  border: 0;
+  margin: 0;
+  min-width: 0;
+  padding: 0;
 }
 
 .codecheck-spec-warning p {

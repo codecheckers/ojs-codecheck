@@ -15,14 +15,14 @@ const PkpButton = {
   },
 };
 
-const mountPanel = (codecheckers) => {
+const mountPanel = (codecheckers, { depositScope = 'none', canAuthorise = true } = {}) => {
   cy.intercept('GET', '**/codecheck/orcid-status*', {
     statusCode: 200,
-    body: { success: true, submissionId: 1, codecheckers, journalConfigError: null },
+    body: { success: true, submissionId: 1, codecheckers, journalConfigError: null, depositScope },
   }).as('status');
 
   cy.mount(CodecheckOrcidSection, {
-    props: { submission: { id: 1 }, orcidEnabled: true, orcidAuthUrl: '/startAuth', canAuthorise: true },
+    props: { submission: { id: 1 }, orcidEnabled: true, orcidAuthUrl: '/startAuth', canAuthorise },
     global: { components: { 'pkp-button': PkpButton } },
   });
   cy.wait('@status');
@@ -41,6 +41,39 @@ describe('CodecheckOrcidSection', () => {
     cy.contains('.codecheck-orcid-row', 'Name only').within(() => {
       cy.get('.pkp-button-stub').should('not.exist');
       cy.contains('plugins.generic.codecheck.orcid.noOrcidRecorded').should('be.visible');
+    });
+  });
+
+  // What the server answers about the user decides which deposits are offered;
+  // the endpoint refuses the others whatever the panel shows (#127).
+  describe('deposit buttons', () => {
+    const connected = [
+      { name: 'Mine', hasOrcid: true, orcidId: '0000-0002-1825-0097', depositStatus: null, isCurrentUser: true },
+      { name: 'Theirs', hasOrcid: true, orcidId: '0000-0001-5109-3700', depositStatus: null, isCurrentUser: false },
+    ];
+
+    it('offers an editor every deposit and "deposit all"', () => {
+      mountPanel(connected, { depositScope: 'all', canAuthorise: false });
+
+      cy.contains('.codecheck-orcid-row', 'Mine').contains('plugins.generic.codecheck.orcid.deposit');
+      cy.contains('.codecheck-orcid-row', 'Theirs').contains('plugins.generic.codecheck.orcid.deposit');
+      cy.contains('plugins.generic.codecheck.orcid.depositAll').should('exist');
+    });
+
+    it('offers a reviewer their own row alone', () => {
+      mountPanel(connected, { depositScope: 'own' });
+
+      cy.contains('.codecheck-orcid-row', 'Mine').contains('plugins.generic.codecheck.orcid.deposit');
+      cy.contains('.codecheck-orcid-row', 'Theirs').contains('plugins.generic.codecheck.orcid.deposit').should('not.exist');
+      cy.contains('plugins.generic.codecheck.orcid.depositAll').should('not.exist');
+    });
+
+    it('offers no deposit when the server allows none', () => {
+      mountPanel(connected, { depositScope: 'none', canAuthorise: false });
+
+      cy.get('.codecheck-orcid-row').should('have.length', 2);
+      cy.contains('plugins.generic.codecheck.orcid.deposit').should('not.exist');
+      cy.contains('plugins.generic.codecheck.orcid.depositAll').should('not.exist');
     });
   });
 });

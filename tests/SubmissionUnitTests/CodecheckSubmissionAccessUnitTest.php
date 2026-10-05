@@ -168,4 +168,24 @@ class CodecheckSubmissionAccessUnitTest extends PKPTestCase
         }
         $this->assertFalse(CodecheckSubmissionAccess::mayManageIdentifier(null, 1));
     }
+
+    /** An editor deposits for everyone, an assigned reviewer for their own record, anyone else not at all (#127). */
+    public function testTheOrcidDepositScopeFollowsTheEditorAndTheAssignment()
+    {
+        $this->assertSame('all', CodecheckSubmissionAccess::orcidDepositScope(true, false));
+        $this->assertSame('all', CodecheckSubmissionAccess::orcidDepositScope(true, true));
+        $this->assertSame('own', CodecheckSubmissionAccess::orcidDepositScope(false, true));
+        $this->assertSame('none', CodecheckSubmissionAccess::orcidDepositScope(false, false));
+    }
+
+    /** A site administrator holds no journal role, and may still write (#127). */
+    public function testASiteAdministratorMayWriteWithoutAJournalRole()
+    {
+        $siteAdmin = $this->createMock(User::class);
+        $siteAdmin->method('hasRole')->willReturnCallback(
+            fn (array $asked, $contextId) => $contextId === null && in_array(Role::ROLE_ID_SITE_ADMIN, $asked, true)
+        );
+
+        $this->assertTrue(CodecheckSubmissionAccess::canWriteMetadata($siteAdmin, 42, 1));
+    }
 }

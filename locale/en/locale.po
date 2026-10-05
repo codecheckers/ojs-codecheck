@@ -266,6 +266,9 @@ msgstr "What you record here becomes the codecheck.yml file that accompanies the
 msgid "plugins.generic.codecheck.form.intro.specLinkLabel"
 msgstr "the CODECHECK config file specification"
 
+msgid "plugins.generic.codecheck.form.readOnly"
+msgstr "You can read this CODECHECK but not change it: only the journal's editors and the codechecker assigned to the submission can."
+
 msgid "plugins.generic.codecheck.configVersion.onlyOne"
 msgstr "This journal offers a single CODECHECK config version."
 
