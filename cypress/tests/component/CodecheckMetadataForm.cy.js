@@ -1054,6 +1054,22 @@ describe('CodecheckMetadataForm Component', () => {
       .should('have.value', 'https://zenodo.org/record/12345');
   });
 
+  it('explains how to share a preview of the certificate', () => {
+    cy.mount(CodecheckMetadataForm, {
+      props: {
+        submission: { id: 1 },
+        canEdit: true
+      }
+    });
+
+    cy.wait('@loadMetadata');
+
+    cy.contains('button', 'plugins.generic.codecheck.certificate.sharePreview').click();
+
+    cy.get('.pkp-mock-modal a[href="https://help.zenodo.org/docs/share/link-sharing/"]').should('exist');
+    cy.get('.pkp-mock-modal a[href="https://docs.pkp.sfu.ca/learning-ojs/editorial-workflow/en/dashboard#discussions"]').should('exist');
+  });
+
   it('can fill completion time field', () => {
     cy.mount(CodecheckMetadataForm, {
       props: {

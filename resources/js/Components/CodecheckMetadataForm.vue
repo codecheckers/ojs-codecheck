@@ -315,6 +315,11 @@
             class="pkpFormField__input full-width"
             placeholder="https://zenodo.org/record/12345"
           />
+          <button
+            type="button"
+            class="pkpButton codecheck-btn"
+            @click="showSharePreviewModal"
+          >{{ t('plugins.generic.codecheck.certificate.sharePreview') }}</button>
         </div>
 
         <div v-if="certificateReferenceMode !== 'off'" class="field-group certificate-reference">
@@ -1072,6 +1077,27 @@ export default {
         // The codecheck.yml flag travels with the entry, so removing one cannot
         // leave it pointing at a different repository (Issue #154).
         onConfirm: () => this.repositories.splice(index, 1)
+      });
+    },
+
+    /**
+     * Explains how to share a certificate that is not yet public with the
+     * editors and authors; nothing is stored or sent (#39).
+     */
+    showSharePreviewModal() {
+      const link = (address, label) => html`<a href="${address}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+      const zenodo = link('https://help.zenodo.org/docs/share/link-sharing/', this.t('plugins.generic.codecheck.certificate.sharePreviewZenodoLink'));
+      const discussions = link('https://docs.pkp.sfu.ca/learning-ojs/editorial-workflow/en/dashboard#discussions', this.t('plugins.generic.codecheck.certificate.sharePreviewDiscussionsLink'));
+
+      showInformation({
+        title: this.t('plugins.generic.codecheck.certificate.sharePreviewTitle'),
+        body: html`
+          <div class="modal-field">
+            <label class="modal-label">${this.t('plugins.generic.codecheck.certificate.sharePreviewIntro')}</label><br>
+            <label class="modal-label">${htmlSentence(this.t('plugins.generic.codecheck.certificate.sharePreviewZenodo', {link: MARKUP_PLACEHOLDER}), zenodo)}</label><br>
+            <label class="modal-label">${htmlSentence(this.t('plugins.generic.codecheck.certificate.sharePreviewDiscussions', {link: MARKUP_PLACEHOLDER}), discussions)}</label>
+          </div>
+        `
       });
     },
 
