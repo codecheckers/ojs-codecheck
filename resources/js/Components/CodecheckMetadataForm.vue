@@ -501,6 +501,7 @@ import { isWebUrl } from '../isWebUrl.js';
 import { isValidOrcid, normalizeOrcid } from '../orcid.js';
 import { missingMandatoryFields } from '../configSpec.js';
 import { notOptedInReason } from '../optIn.js';
+import { serverMessage } from '../serverMessage.js';
 import { askForConfirmation, askForInput, showInformation } from '../dialogs.js';
 import CodecheckCodecheckerDialog from './CodecheckCodecheckerDialog.vue';
 
@@ -942,9 +943,7 @@ export default {
 
           if (!data.success) {
               console.error('Error:', data.error);
-              // A refusal comes with its translated sentence; the rest with the
-              // server's own English.
-              return data.errorMessage || data.error;
+              return serverMessage(data);
           }
 
           // Only the CODECHECK fields are taken over. The paper's title,
@@ -1250,7 +1249,7 @@ export default {
         if (!response.ok || !data.success) {
           // OJS's own refusals (a role the route does not admit) carry a
           // translated errorMessage beside the bare locale key in error.
-          showInformation({title, text: data.errorMessage || data.error || this.t('plugins.generic.codecheck.certificateReference.failed')});
+          showInformation({title, text: serverMessage(data, this.t('plugins.generic.codecheck.certificateReference.failed'))});
           return;
         }
 
@@ -1341,7 +1340,7 @@ export default {
         const data = await response.json();
 
         if (!response.ok || !data.success) {
-          throw new Error(`[HTTP ${response.status}] ${data.errorMessage || data.error}`);
+          throw new Error(`[HTTP ${response.status}] ${serverMessage(data)}`);
         }
 
         this.hasUnsavedChanges = false;
