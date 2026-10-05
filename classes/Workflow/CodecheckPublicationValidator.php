@@ -7,6 +7,8 @@ use APP\core\Request;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckRepositories;
+use APP\plugins\generic\codecheck\classes\Submission\GithubRepositoryAddress;
+use APP\plugins\generic\codecheck\classes\Submission\OsfRepositoryAddress;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
 
 class CodecheckPublicationValidator
@@ -40,6 +42,8 @@ class CodecheckPublicationValidator
             // error — a publish would then go through with this one never
             // having run (issue #169).
             fn () => $this->validateSelectedRepositoryIsPublic(),
+            // Before the status check for the same reason (#36).
+            fn () => $this->validateSelectedRepositoryCanBeNamedInRegister(),
             fn () => $this->validateCodecheckStatus(),
             fn () => $this->validateYamlStructure(),
             // If this is not an extended Publication Validation, just return valid (and except that the metadata might be invalid, but ignore it since the user set the configuration setting to fail silently in this case)
@@ -184,6 +188,52 @@ class CodecheckPublicationValidator
         ]);
 
         return false;
+    }
+
+    /**
+     * The repository marked as holding the `codecheck.yml` is one the register
+     * can name, so the deposit will not refuse it after publication (#36).
+     * Asked only while the journal deposits to the register, and of a marked
+     * repository that is public: a private one is the check above's subject.
+     * The "contains codecheck.yml" checkbox asks it of the address being
+     * marked, before anything is saved.
+     */
+    public function validateSelectedRepositoryCanBeNamedInRegister(?string $repository = null): bool
+    {
+        $isPublishing = $repository === null;
+
+        if ($this->context === null || !$this->plugin->isRegisterDepositEnabled($this->context->getId())) {
+            return true;
+        }
+
+        $repository ??= CodecheckRepositories::publicSelectedUrl($this->getCodecheckMetadata()['codecheck']['repository'] ?? null);
+        if ($repository === null) {
+            return true;
+        }
+
+        // Only the address forms the import widened for #36 are judged here;
+        // anything else is left to the deposit, as before, so an address the
+        // register never named does not start blocking publication.
+        if (GithubRepositoryAddress::parse($repository) === null && OsfRepositoryAddress::parse($repository) === null) {
+            return true;
+        }
+
+        try {
+            // Publication does not wait on GitHub: a branch it could not
+            // compare is the deposit's to refuse.
+            $this->codecheckMetadataHandler->registerRepositoryName($repository, acceptUnconfirmedBranch: $isPublishing);
+        } catch (\UnexpectedValueException $e) {
+            $this->errors[] = __('plugins.generic.codecheck.publication.validation.invalidRepository', [
+                'repositoryError' => $e->getMessage(),
+            ]);
+            return false;
+        } catch (\Throwable $e) {
+            // Anything else escaping here would leave the hook, and every check
+            // after this one would silently not run; the deposit refuses too.
+            CodecheckLogger::warning('Could not check whether the register can name "' . $repository . '": ' . $e->getMessage());
+        }
+
+        return true;
     }
 
     public function validateMetadataFromRepository(string|null $repository = null): bool

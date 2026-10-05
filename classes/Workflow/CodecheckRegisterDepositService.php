@@ -9,7 +9,6 @@ use APP\plugins\generic\codecheck\classes\CodecheckRegister\GithubHttp;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckRepositories;
-use APP\plugins\generic\codecheck\classes\Submission\GithubRepositoryAddress;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
 use APP\submission\Submission;
 use PKP\context\Context;
@@ -21,8 +20,8 @@ use PKP\context\Context;
  * This class is intentionally read-mostly with respect to existing plugin
  * state: it reuses `CodecheckMetadataHandler` for all data access instead
  * of querying `codecheck_metadata` directly, and reuses
- * `GithubRepositoryAddress::parse()` for GitHub URL parsing rather than
- * re-implementing it.
+ * `RegisterRepositoryName` for the register's name of the repository
+ * rather than re-implementing it.
  */
 class CodecheckRegisterDepositService
 {
@@ -89,6 +88,16 @@ class CodecheckRegisterDepositService
             );
         }
 
+        // Convert the URL into the register's `Repository` column format
+        // (e.g. github::org/repo, zenodo::id, osf::id, gitlab::path) first, so
+        // an address the register cannot name is refused before the file is
+        // fetched; only a GitHub address naming a branch costs a request.
+        try {
+            $formattedRepository = $this->codecheckMetadataHandler->registerRepositoryName($repositoryUrl);
+        } catch (\UnexpectedValueException $e) {
+            return $this->fail('Could not format repository "' . $repositoryUrl . '" for the register: ' . $e->getMessage());
+        }
+
         // Re-run the same import/fetch check already used elsewhere in the plugin
         // (checkbox-time validation, extended publication validation) so a stale
         // or unreachable URL never reaches the public register, independent of
@@ -99,14 +108,6 @@ class CodecheckRegisterDepositService
             return $this->fail(
                 'Could not verify the codecheck.yml at "' . $repositoryUrl . '": ' . ($payload['error'] ?? 'unknown error')
             );
-        }
-
-        // Convert the URL into the register's `Repository` column format
-        // (e.g. github::org/repo, zenodo::id, osf::id, gitlab::path).
-        try {
-            $formattedRepository = $this->formatRepositoryForRegister($repositoryUrl);
-        } catch (\Throwable $e) {
-            return $this->fail('Could not format repository "' . $repositoryUrl . '" for the register: ' . $e->getMessage());
         }
 
         $row = $this->buildRegisterRow($context, $codecheckMetadata, $certificate, $formattedRepository);
@@ -152,49 +153,6 @@ class CodecheckRegisterDepositService
             'prUrl' => $pullRequest['html_url'],
             'row' => $row,
         ];
-    }
-
-    /**
-     * Converts a raw repository URL into the register.csv `Repository`
-     * column format, e.g.:
-     *   https://github.com/codecheckers/certificate-2025-029        -> github::codecheckers/certificate-2025-029
-     *   https://github.com/org/repo/blob/main/reports/08/codecheck.yml -> github::org/repo|reports/08
-     *   https://raw.githubusercontent.com/org/repo/main/reports/08/codecheck.yml -> github::org/repo|reports/08
-     *   https://zenodo.org/records/12345678                          -> zenodo::12345678
-     *   https://osf.io/abcde/                                        -> osf::abcde
-     *   https://gitlab.com/cdchck/community-codechecks/some-check    -> gitlab::some-check
-     */
-    private function formatRepositoryForRegister(string $repository): string
-    {
-        $parts = GithubRepositoryAddress::parse($repository);
-        if ($parts !== null) {
-            // The register names a folder and reads the `codecheck.yml` in it,
-            // so a file of any other name cannot be named there.
-            if ($parts['file'] !== null && $parts['file'] !== 'codecheck.yml') {
-                throw new \UnexpectedValueException("The register can only name a file called codecheck.yml, not \"{$parts['file']}\".");
-            }
-            $formatted = "github::{$parts['owner']}/{$parts['repo']}";
-            if (!empty($parts['path'])) {
-                // Register convention for a sub-path within a shared repository,
-                // e.g. github::reproducible-agile/reviews-2025|reports/08
-                $formatted .= '|' . $parts['path'];
-            }
-            return $formatted;
-        }
-
-        if (preg_match('#^https://zenodo\.org/records/(\d+)/?$#', $repository, $matches)) {
-            return "zenodo::{$matches[1]}";
-        }
-
-        if (preg_match('#^https://osf\.io/([A-Za-z0-9]{5})/?$#', $repository, $matches)) {
-            return "osf::{$matches[1]}";
-        }
-
-        if (preg_match('#^https://gitlab\.com/cdchck/community-codechecks/([^/]+)/?$#', $repository, $matches)) {
-            return "gitlab::{$matches[1]}";
-        }
-
-        throw new \UnexpectedValueException("Repository URL \"{$repository}\" does not match any register-supported format.");
     }
 
     /**

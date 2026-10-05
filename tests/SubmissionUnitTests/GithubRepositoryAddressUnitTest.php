@@ -36,6 +36,7 @@ class GithubRepositoryAddressUnitTest extends PKPTestCase
             'raw host, full branch ref' => ['https://raw.githubusercontent.com/org/repo/refs/heads/main/7/codecheck.yml', $parts('org', 'repo', 'refs/heads/main', '7', 'codecheck.yml')],
             'raw host, tag ref' => ['https://raw.githubusercontent.com/org/repo/refs/tags/v1/codecheck.yml', $parts('org', 'repo', 'refs/tags/v1', '', 'codecheck.yml')],
             'file through tree' => ['https://github.com/org/repo/tree/main/7/codecheck.yml', $parts('org', 'repo', 'main', '7', 'codecheck.yml')],
+            'an encoded space' => ['https://github.com/org/repo/tree/main/my%20check', $parts('org', 'repo', 'main', 'my check')],
             'a folder named like a ref' => ['https://github.com/org/repo/tree/main/refs', $parts('org', 'repo', 'main', 'refs')],
         ];
     }
@@ -53,6 +54,11 @@ class GithubRepositoryAddressUnitTest extends PKPTestCase
             'an owner' => ['https://github.com/codecheckers'],
             'another host' => ['https://gitlab.com/codecheckers/register'],
             'plain http' => ['http://github.com/codecheckers/register'],
+            'a line break in a folder' => ['https://github.com/o/r/tree/main/x%0A2099-999'],
+            'a quote in a folder' => ['https://github.com/o/r/tree/main/x%22'],
+            'a comma in a folder' => ['https://github.com/o/r/tree/main/a%2Cb'],
+            'a hash in a folder' => ['https://github.com/o/r/tree/main/C%23'],
+            'bytes outside UTF-8' => ['https://github.com/o/r/blob/main/%FF.yml'],
         ];
     }
 

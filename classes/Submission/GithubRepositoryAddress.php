@@ -48,7 +48,15 @@ final class GithubRepositoryAddress
             return $parts;
         }
 
-        $segments = explode('/', trim($rest, '/'));
+        // The client encodes the path itself, so a link copied from the
+        // browser is decoded first.
+        $segments = array_map('rawurldecode', explode('/', trim($rest, '/')));
+        // Nothing decoded may break the `register.csv` row it ends up in.
+        foreach ($segments as $segment) {
+            if (preg_match('/[\x00-\x1f\x7f",#]/', $segment) || !mb_check_encoding($segment, 'UTF-8')) {
+                return null;
+            }
+        }
         $refLength = (count($segments) > 2 && $segments[0] === 'refs' && in_array($segments[1], ['heads', 'tags'], true)) ? 3 : 1;
         $parts['ref'] = implode('/', array_slice($segments, 0, $refLength));
         $pathSegments = array_slice($segments, $refLength);

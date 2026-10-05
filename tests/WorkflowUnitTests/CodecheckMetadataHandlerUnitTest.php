@@ -4,6 +4,7 @@ namespace APP\plugins\generic\codecheck\tests\WorkflowUnitTests;
 
 use APP\core\Request;
 use APP\plugins\generic\codecheck\api\v1\CurlApiClient;
+use APP\plugins\generic\codecheck\classes\CodecheckRegister\GithubHttp;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlHttpException;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -292,12 +293,30 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $this->assertSame('API rate limit exceeded', $response->getPayloadArray()['error']);
     }
 
+    public function testImportMetadataFromGithubSaysWhenGithubDidNotAnswer()
+    {
+        $client = $this->githubClient(new \Exception('cURL error 28: Operation timed out'), $requested);
+        $this->handler = new CodecheckMetadataHandler(new Request(), $client, $this->curlApiClient);
+        $unreachable = new \ReflectionProperty(GithubHttp::class, 'unreachable');
+        $unreachable->setValue(null, true);
+
+        try {
+            $response = $this->handler->importMetadataFromRepository('https://github.com/codecheckers/testing-dev-register');
+        } finally {
+            GithubHttp::reset();
+        }
+
+        $this->assertEquals(504, $response->getHttpResponseCode());
+        $this->assertSame('plugins.generic.codecheck.repositories.githubUnreachable', $response->getPayloadArray()['error']);
+    }
+
     public static function notAMappingProvider(): array
     {
         return [
             'empty' => [''],
             'a bare value' => ['just a sentence'],
             'a list' => ["- a\n- b"],
+            'not JSON' => ['summary: .inf'],
         ];
     }
 
@@ -452,97 +471,110 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $this->assertEquals(['test' => 'yaml'], $actualMetadataReturnArray['metadata']);
     }
 
+    /**
+     * A handler whose cURL client answers `$answers` in turn and records the
+     * addresses it was asked for in `$fetched`.
+     */
+    private function handlerAnswering(array $answers, ?array &$fetched): CodecheckMetadataHandler
+    {
+        $fetched = [];
+        $curlApiClient = $this->createMock(CurlApiClient::class);
+        $curlApiClient->method('resolveDoi')->willReturnArgument(0);
+        $curlApiClient->method('fetch')->willReturnCallback(function (string $url) use (&$answers, &$fetched) {
+            $fetched[] = $url;
+            return array_shift($answers);
+        });
+
+        return new CodecheckMetadataHandler(new Request(), $this->createMock(\Github\Client::class), $curlApiClient);
+    }
+
+    private static function osfFile(string $name, string $download = 'https://osf.io/download/5zu8b/', string $kind = 'file'): array
+    {
+        return ['attributes' => ['name' => $name, 'kind' => $kind], 'links' => ['download' => $download]];
+    }
+
     public function testImportMetadataFromOsf()
     {
-        $osfNodeId = 'ymc3t';
-        $repository = "https://osf.io/{$osfNodeId}/";
-        $client = $this->createMock(\Github\Client::class);
-        $request = new Request();
-        $curlApiClient = $this->createMock(CurlApiClient::class);
-        $curlApiClient->method('resolveDoi')->willReturn($repository);
-        $curlApiClient->method('fetch')
-            ->willReturnOnConsecutiveCalls(
-                json_encode([
-                    'data' => [
-                        [
-                            'attributes' => [
-                                'name' => 'README.md',
-                                'guid' => '4co4h'
-                            ],
-                            'attributes' => [
-                                'name' => 'codecheck.yml',
-                                'guid' => '5zu8b'
-                            ]
-                        ]
-                    ]
-                ]),
-                'test: yaml'
-            );
-        $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
-        $response = $this->handler->importMetadataFromRepository($osfNodeId);
-        $actualMetadataReturnArray = json_decode($response->getPayload(), true);
+        $repository = 'https://osf.io/ymc3t/';
+        $listing = json_encode(['data' => [
+            self::osfFile('codecheck.yml', 'https://osf.io/download/5zu8b/', 'folder'),
+            self::osfFile('codecheck.yml.bak', 'https://osf.io/download/4co4h/'),
+            self::osfFile('codecheck.yml', 'https://files.de-1.osf.io/v1/resources/ymc3t/providers/osfstorage/66f8'),
+        ]]);
+        $this->handler = $this->handlerAnswering([$listing, 'test: yaml'], $fetched);
+
+        $response = $this->handler->importMetadataFromRepository($repository);
+
+        $this->assertSame([
+            'https://api.osf.io/v2/nodes/ymc3t/files/osfstorage/?filter%5Bname%5D=codecheck.yml',
+            'https://files.de-1.osf.io/v1/resources/ymc3t/providers/osfstorage/66f8',
+        ], $fetched);
         $this->assertEquals(200, $response->getHttpResponseCode());
-        $this->assertCount(3, $actualMetadataReturnArray);
-        $this->assertTrue($actualMetadataReturnArray['success']);
-        $this->assertEquals($repository, $actualMetadataReturnArray['repository']);
-        $this->assertEquals(['test' => 'yaml'], $actualMetadataReturnArray['metadata']);
+        $this->assertSame(
+            ['success' => true, 'repository' => $repository, 'metadata' => ['test' => 'yaml']],
+            $response->getPayloadArray()
+        );
+    }
+
+    public static function osfFileAddressProvider(): array
+    {
+        return [
+            'file page' => ['https://osf.io/ymc3t/files/osfstorage/66f86b012218196732a8604f', '66f86b012218196732a8604f'],
+            'file by its short identifier' => ['https://osf.io/ymc3t/files/5zu8b', '5zu8b'],
+        ];
+    }
+
+    #[DataProvider('osfFileAddressProvider')]
+    public function testImportMetadataFromOsfReadsTheFileTheAddressNames(string $repository, string $file)
+    {
+        $record = json_encode(['data' => self::osfFile('paper.yml')]);
+        $this->handler = $this->handlerAnswering([$record, 'test: yaml'], $fetched);
+
+        $response = $this->handler->importMetadataFromRepository($repository);
+
+        $this->assertSame(["https://api.osf.io/v2/files/{$file}/", 'https://osf.io/download/5zu8b/'], $fetched);
+        $this->assertEquals(200, $response->getHttpResponseCode());
+        $this->assertSame(['test' => 'yaml'], $response->getPayloadArray()['metadata']);
+    }
+
+    public function testImportMetadataFromOsfRefusesAFolderTheAddressNames()
+    {
+        $record = json_encode(['data' => self::osfFile('reports', kind: 'folder')]);
+        $this->handler = $this->handlerAnswering([$record], $fetched);
+
+        $response = $this->handler->importMetadataFromRepository('https://osf.io/ymc3t/files/osfstorage/66f8');
+
+        $this->assertCount(1, $fetched);
+        $this->assertEquals(404, $response->getHttpResponseCode());
     }
 
     public function testImportMetadataFromOsfNoDataFromOsfFilestorage()
     {
-        $osfNodeId = 'ymc3t';
-        $repository = "https://osf.io/{$osfNodeId}/";
-        $client = $this->createMock(\Github\Client::class);
-        $request = new Request();
-        $curlApiClient = $this->createMock(CurlApiClient::class);
-        $curlApiClient->method('resolveDoi')->willReturn($repository);
-        $curlApiClient->method('fetch')
-            ->willReturnOnConsecutiveCalls(
-                json_encode([
-                    'data' => null
-                ]),
-                'test: yaml'
-            );
-        $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
-        $response = $this->handler->importMetadataFromRepository($osfNodeId);
-        $actualMetadataReturnArray = json_decode($response->getPayload(), true);
+        $repository = 'https://osf.io/ymc3t/';
+        $this->handler = $this->handlerAnswering([json_encode(['data' => null])], $fetched);
+
+        $response = $this->handler->importMetadataFromRepository($repository);
+
         $this->assertEquals(500, $response->getHttpResponseCode());
-        $this->assertCount(3, $actualMetadataReturnArray);
-        $this->assertFalse($actualMetadataReturnArray['success']);
-        $this->assertEquals($repository, $actualMetadataReturnArray['repository']);
-        $this->assertEquals('Invalid OSF API response', $actualMetadataReturnArray['error']);
+        $this->assertSame(
+            ['success' => false, 'error' => 'Invalid OSF API response', 'repository' => $repository],
+            $response->getPayloadArray()
+        );
     }
 
-    public function testImportMetadataFromOsfCodecheckYamlHasNoGuid()
+    public function testImportMetadataFromOsfWithoutTheFile()
     {
-        $osfNodeId = 'ymc3t';
-        $repository = "https://osf.io/{$osfNodeId}/";
-        $client = $this->createMock(\Github\Client::class);
-        $request = new Request();
-        $curlApiClient = $this->createMock(CurlApiClient::class);
-        $curlApiClient->method('resolveDoi')->willReturn($repository);
-        $curlApiClient->method('fetch')
-            ->willReturnOnConsecutiveCalls(
-                json_encode([
-                    'data' => [
-                        [
-                            'attributes' => [
-                                'name' => 'codecheck.yml',
-                                'guid' => null
-                            ]
-                        ]
-                    ]
-                ]),
-                'test: yaml'
-            );
-        $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
-        $response = $this->handler->importMetadataFromRepository($osfNodeId);
-        $actualMetadataReturnArray = json_decode($response->getPayload(), true);
+        $repository = 'https://osf.io/ymc3t/';
+        $listing = json_encode(['data' => []]);
+        $this->handler = $this->handlerAnswering([$listing], $fetched);
+
+        $response = $this->handler->importMetadataFromRepository($repository);
+
         $this->assertEquals(404, $response->getHttpResponseCode());
-        $this->assertCount(3, $actualMetadataReturnArray);
-        $this->assertFalse($actualMetadataReturnArray['success']);
-        $this->assertEquals($repository, $actualMetadataReturnArray['repository']);
-        $this->assertEquals('codecheck.yml not found', $actualMetadataReturnArray['error']);
+        $this->assertSame(
+            ['success' => false, 'error' => 'codecheck.yml not found', 'repository' => $repository],
+            $response->getPayloadArray()
+        );
     }
 
     public function testImportMetadataFromOsfFetchRefused()

@@ -18,6 +18,7 @@ use APP\plugins\generic\codecheck\classes\Submission\CodecheckCodecheckers;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckRepositories;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionAccess;
 use APP\plugins\generic\codecheck\classes\Submission\GithubRepositoryAddress;
+use APP\plugins\generic\codecheck\classes\Submission\OsfRepositoryAddress;
 use Github\Client;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\Yaml\Yaml;
@@ -649,9 +650,8 @@ class CodecheckMetadataHandler
             return $this->importMetadataFromGitHub($repository, $githubAddress);
         }
         // Check if the Repository is an OSF Repository
-        elseif (preg_match('#^https://osf\.io/([A-Za-z0-9]{5})/?$#', $repository, $matches)) {
-            $osf_node_id = $matches[1];
-            return $this->importMetadataFromOSF($osf_node_id);
+        elseif (($osfAddress = OsfRepositoryAddress::parse($repository)) !== null) {
+            return $this->importMetadataFromOSF($repository, $osfAddress);
         }
         // Check if the Repository is a GitLab Repository
         elseif (preg_match('#^https://gitlab\.com/cdchck/community-codechecks/([^/]+)/?$#', $repository)) {
@@ -665,6 +665,59 @@ class CodecheckMetadataHandler
                 'error' => 'The repository (' . $repository . ") URL isn't of the required format.",
             ], 400);
         }
+    }
+
+    /**
+     * Default branches GitHub has named in this request, by `owner/repo`:
+     * publication validation and the deposit both ask, once per article of an
+     * issue. Only an answer is remembered, so a failure is asked again.
+     */
+    private static array $defaultBranches = [];
+
+    /**
+     * GitHub's default branch for a repository, or null when GitHub could not
+     * say: what the register reads, for `RegisterRepositoryName::for()`.
+     *
+     * @throws \UnexpectedValueException When GitHub did not answer, saying so
+     */
+    public function githubDefaultBranch(string $owner, string $repo): ?string
+    {
+        $key = strtolower("{$owner}/{$repo}");
+        if (isset(self::$defaultBranches[$key])) {
+            return self::$defaultBranches[$key];
+        }
+
+        try {
+            $branch = $this->client->api('repo')->show($owner, $repo)['default_branch'] ?? null;
+        } catch (\Exception $e) {
+            if (GithubHttp::wasUnreachable()) {
+                throw new \UnexpectedValueException(GithubHttp::unreachableMessage('plugins.generic.codecheck.repositories.githubUnreachable'));
+            }
+            return null;
+        }
+
+        return is_string($branch) ? (self::$defaultBranches[$key] = $branch) : null;
+    }
+
+    /**
+     * The register's name for an address, a DOI resolved first as the import
+     * resolves it; see `RegisterRepositoryName::for()`, also for the branch
+     * GitHub could not compare with the default.
+     */
+    public function registerRepositoryName(string $repository, bool $acceptUnconfirmedBranch = false): string
+    {
+        $defaultBranchOf = $this->githubDefaultBranch(...);
+        if ($acceptUnconfirmedBranch) {
+            $defaultBranchOf = function (string $owner, string $repo): ?string {
+                try {
+                    return $this->githubDefaultBranch($owner, $repo);
+                } catch (\UnexpectedValueException $e) {
+                    return null;
+                }
+            };
+        }
+
+        return RegisterRepositoryName::for($this->curlApiClient->resolveDoi($repository), $defaultBranchOf, $acceptUnconfirmedBranch);
     }
 
     /**
@@ -692,6 +745,13 @@ class CodecheckMetadataHandler
         } catch (\Exception $e) {
             // GitHub answers 404 for a private repository too. Anything else —
             // a rate limit, no answer — is not a missing file, and says so.
+            if (GithubHttp::wasUnreachable()) {
+                return new JsonResponse([
+                    'success' => false,
+                    'error' => GithubHttp::unreachableMessage('plugins.generic.codecheck.repositories.githubUnreachable'),
+                    'repository' => $repository,
+                ], 504);
+            }
             if ($e->getCode() !== 404) {
                 return self::failure($e, $repository);
             }
@@ -726,59 +786,52 @@ class CodecheckMetadataHandler
     }
 
     /**
-     * Import the codecheck metadata from an existing `codecheck.yml` from the CODECHECK OSF Repository
+     * Import the codecheck metadata from an OSF project: the file the address
+     * names, or the `codecheck.yml` at the top of the project's OSF Storage.
+     * Either way the download address is the one OSF's API gives for the file,
+     * which a file has whether or not OSF has given it a short identifier yet.
      *
-     * @param string $osf_node_id The node_id of the OSF Repository for the OSF API
+     * @param string $repository The OSF address
+     * @param array $address The address as `OsfRepositoryAddress::parse()` reads it
      *
      * @return JsonResponse The Metadata from the Repositories `codecheck.yml`
      */
-    private function importMetadataFromOSF(string $osf_node_id): JsonResponse
+    private function importMetadataFromOSF(string $repository, array $address): JsonResponse
     {
         $filename = 'codecheck.yml';
-        $repository = "https://osf.io/{$osf_node_id}/";
-        $apiUrl = 'https://api.osf.io/v2/nodes/' . $osf_node_id . '/files/osfstorage/';
+        $apiUrl = $address['file'] !== null
+            ? 'https://api.osf.io/v2/files/' . $address['file'] . '/'
+            : 'https://api.osf.io/v2/nodes/' . $address['node'] . '/files/osfstorage/?filter%5Bname%5D=' . $filename;
 
-        // Get YAML Contents
         try {
-            $api_response = $this->curlApiClient->fetch($apiUrl);
-            $data = json_decode($api_response, true);
-
-            if (!$data || !isset($data['data'])) {
-                return new JsonResponse([
-                    'success' => false,
-                    'error' => 'Invalid OSF API response',
-                    'repository' => $repository
-                ], 500);
-            }
-
-            // Search for the codecheck.yml and get the guid of the codecheck.yml
-            $guid = null;
-
-            foreach ($data['data'] as $item) {
-                $attributes = $item['attributes'];
-
-                if (isset($attributes['name']) && $attributes['name'] === $filename) {
-                    $guid = $attributes['guid'];   // This is the OSF file GUID
-                    break;
-                }
-            }
-
-            if ($guid) {
-                $pathToCodecheckYaml = 'https://osf.io/download/' . $guid . '/';
-                $repository = 'https://osf.io/' . $osf_node_id . '/';
-                return $this->readYamlContent($pathToCodecheckYaml, $repository);
-            } else {
-                return new JsonResponse([
-                    'success' => false,
-                    'error' => "{$filename} not found",
-                    'repository' => $repository
-                ], 404);
-            }
-        }
-        // Check if cURL went wrong
-        catch (\Throwable $e) {
+            $data = json_decode($this->curlApiClient->fetch($apiUrl), true);
+        } catch (\Throwable $e) {
             return self::failure($e, $repository);
         }
+
+        if (!is_array($data['data'] ?? null)) {
+            return new JsonResponse([
+                'success' => false,
+                'error' => 'Invalid OSF API response',
+                'repository' => $repository,
+            ], 500);
+        }
+
+        // A file comes back on its own, the project's top folder as a list,
+        // whose name filter matches any name containing the one asked for.
+        $item = $address['file'] !== null
+            ? $data['data']
+            : collect($data['data'])->first(fn ($entry) => ($entry['attributes']['name'] ?? null) === $filename && ($entry['attributes']['kind'] ?? null) === 'file');
+        $download = $item['links']['download'] ?? null;
+        if (($item['attributes']['kind'] ?? null) === 'file' && is_string($download)) {
+            return $this->readYamlContent($download, $repository);
+        }
+
+        return new JsonResponse([
+            'success' => false,
+            'error' => "{$filename} not found",
+            'repository' => $repository,
+        ], 404);
     }
 
     /**
@@ -828,8 +881,9 @@ class CodecheckMetadataHandler
         }
 
         // Everything reading the metadata takes it as a mapping; an empty file
-        // or a bare value is not a `codecheck.yml`.
-        if (!is_array($metadata) || array_is_list($metadata)) {
+        // or a bare value is not a `codecheck.yml`. The answer is JSON, which
+        // has no infinity, no NaN and no bytes outside UTF-8.
+        if (!is_array($metadata) || array_is_list($metadata) || json_encode($metadata) === false) {
             return new JsonResponse([
                 'success' => false,
                 'error' => 'The codecheck.yml in this repository holds no metadata.',

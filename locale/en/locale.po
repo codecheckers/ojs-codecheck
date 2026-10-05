@@ -407,6 +407,9 @@ msgstr "Codechecker: {$codechecker}"
 msgid "plugins.generic.codecheck.register.issue.codecheckerViaJournal"
 msgstr "Codechecker: {$codechecker}, coordinated by {$journal}; to reach them, please contact the journal via {$contactUrl}"
 
+msgid "plugins.generic.codecheck.repositories.githubUnreachable"
+msgstr "GitHub did not answer within {$seconds} seconds, so the codecheck.yml could not be read. Try again later."
+
 msgid "plugins.generic.codecheck.repositories.titleMismatch"
 msgstr "The paper title in this repository's codecheck.yml is missing or does not match the title of this submission, so nothing was imported."
 
@@ -523,6 +526,21 @@ msgstr "The register repository {$organization}/{$repository} holds issues carry
 
 msgid "plugins.generic.codecheck.identifier.reserve.firstIdentifier.refused.unreadableRegister"
 msgstr "The register repository {$organization}/{$repository} could not be read, so it is not known which certificate identifiers it already holds. No identifier was reserved. Check the register repository setting, that the repository is public, and try again later — GitHub limits how often it may be read."
+
+msgid "plugins.generic.codecheck.register.repository.githubFileName"
+msgstr "The CODECHECK Register reads a file called codecheck.yml, so it cannot name {$file}. Rename the file, or mark the address of a folder holding a codecheck.yml."
+
+msgid "plugins.generic.codecheck.register.repository.githubBranch"
+msgstr "The CODECHECK Register reads a repository's default branch, {$defaultBranch}, so it cannot name an address on {$ref}. Mark the address of the repository, or of a folder in it, on {$defaultBranch}."
+
+msgid "plugins.generic.codecheck.register.repository.githubDefaultBranchUnknown"
+msgstr "GitHub could not say whether {$ref} is the repository's default branch, which is the one the CODECHECK Register reads. Mark the address of the repository without a branch, or try again later."
+
+msgid "plugins.generic.codecheck.register.repository.osfFile"
+msgstr "The CODECHECK Register names an OSF project and reads the codecheck.yml at its top level, so it cannot name a link to a file. Mark the project's address, {$project}, with the codecheck.yml at its top level."
+
+msgid "plugins.generic.codecheck.register.repository.unsupported"
+msgstr "The CODECHECK Register cannot name this repository address."
 
 msgid "plugins.generic.codecheck.register.unreachable"
 msgstr "GitHub did not answer within {$seconds} seconds. Look at the CODECHECK Register before trying again: the change may have reached it all the same."
