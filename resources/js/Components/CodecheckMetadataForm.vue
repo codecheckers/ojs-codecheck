@@ -459,6 +459,7 @@
 </template>
 
 <script>
+import { workflowStore } from '../piniaStore.js';
 import { html, htmlSentence, MARKUP_PLACEHOLDER, toHtml } from '../markup.js';
 import { isWebUrl } from '../isWebUrl.js';
 import { isValidOrcid, normalizeOrcid } from '../orcid.js';
@@ -1133,13 +1134,12 @@ export default {
     },
 
     triggerRegisterIssueDisplayUpdateEvent() {
-      const pinia = pkp.registry._piniaInstance;
-      const workflowStore = pinia?._s?.get('workflow');
+      const codecheck = workflowStore()?.codecheck;
 
-      if (workflowStore?.codecheck) {
-        workflowStore.codecheck.registerIssueDisplayUpdateEvent = Date.now();
-        workflowStore.codecheck.certificateIdentifier = this.metadata.certificate;
-        workflowStore.codecheck.issue = this.certificateIdentifier.issue;
+      if (codecheck) {
+        codecheck.registerIssueDisplayUpdateEvent = Date.now();
+        codecheck.certificateIdentifier = this.metadata.certificate;
+        codecheck.issue = this.certificateIdentifier.issue;
       }
     },
 
@@ -1180,7 +1180,7 @@ export default {
         // OJS's own References form reads the publication from the workflow
         // store, which has to fetch it again to show the new line.
         if (data.changed) {
-          pkp.registry._piniaInstance?._s?.get('workflow')?.triggerDataChange?.();
+          workflowStore()?.triggerDataChange?.();
         }
       } catch (error) {
         console.error('Error adding the certificate to the references:', error);
@@ -1191,11 +1191,10 @@ export default {
     },
 
     triggerCodecheckStatusUpdateEvent() {
-      const pinia = pkp.registry._piniaInstance;
-      const workflowStore = pinia?._s?.get('workflow');
+      const codecheck = workflowStore()?.codecheck;
 
-      if (workflowStore?.codecheck) {
-        workflowStore.codecheck.statusUpdateEvent = Date.now();
+      if (codecheck) {
+        codecheck.statusUpdateEvent = Date.now();
       }
     },
 

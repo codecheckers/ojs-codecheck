@@ -570,7 +570,7 @@ window.addEventListener('DOMContentLoaded', () => {
       const tab3Link = document.querySelector('#reviewTabs ul li:nth-child(3) a');
       if (tab3Link) {
         const badge = document.createElement('span');
-        badge.style.cssText = 'margin-left: 0.4rem; font-size: 0.7rem; background: #008033; color: white; padding: 0.1rem 0.3rem; border-radius: 3px; vertical-align: middle;';
+        badge.className = 'codecheck-reviewer-tab-badge';
         badge.textContent = 'CODECHECK';
         tab3Link.appendChild(badge);
       }

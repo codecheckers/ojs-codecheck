@@ -1,23 +1,34 @@
 /**
- * Reading a submission's CODECHECK data from the plugin's endpoints, and moving
- * the workflow to the CODECHECK tab — shared by the panels outside that tab,
- * so they read and fail the same way (#65).
+ * Reading CODECHECK data from the plugin's endpoints, and moving the workflow
+ * to the CODECHECK tab — shared by the panels outside that tab and the
+ * codechecker dialog, so they read and fail the same way (#65).
  */
+
+import { workflowStore } from './piniaStore.js';
 
 /** The key of the CODECHECK item that main.js adds to the workflow menu. */
 export const CODECHECK_MENU_KEY = 'codecheck';
 
 /**
- * A submission-scoped endpoint's answer, or an error already worded for a
- * panel. `error.status` carries the HTTP status, for a caller to whom some
- * refusal is an ordinary state.
+ * getCodecheckApi() for a submission-scoped endpoint.
  *
  * @param {string} endpoint relative to `api/v1/codecheck/`, e.g. `metadata`
  * @param {number|string} submissionId
  */
-export async function getCodecheckJson(endpoint, submissionId) {
+export function getCodecheckJson(endpoint, submissionId) {
+  return getCodecheckApi(`${endpoint}?submissionId=${submissionId}`);
+}
+
+/**
+ * A GET endpoint's answer, or an error already worded for a panel.
+ * `error.status` carries the HTTP status, for a caller to whom some refusal
+ * is an ordinary state.
+ *
+ * @param {string} path relative to `api/v1/codecheck/`, with its query string
+ */
+export async function getCodecheckApi(path) {
   const response = await fetch(
-    `${pkp.context.apiBaseUrl}codecheck/${endpoint}?submissionId=${submissionId}`,
+    `${pkp.context.apiBaseUrl}codecheck/${path}`,
     { headers: { 'X-Csrf-Token': pkp.currentUser.csrfToken } }
   );
   // An error page need not be JSON: a PHP fatal answers HTML.
@@ -33,5 +44,5 @@ export async function getCodecheckJson(endpoint, submissionId) {
 
 /** Moves the workflow to the CODECHECK tab, through the workflow store's own navigation. */
 export function openCodecheckTab() {
-  pkp.registry._piniaInstance?._s?.get('workflow')?.navigateToMenu(CODECHECK_MENU_KEY);
+  workflowStore()?.navigateToMenu(CODECHECK_MENU_KEY);
 }

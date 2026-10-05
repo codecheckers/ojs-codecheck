@@ -70,6 +70,7 @@
 </template>
 
 <script>
+import { workflowStore } from '../piniaStore.js';
 import { html } from '../markup.js';
 import { isOptedIn } from '../optIn.js';
 import { askForInput, showInformation } from '../dialogs.js';
@@ -109,10 +110,7 @@ export default {
       return isOptedIn(this.submission);
     },
     codecheckMetadataLastSavedAt() {
-        const pinia = pkp.registry._piniaInstance;
-        const workflowStore = pinia?._s?.get('workflow');
-
-        return workflowStore?.codecheck?.statusUpdateEvent ?? null;
+        return workflowStore()?.codecheck?.statusUpdateEvent ?? null;
     }
   },
   mounted() {
