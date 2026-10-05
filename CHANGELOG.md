@@ -35,6 +35,7 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 
 #### Editorial workflow
 
+- Enabling the plugin gives the journal a *Codechecker* role at the Reviewer level, open to self-registration, and an *Invitation to codecheck* email template that "Add Reviewer" offers beside the review request; the plugin settings show whether each still exists and recreate a deleted one (#13)
 - A *Share Preview* button next to the report field explains how to share a draft certificate with editors and authors through a repository preview link and a submission discussion (#39)
 
 #### Frontend

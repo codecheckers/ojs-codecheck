@@ -14,6 +14,7 @@
 namespace APP\plugins\generic\codecheck\classes\Settings;
 
 use APP\core\Request;
+use APP\plugins\generic\codecheck\classes\Codecheckers\CodecheckerJournalSetup;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
 use PKP\core\JSONMessage;
 
@@ -53,6 +54,19 @@ class Manage
                     return new JSONMessage(true);
                 }
                 break;
+
+                // Recreates the Codechecker role or the invitation template a
+                // manager deleted (#13). PKP's `manage` op checks no CSRF token,
+                // so this verb does.
+            case 'recreateCodecheckerSetup':
+                $context = $request->getContext();
+                if (!$context || !$request->isPost() || !$request->checkCSRF()) {
+                    return new JSONMessage(false);
+                }
+
+                // The status afterwards; the page says so when anything is
+                // still missing, which recreateMissing() has logged.
+                return new JSONMessage(true, (new CodecheckerJournalSetup($this->plugin))->recreateMissing($context));
         }
 
         return new JSONMessage(false);

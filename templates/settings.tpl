@@ -58,6 +58,38 @@
 		});
 	});
 
+	// Recreates the Codechecker role or the invitation template, whichever a
+	// manager deleted, and shows what exists afterwards (#13).
+	$(function () {
+		$('#codecheckerSetupRecreate').on('click', function () {
+			const $button = $(this);
+			$button.prop('disabled', true);
+			$('#codecheckerSetupError').prop('hidden', true);
+			$.post($button.data('url'), { csrfToken: pkp.currentUser.csrfToken })
+				.done(function (response) {
+					if (!response || !response.status) {
+						$('#codecheckerSetupError').prop('hidden', false);
+						return;
+					}
+					const status = response.content || {};
+					$('#codecheckerSetupStatus li').each(function () {
+						const present = Boolean(status[$(this).data('part')]);
+						$(this).find('.codecheck-setup-status__present').prop('hidden', !present);
+						$(this).find('.codecheck-setup-status__missing').prop('hidden', present);
+					});
+					const complete = Boolean(status.role && status.template);
+					$button.prop('hidden', complete);
+					$('#codecheckerSetupError').prop('hidden', complete);
+				})
+				.fail(function () {
+					$('#codecheckerSetupError').prop('hidden', false);
+				})
+				.always(function () {
+					$button.prop('disabled', false);
+				});
+		});
+	});
+
 	function resetGitHubRegisterRepository() {
 		$('input[name="githubRegisterOrganization"]').val("codecheckers");
 		$('input[name="githubRegisterRepository"]').val("testing-dev-register");
@@ -145,6 +177,9 @@
 	color: #721c24;
 	border: 1px solid #f5c6cb;
 }
+.codecheck-setup-status { margin: 0 0 0.5rem; padding-left: 1.25rem; }
+.codecheck-setup-status__missing,
+.codecheck-setup-status__error { color: #721c24; }
 </style>
 
 <form
@@ -692,9 +727,35 @@
 			{/fbvFormSection}
 		{/fbvFormSection}
 
-		{* TODO: Add more settings in future development *}
-		{* - Email template settings *}
-		
+		{* ------------------------------------------------------------------ *}
+		{* Codechecker role and invitation template (#13)                      *}
+		{* ------------------------------------------------------------------ *}
+		{fbvFormSection id="codecheckerSetupHeader" list=true}
+			<h3 class="section-title">{translate key="plugins.generic.codecheck.settings.codecheckers.title"}</h3>
+			<p class="section-description">{translate key="plugins.generic.codecheck.settings.codecheckers.description"}</p>
+		{/fbvFormSection}
+
+		{fbvFormSection list=true}
+			<ul id="codecheckerSetupStatus" class="codecheck-setup-status">
+				<li data-part="role">
+					<span class="codecheck-setup-status__present"{if !$codecheckerSetup.role} hidden{/if}>{translate key="plugins.generic.codecheck.settings.codecheckers.role.present"}</span>
+					<span class="codecheck-setup-status__missing"{if $codecheckerSetup.role} hidden{/if}>{translate key="plugins.generic.codecheck.settings.codecheckers.role.missing"}</span>
+				</li>
+				<li data-part="template">
+					<span class="codecheck-setup-status__present"{if !$codecheckerSetup.template} hidden{/if}>{translate key="plugins.generic.codecheck.settings.codecheckers.template.present"}</span>
+					<span class="codecheck-setup-status__missing"{if $codecheckerSetup.template} hidden{/if}>{translate key="plugins.generic.codecheck.settings.codecheckers.template.missing"}</span>
+				</li>
+			</ul>
+			<button
+				type="button"
+				id="codecheckerSetupRecreate"
+				class="pkpButton"
+				data-url="{url router=$smarty.const.ROUTE_COMPONENT op='manage' category='generic' plugin=$pluginName verb='recreateCodecheckerSetup'}"
+				{if $codecheckerSetup.role && $codecheckerSetup.template}hidden{/if}
+			>{translate key="plugins.generic.codecheck.settings.codecheckers.recreate"}</button>
+			<p id="codecheckerSetupError" class="codecheck-setup-status__error" role="alert" hidden>{translate key="plugins.generic.codecheck.settings.codecheckers.recreate.failed"}</p>
+		{/fbvFormSection}
+
 
 		{* ------------------------------------------------------------------ *}
 		{* ORCID Deposition Settings                                           *}

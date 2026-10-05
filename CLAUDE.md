@@ -407,7 +407,14 @@ into `Constants`, `SettingsForm::initData()` + `readInputData()` + `execute()`,
 `.codecheck-choice-list`; option-dependent fields are `.badge-dependent-field`.
 
 - Any verb added to `Manage::execute()` needs its own CSRF check (PKP's `manage`
-  op has none).
+  op has none). `recreateCodecheckerSetup` is one.
+- **Codechecker role and invitation template** (#13): `CodecheckerJournalSetup`
+  creates each once per journal on enable (not on `Context::add`: no new
+  journal has the plugin enabled yet), storing the
+  user group id / template key (`CODECHECKER_USER_GROUP_ID`,
+  `CODECHECK_INVITATION_TEMPLATE_KEY`); never recreated on its own, only from
+  the settings button. The template is an alternate to `REVIEW_REQUEST`; its
+  `{$…}` variables survive `__()` because no parameters are passed.
 - **Defaults**: `Constants::CODECHECK_SETTING_DEFAULTS` +
   `CodecheckPlugin::getSettingWithDefault()` (only `null` is unset) +
   `writeDefaultSettings()` (on enable, `Context::add`, install migration).

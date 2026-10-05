@@ -401,6 +401,15 @@ class Constants
         self::CODECHECK_SHOW_IN_TOC => true,
     ];
 
+    /**
+     * The journal's Codechecker role and "Invitation to codecheck" template
+     * (#13), as `CodecheckerJournalSetup` created them: the user group's id and
+     * the email template's key. Not in the defaults map — they name things
+     * created in the journal, not values.
+     */
+    public const CODECHECKER_USER_GROUP_ID = 'codecheckerUserGroupId';
+    public const CODECHECK_INVITATION_TEMPLATE_KEY = 'codecheckInvitationTemplateKey';
+
     // ORCID integration settings
     public const ORCID_ENABLED = 'orcidEnabled';
     public const ORCID_API_TYPE = 'orcidApiType';

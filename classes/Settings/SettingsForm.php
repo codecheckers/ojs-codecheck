@@ -16,6 +16,7 @@ namespace APP\plugins\generic\codecheck\classes\Settings;
 use APP\core\Application;
 use APP\notification\Notification;
 use APP\notification\NotificationManager;
+use APP\plugins\generic\codecheck\classes\Codecheckers\CodecheckerJournalSetup;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\GithubHttp;
 use APP\plugins\generic\codecheck\classes\Constants;
@@ -449,6 +450,12 @@ class SettingsForm extends Form
         // string would be read as one of the message's own parameters.
         $templateMgr->assign('githubSignatureDefault', Constants::CODECHECK_GITHUB_SIGNATURE_DEFAULT);
         $templateMgr->assign('githubSignaturePlaceholders', ['journal' => '{$journal}', 'journalUrl' => '{$journalUrl}']);
+
+        $context = $request->getContext();
+        $templateMgr->assign(
+            'codecheckerSetup',
+            $context ? (new CodecheckerJournalSetup($this->plugin))->status((int) $context->getId()) : ['role' => false, 'template' => false]
+        );
 
         $templateMgr->assign('orcidApiTypes', [
             Constants::ORCID_API_TYPE_SANDBOX => __('plugins.generic.codecheck.orcid.apiType.sandbox'),

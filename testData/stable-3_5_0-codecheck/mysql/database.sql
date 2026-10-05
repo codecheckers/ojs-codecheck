@@ -717,7 +717,8 @@ INSERT INTO `email_templates` (`email_id`, `email_key`, `context_id`, `alternate
 (3, 'EDITOR_ASSIGN_REVIEW', 1, 'DISCUSSION_NOTIFICATION_REVIEW'),
 (4, 'EDITOR_ASSIGN_PRODUCTION', 1, 'DISCUSSION_NOTIFICATION_PRODUCTION'),
 (5, 'LAYOUT_REQUEST', 1, 'DISCUSSION_NOTIFICATION_PRODUCTION'),
-(6, 'LAYOUT_COMPLETE', 1, 'DISCUSSION_NOTIFICATION_PRODUCTION');
+(6, 'LAYOUT_COMPLETE', 1, 'DISCUSSION_NOTIFICATION_PRODUCTION'),
+(7, 'invitation-to-codecheck', 1, 'REVIEW_REQUEST');
 
 -- --------------------------------------------------------
 
@@ -901,6 +902,17 @@ CREATE TABLE `email_templates_settings` (
   `setting_name` varchar(255) NOT NULL,
   `setting_value` mediumtext
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COMMENT='More data about custom email templates, including localized properties such as the subject and body.';
+
+--
+-- Dumping data for table `email_templates_settings`
+--
+-- The "Invitation to codecheck" template the plugin creates on enable (#13).
+--
+
+INSERT INTO `email_templates_settings` (`email_template_setting_id`, `email_id`, `locale`, `setting_name`, `setting_value`) VALUES
+(1, 7, 'en', 'name', 'Invitation to codecheck'),
+(2, 7, 'en', 'subject', 'Invitation to codecheck'),
+(3, 7, 'en', 'body', '<p>Dear {$recipientName},</p><p>I believe that you would be an excellent codechecker for a submission to {$contextName}. A codecheck confirms that the code and data behind the submission reproduce its computational results. The submission\'s title and abstract are below.</p><p>If you are able to take on this codecheck, it is due by {$reviewDueDate}. You can view the submission, find the code and data the authors provided, and record the CODECHECK by logging into the journal site and following the steps at the link below. You may also give a regular review there, but you do not have to.</p><p><a href="{$reviewAssignmentUrl}">{$submissionTitle}</a></p><p><b>Abstract</b></p>{$submissionAbstract}<p>Please <a href="{$reviewAssignmentUrl}">accept or decline</a> the invitation by <b>{$responseDueDate}</b>.</p><p>You may contact me with any questions about the submission or the codecheck. More about the CODECHECK process is at <a href="https://codecheck.org.uk/">codecheck.org.uk</a>.</p><p>Kind regards,</p>{$signature}');
 
 -- --------------------------------------------------------
 
@@ -2077,7 +2089,9 @@ INSERT INTO `plugin_settings` (`plugin_setting_id`, `plugin_name`, `context_id`,
 (31, 'codecheckplugin', 1, 'showArticleSidebar', '1', 'bool'),
 -- Written by CodecheckPlugin::writeDefaultSettings() on enable; the dump has
 -- `enabled` baked in, so that never runs here and the row is carried (#177).
-(32, 'codecheckplugin', 1, 'codecheckRegisterDepositEnabled', '1', 'bool');
+(32, 'codecheckplugin', 1, 'codecheckRegisterDepositEnabled', '1', 'bool'),
+(33, 'codecheckplugin', 1, 'codecheckerUserGroupId', '20', 'int'),
+(34, 'codecheckplugin', 1, 'codecheckInvitationTemplateKey', 'invitation-to-codecheck', 'string');
 
 -- --------------------------------------------------------
 
@@ -5076,7 +5090,8 @@ INSERT INTO `user_groups` (`user_group_id`, `context_id`, `role_id`, `is_default
 (16, 1, 4096, 1, 1, 1, 0, 0, 1),
 (17, 1, 1048576, 1, 1, 1, 0, 0, 0),
 (18, 1, 2097152, 1, 1, 0, 0, 0, 0),
-(19, 1, 4097, 1, 1, 0, 0, 0, 1);
+(19, 1, 4097, 1, 1, 0, 0, 0, 1),
+(20, 1, 4096, 0, 1, 1, 0, 0, 0);
 
 -- --------------------------------------------------------
 
@@ -5204,7 +5219,10 @@ INSERT INTO `user_group_settings` (`user_group_setting_id`, `user_group_id`, `lo
 (105, 19, 'de', 'name', 'Redaktionsmitglied'),
 (106, 19, 'de', 'abbrev', 'EBM'),
 (107, 19, 'en', 'name', 'Editorial Board Member'),
-(108, 19, 'en', 'abbrev', 'EBM');
+(108, 19, 'en', 'abbrev', 'EBM'),
+(109, 20, '', 'recommendOnly', '0'),
+(110, 20, 'en', 'name', 'Codechecker'),
+(111, 20, 'en', 'abbrev', 'CC');
 
 -- --------------------------------------------------------
 
@@ -5254,7 +5272,8 @@ INSERT INTO `user_group_stage` (`user_group_stage_id`, `context_id`, `user_group
 (28, 1, 15, 3),
 (29, 1, 15, 4),
 (30, 1, 15, 5),
-(31, 1, 16, 3);
+(31, 1, 16, 3),
+(32, 1, 20, 3);
 
 -- --------------------------------------------------------
 
@@ -6740,7 +6759,7 @@ ALTER TABLE `email_log_users`
 -- AUTO_INCREMENT for table `email_templates`
 --
 ALTER TABLE `email_templates`
-  MODIFY `email_id` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `email_id` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `email_templates_default_data`
@@ -6752,7 +6771,7 @@ ALTER TABLE `email_templates_default_data`
 -- AUTO_INCREMENT for table `email_templates_settings`
 --
 ALTER TABLE `email_templates_settings`
-  MODIFY `email_template_setting_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `email_template_setting_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `event_log`
@@ -7028,7 +7047,7 @@ ALTER TABLE `oai_resumption_tokens`
 -- AUTO_INCREMENT for table `plugin_settings`
 --
 ALTER TABLE `plugin_settings`
-  MODIFY `plugin_setting_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
+  MODIFY `plugin_setting_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=35;
 
 --
 -- AUTO_INCREMENT for table `publications`
@@ -7316,19 +7335,19 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `user_groups`
 --
 ALTER TABLE `user_groups`
-  MODIFY `user_group_id` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
+  MODIFY `user_group_id` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT for table `user_group_settings`
 --
 ALTER TABLE `user_group_settings`
-  MODIFY `user_group_setting_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=109;
+  MODIFY `user_group_setting_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=112;
 
 --
 -- AUTO_INCREMENT for table `user_group_stage`
 --
 ALTER TABLE `user_group_stage`
-  MODIFY `user_group_stage_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
+  MODIFY `user_group_stage_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
 
 --
 -- AUTO_INCREMENT for table `user_interests`

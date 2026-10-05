@@ -5,6 +5,7 @@ namespace APP\plugins\generic\codecheck;
 use APP\core\Application;
 use APP\facades\Repo;
 use APP\plugins\generic\codecheck\api\v1\CodecheckApiController;
+use APP\plugins\generic\codecheck\classes\Codecheckers\CodecheckerJournalSetup;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\GithubHttp;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\DoiDeposit\CodecheckDoiDeposit;
@@ -808,7 +809,13 @@ class CodecheckPlugin extends GenericPlugin implements HasTaskScheduler
         if ($enabled) {
             // Idempotent: creates whatever tables and the genre are missing.
             $this->getInstallMigration()->up();
-            $this->writeDefaultSettings($this->getCurrentContextId());
+            $contextId = $this->getCurrentContextId();
+            $this->writeDefaultSettings($contextId);
+            // Enabling from the site-wide list has no journal, as above.
+            $context = Application::get()->getRequest()->getContext();
+            if ($context) {
+                (new CodecheckerJournalSetup($this))->installOnce($context);
+            }
         }
 
         return $result;
@@ -853,7 +860,9 @@ class CodecheckPlugin extends GenericPlugin implements HasTaskScheduler
 
     /**
      * Writes the defaults for a journal created while the plugin was already
-     * enabled, which never calls `setEnabled()` (#177).
+     * enabled, which never calls `setEnabled()` (#177). The Codechecker role
+     * and invitation template (#13) wait for the journal to enable the plugin:
+     * when this runs, no journal has done so yet.
      */
     public function writeDefaultSettingsForNewContext(string $hookName, array $args): bool
     {
@@ -861,6 +870,7 @@ class CodecheckPlugin extends GenericPlugin implements HasTaskScheduler
 
         if ($context) {
             $this->writeDefaultSettings((int) $context->getId());
+
         }
 
         return false;

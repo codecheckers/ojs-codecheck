@@ -47,6 +47,55 @@ msgstr "Submission Settings"
 msgid "plugins.generic.codecheck.settings.showArticleSidebar"
 msgstr "CODECHECK information on published articles"
 
+msgid "plugins.generic.codecheck.settings.codecheckers.title"
+msgstr "Codecheckers"
+
+msgid "plugins.generic.codecheck.settings.codecheckers.description"
+msgstr "Codecheckers are invited as reviewers, in a Codechecker role and with an \"Invitation to codecheck\" email template that \"Add Reviewer\" offers beside the review request. Enabling the plugin creates both; they can be edited under Users & Roles and Emails."
+
+msgid "plugins.generic.codecheck.settings.codecheckers.role.present"
+msgstr "The Codechecker role exists."
+
+msgid "plugins.generic.codecheck.settings.codecheckers.role.missing"
+msgstr "The Codechecker role is missing."
+
+msgid "plugins.generic.codecheck.settings.codecheckers.template.present"
+msgstr "The \"Invitation to codecheck\" email template exists."
+
+msgid "plugins.generic.codecheck.settings.codecheckers.template.missing"
+msgstr "The \"Invitation to codecheck\" email template is missing."
+
+msgid "plugins.generic.codecheck.settings.codecheckers.recreate"
+msgstr "Create what is missing"
+
+msgid "plugins.generic.codecheck.settings.codecheckers.recreate.failed"
+msgstr "The role or the template could not be created. Reload the page and try again; if it fails again, the server log says why."
+
+msgid "plugins.generic.codecheck.codecheckerRole.name"
+msgstr "Codechecker"
+
+msgid "plugins.generic.codecheck.codecheckerRole.abbrev"
+msgstr "CC"
+
+msgid "plugins.generic.codecheck.invitationTemplate.name"
+msgstr "Invitation to codecheck"
+
+msgid "plugins.generic.codecheck.invitationTemplate.subject"
+msgstr "Invitation to codecheck"
+
+msgid "plugins.generic.codecheck.invitationTemplate.body"
+msgstr ""
+"<p>Dear {$recipientName},</p>"
+"<p>I believe that you would be an excellent codechecker for a submission to {$contextName}. A codecheck confirms that the code and data behind the submission reproduce its computational results. The submission's title and abstract are below.</p>"
+"<p>If you are able to take on this codecheck, it is due by {$reviewDueDate}. You can view the submission, find the code and data the authors provided, and record the CODECHECK by logging into the journal site and following the steps at the link below. You may also give a regular review there, but you do not have to.</p>"
+"<p><a href=\"{$reviewAssignmentUrl}\">{$submissionTitle}</a></p>"
+"<p><b>Abstract</b></p>"
+"{$submissionAbstract}"
+"<p>Please <a href=\"{$reviewAssignmentUrl}\">accept or decline</a> the invitation by <b>{$responseDueDate}</b>.</p>"
+"<p>You may contact me with any questions about the submission or the codecheck. More about the CODECHECK process is at <a href=\"https://codecheck.org.uk/\">codecheck.org.uk</a>.</p>"
+"<p>Kind regards,</p>"
+"{$signature}"
+
 msgid "plugins.generic.codecheck.settings.mode"
 msgstr "Select the CODECHECK mode for submissions"
 
