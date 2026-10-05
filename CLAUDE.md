@@ -185,9 +185,9 @@ assignment):
   and sends no `issue` update; `saveMetadata()` keeps the stored `certificate` and `issue`
   for anyone else. Automatic register writes (status comment, labels, JSON
   block) are not covered by it.
-- `isEditor()` — journal-wide: gates directory writes and GitHub assignment.
-- `isEditorOn()` (#127) — per submission: manager/site admin, or Section
-  editor/Assistant with a stage assignment on it. `canWriteMetadata()` (an
+- `isEditorOn()` (#127) — per submission, the one editor question (there is no
+  journal-wide one): manager/site admin, or Section editor/Assistant with a
+  stage assignment on it. `canWriteMetadata()` (an
   editor on it, or the assigned reviewer) and the ORCID deposit scope use it,
   so a journal-wide Section editor who reaches a submission only as its author
   or as an invited reviewer is not treated as its editor.
@@ -531,8 +531,10 @@ the testing register (issues rw, contents r, pull requests rw, workflows rw).
 ### Test data
 
 `testData/stable-3_5_0-codecheck/` — dump + files for journal `codecheck`; users
-`admin`, `jmanager`, `seglen`, `dnuest`, `fostermann`, `rreviewer` (password =
-username; `rreviewer` reviews submission 9 only). The dump carries the full
+`admin`, `jmanager`, `seglen`, `dnuest`, `fostermann`, `rreviewer`,
+`sectioneditor` (password = username; `rreviewer` reviews submission 9 only;
+`sectioneditor` is Section editor, assigned as editor to submission 8 and only
+the author of 10). The dump carries the full
 CODECHECK schema and `enabled = 1`, so migrations never run against it.
 
 **Any change to `codecheck_metadata`'s shape or its JSON blobs must be applied to

@@ -2683,7 +2683,9 @@ INSERT INTO `stage_assignments` (`stage_assignment_id`, `submission_id`, `user_g
 (7, 7, 14, 4, '2026-02-26 01:43:31', 0, 0),
 (8, 8, 14, 3, '2026-02-26 01:53:06', 0, 0),
 (9, 9, 14, 2, '2026-02-26 02:04:52', 0, 0),
-(10, 10, 14, 4, '2026-02-26 02:12:34', 0, 0);
+(10, 10, 14, 4, '2026-02-26 02:12:34', 0, 0),
+(11, 8, 5, 7, '2026-02-26 02:20:00', 0, 1),
+(12, 10, 14, 7, '2026-02-26 02:21:00', 0, 0);
 
 -- --------------------------------------------------------
 
@@ -5055,7 +5057,8 @@ INSERT INTO `users` (`user_id`, `username`, `password`, `email`, `url`, `phone`,
 (3, 'seglen', '$2y$12$hjB7Xmv2mfvJzUBtZfrFDuzm7ZG0oam5r6z7ET0RXye.hSp3djtSm', 'seglen@mailinator.com', '', '', '', NULL, '', '[]', NULL, NULL, '2026-02-12 09:03:59', NULL, '2026-02-26 01:52:28', 0, NULL, NULL, 0, NULL, 1, 'yuSUcx4bpxEnXEUQNxOrH91liKrmG7CXgYC8q7X7SO3hEstzrHR7ybAxUZ5Z'),
 (4, 'fostermann', '$2y$12$oWY81bUPVnrIXtG0U61nz.fO8p/nR6mCaqz8hbL7URiot15jIatA6', 'fostermann@mailinator.com', '', '', '', NULL, '', '[]', NULL, NULL, '2026-02-12 09:05:29', NULL, '2026-02-26 02:11:54', 0, NULL, NULL, 0, NULL, 1, '8ZNJDW6lnOSLE25NPyhXOweZdmkHVkksSt9Uea5miVbvjEB3chgzvoqaaRIL'),
 (5, 'jmanager', '$2y$12$MOedT/6Crk61mLTauMg7e.oaJYAlChXTNUse.ul7ahaaQ1RIhKWFW', 'jmanager@mailinator.com', '', '', '', NULL, '', '[]', NULL, NULL, '2026-02-12 09:07:48', NULL, '2026-02-26 02:19:01', 0, NULL, NULL, 0, NULL, 1, 'dmAs9l278hBRyLz8VXsbJYRhE7FinmRI5pCUbikUlT89RoFApi2ms7p4RJ4I'),
-(6, 'rreviewer', '$2y$12$tWDpcrUr/EKX/UkR.xDJgu0.qZQzcYxeW5dF3lv4p.mt2EeZrBfLu', 'rreviewer@mailinator.com', '', '', '', NULL, '', '[]', NULL, NULL, '2026-02-12 09:09:36', NULL, NULL, 0, NULL, NULL, 0, NULL, 1, NULL);
+(6, 'rreviewer', '$2y$12$tWDpcrUr/EKX/UkR.xDJgu0.qZQzcYxeW5dF3lv4p.mt2EeZrBfLu', 'rreviewer@mailinator.com', '', '', '', NULL, '', '[]', NULL, NULL, '2026-02-12 09:09:36', NULL, NULL, 0, NULL, NULL, 0, NULL, 1, NULL),
+(7, 'sectioneditor', '$2y$12$MoVLTa/DUc7yRjJk8nEIxupBKg0bTsDm6i15JlZuDCQUNeLvs8/te', 'sectioneditor@mailinator.com', '', '', '', NULL, '', '[]', NULL, NULL, '2026-02-12 09:11:00', NULL, NULL, 0, NULL, NULL, 0, NULL, 1, NULL);
 
 -- --------------------------------------------------------
 
@@ -5340,7 +5343,9 @@ INSERT INTO `user_settings` (`user_setting_id`, `user_id`, `locale`, `setting_na
 (29, 6, 'en', 'familyName', 'Reviewer'),
 (30, 6, 'en', 'givenName', 'Rosa'),
 (31, 6, 'en', 'preferredPublicName', ''),
-(32, 6, 'en', 'signature', '');
+(32, 6, 'en', 'signature', ''),
+(33, 7, 'en', 'familyName', 'Editor'),
+(34, 7, 'en', 'givenName', 'Sam');
 
 -- --------------------------------------------------------
 
@@ -5369,7 +5374,9 @@ INSERT INTO `user_user_groups` (`user_user_group_id`, `user_group_id`, `user_id`
 (5, 14, 4, '2026-02-12 09:05:55', NULL, 0),
 (6, 2, 5, '2026-02-12 09:08:42', NULL, 0),
 (7, 3, 5, '2026-02-12 09:08:42', NULL, 0),
-(8, 16, 6, '2026-02-12 09:10:36', NULL, 1);
+(8, 16, 6, '2026-02-12 09:10:36', NULL, 1),
+(9, 5, 7, '2026-02-12 09:11:00', NULL, 0),
+(10, 14, 7, '2026-02-12 09:11:00', NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -7206,7 +7213,7 @@ ALTER TABLE `site_settings`
 -- AUTO_INCREMENT for table `stage_assignments`
 --
 ALTER TABLE `stage_assignments`
-  MODIFY `stage_assignment_id` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `stage_assignment_id` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `static_pages`
@@ -7332,7 +7339,7 @@ ALTER TABLE `usage_stats_unique_item_requests_temporary_records`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `user_id` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `user_id` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `user_groups`
@@ -7362,13 +7369,13 @@ ALTER TABLE `user_interests`
 -- AUTO_INCREMENT for table `user_settings`
 --
 ALTER TABLE `user_settings`
-  MODIFY `user_setting_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
+  MODIFY `user_setting_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=35;
 
 --
 -- AUTO_INCREMENT for table `user_user_groups`
 --
 ALTER TABLE `user_user_groups`
-  MODIFY `user_user_group_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `user_user_group_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `versions`
