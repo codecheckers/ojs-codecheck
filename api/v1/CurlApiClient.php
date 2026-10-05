@@ -104,12 +104,13 @@ class CurlApiClient implements ApiClientInterface
                     $effectiveUrl = (string) $stats->getEffectiveUri();
                 },
             ]);
+            $status = $response->getStatusCode();
             $response->getBody()->close();
         } catch (\Throwable $e) {
             return $possibleDoiUrl;
         }
 
-        if (!$effectiveUrl) {
+        if (!$effectiveUrl || $status >= 400) {
             return $possibleDoiUrl;
         }
 

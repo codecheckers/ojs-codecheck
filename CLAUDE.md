@@ -325,10 +325,13 @@ offers a suggestion with "Use it", never fills it in.
 ### Publication validation
 
 `CodecheckPublicationValidator` (opted-in submissions), short-circuiting, **order
-matters**: (1) selected repository not hidden (#169), (2) current status in the
-allow-list, (3) generated YAML parses, (4) with extended validation: the
-`codecheck.yml` is fetchable and its title matches. Check 2 can return false
-without an error, so new gates go before it.
+matters**: (1) selected repository not hidden (#169), (2) the register can name
+it (#36, `RegisterRepositoryName`; resolves a DOI and, for a GitHub branch,
+asks GitHub — accepting a branch GitHub cannot confirm, which the deposit then
+refuses), (3) current status in the allow-list, (4) generated YAML parses,
+(5) with extended validation: the `codecheck.yml` is fetchable and its title
+matches. Checks 1 and 2 run only while the register deposit is on. Check 3 can
+return false without an error, so new gates go before it.
 
 `Publication::validatePublish` runs only for REST publishing — not for
 `IssueGridHandler::publishIssue()` or the scheduled task. So every gate needs a

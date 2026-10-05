@@ -36,6 +36,7 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 #### Frontend
 
 - With the new setting *Certificate in the References*, the published CODECHECK certificate is listed among the article's references, from a button on the CODECHECK tab or also automatically whenever a version is published; a line already citing the certificate is updated where it stands and no other reference is changed (#183)
+- Loading metadata from Zenodo works for records of any age, from the older `record/` addresses, from a link to a file in the record and from the Zenodo sandbox, which is deposited to the register as `zenodo-sandbox::` (#36)
 - Loading metadata from OSF works for a link to the `codecheck.yml`'s file page, and finds the `codecheck.yml` in a project with many files (#36)
 - Loading metadata from GitHub works for a repository of any owner, and for a link to a branch, a folder or the `codecheck.yml` itself, `raw.githubusercontent.com` links included; such a repository is named by its folder in `register.csv` (#36)
 - The editorial CODECHECK form names the submission's primary contact, with a link that emails them about the check (#28)

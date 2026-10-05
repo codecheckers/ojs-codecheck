@@ -19,6 +19,7 @@ use APP\plugins\generic\codecheck\classes\Submission\CodecheckRepositories;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionAccess;
 use APP\plugins\generic\codecheck\classes\Submission\GithubRepositoryAddress;
 use APP\plugins\generic\codecheck\classes\Submission\OsfRepositoryAddress;
+use APP\plugins\generic\codecheck\classes\Submission\ZenodoRepositoryAddress;
 use Github\Client;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\Yaml\Yaml;
@@ -640,10 +641,8 @@ class CodecheckMetadataHandler
         $repository = $this->curlApiClient->resolveDoi($repository);
 
         // Check if the repository is a Zenodo Repository
-        if (preg_match('#^https://zenodo\.org/records/\d{8}/?$#', $repository)) {
-            // Remove trailing / if it exists
-            $repository = rtrim($repository, '/');
-            return $this->importMetadataFromZenodo($repository);
+        if (($zenodoAddress = ZenodoRepositoryAddress::parse($repository)) !== null) {
+            return $this->readYamlContent(ZenodoRepositoryAddress::downloadUrl($zenodoAddress), $repository);
         }
         // Check if the Repository is a GitHub Repository
         elseif (($githubAddress = GithubRepositoryAddress::parse($repository)) !== null) {
@@ -678,7 +677,8 @@ class CodecheckMetadataHandler
      * GitHub's default branch for a repository, or null when GitHub could not
      * say: what the register reads, for `RegisterRepositoryName::for()`.
      *
-     * @throws \UnexpectedValueException When GitHub did not answer, saying so
+     * @throws \UnexpectedValueException When GitHub did not answer or has no
+     *                                    such public repository, saying so
      */
     public function githubDefaultBranch(string $owner, string $repo): ?string
     {
@@ -693,6 +693,10 @@ class CodecheckMetadataHandler
             if (GithubHttp::wasUnreachable()) {
                 throw new \UnexpectedValueException(GithubHttp::unreachableMessage('plugins.generic.codecheck.repositories.githubUnreachable'));
             }
+            // Unauthenticated, GitHub answers 404 for a private repository too.
+            if ($e->getCode() === 404) {
+                throw new \UnexpectedValueException(__('plugins.generic.codecheck.register.repository.githubNotFound', ['repository' => "{$owner}/{$repo}"]));
+            }
             return null;
         }
 
@@ -706,18 +710,7 @@ class CodecheckMetadataHandler
      */
     public function registerRepositoryName(string $repository, bool $acceptUnconfirmedBranch = false): string
     {
-        $defaultBranchOf = $this->githubDefaultBranch(...);
-        if ($acceptUnconfirmedBranch) {
-            $defaultBranchOf = function (string $owner, string $repo): ?string {
-                try {
-                    return $this->githubDefaultBranch($owner, $repo);
-                } catch (\UnexpectedValueException $e) {
-                    return null;
-                }
-            };
-        }
-
-        return RegisterRepositoryName::for($this->curlApiClient->resolveDoi($repository), $defaultBranchOf, $acceptUnconfirmedBranch);
+        return RegisterRepositoryName::for($this->curlApiClient->resolveDoi($repository), $this->githubDefaultBranch(...), $acceptUnconfirmedBranch);
     }
 
     /**
@@ -768,21 +761,6 @@ class CodecheckMetadataHandler
         }
 
         return $this->yamlResponse(base64_decode($file['content']), $repository);
-    }
-
-    /**
-     * Import the codecheck metadata from an existing `codecheck.yml` from the CODECHECK Zenodo Repository
-     *
-     * @param string $repository The Zenodo Repository
-     *
-     * @return JsonResponse The Metadata from the Repositories `codecheck.yml`
-     */
-    private function importMetadataFromZenodo(string $repository): JsonResponse
-    {
-        $filename = 'codecheck.yml';
-        $pathToCodecheckYaml = $repository . '/files/' . $filename . '?download=1';
-
-        return $this->readYamlContent($pathToCodecheckYaml, $repository);
     }
 
     /**

@@ -2,16 +2,18 @@
 
 namespace APP\plugins\generic\codecheck\classes\Workflow;
 
+use APP\plugins\generic\codecheck\classes\Exceptions\UnsupportedRepositoryAddressException;
 use APP\plugins\generic\codecheck\classes\Submission\GithubRepositoryAddress;
 use APP\plugins\generic\codecheck\classes\Submission\OsfRepositoryAddress;
+use APP\plugins\generic\codecheck\classes\Submission\ZenodoRepositoryAddress;
 
 /**
  * How `register.csv` names the repository holding a check's `codecheck.yml`,
  * and the one answer to whether it can name it at all (#36).
  *
  * The register names a GitHub repository or a folder in it, read on its
- * default branch, and an OSF project, read at its top level; in each it reads
- * the file called `codecheck.yml`. An import takes more than that — a branch,
+ * default branch, an OSF project, read at its top level, and a Zenodo record;
+ * in each it reads the file called `codecheck.yml`. An import takes more than that — a branch,
  * a file of another name, a file anywhere in an OSF project — so an address
  * the register would resolve to a different file is refused rather than
  * written as the nearest thing it can name. Publication validation and the
@@ -25,6 +27,7 @@ final class RegisterRepositoryName
      *   https://github.com/codecheckers/certificate-2025-029           -> github::codecheckers/certificate-2025-029
      *   https://github.com/org/repo/blob/main/reports/08/codecheck.yml -> github::org/repo|reports/08 (main the default branch)
      *   https://zenodo.org/records/12345678                            -> zenodo::12345678
+     *   https://sandbox.zenodo.org/records/123                         -> zenodo-sandbox::123
      *   https://osf.io/abcde/                                          -> osf::abcde
      *   https://gitlab.com/cdchck/community-codechecks/some-check      -> gitlab::cdchck/community-codechecks/some-check
      *
@@ -37,27 +40,35 @@ final class RegisterRepositoryName
      *        check that must not stop on GitHub's availability, behind one
      *        that refuses
      *
-     * @throws \UnexpectedValueException With the reason, for the editor, when the register cannot name the address
+     * @throws UnsupportedRepositoryAddressException When the address is of no kind the register names
+     * @throws \UnexpectedValueException With the reason, for the editor, when the register would read it elsewhere
      */
     public static function for(string $repository, callable $defaultBranchOf, bool $acceptUnconfirmedBranch = false): string
     {
         $github = GithubRepositoryAddress::parse($repository);
         if ($github !== null) {
             if ($github['file'] !== null && $github['file'] !== 'codecheck.yml') {
-                throw new \UnexpectedValueException(__('plugins.generic.codecheck.register.repository.githubFileName', ['file' => htmlspecialchars($github['file'])]));
+                throw new \UnexpectedValueException(__('plugins.generic.codecheck.register.repository.githubFileName', ['file' => $github['file']]));
             }
             // `HEAD` is GitHub's own name for the default branch.
             if ($github['ref'] !== null && $github['ref'] !== 'HEAD') {
                 $branch = preg_replace('#^refs/heads/#', '', $github['ref']);
-                $defaultBranch = $defaultBranchOf($github['owner'], $github['repo']);
+                try {
+                    $defaultBranch = $defaultBranchOf($github['owner'], $github['repo']);
+                } catch (\UnexpectedValueException $e) {
+                    if (!$acceptUnconfirmedBranch) {
+                        throw $e;
+                    }
+                    $defaultBranch = null;
+                }
                 if ($defaultBranch === null && $acceptUnconfirmedBranch) {
                     $defaultBranch = $branch;
                 }
                 if ($defaultBranch === null) {
-                    throw new \UnexpectedValueException(__('plugins.generic.codecheck.register.repository.githubDefaultBranchUnknown', ['ref' => htmlspecialchars($github['ref'])]));
+                    throw new \UnexpectedValueException(__('plugins.generic.codecheck.register.repository.githubDefaultBranchUnknown', ['ref' => $github['ref']]));
                 }
                 if ($branch !== $defaultBranch) {
-                    throw new \UnexpectedValueException(__('plugins.generic.codecheck.register.repository.githubBranch', ['ref' => htmlspecialchars($github['ref']), 'defaultBranch' => htmlspecialchars($defaultBranch)]));
+                    throw new \UnexpectedValueException(__('plugins.generic.codecheck.register.repository.githubBranch', ['ref' => $github['ref'], 'defaultBranch' => $defaultBranch]));
                 }
             }
 
@@ -74,8 +85,12 @@ final class RegisterRepositoryName
             return "osf::{$osf['node']}";
         }
 
-        if (preg_match('#^https://zenodo\.org/records/(\d+)/?$#', $repository, $matches)) {
-            return "zenodo::{$matches[1]}";
+        $zenodo = ZenodoRepositoryAddress::parse($repository);
+        if ($zenodo !== null) {
+            if ($zenodo['file'] !== null && $zenodo['file'] !== 'codecheck.yml') {
+                throw new \UnexpectedValueException(__('plugins.generic.codecheck.register.repository.zenodoFileName', ['file' => $zenodo['file']]));
+            }
+            return ($zenodo['sandbox'] ? 'zenodo-sandbox::' : 'zenodo::') . $zenodo['record'];
         }
 
         // The register names a GitLab project by its whole path.
@@ -83,6 +98,6 @@ final class RegisterRepositoryName
             return "gitlab::{$matches[1]}";
         }
 
-        throw new \UnexpectedValueException(__('plugins.generic.codecheck.register.repository.unsupported'));
+        throw new UnsupportedRepositoryAddressException(__('plugins.generic.codecheck.register.repository.unsupported'));
     }
 }

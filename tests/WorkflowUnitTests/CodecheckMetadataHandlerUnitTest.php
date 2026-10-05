@@ -453,22 +453,28 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $this->assertFalse($response->getPayloadArray()['success']);
     }
 
-    public function testImportMetadataFromZenodo()
+    public static function zenodoAddressProvider(): array
     {
-        $repository = 'https://zenodo.org/records/14900193';
-        $client = $this->createMock(\Github\Client::class);
-        $request = new Request();
-        $curlApiClient = $this->createMock(CurlApiClient::class);
-        $curlApiClient->method('resolveDoi')->willReturn($repository);
-        $curlApiClient->method('fetch')->willReturn('test: yaml');
-        $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
+        return [
+            'record' => ['https://zenodo.org/records/14900193', 'https://zenodo.org/records/14900193/files/codecheck.yml?download=1'],
+            'older record, shorter id' => ['https://zenodo.org/record/3674056/', 'https://zenodo.org/records/3674056/files/codecheck.yml?download=1'],
+            'file' => ['https://zenodo.org/records/14900193/files/paper.yaml?download=1', 'https://zenodo.org/records/14900193/files/paper.yaml?download=1'],
+        ];
+    }
+
+    #[DataProvider('zenodoAddressProvider')]
+    public function testImportMetadataFromZenodo(string $repository, string $download)
+    {
+        $this->handler = $this->handlerAnswering(['test: yaml'], $fetched);
+
         $response = $this->handler->importMetadataFromRepository($repository);
-        $actualMetadataReturnArray = json_decode($response->getPayload(), true);
+
+        $this->assertSame([$download], $fetched);
         $this->assertEquals(200, $response->getHttpResponseCode());
-        $this->assertCount(3, $actualMetadataReturnArray);
-        $this->assertTrue($actualMetadataReturnArray['success']);
-        $this->assertEquals($repository, $actualMetadataReturnArray['repository']);
-        $this->assertEquals(['test' => 'yaml'], $actualMetadataReturnArray['metadata']);
+        $this->assertSame(
+            ['success' => true, 'repository' => $repository, 'metadata' => ['test' => 'yaml']],
+            $response->getPayloadArray()
+        );
     }
 
     /**

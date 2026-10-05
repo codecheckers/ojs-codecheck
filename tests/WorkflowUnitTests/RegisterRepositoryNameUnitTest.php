@@ -2,6 +2,7 @@
 
 namespace APP\plugins\generic\codecheck\tests\WorkflowUnitTests;
 
+use APP\plugins\generic\codecheck\classes\Exceptions\UnsupportedRepositoryAddressException;
 use APP\plugins\generic\codecheck\classes\Workflow\RegisterRepositoryName;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PKP\tests\PKPTestCase;
@@ -26,6 +27,9 @@ class RegisterRepositoryNameUnitTest extends PKPTestCase
             'OSF project' => ['https://osf.io/ymc3t/', 'osf::ymc3t'],
             'OSF files tab' => ['https://osf.io/ymc3t/files/osfstorage', 'osf::ymc3t'],
             'Zenodo record' => ['https://zenodo.org/records/14900193', 'zenodo::14900193'],
+            'Zenodo record, shorter id' => ['https://zenodo.org/record/3674056', 'zenodo::3674056'],
+            'Zenodo codecheck.yml' => ['https://zenodo.org/records/14900193/files/codecheck.yml?download=1', 'zenodo::14900193'],
+            'Zenodo sandbox record' => ['https://sandbox.zenodo.org/records/123', 'zenodo-sandbox::123'],
             'GitLab project' => ['https://gitlab.com/cdchck/community-codechecks/2022-svaRetro-svaNUMT', 'gitlab::cdchck/community-codechecks/2022-svaRetro-svaNUMT'],
         ];
     }
@@ -44,7 +48,7 @@ class RegisterRepositoryNameUnitTest extends PKPTestCase
             'GitHub tag' => ['https://raw.githubusercontent.com/org/repo/refs/tags/trunk/codecheck.yml', 'githubBranch'],
             'OSF file page' => ['https://osf.io/ymc3t/files/osfstorage/66f86b012218196732a8604f', 'osfFile'],
             'OSF file by its short identifier' => ['https://osf.io/ymc3t/files/5zu8b', 'osfFile'],
-            'another host' => ['https://example.org/check', 'unsupported'],
+            'Zenodo file of another name' => ['https://zenodo.org/records/14900193/files/paper.yaml', 'zenodoFileName'],
         ];
     }
 
@@ -55,6 +59,14 @@ class RegisterRepositoryNameUnitTest extends PKPTestCase
         $this->expectExceptionMessage("plugins.generic.codecheck.register.repository.{$reason}");
 
         RegisterRepositoryName::for($address, fn () => 'trunk');
+    }
+
+    public function testAnAddressOfNoKindTheRegisterNamesIsToldApart()
+    {
+        // Publication validation leaves these to the deposit.
+        $this->expectException(UnsupportedRepositoryAddressException::class);
+
+        RegisterRepositoryName::for('https://example.org/check', fn () => 'trunk');
     }
 
     public function testABranchGithubCannotConfirmIsRefused()
@@ -79,12 +91,19 @@ class RegisterRepositoryNameUnitTest extends PKPTestCase
         RegisterRepositoryName::for('https://github.com/org/repo/tree/check-2025', fn () => 'trunk', acceptUnconfirmedBranch: true);
     }
 
-    public function testANameIsEscapedForTheMessage()
+    public function testARefusalFromGithubIsPassedOn()
     {
-        // The publish dialog renders validation errors as HTML.
-        $this->expectExceptionMessage('plugins.generic.codecheck.register.repository.githubFileName');
+        $this->expectExceptionMessage('GitHub did not answer');
 
-        RegisterRepositoryName::for('https://github.com/org/repo/blob/trunk/%3Cb%3E.yml', fn () => 'trunk');
+        RegisterRepositoryName::for('https://github.com/org/repo/tree/trunk', fn () => throw new \UnexpectedValueException('GitHub did not answer'));
+    }
+
+    public function testARefusalFromGithubIsAcceptedWhenUnconfirmedBranchesAre()
+    {
+        $this->assertSame(
+            'github::org/repo',
+            RegisterRepositoryName::for('https://github.com/org/repo/tree/trunk', fn () => throw new \UnexpectedValueException('GitHub did not answer'), acceptUnconfirmedBranch: true)
+        );
     }
 
     public function testGithubIsOnlyAskedWhenTheAddressNamesABranch()

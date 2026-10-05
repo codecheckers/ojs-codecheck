@@ -5,10 +5,9 @@ namespace APP\plugins\generic\codecheck\classes\Workflow;
 use APP\core\Application;
 use APP\core\Request;
 use APP\plugins\generic\codecheck\classes\Constants;
+use APP\plugins\generic\codecheck\classes\Exceptions\UnsupportedRepositoryAddressException;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckRepositories;
-use APP\plugins\generic\codecheck\classes\Submission\GithubRepositoryAddress;
-use APP\plugins\generic\codecheck\classes\Submission\OsfRepositoryAddress;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
 
 class CodecheckPublicationValidator
@@ -211,20 +210,19 @@ class CodecheckPublicationValidator
             return true;
         }
 
-        // Only the address forms the import widened for #36 are judged here;
-        // anything else is left to the deposit, as before, so an address the
-        // register never named does not start blocking publication.
-        if (GithubRepositoryAddress::parse($repository) === null && OsfRepositoryAddress::parse($repository) === null) {
-            return true;
-        }
-
         try {
             // Publication does not wait on GitHub: a branch it could not
             // compare is the deposit's to refuse.
             $this->codecheckMetadataHandler->registerRepositoryName($repository, acceptUnconfirmedBranch: $isPublishing);
+        } catch (UnsupportedRepositoryAddressException $e) {
+            // An address of no kind the register names is left to the deposit,
+            // as before, so it does not start blocking publication.
+            return true;
         } catch (\UnexpectedValueException $e) {
+            // The reason names a file or branch from the address, and the
+            // publish dialog renders the errors as HTML.
             $this->errors[] = __('plugins.generic.codecheck.publication.validation.invalidRepository', [
-                'repositoryError' => $e->getMessage(),
+                'repositoryError' => htmlspecialchars($e->getMessage()),
             ]);
             return false;
         } catch (\Throwable $e) {

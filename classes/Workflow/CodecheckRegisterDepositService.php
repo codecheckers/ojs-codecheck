@@ -94,7 +94,7 @@ class CodecheckRegisterDepositService
         // fetched; only a GitHub address naming a branch costs a request.
         try {
             $formattedRepository = $this->codecheckMetadataHandler->registerRepositoryName($repositoryUrl);
-        } catch (\UnexpectedValueException $e) {
+        } catch (\Throwable $e) {
             return $this->fail('Could not format repository "' . $repositoryUrl . '" for the register: ' . $e->getMessage());
         }
 

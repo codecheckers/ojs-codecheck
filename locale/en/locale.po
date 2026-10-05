@@ -536,8 +536,14 @@ msgstr "The CODECHECK Register reads a repository's default branch, {$defaultBra
 msgid "plugins.generic.codecheck.register.repository.githubDefaultBranchUnknown"
 msgstr "GitHub could not say whether {$ref} is the repository's default branch, which is the one the CODECHECK Register reads. Mark the address of the repository without a branch, or try again later."
 
+msgid "plugins.generic.codecheck.register.repository.githubNotFound"
+msgstr "GitHub has no public repository {$repository}. Check the address, and that the repository is public."
+
 msgid "plugins.generic.codecheck.register.repository.osfFile"
 msgstr "The CODECHECK Register names an OSF project and reads the codecheck.yml at its top level, so it cannot name a link to a file. Mark the project's address, {$project}, with the codecheck.yml at its top level."
+
+msgid "plugins.generic.codecheck.register.repository.zenodoFileName"
+msgstr "The CODECHECK Register reads the file called codecheck.yml in a Zenodo record, so it cannot name {$file}. Mark the address of the record instead, with a codecheck.yml in it."
 
 msgid "plugins.generic.codecheck.register.repository.unsupported"
 msgstr "The CODECHECK Register cannot name this repository address."
