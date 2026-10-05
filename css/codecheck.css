@@ -556,3 +556,48 @@ textarea[name="dataAvailabilityStatement"] {
   background: #008033;
   color: #fff;
 }
+
+/* The CODECHECK form on the reviewer's "Download & Review" step */
+.codecheck-reviewer-form {
+  margin-top: 2rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.codecheck-reviewer-form > summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-radius: 4px;
+  background: #f8f8f8;
+  font-size: 1rem;
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+
+.codecheck-reviewer-form__mark {
+  color: #008033;
+}
+
+.codecheck-reviewer-form__content {
+  padding: 1rem;
+}
+
+/* The submission wizard's review step, when the author entered nothing */
+.codecheck-review-empty {
+  color: #d00a0a;
+}
+
+/* The CODECHECK column on the submissions dashboard */
+.codecheck-dashboard-loading {
+  color: #888;
+  font-size: 0.85em;
+}
+
+.codecheck-dashboard-certificate {
+  color: #008033;
+  font-weight: 600;
+}

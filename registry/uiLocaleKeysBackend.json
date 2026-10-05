@@ -217,6 +217,7 @@
   "plugins.generic.codecheck.review.publicationType.separate",
   "plugins.generic.codecheck.review.reportUrl",
   "plugins.generic.codecheck.reviewTitle",
+  "plugins.generic.codecheck.reviewer.formTitle",
   "plugins.generic.codecheck.saveFailed",
   "plugins.generic.codecheck.savedSuccessfully",
   "plugins.generic.codecheck.source.description",

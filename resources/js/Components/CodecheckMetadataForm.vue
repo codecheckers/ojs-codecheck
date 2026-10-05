@@ -118,7 +118,7 @@
               ref="fileInput"
               @change="handleFileUpload" 
               multiple 
-              style="position: absolute; left: -9999px; opacity: 0;"
+              class="codecheck-file-input"
               accept=".pdf,.csv,.txt,.yml,.yaml,.json,.zip,.png,.jpg"
             />
           </div>
@@ -1673,6 +1673,13 @@ export default {
 </script>
 
 <style>
+/* Opened by the "add file" button; the input itself is never shown. */
+.codecheck-file-input {
+  position: absolute;
+  left: -9999px;
+  opacity: 0;
+}
+
 .codecheck-metadata-form *,
 .codecheck-metadata-form *::before,
 .codecheck-metadata-form *::after {

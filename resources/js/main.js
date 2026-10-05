@@ -562,7 +562,7 @@ class CodecheckReviewRefresher {
       if (!sections.length) {
         sections.push(html`
           <div class="submissionWizard__reviewPanel__item">
-            <p class="description" style="color: #d00a0a;">
+            <p class="description codecheck-review-empty">
               <em>${t('plugins.generic.codecheck.noDataFound')}</em>
             </p>
           </div>
@@ -643,14 +643,13 @@ function mountCodecheckReviewerForm() {
 
   const details = document.createElement('details');
   details.id = 'codecheck-reviewer-form';
-  details.style.cssText = 'margin-top: 2rem; border: 1px solid #ddd; border-radius: 4px; background: #fff;';
+  details.className = 'codecheck-reviewer-form';
 
   const summary = document.createElement('summary');
-  summary.style.cssText = 'padding: 1rem; font-weight: 600; font-size: 1rem; cursor: pointer; list-style: none; display: flex; align-items: center; gap: 0.5rem; background: #f8f8f8; border-radius: 4px;';
-  summary.innerHTML = '<span style="color: #008033;">&#10003;</span> CODECHECK Documentation';
+  summary.innerHTML = toHtml(html`<span class="codecheck-reviewer-form__mark" aria-hidden="true">&#10003;</span> ${t('plugins.generic.codecheck.reviewer.formTitle')}`);
 
   const content = document.createElement('div');
-  content.style.cssText = 'padding: 1rem;';
+  content.className = 'codecheck-reviewer-form__content';
 
   details.appendChild(summary);
   details.appendChild(content);
@@ -818,8 +817,8 @@ const DashboardCellCodecheck = {
   },
   template: `
     <pkp-table-cell>
-      <span v-if="loading" style="color:#888;font-size:0.85em;">...</span>
-      <span v-else-if="hasCertificate" style="color:#008033;font-weight:600;">
+      <span v-if="loading" class="codecheck-dashboard-loading">...</span>
+      <span v-else-if="hasCertificate" class="codecheck-dashboard-certificate">
         ✓ {{ codecheckData.certificate }}
       </span>
       <a v-else

@@ -663,6 +663,9 @@ msgstr "View Full CODECHECK metadata"
 msgid "plugins.generic.codecheck.notOptedIn"
 msgstr "This submission has not opted in for CODECHECK"
 
+msgid "plugins.generic.codecheck.reviewer.formTitle"
+msgstr "CODECHECK documentation"
+
 msgid "plugins.generic.codecheck.workflow.label"
 msgstr "CODECHECK"
 
