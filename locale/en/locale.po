@@ -443,9 +443,6 @@ msgstr "CODECHECK Certificate ID, Venue Type and Venue Name"
 msgid "plugins.generic.codecheck.identifier.label"
 msgstr "ID of the CODECHECK certificate - e.g.: 2025-001"
 
-msgid "plugins.generic.codecheck.identifier.venue.fetch.error.curl"
-msgstr "Venue Data Error"
-
 msgid "plugins.generic.codecheck.identifier.managersOnly"
 msgstr "Only a journal manager or an administrator can reserve, link or remove the certificate identifier."
 

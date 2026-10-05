@@ -71,6 +71,7 @@
 
 <script>
 import { workflowStore } from '../piniaStore.js';
+import { getCodecheckJson } from '../codecheckApi.js';
 import { html } from '../markup.js';
 import { isOptedIn } from '../optIn.js';
 import { askForInput, showInformation } from '../dialogs.js';
@@ -153,20 +154,14 @@ export default {
         try {
             if (!this.submission?.id) return;
 
-            const submissionId = this.submission.id;
-            const apiUrl = `${pkp.context.apiBaseUrl}codecheck/status?submissionId=${submissionId}`;
-            
-            const response = await fetch(apiUrl, {
-                method: 'GET',
-                headers: { 'X-Csrf-Token': pkp.currentUser.csrfToken }
-            });
-
-            const data = await response.json();
+            this.error = null;
+            const data = await getCodecheckJson('status', this.submission.id);
             this.statusData = data.statusRecord;
             this.allStatuses = data.allStatuses;
 
             this.dataLoaded = true;
         } catch (error) {
+            this.error = error.message;
             console.error('getStatus error:', error);
         } finally {
             this.loading = false;
@@ -190,27 +185,15 @@ export default {
         try {
             if (!this.submission?.id) return;
 
-            const submissionId = this.submission.id;
-            const apiUrl = `${pkp.context.apiBaseUrl}codecheck/status/history?submissionId=${submissionId}`;
-            
-            const response = await fetch(apiUrl, {
-                method: 'GET',
-                headers: { 'X-Csrf-Token': pkp.currentUser.csrfToken }
-            });
-
-            const data = await response.json();
-            const statusHistory = data.statusHistory;
-
-            if(statusHistory === null) {
-                this.hasStatusHistory = false;
-            } else {
-                this.hasStatusHistory = true;
-            }
-
-            return statusHistory;
+            const data = await getCodecheckJson('status/history', this.submission.id);
+            this.hasStatusHistory = true;
+            return data.statusHistory;
         } catch (error) {
             this.hasStatusHistory = false;
-            console.error('getStatus error:', error);
+            // A submission with no recorded status answers 400: still pending.
+            if (error.status !== 400) {
+                console.error('getStatus error:', error);
+            }
         }
     },
     /**

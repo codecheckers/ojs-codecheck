@@ -460,6 +460,7 @@
 
 <script>
 import { workflowStore } from '../piniaStore.js';
+import { getCodecheckApi, getCodecheckJson, loadError } from '../codecheckApi.js';
 import { html, htmlSentence, MARKUP_PLACEHOLDER, toHtml } from '../markup.js';
 import { isWebUrl } from '../isWebUrl.js';
 import { isValidOrcid, normalizeOrcid } from '../orcid.js';
@@ -734,27 +735,11 @@ export default {
 
       try {
         if (!this.submission || !this.submission.id) {
-          throw new Error('Invalid submission object');
+          throw loadError('Invalid submission object');
         }
 
-        const submissionId = this.submission.id;
-        let apiUrl = pkp.context.apiBaseUrl;
-        apiUrl += 'codecheck';
-        apiUrl = `${apiUrl}/metadata?submissionId=${submissionId}`;
-        
-        const response = await fetch(apiUrl, {
-          method: 'GET',
-          headers: {
-            'X-Csrf-Token': pkp.currentUser.csrfToken
-          }
-        });
+        const data = await getCodecheckJson('metadata', this.submission.id);
 
-        const data = await response.json();
-
-        if (!response.ok || !data.success) {
-          throw new Error(`[HTTP ${response.status}] ${data.error}`);
-        }
-        
         if (Array.isArray(data.settings?.enabledConfigVersions) && data.settings.enabledConfigVersions.length) {
           this.enabledConfigVersions = data.settings.enabledConfigVersions;
         }
@@ -769,7 +754,7 @@ export default {
         }
 
         this.submissionData = {
-          id: data.submission?.id || submissionId,
+          id: data.submission?.id || this.submission.id,
           title: data.submission?.title || '',
           authors: Array.isArray(data.submission?.authors) ? data.submission.authors : [],
           contact: data.submission?.contact ?? null,
@@ -840,7 +825,7 @@ export default {
         
       } catch (error) {
         console.error('Load error:', error);
-        this.error = this.t('plugins.generic.codecheck.loadError') + ': ' + error.message;
+        this.error = error.message;
       } finally {
         this.triggerRegisterIssueDisplayUpdateEvent();
         this.loading = false;
@@ -1280,27 +1265,8 @@ export default {
 
     async generateYamlContent() {
       try {
-        const submissionId = this.submission.id;
-        let apiUrl = pkp.context.apiBaseUrl;
-        apiUrl += 'codecheck';
-        apiUrl = `${apiUrl}/yaml?submissionId=${submissionId}`;
-        
-        const response = await fetch(apiUrl, {
-          method: 'GET',
-          headers: {
-            'X-Csrf-Token': pkp.currentUser.csrfToken
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to generate YAML');
-        }
-
-        const data = await response.json();
-        const yamlContent = data.yaml;
-        
-        return yamlContent;
-        
+        const data = await getCodecheckJson('yaml', this.submission.id);
+        return data.yaml;
       } catch (error) {
         console.error('Yaml generation error:', error);
         throw error;
@@ -1363,28 +1329,13 @@ export default {
     },
 
     async getCodecheckIssueLabels() {
-      let apiUrl = pkp.context.apiBaseUrl + 'codecheck';
-
       try {
-          const response = await fetch(`${apiUrl}/labels`, {
-              method: 'GET',
-              headers: {
-              'Content-Type': 'application/json',
-              'X-Csrf-Token': pkp.currentUser.csrfToken,
-              },
-          });
-          const data = await response.json();
-
-          if (data.success) {
-              this.certificateIdentifier.issue.labels = data.labels;
-              // Only where the labels can still be chosen: once an identifier
-              // is reserved the picker is disabled and the warning moot.
-              if (data.labelsWarning && this.identifierInputEmpty && !this.certificateIdentifier.isReserved) {
-                  this.showMessage(data.labelsWarning, 'warning');
-              }
-          } else {
-              this.showMessage(`${this.t('plugins.generic.codecheck.identifier.venue.fetch.error.curl')}\n${data.error}`, 'error');
-              console.error(`${this.t('plugins.generic.codecheck.identifier.venue.fetch.error.curl')}:`, data.error);
+          const data = await getCodecheckApi('labels');
+          this.certificateIdentifier.issue.labels = data.labels;
+          // Only where the labels can still be chosen: once an identifier
+          // is reserved the picker is disabled and the warning moot.
+          if (data.labelsWarning && this.identifierInputEmpty && !this.certificateIdentifier.isReserved) {
+              this.showMessage(data.labelsWarning, 'warning');
           }
       } catch (error) {
           console.error(`${this.t('plugins.generic.codecheck.identifier.venue.fetch.error.codecheckAPI')}:`, error);

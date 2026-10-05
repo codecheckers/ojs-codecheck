@@ -20,26 +20,37 @@ export function getCodecheckJson(endpoint, submissionId) {
 }
 
 /**
- * A GET endpoint's answer, or an error already worded for a panel.
- * `error.status` carries the HTTP status, for a caller to whom some refusal
- * is an ordinary state.
+ * A GET endpoint's answer, or an error already worded for a panel — also when
+ * the server could not be reached. `error.status` carries the HTTP status, for
+ * a caller to whom some refusal is an ordinary state; it is unset when there
+ * was no answer.
  *
  * @param {string} path relative to `api/v1/codecheck/`, with its query string
  */
 export async function getCodecheckApi(path) {
-  const response = await fetch(
-    `${pkp.context.apiBaseUrl}codecheck/${path}`,
-    { headers: { 'X-Csrf-Token': pkp.currentUser.csrfToken } }
-  );
+  let response;
+  try {
+    response = await fetch(
+      `${pkp.context.apiBaseUrl}codecheck/${path}`,
+      { headers: { 'X-Csrf-Token': pkp.currentUser.csrfToken } }
+    );
+  } catch (cause) {
+    throw loadError(cause.message);
+  }
   // An error page need not be JSON: a PHP fatal answers HTML.
   const data = await response.json().catch(() => ({}));
   if (!response.ok || data.success === false) {
-    const { t } = pkp.modules.useLocalize.useLocalize();
-    const error = new Error(`${t('plugins.generic.codecheck.loadError')}: [HTTP ${response.status}] ${data.error ?? ''}`);
+    const error = loadError(`[HTTP ${response.status}] ${data.error ?? ''}`);
     error.status = response.status;
     throw error;
   }
   return data;
+}
+
+/** An error worded as getCodecheckApi() words its own, for a caller's own failure. */
+export function loadError(detail) {
+  const { t } = pkp.modules.useLocalize.useLocalize();
+  return new Error(`${t('plugins.generic.codecheck.loadError')}: ${detail}`);
 }
 
 /** Moves the workflow to the CODECHECK tab, through the workflow store's own navigation. */

@@ -61,6 +61,7 @@
 
 <script>
 import { workflowStore } from '../piniaStore.js';
+import { getCodecheckApi } from '../codecheckApi.js';
 import { showInformation } from '../dialogs.js';
 import { isOptedIn } from '../optIn.js';
 
@@ -121,34 +122,8 @@ export default {
 
         try {
             if(this.repository === null) {
-                if (!this.submission || !this.submission.id) {
-                    throw new Error('Invalid submission object');
-                }
-
-                const submissionId = this.submission.id;
-                let apiUrl = pkp.context.apiBaseUrl;
-                apiUrl += 'codecheck';
-                apiUrl = `${apiUrl}/register`;
-                
-                const response = await fetch(apiUrl, {
-                    method: 'GET',
-                    headers: {
-                        'X-Csrf-Token': pkp.currentUser.csrfToken
-                    }
-                });
-
-                const data = await response.json();
-
-
-                if (!response.ok || !data.success) {
-                    throw new Error(`[HTTP ${response.status}] ${data.error}`);
-                }
-                
-                if (data && typeof data === 'object') {
-                    this.repository = data.url;
-                } else {
-                    throw new Error(`[HTTP ${response.status}] ${response.message}`);
-                }
+                const data = await getCodecheckApi('register');
+                this.repository = data.url;
             }
 
             this.dataLoaded = true;
@@ -158,7 +133,7 @@ export default {
             });
         } catch (error) {
             console.error('Load error:', error);
-            this.error = this.t('plugins.generic.codecheck.loadError') + ': ' + error.message;
+            this.error = error.message;
         } finally {
             this.loading = false;
         }

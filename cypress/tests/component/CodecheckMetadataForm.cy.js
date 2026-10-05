@@ -176,6 +176,28 @@ describe('CodecheckMetadataForm Component', () => {
     cy.contains('10.1234/test.2024').should('exist');
   });
 
+  it('loads a record whose answer names no submission', () => {
+    interceptMetadata({ submission: undefined });
+    mountForm();
+    cy.wait('@loadMetadata');
+
+    cy.get('.error-state').should('not.exist');
+    cy.get('.codecheck-metadata-form').should('exist');
+  });
+
+  it('says why the record could not be loaded', () => {
+    cy.intercept('GET', '**/codecheck/metadata*', {
+      statusCode: 500,
+      body: { error: 'plugins.generic.codecheck.exampleError' }
+    }).as('failedLoad');
+    mountForm();
+    cy.wait('@failedLoad');
+
+    cy.get('.error-state')
+      .should('contain', 'plugins.generic.codecheck.loadError')
+      .and('contain', 'HTTP 500');
+  });
+
   it("shows the author's availability statement in the paper metadata panel", () => {
     // The codechecker has to be able to read what the author wrote about where
     // the materials are; the statement lives on the publication and arrives in
