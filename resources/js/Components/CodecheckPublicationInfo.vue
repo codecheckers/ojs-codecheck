@@ -93,11 +93,9 @@
 <script>
 import { isWebUrl } from '../isWebUrl.js';
 import { notOptedInReason } from '../optIn.js';
+import { getCodecheckJson, openCodecheckTab } from '../codecheckApi.js';
 
 const { useLocalize } = pkp.modules.useLocalize;
-
-/** The key of the CODECHECK item that main.js adds to the workflow menu. */
-const CODECHECK_MENU_KEY = 'codecheck';
 
 /** Marks a locale key for the extractor without translating it here. */
 const tk = (key) => key;
@@ -161,20 +159,8 @@ export default {
     }
   },
   methods: {
-    /** A plugin endpoint's answer, or an error already worded for the panel. */
-    async getJson(endpoint) {
-      const response = await fetch(
-        `${pkp.context.apiBaseUrl}codecheck/${endpoint}?submissionId=${this.submission.id}`,
-        { headers: { 'X-Csrf-Token': pkp.currentUser.csrfToken } }
-      );
-      // An error page need not be JSON: a PHP fatal answers HTML.
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok || data.success === false) {
-        const error = new Error(`${this.t('plugins.generic.codecheck.loadError')}: [HTTP ${response.status}] ${data.error ?? ''}`);
-        error.status = response.status;
-        throw error;
-      }
-      return data;
+    getJson(endpoint) {
+      return getCodecheckJson(endpoint, this.submission.id);
     },
     async loadData() {
       this.loading = true;
@@ -217,9 +203,7 @@ export default {
         this.yamlLoading = false;
       }
     },
-    openCodecheckTab() {
-      pkp.registry._piniaInstance?._s?.get('workflow')?.navigateToMenu(CODECHECK_MENU_KEY);
-    },
+    openCodecheckTab,
   },
 };
 </script>

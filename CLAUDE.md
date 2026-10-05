@@ -341,8 +341,8 @@ the router's handler (null under REST).
 `CodecheckStatusHandler` (static) on `codecheck_status`. Statuses are locale
 keys in `Constants::CODECHECK_STATUSES`: pending → needs codechecker →
 codechecker assigned → stalled → completed → published certificate. "Pending"
-is the absence of a row. README's "Status Levels" table describes an older
-display and does not match.
+is the absence of a row. The review stage's panel (`CodecheckReviewDisplay`)
+reads the same status and record endpoints as the CODECHECK tab.
 
 ### DOI deposits (`classes/DoiDeposit/`, #19)
 

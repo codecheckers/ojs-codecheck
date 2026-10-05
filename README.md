@@ -198,30 +198,18 @@ but grants access to every public repository the holder can push to.
 
 ## CODECHECK Status System
 
-The plugin tracks CODECHECK progress through a status system displayed in the review workflow.
+Every CODECHECK has a recorded status, changed on the CODECHECK tab of the workflow and kept as a history. The CODECHECK tab, the panel on the review stage, the publication gate and the register issue's labels all read the same recorded status.
 
-### Status Levels
+| Status | Meaning |
+|--------|---------|
+| Pending | No status recorded yet |
+| Needs codechecker | The check is waiting for a codechecker |
+| Codechecker assigned | A codechecker is working on it |
+| Stalled (author / codechecker) | The check waits on the author or on the codechecker |
+| Completed (unsuccessful / partial / full reproduction) | The check is finished, with its outcome |
+| Published certificate (partial / full reproduction) | The certificate is published in the CODECHECK Register |
 
-| Status | Badge Color | Criteria | Description |
-|--------|------------|----------|-------------|
-| **Pending** | Gray | No metadata exists | CODECHECK process has not started |
-| **In Progress** | Yellow/Warning | Metadata exists but incomplete | Codechecker is working on verification |
-| **Complete** | Green/Success | Certificate ID and check time both present | CODECHECK verification is finished |
-
-### Status Implementation
-
-The status is determined in `CodecheckReviewDisplay.vue` using the following logic:
-
-```javascript
-function getStatus() {
-  if (metadata.value.certificate && metadata.value.checkTime) {
-    return 'complete';
-  } else if (hasMetadata.value) {
-    return 'in-progress';
-  }
-  return 'pending';
-}
-```
+The list is `Constants::CODECHECK_STATUSES`; the journal chooses in the plugin settings which statuses allow publication.
 
 ## ORCID Peer-Review Deposition
 

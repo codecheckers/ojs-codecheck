@@ -2,37 +2,39 @@
   <div class="codecheck-review-display">
     <h3>{{ t("plugins.generic.codecheck.reviewTitle") }}</h3>
 
-    <div v-if="loading" class="loading-state">
+    <div v-if="notOptedIn" class="codecheck-not-opted">
+      <p>{{ t(notOptedIn) }}</p>
+    </div>
+    <div v-else-if="loading" class="loading-state">
       <span class="pkpSpinner"></span>
       <p>{{ t('common.loading') }}</p>
     </div>
-    <div v-else-if="dataLoaded">
-      <div v-if="!notOptedIn" class="codecheck-info">
+    <p v-else-if="error" class="codecheck-not-opted">{{ error }}</p>
+    <div v-else>
+      <div class="codecheck-info">
         <div class="border border-light p-4">
           <h3 class="mb-2 text-lg-bold text-heading">{{ t("plugins.generic.codecheck.status") }}</h3>
-          <p class="text-sm-normal" :class="statusClass">
-            {{ getStatusText() }}
-          </p>
+          <p class="text-sm-normal">{{ status && t(status) }}</p>
         </div>
 
-        <div class="info-section" v-if="hasMetadata && metadata.configVersion">
+        <div class="info-section" v-if="metadata.version">
           <h4>{{ t("plugins.generic.codecheck.review.configVersion") }}</h4>
-          <p>{{ metadata.configVersion }}</p>
+          <p>{{ metadata.version }}</p>
         </div>
 
-        <div class="info-section" v-if="hasMetadata && metadata.publicationType">
+        <div class="info-section" v-if="metadata.publicationType">
           <h4>{{ t("plugins.generic.codecheck.review.publicationType") }}</h4>
           <p>{{ metadata.publicationType === 'doi' 
                 ? t("plugins.generic.codecheck.review.publicationType.doi") 
                 : t("plugins.generic.codecheck.review.publicationType.separate") }}</p>
         </div>
         
-        <div class="info-section" v-if="hasMetadata && metadata.certificate">
-          <h4>{{ t("plugins.generic.codecheck.identifier.label") }}</h4>
+        <div class="info-section" v-if="metadata.certificate">
+          <h4>{{ t("plugins.generic.codecheck.identifier.title") }}</h4>
           <p>{{ metadata.certificate }}</p>
         </div>
 
-        <div class="info-section" v-if="hasMetadata && metadata.manifest && metadata.manifest.length > 0">
+        <div class="info-section" v-if="metadata.manifest?.length">
           <h4>{{ t("plugins.generic.codecheck.review.manifestFiles") }}</h4>
           <ul>
             <li v-for="(file, index) in metadata.manifest" :key="index">
@@ -42,7 +44,7 @@
           </ul>
         </div>
 
-        <div class="info-section" v-if="hasMetadata && metadata.codecheckers && metadata.codecheckers.length > 0">
+        <div class="info-section" v-if="metadata.codecheckers?.length">
           <h4>{{ t("plugins.generic.codecheck.review.codecheckers") }}</h4>
           <ul>
             <li v-for="(checker, index) in metadata.codecheckers" :key="index">
@@ -52,24 +54,28 @@
           </ul>
         </div>
         
-        <div class="info-section" v-if="hasMetadata && metadata.repository">
+        <div class="info-section" v-if="repositoryUrls.length > 0">
           <h4>{{ t("plugins.generic.codecheck.repositories.title") }}</h4>
-          <a :href="metadata.repository" target="_blank">{{ metadata.repository }}</a>
+          <ul>
+            <li v-for="(url, index) in repositoryUrls" :key="index">
+              <a :href="url" target="_blank" rel="noopener">{{ url }}</a>
+            </li>
+          </ul>
         </div>
         
-        <div class="info-section" v-if="hasMetadata && metadata.checkTime">
+        <div class="info-section" v-if="metadata.check_time">
           <h4>{{ t("plugins.generic.codecheck.completionTime.label") }}</h4>
-          <p>{{ formatDate(metadata.checkTime) }}</p>
+          <p>{{ formatDate(metadata.check_time) }}</p>
         </div>
         
-        <div class="info-section" v-if="hasMetadata && metadata.summary">
+        <div class="info-section" v-if="metadata.summary">
           <h4>{{ t("plugins.generic.codecheck.certificate.summary") }}</h4>
           <p>{{ metadata.summary }}</p>
         </div>
 
-        <div class="info-section" v-if="hasMetadata && metadata.reportUrl">
+        <div class="info-section" v-if="isWebUrl(metadata.report)">
           <h4>{{ t("plugins.generic.codecheck.review.reportUrl") }}</h4>
-          <a :href="metadata.reportUrl" target="_blank">{{ metadata.reportUrl }}</a>
+          <a :href="metadata.report" target="_blank" rel="noopener">{{ metadata.report }}</a>
         </div>
         
         <div class="actions">
@@ -78,10 +84,6 @@
           </pkp-button>
         </div>
       </div>
-      
-      <div v-else class="codecheck-not-opted">
-        <p>{{ t(notOptedIn) }}</p>
-      </div>
     </div>
   </div>
 </template>
@@ -89,6 +91,8 @@
 <script setup>
 import { computed, ref, onMounted} from 'vue';
 import { notOptedInReason } from '../optIn.js';
+import { isWebUrl } from '../isWebUrl.js';
+import { getCodecheckJson, openCodecheckTab } from '../codecheckApi.js';
 
 const { t } = pkp.modules.useLocalize.useLocalize();
 
@@ -101,57 +105,38 @@ const props = defineProps({
 const notOptedIn = computed(() => notOptedInReason(props.submission, props.codecheckMode));
 
 const status = ref('');
+const metadata = ref({});
 const loading = ref(true);
-const dataLoaded = ref(false);
+const error = ref(null);
 
+/**
+ * The recorded status and the CODECHECK record, from the endpoints the
+ * CODECHECK tab reads, so the review stage cannot say something else (#65).
+ */
 onMounted(async () => {
+  if (!props.submission?.id || notOptedIn.value) {
+    loading.value = false;
+    return;
+  }
   try {
-    if (!props.submission?.id) {dataLoaded.value = true; return};
-
-    const submissionId = props.submission.id;
-    const apiUrl = `${pkp.context.apiBaseUrl}codecheck/status?submissionId=${submissionId}`;
-    
-    const response = await fetch(apiUrl, {
-      method: 'GET',
-      headers: { 'X-Csrf-Token': pkp.currentUser.csrfToken }
-    });
-
-    const data = await response.json();
-    status.value = data.statusRecord.status;
-    
-    dataLoaded.value = true;
-
-  } catch (error) {
-    console.error('getStatus error:', error);
+    const [statusData, metadataData] = await Promise.all([
+      getCodecheckJson('status', props.submission.id),
+      getCodecheckJson('metadata', props.submission.id),
+    ]);
+    status.value = statusData.statusRecord?.status ?? '';
+    metadata.value = metadataData.codecheck ?? {};
+  } catch (e) {
+    error.value = e.message;
   } finally {
     loading.value = false;
   }
 });
 
-const statusClass = computed(() => 'status-' + status.value);
-
-function getStatusText() {
-  return t(status.value);
-}
-
-const metadata = computed(() => {
-  if (props.submission.codecheckMetadata) {
-    if (typeof props.submission.codecheckMetadata === 'string') {
-      try {
-        return JSON.parse(props.submission.codecheckMetadata);
-      } catch (e) {
-        console.error('Failed to parse codecheck metadata:', e);
-        return {};
-      }
-    }
-    return props.submission.codecheckMetadata;
-  }
-  return {};
-});
-
-const hasMetadata = computed(() => {
-  return Object.keys(metadata.value).length > 0;
-});
+const repositoryUrls = computed(() =>
+  (metadata.value.repository?.repositories ?? [])
+    .map((repository) => repository?.url)
+    .filter(isWebUrl)
+);
 
 function formatDate(dateString) {
   if (!dateString) return '';
@@ -159,14 +144,7 @@ function formatDate(dateString) {
   return date.toLocaleString();
 }
 
-function viewFullMetadata() {
-  // Sadly only works by bypassing the API, searching for the 'CODECHECK' Button and then pressing it by script
-  const allLinks = document.querySelectorAll('a, button, [role="button"]');
-  const codecheckLink = Array.from(allLinks).find(el => 
-    el.textContent.trim().includes(t("plugins.generic.codecheck.workflow.label"))
-  );
-  if (codecheckLink) codecheckLink.click();
-}
+const viewFullMetadata = openCodecheckTab;
 </script>
 
 <style scoped>
@@ -207,29 +185,6 @@ function viewFullMetadata() {
 
 .info-section a:hover {
   text-decoration: underline;
-}
-
-.status-badge {
-  display: inline-block;
-  padding: var(--spacing-1) var(--spacing-3);
-  border-radius: 12px;
-  font-size: var(--font-sm);
-  font-weight: 600;
-}
-
-.status-complete {
-  background: var(--color-success-light);
-  color: var(--color-success);
-}
-
-.status-in-progress {
-  background: var(--color-warning-light);
-  color: var(--color-warning);
-}
-
-.status-pending {
-  background: var(--color-background-light);
-  color: var(--text-color-secondary);
 }
 
 .orcid-badge {
