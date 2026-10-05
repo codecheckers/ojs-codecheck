@@ -35,6 +35,7 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 #### Frontend
 
 - With the new setting *Certificate in the References*, the published CODECHECK certificate is listed among the article's references, from a button on the CODECHECK tab or also automatically whenever a version is published; a line already citing the certificate is updated where it stands and no other reference is changed (#183)
+- Loading metadata from GitHub works for a repository of any owner, and for a link to a branch, a folder or the `codecheck.yml` itself, `raw.githubusercontent.com` links included; such a repository is named by its folder in `register.csv` (#36)
 - The editorial CODECHECK form names the submission's primary contact, with a link that emails them about the check (#28)
 - The "add codechecker" dialog offers the codecheckers the journal has recorded since this release (#186)
 - The publication's Metadata page shows the article's CODECHECK badge, certificate identifier, status and `codecheck.yml` preview, and which destinations receive its metadata: the register issue, `register.csv`, ORCID, the article page and the issue table of contents (#34)
@@ -59,6 +60,7 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 
 ### Fixed
 
+- Loading metadata from GitHub says why GitHub could not be read, instead of reporting a missing `codecheck.yml`, and a `codecheck.yml` that holds no metadata is refused from any repository (#36)
 - An article published by OJS's scheduled publishing run from the command line (cron) is deposited to the CODECHECK Register like one published from the workflow; the register lists the journal under its name in the journal's primary language (#188)
 - A codechecker on a double-anonymous review assignment is not shown the authors in the CODECHECK form or the `codecheck.yml` preview, and is pointed to the handling editor (#28)
 - Loading metadata from a repository in the editorial form works (#28)

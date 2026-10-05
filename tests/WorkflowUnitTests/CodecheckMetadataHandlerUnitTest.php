@@ -204,195 +204,146 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $this->assertIsInt($actualSubmissionId);
     }
 
-    public function testImportMetadataFromGithub()
+    /**
+     * A GitHub client whose contents API answers `$file` (or throws it), and
+     * which records what was asked for in `$requested`.
+     */
+    private function githubClient(mixed $file, ?array &$requested): \Github\Client
     {
-        /** mock contents API */
+        $requested = [];
         $contentsApi = $this->createMock(\Github\Api\Repository\Contents::class);
-        $contentsApi->method('show')
-            ->willReturnOnConsecutiveCalls(
-                // 1st call: folder contents
-                [
-                    [
-                        'type' => 'file',
-                        'name' => 'codecheck.yml',
-                        'path' => 'codecheck.yml'
-                    ]
-                ],
+        $contentsApi->method('show')->willReturnCallback(
+            function (string $owner, string $repo, string $path, ?string $ref) use ($file, &$requested) {
+                $requested[] = compact('owner', 'repo', 'path', 'ref');
+                if ($file instanceof \Throwable) {
+                    throw $file;
+                }
+                return $file;
+            }
+        );
 
-                // 2nd call: file contents
-                [
-                    'content' => base64_encode('test: yaml')
-                ]
-            );
-
-        /** mock Repo API */
         $repoApi = $this->createMock(\Github\Api\Repo::class);
+        $repoApi->expects($this->never())->method('show');
+        $repoApi->method('contents')->willReturn($contentsApi);
 
-        // mock show() for default branch
-        $repoApi->method('show')
-            ->willReturn(['default_branch' => 'root']);
-
-        // mock contents()
-        $repoApi->method('contents')
-            ->willReturn($contentsApi);
-
-        /** mock GitHub client */
         $client = $this->createMock(\Github\Client::class);
-
-        // client->api('repo') must return Github\Api\Repo because of return types
         $client->method('api')->willReturn($repoApi);
 
-
-        $request = new Request();
-
-        $this->handler = new CodecheckMetadataHandler($request, $client, $this->curlApiClient);
-
-        $owner = 'codecheckers';
-        $repo = 'testing-dev-register';
-        $repositoryUrl = 'https://github.com/' . $owner . '/' . $repo . '/';
-        $response = $this->handler->importMetadataFromRepository($repositoryUrl);
-        $actualMetadataReturnArray = json_decode($response->getPayload(), true);
-        $this->assertEquals(200, $response->getHttpResponseCode());
-        $this->assertCount(3, $actualMetadataReturnArray);
-        $this->assertTrue($actualMetadataReturnArray['success']);
-        $this->assertEquals($repositoryUrl, $actualMetadataReturnArray['repository']);
-        $this->assertEquals(['test' => 'yaml'], $actualMetadataReturnArray['metadata']);
+        return $client;
     }
 
-    public function testImportMetadataFromGithubDefaultBranchMain()
+    private static function githubFile(string $yaml): array
     {
-        // mock contents API
-        $contentsApi = $this->createMock(\Github\Api\Repository\Contents::class);
-        $contentsApi->method('show')
-            ->willReturnOnConsecutiveCalls(
-                // 1st call: folder contents
-                [
-                    [
-                        'type' => 'file',
-                        'name' => 'codecheck.yml',
-                        'path' => 'codecheck.yml'
-                    ]
-                ],
+        return ['type' => 'file', 'content' => base64_encode($yaml)];
+    }
 
-                // 2nd call: file contents
-                [
-                    'content' => base64_encode('test: yaml')
-                ]
-            );
+    public static function githubAddressProvider(): array
+    {
+        return [
+            'repository root, any owner' => ['https://github.com/reproducible-agile/AGILECA', 'reproducible-agile', 'AGILECA', 'codecheck.yml', null],
+            'repository root with a trailing slash' => ['https://github.com/codecheckers/testing-dev-register/', 'codecheckers', 'testing-dev-register', 'codecheck.yml', null],
+            'clone address' => ['https://github.com/codecheckers/Piccolo-2020.git', 'codecheckers', 'Piccolo-2020', 'codecheck.yml', null],
+            'folder' => ['https://github.com/reproducible-agile/reviews-2025/tree/main/reports/08', 'reproducible-agile', 'reviews-2025', 'reports/08/codecheck.yml', 'main'],
+            'file' => ['https://github.com/codecheckers/lifecycle-journal-codechecks/blob/main/7/codecheck.yml', 'codecheckers', 'lifecycle-journal-codechecks', '7/codecheck.yml', 'main'],
+            'file with a query' => ['https://github.com/codecheckers/lifecycle-journal-codechecks/blob/main/7/codecheck.yml?plain=1', 'codecheckers', 'lifecycle-journal-codechecks', '7/codecheck.yml', 'main'],
+            'raw file' => ['https://raw.githubusercontent.com/codecheckers/lifecycle-journal-codechecks/refs/heads/main/7/codecheck.yml', 'codecheckers', 'lifecycle-journal-codechecks', '7/codecheck.yml', 'refs/heads/main'],
+            'raw file on a short ref' => ['https://raw.githubusercontent.com/codecheckers/lifecycle-journal-codechecks/main/7/codecheck.yml', 'codecheckers', 'lifecycle-journal-codechecks', '7/codecheck.yml', 'main'],
+        ];
+    }
 
-        // mock Repo API
-        $repoApi = $this->createMock(\Github\Api\Repo::class);
+    #[DataProvider('githubAddressProvider')]
+    public function testImportMetadataFromGithubReadsTheFileTheAddressNames(string $address, string $owner, string $repo, string $path, ?string $ref)
+    {
+        $client = $this->githubClient(self::githubFile('test: yaml'), $requested);
+        $this->handler = new CodecheckMetadataHandler(new Request(), $client, $this->curlApiClient);
 
-        // mock show() for default branch main
-        $repoApi->method('show')
-            ->will($this->throwException(new \Exception('No default branch found.')));
+        $response = $this->handler->importMetadataFromRepository($address);
 
-        $repoApi->expects($this->once())->method('show');
-
-        // mock contents()
-        $repoApi->method('contents')
-            ->willReturn($contentsApi);
-
-        // mock GitHub client
-        $client = $this->createMock(\Github\Client::class);
-
-        // client->api('repo') must return Github\Api\Repo because of return types
-        $client->method('api')->willReturn($repoApi);
-
-
-        $request = new Request();
-
-        $this->handler = new CodecheckMetadataHandler($request, $client, $this->curlApiClient);
-
-        $owner = 'codecheckers';
-        $repo = 'testing-dev-register';
-        $repositoryUrl = 'https://github.com/' . $owner . '/' . $repo . '/';
-        $this->handler->importMetadataFromRepository($repositoryUrl);
+        $this->assertSame([compact('owner', 'repo', 'path', 'ref')], $requested);
+        $this->assertEquals(200, $response->getHttpResponseCode());
+        $this->assertSame(
+            ['success' => true, 'repository' => $address, 'metadata' => ['test' => 'yaml']],
+            $response->getPayloadArray()
+        );
     }
 
     public function testImportMetadataFromGithubContentsShowException()
     {
-        // mock contents API
-        $contentsApi = $this->createMock(\Github\Api\Repository\Contents::class);
-        // mock show() for the GitHub Repo contents
-        $contentsApi->method('show')
-            ->will($this->throwException(new \Exception('Failed to load the repository data.')));
+        $client = $this->githubClient(new \Github\Exception\RuntimeException('Not Found', 404), $requested);
+        $this->handler = new CodecheckMetadataHandler(new Request(), $client, $this->curlApiClient);
 
-        $contentsApi->expects($this->once())->method('show');
-
-        // mock Repo API
-        $repoApi = $this->createMock(\Github\Api\Repo::class);
-
-        // mock show() for default branch
-        $repoApi->method('show')
-            ->willReturn(['default_branch' => 'root']);
-
-        // mock contents()
-        $repoApi->method('contents')
-            ->willReturn($contentsApi);
-
-        // mock GitHub client
-        $client = $this->createMock(\Github\Client::class);
-
-        // client->api('repo') must return Github\Api\Repo because of return types
-        $client->method('api')->willReturn($repoApi);
-
-
-        $request = new Request();
-
-        $this->handler = new CodecheckMetadataHandler($request, $client, $this->curlApiClient);
-
-        $owner = 'codecheckers';
-        $repo = 'testing-dev-register';
-        $repositoryUrl = 'https://github.com/' . $owner . '/' . $repo . '/';
+        $repositoryUrl = 'https://github.com/codecheckers/testing-dev-register/';
         $response = $this->handler->importMetadataFromRepository($repositoryUrl);
-        $actualMetadataReturnArray = json_decode($response->getPayload(), true);
+        $payload = $response->getPayloadArray();
         $this->assertEquals(404, $response->getHttpResponseCode());
-        $this->assertCount(3, $actualMetadataReturnArray);
-        $this->assertFalse($actualMetadataReturnArray['success']);
-        $this->assertEquals($repositoryUrl, $actualMetadataReturnArray['repository']);
+        $this->assertCount(3, $payload);
+        $this->assertFalse($payload['success']);
+        $this->assertEquals($repositoryUrl, $payload['repository']);
     }
 
-    public function testImportMetadataFromGithubNoCodecheckYamlFound()
+    public function testImportMetadataFromGithubDoesNotCallAFailedRequestAMissingFile()
     {
-        // mock contents API
-        $contentsApi = $this->createMock(\Github\Api\Repository\Contents::class);
-        $contentsApi->expects($this->once())->method('show');
+        $client = $this->githubClient(new \Github\Exception\RuntimeException('API rate limit exceeded', 403), $requested);
+        $this->handler = new CodecheckMetadataHandler(new Request(), $client, $this->curlApiClient);
 
-        // mock Repo API
-        $repoApi = $this->createMock(\Github\Api\Repo::class);
+        $response = $this->handler->importMetadataFromRepository('https://github.com/codecheckers/testing-dev-register');
 
-        // mock show() for default branch main
-        $repoApi->method('show')
-            ->will($this->throwException(new \Exception('No default branch found.')));
+        $this->assertEquals(403, $response->getHttpResponseCode());
+        $this->assertSame('API rate limit exceeded', $response->getPayloadArray()['error']);
+    }
 
-        $repoApi->expects($this->once())->method('show');
+    public static function notAMappingProvider(): array
+    {
+        return [
+            'empty' => [''],
+            'a bare value' => ['just a sentence'],
+            'a list' => ["- a\n- b"],
+        ];
+    }
 
-        // mock contents()
-        $repoApi->method('contents')
-            ->willReturn($contentsApi);
+    #[DataProvider('notAMappingProvider')]
+    public function testImportMetadataRefusesAFileThatHoldsNoMetadata(string $yaml)
+    {
+        $client = $this->githubClient(self::githubFile($yaml), $requested);
+        $this->handler = new CodecheckMetadataHandler(new Request(), $client, $this->curlApiClient);
 
-        // mock GitHub client
-        $client = $this->createMock(\Github\Client::class);
+        $response = $this->handler->importMetadataFromRepository('https://github.com/codecheckers/testing-dev-register');
 
-        // client->api('repo') must return Github\Api\Repo because of return types
-        $client->method('api')->willReturn($repoApi);
+        $this->assertEquals(422, $response->getHttpResponseCode());
+        $this->assertFalse($response->getPayloadArray()['success']);
+    }
 
+    public function testImportMetadataFromGithubRefusesAFolderNamedLikeTheFile()
+    {
+        $client = $this->githubClient([self::githubFile('test: yaml')], $requested);
+        $this->handler = new CodecheckMetadataHandler(new Request(), $client, $this->curlApiClient);
 
-        $request = new Request();
+        $response = $this->handler->importMetadataFromRepository('https://github.com/codecheckers/testing-dev-register');
 
-        $this->handler = new CodecheckMetadataHandler($request, $client, $this->curlApiClient);
-
-        $owner = 'codecheckers';
-        $repo = 'testing-dev-register';
-        $repositoryUrl = 'https://github.com/' . $owner . '/' . $repo . '/';
-        $response = $this->handler->importMetadataFromRepository($repositoryUrl);
-        $actualMetadataReturnArray = json_decode($response->getPayload(), true);
         $this->assertEquals(404, $response->getHttpResponseCode());
-        $this->assertCount(3, $actualMetadataReturnArray);
-        $this->assertFalse($actualMetadataReturnArray['success']);
-        $this->assertEquals($repositoryUrl, $actualMetadataReturnArray['repository']);
-        $this->assertEquals('codecheck.yml not found', $actualMetadataReturnArray['error']);
+        $this->assertFalse($response->getPayloadArray()['success']);
+    }
+
+    public function testImportMetadataFromGithubAnswersAFileThatIsNotYaml()
+    {
+        $client = $this->githubClient(self::githubFile("a: b\n  c: : d"), $requested);
+        $this->handler = new CodecheckMetadataHandler(new Request(), $client, $this->curlApiClient);
+
+        $response = $this->handler->importMetadataFromRepository('https://github.com/codecheckers/testing-dev-register');
+
+        $this->assertEquals(500, $response->getHttpResponseCode());
+        $this->assertFalse($response->getPayloadArray()['success']);
+    }
+
+    public function testImportMetadataFromGithubRefusesAnAddressThatIsNotARepository()
+    {
+        $client = $this->githubClient(self::githubFile('test: yaml'), $requested);
+        $this->handler = new CodecheckMetadataHandler(new Request(), $client, $this->curlApiClient);
+
+        $response = $this->handler->importMetadataFromRepository('https://github.com/codecheckers/register/issues/5');
+
+        $this->assertEquals(400, $response->getHttpResponseCode());
+        $this->assertSame([], $requested);
     }
 
     #[DataProvider('titleComparisonProvider')]

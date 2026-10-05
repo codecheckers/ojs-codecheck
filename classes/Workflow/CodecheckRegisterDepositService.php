@@ -7,9 +7,9 @@ use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegis
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckPostOrigin;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\GithubHttp;
 use APP\plugins\generic\codecheck\classes\Constants;
-use APP\plugins\generic\codecheck\classes\Exceptions\GithubUrlParseException;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckRepositories;
+use APP\plugins\generic\codecheck\classes\Submission\GithubRepositoryAddress;
 use APP\plugins\generic\codecheck\CodecheckPlugin;
 use APP\submission\Submission;
 use PKP\context\Context;
@@ -21,8 +21,8 @@ use PKP\context\Context;
  * This class is intentionally read-mostly with respect to existing plugin
  * state: it reuses `CodecheckMetadataHandler` for all data access instead
  * of querying `codecheck_metadata` directly, and reuses
- * `CodecheckGithubRegisterApiClient::parseGithubUrl()` for GitHub URL
- * parsing rather than re-implementing it.
+ * `GithubRepositoryAddress::parse()` for GitHub URL parsing rather than
+ * re-implementing it.
  */
 class CodecheckRegisterDepositService
 {
@@ -159,14 +159,20 @@ class CodecheckRegisterDepositService
      * column format, e.g.:
      *   https://github.com/codecheckers/certificate-2025-029        -> github::codecheckers/certificate-2025-029
      *   https://github.com/org/repo/blob/main/reports/08/codecheck.yml -> github::org/repo|reports/08
+     *   https://raw.githubusercontent.com/org/repo/main/reports/08/codecheck.yml -> github::org/repo|reports/08
      *   https://zenodo.org/records/12345678                          -> zenodo::12345678
      *   https://osf.io/abcde/                                        -> osf::abcde
      *   https://gitlab.com/cdchck/community-codechecks/some-check    -> gitlab::some-check
      */
     private function formatRepositoryForRegister(string $repository): string
     {
-        if (preg_match('#^https://github\.com/#', $repository)) {
-            $parts = CodecheckGithubRegisterApiClient::parseGithubUrl($repository);
+        $parts = GithubRepositoryAddress::parse($repository);
+        if ($parts !== null) {
+            // The register names a folder and reads the `codecheck.yml` in it,
+            // so a file of any other name cannot be named there.
+            if ($parts['file'] !== null && $parts['file'] !== 'codecheck.yml') {
+                throw new \UnexpectedValueException("The register can only name a file called codecheck.yml, not \"{$parts['file']}\".");
+            }
             $formatted = "github::{$parts['owner']}/{$parts['repo']}";
             if (!empty($parts['path'])) {
                 // Register convention for a sub-path within a shared repository,
@@ -188,7 +194,7 @@ class CodecheckRegisterDepositService
             return "gitlab::{$matches[1]}";
         }
 
-        throw new GithubUrlParseException("Repository URL \"{$repository}\" does not match any register-supported format.");
+        throw new \UnexpectedValueException("Repository URL \"{$repository}\" does not match any register-supported format.");
     }
 
     /**
