@@ -516,6 +516,55 @@ describe('CodecheckMetadataForm Component', () => {
     });
   });
 
+  /**
+   * The certificate is where the codecheck.yml is kept when there is no
+   * repository for it, so its address loads the metadata too (#36).
+   */
+  it('loads the metadata from the report address', () => {
+    cy.intercept('POST', '**/codecheck/repository?submissionId=1*', { statusCode: 200, body: importedYml() })
+      .as('importReport');
+    interceptMetadata();
+    mountForm();
+    cy.wait('@loadMetadata');
+
+    cy.get('.codecheck-report-load').should('not.exist');
+    cy.get('.report-field input').type('  https://doi.org/10.5281/zenodo.14900193 ');
+    cy.get('.codecheck-report-load').click();
+
+    cy.wait('@importReport').its('request.body').should('deep.equal', {
+      repository: 'https://doi.org/10.5281/zenodo.14900193',
+    });
+    cy.get('textarea[placeholder="plugins.generic.codecheck.certificate.summaryPlaceholder"]')
+      .should('have.value', 'Imported summary');
+    cy.get('.codecheck-report-error').should('not.exist');
+  });
+
+  it('says beside the report address why nothing was loaded from it, until the form is loaded again', () => {
+    cy.intercept('POST', '**/codecheck/repository?submissionId=1*', {
+      statusCode: 404,
+      body: { success: false, error: 'codecheck.yml not found' },
+    }).as('failedImport');
+    interceptMetadata();
+    mountForm().then(({ wrapper }) => {
+      cy.wait('@loadMetadata');
+
+      cy.get('.report-field input').type('https://zenodo.org/records/1');
+      cy.get('.codecheck-report-load').click();
+      cy.wait('@failedImport');
+
+      cy.get('.codecheck-report-error').should('contain', 'codecheck.yml not found');
+      cy.get('textarea[placeholder="plugins.generic.codecheck.certificate.summaryPlaceholder"]')
+        .should('not.have.value', 'Imported summary')
+        .then(() => {
+          // A load from a repository replaces the form, the report included.
+          cy.intercept('POST', '**/codecheck/repository?submissionId=1*', { statusCode: 200, body: importedYml() });
+          wrapper.vm.repositories = [{ url: 'https://github.com/a/b', hidden: false, containsCodecheckYaml: true }];
+          return wrapper.vm.loadMetadataFromRepository(0);
+        });
+      cy.get('.codecheck-report-error').should('not.exist');
+    });
+  });
+
   it('tells a codechecker on an anonymous assignment to go through the editor', () => {
     interceptMetadata(submissionWith({ authors: [], contact: null, authorsWithheld: true }));
     mountForm();

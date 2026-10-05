@@ -810,6 +810,12 @@ msgstr "Report URL"
 msgid "plugins.generic.codecheck.certificate.reportDescription"
 msgstr "Link to the published CODECHECK report (e.g., Zenodo)."
 
+msgid "plugins.generic.codecheck.certificate.reportLoadDescription"
+msgstr "When the codecheck.yml is kept with the certificate rather than in a repository, load the metadata from the report's address or DOI. This overwrites, but does not save, the values in the form."
+
+msgid "plugins.generic.codecheck.certificate.reportLoadError"
+msgstr "Error while importing the CODECHECK metadata from the report. {$error}"
+
 msgid "plugins.generic.codecheck.identifier.saved"
 msgstr "Identifier \"{$identifier}\" saved!"
 

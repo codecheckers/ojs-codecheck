@@ -17,6 +17,8 @@
   "plugins.generic.codecheck.additionalContent.placeholder",
   "plugins.generic.codecheck.certificate.report",
   "plugins.generic.codecheck.certificate.reportDescription",
+  "plugins.generic.codecheck.certificate.reportLoadDescription",
+  "plugins.generic.codecheck.certificate.reportLoadError",
   "plugins.generic.codecheck.certificate.summary",
   "plugins.generic.codecheck.certificate.summaryDescription",
   "plugins.generic.codecheck.certificate.summaryPlaceholder",
