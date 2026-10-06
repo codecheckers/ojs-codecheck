@@ -39,6 +39,7 @@ namespace APP\plugins\generic\codecheck\api\v1;
 
 use APP\core\Application;
 use APP\facades\Repo;
+use APP\plugins\generic\codecheck\classes\Codecheckers\CodecheckerReviewClosing;
 use APP\plugins\generic\codecheck\classes\Codecheckers\CodecheckerReviewers;
 use APP\plugins\generic\codecheck\classes\Codecheckers\GithubUsernameField;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifier;
@@ -97,6 +98,8 @@ class CodecheckApiController extends PKPBaseController
         'addCertificateReference',
         'getAssignedReviewers',
         'saveReviewerGithubUsername',
+        'getOpenCodecheckerReviews',
+        'closeCodecheckerReview',
     ];
 
     public function __construct(private CodecheckPlugin $plugin)
@@ -227,6 +230,12 @@ class CodecheckApiController extends PKPBaseController
 
         Route::post('codecheckers/github', $this->saveReviewerGithubUsername(...))
             ->name('codecheck.codecheckers.github')->middleware($editor);
+
+        Route::get('codecheckers/reviews', $this->getOpenCodecheckerReviews(...))
+            ->name('codecheck.codecheckers.reviews')->middleware($editor);
+
+        Route::post('codecheckers/reviews/close', $this->closeCodecheckerReview(...))
+            ->name('codecheck.codecheckers.reviews.close')->middleware($editor);
 
         // The venue labels are offered only for reserving an identifier (#65).
         Route::get('labels', $this->getCodecheckIssueLabels(...))
@@ -884,6 +893,78 @@ class CodecheckApiController extends PKPBaseController
         GithubUsernameField::writeFor($user, $username);
 
         return response()->json(['success' => true, 'github' => $username], 200);
+    }
+
+    /**
+     * GET api/v1/codecheck/codecheckers/reviews?submissionId=N
+     *
+     * The codecheckers' reviews that are not submitted yet, which the
+     * CODECHECK tab offers to close once the check is completed (#13). Empty
+     * before then.
+     */
+    public function getOpenCodecheckerReviews(): \Illuminate\Http\JsonResponse
+    {
+        $request = Application::get()->getRequest();
+        $submission = $this->getAuthorizedContextObject(Application::ASSOC_TYPE_SUBMISSION);
+
+        if (!$this->mayEditCodecheckers($request, $submission)) {
+            return $this->roleRefusal();
+        }
+
+        return response()->json([
+            'success' => true,
+            'reviews' => CodecheckerReviewClosing::closableReviews((int) $submission->getId()),
+        ], 200);
+    }
+
+    /**
+     * POST api/v1/codecheck/codecheckers/reviews/close?submissionId=N
+     *
+     * Closes a codechecker's review as their own submission of it would
+     * (#13). Body: `{reviewAssignmentId}`, one that getOpenCodecheckerReviews()
+     * offers; anything else is refused.
+     */
+    public function closeCodecheckerReview(IlluminateRequest $illuminateRequest): \Illuminate\Http\JsonResponse
+    {
+        $request = Application::get()->getRequest();
+        $submission = $this->getAuthorizedContextObject(Application::ASSOC_TYPE_SUBMISSION);
+
+        if (!$this->mayEditCodecheckers($request, $submission)) {
+            return $this->roleRefusal();
+        }
+
+        $reviewAssignmentId = (int) $illuminateRequest->input('reviewAssignmentId');
+        $closable = CodecheckerReviewClosing::closableReviews((int) $submission->getId());
+        if (!in_array($reviewAssignmentId, array_column($closable, 'reviewAssignmentId'), true)) {
+            return response()->json([
+                'success' => false,
+                'error' => __('plugins.generic.codecheck.closeReview.notClosable'),
+            ], 400);
+        }
+
+        $contextId = (int) $request->getContext()->getId();
+        $closed = CodecheckerReviewClosing::close(
+            Repo::reviewAssignment()->get($reviewAssignmentId),
+            $submission,
+            $request->getContext(),
+            $request->getUser(),
+            $this->plugin->getSetting($contextId, Constants::CODECHECK_GITHUB_REGISTER_ORGANIZATION)
+                . '/' . $this->plugin->getSetting($contextId, Constants::CODECHECK_GITHUB_REGISTER_REPOSITORY)
+        );
+        if (!$closed) {
+            return response()->json([
+                'success' => false,
+                'error' => __('plugins.generic.codecheck.closeReview.notClosable'),
+            ], 400);
+        }
+
+        return response()->json([
+            'success' => true,
+            'reviews' => array_values(array_filter(
+                $closable,
+                fn (array $review) => $review['reviewAssignmentId'] !== $reviewAssignmentId
+            )),
+        ], 200);
     }
 
     /** Whether the user may change this submission's codechecker list. */

@@ -862,6 +862,30 @@ msgstr "This account already has a GitHub username. It can be changed on the use
 msgid "plugins.generic.codecheck.codecheckers.importUnchecked"
 msgstr "The codecheckers were not imported, because the reviewers assigned to this submission could not be read. Try again."
 
+msgid "plugins.generic.codecheck.closeReview.description"
+msgstr "The check is completed. A codechecker whose only task was the codecheck can have their review closed here; one who also gives a regular review submits it as usual."
+
+msgid "plugins.generic.codecheck.closeReview.review"
+msgstr "{$name}, review round {$round}"
+
+msgid "plugins.generic.codecheck.closeReview.button"
+msgstr "Close review"
+
+msgid "plugins.generic.codecheck.closeReview.confirm"
+msgstr "Close the review of {$name}? It is completed as if they had submitted it, with the recommendation \"See comments\" and a comment naming the certificate and its register entry, and the editors are notified."
+
+msgid "plugins.generic.codecheck.closeReview.notClosable"
+msgstr "This review cannot be closed: the check is not completed, or the review is not a codechecker's open review of this submission."
+
+msgid "plugins.generic.codecheck.closeReview.comment.done"
+msgstr "The CODECHECK of this submission is completed."
+
+msgid "plugins.generic.codecheck.closeReview.comment.certificate"
+msgstr "Certificate: {$certificate}"
+
+msgid "plugins.generic.codecheck.closeReview.comment.register"
+msgstr "CODECHECK register entry: {$issue}"
+
 msgid "plugins.generic.codecheck.codecheckers.githubSuggested.community"
 msgstr "The CODECHECK community list gives the GitHub username {$username} for this ORCID iD."
 

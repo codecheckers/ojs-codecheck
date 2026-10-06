@@ -64,6 +64,12 @@
                         {{ registerWarning }}
                     </p>
                 </div>
+                <CodecheckCodecheckerReviews
+                    v-if="canUpdate"
+                    :submission="submission"
+                    :status="statusData?.status ?? null"
+                    :saved-at="codecheckMetadataLastSavedAt"
+                />
             </div>
         </div>
     </div>
@@ -76,11 +82,13 @@ import { html } from '../markup.js';
 import { isOptedIn } from '../optIn.js';
 import { askForInput, showInformation } from '../dialogs.js';
 import CodecheckStatusDialog from './CodecheckStatusDialog.vue';
+import CodecheckCodecheckerReviews from './CodecheckCodecheckerReviews.vue';
 
 const { useLocalize } = pkp.modules.useLocalize;
 
 export default {
   name: 'CodecheckStatusForm',
+  components: { CodecheckCodecheckerReviews },
   props: {
     submission: { type: Object, required: true },
     canEdit: { type: Boolean, default: true },

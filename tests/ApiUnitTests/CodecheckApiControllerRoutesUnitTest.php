@@ -128,6 +128,8 @@ class CodecheckApiControllerRoutesUnitTest extends PKPTestCase
         // require standing on the submission.
         $this->assertSame('editor', $tiers['GET codecheckers/reviewers'] ?? null);
         $this->assertSame('editor', $tiers['POST codecheckers/github'] ?? null);
+        $this->assertSame('editor', $tiers['GET codecheckers/reviews'] ?? null);
+        $this->assertSame('editor', $tiers['POST codecheckers/reviews/close'] ?? null);
 
         // Reads.
         $this->assertSame('read', $tiers['GET metadata'] ?? null);

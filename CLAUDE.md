@@ -167,8 +167,8 @@ Roles per route: `READ_ROLES` (admits authors), `WRITE_ROLES`, `EDITOR_ROLES`
 and add the method to `SUBMISSION_SCOPED` if it acts on a submission —
 otherwise it answers for any submission in the journal.
 
-Endpoints: `GET labels|metadata|yaml|register|status|status/history|orcid-status|orcid-test|codecheckers/reviewers`,
-`POST identifier|issue|metadata|references|repository|repository/validate|yaml/validate|status/update|orcid-deposit|codecheckers/github`.
+Endpoints: `GET labels|metadata|yaml|register|status|status/history|orcid-status|orcid-test|codecheckers/reviewers|codecheckers/reviews`,
+`POST identifier|issue|metadata|references|repository|repository/validate|yaml/validate|status/update|orcid-deposit|codecheckers/github|codecheckers/reviews/close`.
 
 **There is deliberately no file upload/download endpoint**
 (`CodecheckApiControllerRoutesUnitTest` asserts it). Use OJS file services and
@@ -351,6 +351,19 @@ gets no codechecker.
   the rest.
 - The CODECHECK tab warns beside a codechecker on a double-anonymous review
   (#28) and beside an unlinked entry.
+- **Closing a review** (`CodecheckerReviewClosing`): from any *completed*
+  status on, the status panel (`CodecheckCodecheckerReviews`) lists linked
+  codecheckers' assignments in force without a completion date
+  (`GET codecheckers/reviews`, empty before then) and closes one
+  (`POST codecheckers/reviews/close`, refused unless offered) the way
+  `PKPReviewerReviewStep3Form::execute()` does: completion date, "See
+  comments", a review comment (certificate, register entry), editors'
+  notification and email (last, each editor's failure logged, not fatal), task
+  removed, event log. The review is claimed by a conditional update of
+  `date_completed`, so it closes once. The comment is hidden from authors on a
+  double-anonymous review, and names the register issue only if it is in the
+  configured register. OJS cannot reopen a review, so `close-review.cy.js`
+  closes it once per dataset load and only checks the refusal on a rerun.
 
 ### ORCID deposit (`classes/Orcid/`)
 

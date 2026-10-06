@@ -39,6 +39,7 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 - A user's account has an optional GitHub username, edited on their public profile and in the manager's user form; a username another account holds is refused (#13)
 - "Add codechecker" on the CODECHECK tab offers the reviewers assigned to the submission and copies the codechecker's name, ORCID iD and GitHub username from their account; a GitHub username the CODECHECK community list gives for their ORCID iD can be saved to the account (#13)
 - The CODECHECK tab warns when a codechecker's review is double-anonymous, as they then get no author names and no contact (#13)
+- Once the check is completed, the CODECHECK tab offers to close each codechecker's review they have not submitted, as their own submission would: with the recommendation "See comments", a comment naming the certificate and its register entry, and a notification to the editors (#13)
 - A *Share Preview* button next to the report field explains how to share a draft certificate with editors and authors through a repository preview link and a submission discussion (#39)
 
 #### Frontend
