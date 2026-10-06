@@ -565,4 +565,53 @@ describe('The ORCID redirect URI', () => {
       expect(redirectUri, 'not the site-level path').not.to.contain('/index.php/index/');
     });
   });
+
+  /**
+   * With OJS's own ORCID integration depositing reviews (Member API), OJS
+   * deposits the codechecker's closed review itself, so the plugin sends
+   * nobody to ORCID and deposits nothing (#13). OJS's settings are put back
+   * whether or not the assertion held.
+   */
+  describe("while OJS's own ORCID integration deposits reviews", () => {
+    const CONTEXT = 'api/v1/contexts/1';
+    const OJS_ORCID = ['orcidEnabled', 'orcidApiType', 'orcidClientId', 'orcidClientSecret'];
+    let before_ = null;
+
+    const putContext = (values) => {
+      cy.ojsLogin('admin', 'admin');
+      cy.visit(`/index.php/${JOURNAL}/dashboard/editorial`);
+      cy.ojsApi('PUT', CONTEXT, values).its('status').should('eq', 200);
+    };
+
+    before(() => {
+      cy.ojsLogin('admin', 'admin');
+      cy.visit(`/index.php/${JOURNAL}/dashboard/editorial`);
+      cy.ojsApi('GET', CONTEXT).its('body').then((context) => {
+        before_ = Object.fromEntries(OJS_ORCID.map((name) => [name, context[name] ?? null]));
+      });
+      putContext({ orcidEnabled: true, orcidApiType: 'memberSandbox', orcidClientId: 'APP-OJS-CYPRESS', orcidClientSecret: 'ojs-cypress-secret' });
+    });
+    after(() => {
+      if (before_) {
+        putContext({ ...before_, orcidEnabled: Boolean(before_.orcidEnabled) });
+      }
+    });
+
+    it('sends nobody to ORCID, and says OJS deposits the review', () => {
+      cy.ojsLogin('ccodechecker', 'ccodechecker');
+      cy.request({ url: orcid('startAuth', `?submissionId=${ASSIGNED}`), followRedirect: false }).then((response) => {
+        expect(response.status, 'not sent on to ORCID').to.eq(200);
+        expect(response.body).to.contain("OJS's own ORCID integration");
+      });
+    });
+
+    it('refuses a deposit', () => {
+      cy.ojsLogin('admin', 'admin');
+      cy.visit(`/index.php/${JOURNAL}/dashboard/editorial`);
+      api('POST', `orcid-deposit?submissionId=${ASSIGNED}`, {}).then((response) => {
+        expect(response.status).to.eq(400);
+        expect(response.body.error).to.contain("OJS's own ORCID integration");
+      });
+    });
+  });
 });

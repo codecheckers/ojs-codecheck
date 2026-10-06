@@ -457,6 +457,9 @@ class SettingsForm extends Form
             $context ? (new CodecheckerJournalSetup($this->plugin))->status((int) $context->getId()) : ['role' => false, 'template' => false]
         );
 
+        // The plugin's ORCID deposit gives way to OJS's own (#13).
+        $templateMgr->assign('orcidLeftToOjs', $context && CodecheckPlugin::ojsDepositsReviews($context));
+
         $templateMgr->assign('orcidApiTypes', [
             Constants::ORCID_API_TYPE_SANDBOX => __('plugins.generic.codecheck.orcid.apiType.sandbox'),
             Constants::ORCID_API_TYPE_PRODUCTION => __('plugins.generic.codecheck.orcid.apiType.production'),

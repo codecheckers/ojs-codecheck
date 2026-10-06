@@ -1497,6 +1497,9 @@ msgstr "Client ID and Client Secret are not configured in plugin settings."
 msgid "plugins.generic.codecheck.orcid.test.error.credentialsFailed"
 msgstr "ORCID credentials test failed:"
 
+msgid "plugins.generic.codecheck.orcid.auth.error.ojsDeposits"
+msgstr "This journal deposits reviews to ORCID with OJS's own ORCID integration, which deposits a codechecker's closed review. The CODECHECK plugin deposits nothing then."
+
 msgid "plugins.generic.codecheck.orcid.auth.error.notEnabled"
 msgstr "ORCID integration is not enabled for this journal."
 

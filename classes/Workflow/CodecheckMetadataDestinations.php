@@ -31,8 +31,10 @@ class CodecheckMetadataDestinations
      *  resolved against its recorded default — `getSettingWithDefault()`
      * @param bool $registerDepositEnabled `CodecheckPlugin::isRegisterDepositEnabled()`,
      *  the single reader of that switch (#177)
+     * @param bool $orcidDepositOn `CodecheckPlugin::isOrcidDepositOn()`: the
+     *  switch, and OJS's own ORCID integration not depositing reviews (#13)
      */
-    public function __construct(callable $readSetting, private bool $registerDepositEnabled)
+    public function __construct(callable $readSetting, private bool $registerDepositEnabled, private bool $orcidDepositOn)
     {
         $this->readSetting = $readSetting;
     }
@@ -72,7 +74,7 @@ class CodecheckMetadataDestinations
             [
                 'id' => 'orcid',
                 // OrcidDepositService refuses every deposit without both credentials.
-                'enabled' => (bool) $this->setting(Constants::ORCID_ENABLED)
+                'enabled' => $this->orcidDepositOn
                     && $this->isSet(Constants::ORCID_CLIENT_ID)
                     && $this->isSet(Constants::ORCID_CLIENT_SECRET),
                 'url' => null,

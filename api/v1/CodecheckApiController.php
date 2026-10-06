@@ -613,10 +613,13 @@ class CodecheckApiController extends PKPBaseController
         $submission = $this->getAuthorizedContextObject(Application::ASSOC_TYPE_SUBMISSION);
         $submissionId = $submission->getId();
 
-        if (!$this->plugin->getSetting($context->getId(), Constants::ORCID_ENABLED)) {
+        // Off, or left to OJS's own ORCID integration (#13).
+        if (!$this->plugin->isOrcidDepositOn($context)) {
             return response()->json([
                 'success' => false,
-                'error' => 'ORCID deposition is not enabled for this journal.',
+                'error' => CodecheckPlugin::ojsDepositsReviews($context)
+                    ? __('plugins.generic.codecheck.orcid.auth.error.ojsDeposits')
+                    : 'ORCID deposition is not enabled for this journal.',
             ], 400);
         }
 

@@ -37,6 +37,7 @@ use PKP\components\forms\FieldOptions;
 use PKP\context\Context;
 use PKP\core\JSONMessage;
 use PKP\core\Request;
+use PKP\orcid\OrcidManager;
 use PKP\plugins\GenericPlugin;
 use PKP\plugins\Hook;
 use PKP\plugins\interfaces\HasTaskScheduler;
@@ -275,7 +276,7 @@ class CodecheckPlugin extends GenericPlugin implements HasTaskScheduler
             return false;
         }
 
-        if (!$this->getSetting($context->getId(), Constants::ORCID_ENABLED)) {
+        if (!$this->isOrcidDepositOn($context)) {
             return false;
         }
 
@@ -474,7 +475,7 @@ class CodecheckPlugin extends GenericPlugin implements HasTaskScheduler
             $orcidAuthUrl = $request->getBaseUrl() . '/index.php/' . $context->getPath() . '/codecheck/orcid/startAuth';
 
             $orcidConfig = json_encode([
-                'enabled' => (bool) $this->getSetting($contextId, Constants::ORCID_ENABLED),
+                'enabled' => $this->isOrcidDepositOn($context),
                 'authUrl' => $orcidAuthUrl,
                 'apiType' => $this->getSetting($contextId, Constants::ORCID_API_TYPE)
                             ?? Constants::ORCID_API_TYPE_SANDBOX,
@@ -534,7 +535,7 @@ class CodecheckPlugin extends GenericPlugin implements HasTaskScheduler
                         'submissionId' => $submission->getId(),
                         'codecheckOptIn' => true,
                         'orcid' => [
-                            'enabled' => (bool) $this->getSetting($contextId, Constants::ORCID_ENABLED),
+                            'enabled' => $this->isOrcidDepositOn($context),
                             'authUrl' => $orcidAuthUrl,
                             'apiType' => $this->getSetting($contextId, Constants::ORCID_API_TYPE) ?? Constants::ORCID_API_TYPE_SANDBOX,
                             'apiBaseUrl' => $request->getBaseUrl() . '/index.php/' . $context->getPath(),
@@ -567,7 +568,8 @@ class CodecheckPlugin extends GenericPlugin implements HasTaskScheduler
         $badge = new Badge($this, $context);
         $destinations = new CodecheckMetadataDestinations(
             fn (string $name) => $this->getSettingWithDefault($contextId, $name),
-            $this->isRegisterDepositEnabled($contextId)
+            $this->isRegisterDepositEnabled($contextId),
+            $this->isOrcidDepositOn($context)
         );
 
         return [
@@ -949,6 +951,24 @@ class CodecheckPlugin extends GenericPlugin implements HasTaskScheduler
     {
         return $this->isEnabledIn($contextId)
             && (bool) $this->getSetting($contextId, Constants::CODECHECK_DOI_DEPOSIT_LINKS);
+    }
+
+    /**
+     * Whether the plugin's own ORCID integration deposits for this journal:
+     * its switch is on, and OJS's own ORCID integration does not deposit
+     * reviews with the Member API (#13). OJS then deposits a codechecker's
+     * closed review itself, and two deposits of one check are to be avoided.
+     */
+    public function isOrcidDepositOn(Context $context): bool
+    {
+        return (bool) $this->getSetting((int) $context->getId(), Constants::ORCID_ENABLED)
+            && !self::ojsDepositsReviews($context);
+    }
+
+    /** Whether OJS's own ORCID integration deposits reviews (Member API). */
+    public static function ojsDepositsReviews(Context $context): bool
+    {
+        return OrcidManager::isEnabled($context) && OrcidManager::isMemberApiEnabled($context);
     }
 
     /**

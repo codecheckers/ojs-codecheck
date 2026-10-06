@@ -775,6 +775,9 @@
 				checked=$orcidEnabled
 				label="plugins.generic.codecheck.orcid.enable"
 			}
+			{if $orcidLeftToOjs}
+				<p class="description codecheck-orcid-left-to-ojs">{translate key="plugins.generic.codecheck.orcid.auth.error.ojsDeposits"}</p>
+			{/if}
 		{/fbvFormSection}
 
 		{fbvFormSection list=true}

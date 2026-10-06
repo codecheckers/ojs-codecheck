@@ -24,6 +24,7 @@
 
 namespace APP\plugins\generic\codecheck\classes\Orcid;
 
+use APP\core\Application;
 use APP\facades\Repo;
 use APP\handler\Handler;
 use APP\plugins\generic\codecheck\classes\Constants;
@@ -34,6 +35,7 @@ use APP\plugins\generic\codecheck\CodecheckPlugin;
 use APP\submission\Submission;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use PKP\context\Context;
 use PKP\security\authorization\ContextRequiredPolicy;
 use PKP\security\authorization\UserRequiredPolicy;
 use PKP\user\User;
@@ -205,8 +207,7 @@ class OrcidAuthHandler extends Handler
             return;
         }
 
-        if (!$this->plugin->getSetting($contextId, Constants::ORCID_ENABLED)) {
-            $this->sendPopupError(__('plugins.generic.codecheck.orcid.auth.error.notEnabled'));
+        if (!$this->refuseUnlessDepositOn($context)) {
             return;
         }
 
@@ -283,6 +284,12 @@ class OrcidAuthHandler extends Handler
 
         $contextId = $submission->getData('contextId');
 
+        // The switch covers the return from ORCID too: one turned off while the
+        // codechecker was at the consent screen stores no token (#13).
+        if (!$this->refuseUnlessDepositOn(Application::getContextDAO()->getById($contextId))) {
+            return;
+        }
+
         // Before the code is exchanged, not after: with no iD on record the
         // answer is a refusal whoever authenticated, and exchanging the code
         // would leave the journal authorised on their ORCID account for nothing.
@@ -345,6 +352,24 @@ class OrcidAuthHandler extends Handler
             CodecheckLogger::error('ORCID token exchange failed: ' . $e->getMessage());
             $this->sendPopupError(__('plugins.generic.codecheck.orcid.auth.error.tokenExchange', ['error' => $e->getMessage()]));
         }
+    }
+
+    /**
+     * Whether the plugin's ORCID deposit is on for the journal, saying why
+     * not when it is off: switched off, or left to OJS's own ORCID
+     * integration (#13).
+     */
+    private function refuseUnlessDepositOn(?Context $context): bool
+    {
+        if ($context && $this->plugin->isOrcidDepositOn($context)) {
+            return true;
+        }
+
+        $this->sendPopupError(__($context && CodecheckPlugin::ojsDepositsReviews($context)
+            ? 'plugins.generic.codecheck.orcid.auth.error.ojsDeposits'
+            : 'plugins.generic.codecheck.orcid.auth.error.notEnabled'));
+
+        return false;
     }
 
     /**

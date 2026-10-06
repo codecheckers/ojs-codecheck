@@ -36,7 +36,11 @@ class CodecheckMetadataDestinationsUnitTest extends PKPTestCase
 
     private function destinations(array $settings, bool $depositEnabled = true): array
     {
-        $list = (new CodecheckMetadataDestinations(fn (string $name) => $settings[$name] ?? null, $depositEnabled))->toArray();
+        $list = (new CodecheckMetadataDestinations(
+            fn (string $name) => $settings[$name] ?? null,
+            $depositEnabled,
+            (bool) ($settings[Constants::ORCID_ENABLED] ?? false)
+        ))->toArray();
 
         return array_column($list, null, 'id');
     }
@@ -152,5 +156,24 @@ class CodecheckMetadataDestinationsUnitTest extends PKPTestCase
 
         $this->assertStringNotContainsString(self::TOKEN, $json);
         $this->assertStringNotContainsString('orcid_secret', $json);
+    }
+
+    /** With OJS's own ORCID integration depositing reviews, the plugin's ORCID is no destination (#13). */
+    public function testOrcidIsNoDestinationWhileOjsDepositsReviews(): void
+    {
+        $orcid = array_values(array_filter(
+            (new CodecheckMetadataDestinations(
+                fn (string $name) => [
+                    Constants::ORCID_ENABLED => true,
+                    Constants::ORCID_CLIENT_ID => 'APP-1',
+                    Constants::ORCID_CLIENT_SECRET => 'secret',
+                ][$name] ?? null,
+                true,
+                false
+            ))->toArray(),
+            fn (array $destination) => $destination['id'] === 'orcid'
+        ))[0];
+
+        $this->assertFalse($orcid['enabled']);
     }
 }

@@ -20,7 +20,7 @@
  * `reviewerreviewstep3form::execute` hook is not raised, as its listeners
  * expect the form. The closed review then counts
  * where OJS counts reviews: the reviewer statistics, the masthead's list of
- * reviewers and OJS's own ORCID review deposit.
+ * reviewers and OJS's own ORCID review deposit, which closing hands it to.
  */
 
 namespace APP\plugins\generic\codecheck\classes\Codecheckers;
@@ -28,11 +28,13 @@ namespace APP\plugins\generic\codecheck\classes\Codecheckers;
 use APP\core\Application;
 use APP\facades\Repo;
 use APP\notification\NotificationManager;
+use APP\orcid\actions\SendReviewToOrcid;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckCodecheckers;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckStatusHandler;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckStatusRegisterUpdate;
+use APP\plugins\generic\codecheck\CodecheckPlugin;
 use APP\submission\Submission;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -173,6 +175,18 @@ class CodecheckerReviewClosing
         Repo::reviewAssignment()->getAccessInvitation($assignment)?->finalize();
 
         self::notifyEditors($assignment, $submission, $context);
+
+        // Where OJS deposits reviews to ORCID, the plugin deposits nothing
+        // (#13), so the closed review is handed to OJS's deposit, as
+        // confirming a review in its grid does. Queued; it needs the
+        // codechecker's ORCID iD on their OJS profile.
+        if (CodecheckPlugin::ojsDepositsReviews($context)) {
+            try {
+                (new SendReviewToOrcid($assignment->getId()))->execute();
+            } catch (\Throwable $e) {
+                CodecheckLogger::warning('Could not hand the closed review #' . $assignment->getId() . ' to OJS\'s ORCID deposit: ' . $e->getMessage());
+            }
+        }
 
         return true;
     }

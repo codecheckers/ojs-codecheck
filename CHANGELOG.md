@@ -62,6 +62,8 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 
 - Only a codechecker of the submission, a reviewer added to its codechecker list, gets the CODECHECK form on the review page and may record the check, its status and an ORCID deposit; other reviewers of an opted-in submission do not (#13)
 - Importing a `codecheck.yml` takes the codecheckers who match a reviewer assigned to the submission by ORCID iD, and names the ones it leaves out (#13)
+- The plugin deposits nothing to ORCID while OJS's own ORCID integration deposits reviews with the Member API; closing a codechecker's review hands it to OJS's ORCID deposit then, and the plugin settings say so (#13)
+- Switching the plugin's ORCID integration off also stops an authorisation already under way at ORCID (#13)
 - The editorial CODECHECK form saves an unfinished check and refuses only invalid entries; the `codecheck.yml` preview still requires a complete record
 - Checks are recorded against version 2.0 of the CODECHECK config file specification, the only version offered; `latest` and 1.0 are gone and existing records move to 2.0 on upgrade (#185)
 - Saving a check with a config version the plugin does not support, or the journal does not offer, is refused with a reason and the stored version is kept (#185)

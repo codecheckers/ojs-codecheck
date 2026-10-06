@@ -378,6 +378,11 @@ gets no codechecker.
   successes, in a static nothing resets.
 - `PeerReviewPayloadBuilder::groupIdFor()` is the one group-id derivation.
 - Needs a journal in the request; not run from the scheduled task (by decision).
+- `CodecheckPlugin::isOrcidDepositOn()` is the one gate (#13): the plugin's
+  switch, and OJS's own ORCID integration not depositing reviews with the
+  Member API (`ojsDepositsReviews()`; OJS then deposits the closed review
+  itself). Deposit on publish, `orcid-deposit`, `startAuth`, the callback
+  (before the code is exchanged) and the ORCID panels ask it.
 - Live testing needs ORCID *Member* API sandbox credentials; see
   `dev/live-orcid-tests.md`.
 
