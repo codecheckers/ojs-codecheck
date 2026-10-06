@@ -55,6 +55,19 @@ const interceptMetadata = (overrides = {}, alias = 'loadMetadata') =>
     body: { ...metadataResponseBody(), ...overrides }
   }).as(alias);
 
+/** The reviewers assigned to the submission, whom codecheckers are linked to (#13). */
+const REVIEWERS = [
+  { userId: 7, name: 'Josiah Carberry', orcid: '0000-0002-1825-0097', github: 'jcarberry', doubleAnonymous: false, githubSuggestion: null },
+  { userId: 8, name: 'Ada Lovelace', orcid: '0000-0002-1694-233X', github: '', doubleAnonymous: true, githubSuggestion: null },
+];
+
+/** Serve the assigned reviewers. */
+const interceptReviewers = (reviewers = REVIEWERS) =>
+  cy.intercept('GET', '**/codecheck/codecheckers/reviewers*', {
+    statusCode: 200,
+    body: { success: true, reviewers }
+  }).as('loadReviewers');
+
 /** Serve a successful reservation of 2025-042. */
 const interceptReservation = (submissionId = 1) =>
   cy.intercept('POST', `**/codecheck/identifier?submissionId=${submissionId}`, {
@@ -118,6 +131,7 @@ const mountAndReserve = (submissionId = 1) => {
 describe('CodecheckMetadataForm Component', () => {
   beforeEach(() => {
     interceptMetadata();
+    interceptReviewers();
 
     cy.intercept('GET', '**/codecheck/labels*', {
       statusCode: 200,
@@ -389,15 +403,15 @@ describe('CodecheckMetadataForm Component', () => {
   });
 
   /**
-   * The file spells the iD `ORCID` and the form `orcid`, and an imported iD
-   * used to be dropped on save; one that is not an iD still is, or every
-   * later save would fail. The file carries no GitHub username, so one already
-   * on the form for the same iD, or the same name, survives the import (#186).
+   * A codechecker is always a reviewer assigned to the submission (#13), so
+   * the file's codecheckers are matched to those reviewers by ORCID iD, which
+   * the file spells `ORCID`, and a matched one becomes the entry for that
+   * account. One no reviewer matches is not imported, and the form names it.
    */
-  it("takes the file's codecheckers in the form's shape, keeping a known username", () => {
+  it("takes the file's codecheckers that match an assigned reviewer, and names the others", () => {
     const yml = importedYml();
     yml.metadata.codechecker = [
-      { name: 'Josiah Carberry', ORCID: 'https://orcid.org/0000-0002-1825-0097' },
+      { name: 'J. Carberry', ORCID: 'https://orcid.org/0000-0002-1825-0097' },
       { name: 'Someone New', ORCID: '0000-0001-5109-3700' },
       { name: 'Daniel', ORCID: 'NA' },
     ];
@@ -408,22 +422,41 @@ describe('CodecheckMetadataForm Component', () => {
         cy.wait('@loadMetadata');
         cy.get('.codecheck-contact-email').should('exist').then(() => {
           wrapper.vm.repositories = [{ url: 'https://github.com/a/b', hidden: false, containsCodecheckYaml: true }];
-          wrapper.vm.metadata = {
-            ...wrapper.vm.metadata,
-            codecheckers: [
-              { name: 'J. Carberry', orcid: '0000-0002-1825-0097', github: 'jcarberry' },
-              { name: 'Daniel', orcid: '', github: 'nuest' },
-            ],
-          };
           return wrapper.vm.loadMetadataFromRepository(0).then(() => wrapper);
         });
       })
       .then((wrapper) => {
         cy.wrap(wrapper.vm).its('metadata.codecheckers').should('deep.equal', [
-          { name: 'Josiah Carberry', orcid: '0000-0002-1825-0097', github: 'jcarberry' },
-          { name: 'Someone New', orcid: '0000-0001-5109-3700', github: '' },
-          { name: 'Daniel', orcid: '', github: 'nuest' },
+          { userId: 7, name: 'Josiah Carberry', orcid: '0000-0002-1825-0097', github: 'jcarberry' },
         ]);
+        cy.get('.codecheck-repository-warning')
+          .should('contain', 'Not imported, because no reviewer assigned to this submission has their ORCID iD: Someone New, Daniel');
+      });
+  });
+
+  /**
+   * Without the reviewers the file cannot be matched, and an emptied list
+   * would be stored by the next save: the codecheckers stay as they are.
+   */
+  it('keeps the codecheckers when the assigned reviewers cannot be read', () => {
+    const yml = importedYml();
+    yml.metadata.codechecker = [{ name: 'J. Carberry', ORCID: '0000-0002-1825-0097' }];
+    const onRecord = [{ userId: 8, name: 'Ada Lovelace', orcid: '0000-0002-1694-233X', github: '' }];
+    cy.intercept('POST', '**/codecheck/repository?submissionId=1*', { statusCode: 200, body: yml });
+    cy.intercept('GET', '**/codecheck/codecheckers/reviewers*', { statusCode: 500, body: {} });
+    interceptMetadata({ codecheck: { ...metadataResponseBody().codecheck, codecheckers: onRecord } });
+    cy.mount(CodecheckMetadataForm, { props: { submission: { id: 1 }, canEdit: true } })
+      .then(({ wrapper }) => {
+        cy.wait('@loadMetadata');
+        cy.get('.codecheck-contact-email').should('exist').then(() => {
+          wrapper.vm.repositories = [{ url: 'https://github.com/a/b', hidden: false, containsCodecheckYaml: true }];
+          return wrapper.vm.loadMetadataFromRepository(0).then(() => wrapper);
+        });
+      })
+      .then((wrapper) => {
+        cy.wrap(wrapper.vm).its('metadata.codecheckers').should('deep.equal', onRecord);
+        cy.get('.codecheck-repository-warning')
+          .should('contain', 'plugins.generic.codecheck.codecheckers.importUnchecked');
       });
   });
 
@@ -1461,54 +1494,57 @@ describe('CodecheckMetadataForm Component', () => {
   });
 
   /**
-   * The dialog's body is a Vue component with its own fields (#180), so the
-   * form takes the codechecker from what the component answers rather than
-   * from `document.getElementById`.
+   * The dialog offers the reviewers assigned to the submission (#13), and the
+   * form adds the entry for the account chosen, linked by its user id.
    */
-  it('adds the codechecker the dialog was filled in with', () => {
+  it('adds the reviewer chosen in the dialog, linked to their account', () => {
     mountForm();
     cy.wait('@loadMetadata');
 
     addCodechecker();
-    cy.get('.pkp-mock-modal input[id^=codecheck-checker-name]').type('Ada Lovelace');
-    cy.get('.pkp-mock-modal input[id^=codecheck-checker-orcid]').type('0000-0002-1825-0097');
+    cy.wait('@loadReviewers');
+    cy.get('.pkp-mock-modal select[id^=codecheck-checker-reviewer]').select('Ada Lovelace');
     dialogSubmit('common.add').click();
 
     cy.get('.pkp-mock-modal').should('not.exist');
     cy.get('.codecheckers-list .item-name').should('have.text', 'Ada Lovelace');
-    cy.get('.codecheckers-list .item-orcid').should('contain', '0000-0002-1825-0097');
+    cy.get('.codecheckers-list .item-orcid').should('contain', '0000-0002-1694-233X');
   });
 
-  /**
-   * An empty name used to close the dialog and add nothing at all, so the
-   * editor was left believing the codechecker was on the record.
-   */
-  it('keeps the dialog open and adds nothing when the name is missing', () => {
+  /** A double-anonymous review keeps the authors from the codechecker (#28). */
+  it('warns beside a codechecker whose review is double-anonymous', () => {
+    interceptMetadata({
+      codecheck: {
+        ...metadataResponseBody().codecheck,
+        codecheckers: [
+          { userId: 8, name: 'Ada Lovelace', orcid: '0000-0002-1694-233X', github: '' },
+          { name: 'From an older record', orcid: '', github: '' },
+        ],
+      },
+    });
+    mountForm();
+    cy.wait(['@loadMetadata', '@loadReviewers']);
+
+    cy.get('.codecheckers-list .list-item').eq(0).find('.codecheck-double-anonymous')
+      .should('have.text', 'plugins.generic.codecheck.codecheckers.doubleAnonymous');
+    cy.get('.codecheckers-list .list-item').eq(1).find('.codecheck-codechecker-note')
+      .should('have.text', 'plugins.generic.codecheck.codecheckers.notLinked');
+  });
+
+  it('offers only the reviewers who are not codecheckers yet', () => {
+    interceptMetadata({
+      codecheck: {
+        ...metadataResponseBody().codecheck,
+        codecheckers: [{ userId: 7, name: 'Josiah Carberry', orcid: '0000-0002-1825-0097', github: 'jcarberry' }],
+      },
+    });
     mountForm();
     cy.wait('@loadMetadata');
 
     addCodechecker();
-    dialogSubmit('common.add').click();
-
-    cy.get('.pkp-mock-modal').should('exist');
-    cy.get('.pkp-mock-modal .modal-field-error')
-      .should('have.text', 'plugins.generic.codecheck.codecheckers.validation.nameRequired');
-    cy.get('.codecheckers-list').should('not.exist');
-  });
-
-  it('refuses an ORCID that is not one', () => {
-    mountForm();
-    cy.wait('@loadMetadata');
-
-    addCodechecker();
-    cy.get('.pkp-mock-modal input[id^=codecheck-checker-name]').type('Ada Lovelace');
-    cy.get('.pkp-mock-modal input[id^=codecheck-checker-orcid]').type('0000-0002-1825-0098');
-    dialogSubmit('common.add').click();
-
-    cy.get('.pkp-mock-modal').should('exist');
-    cy.get('.pkp-mock-modal .modal-field-error')
-      .should('have.text', 'plugins.generic.codecheck.codecheckers.validation.orcidInvalid');
-    cy.get('.codecheckers-list').should('not.exist');
+    cy.get('.pkp-mock-modal select[id^=codecheck-checker-reviewer] option')
+      .then(($options) => [...$options].map((option) => option.textContent.trim()))
+      .should('deep.equal', ['plugins.generic.codecheck.codecheckers.chooseReviewer.none', 'Ada Lovelace']);
   });
 
   it('can fill source field', () => {

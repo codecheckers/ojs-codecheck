@@ -1,21 +1,32 @@
-import { h } from 'vue';
 import '../../support/pkp-mock.js';
 import CodecheckCodecheckerDialog from '../../../resources/js/Components/CodecheckCodecheckerDialog.vue';
 
 /**
- * The body of the "add codechecker" dialog. It draws its own buttons — OJS's
- * are disabled for good by the first click, so a dialog that stays open to say
- * why it refused would have nothing left to press (#180).
+ * The body of the "add codechecker" dialog (#13): it offers the reviewers
+ * assigned to the submission who are not codecheckers yet, and answers the
+ * entry for the account chosen. It draws its own buttons — OJS's are disabled
+ * for good by the first click, so a dialog that stays open to say why it
+ * refused would have nothing left to press (#180).
  */
 describe('CodecheckCodecheckerDialog', () => {
+  const CARBERRY = {
+    userId: 7, name: 'Josiah Carberry', orcid: '0000-0002-1825-0097', github: '', doubleAnonymous: false, githubSuggestion: 'jcarberry',
+  };
+  const LOVELACE = {
+    userId: 8, name: 'Ada Lovelace', orcid: '', github: 'ada', doubleAnonymous: true, githubSuggestion: null,
+  };
+  const SAVE_GITHUB = { method: 'POST', pathname: '/api/v1/codecheck/codecheckers/github' };
+
   let submitted;
   let closed;
 
-  const mountDialog = (onSubmit = () => {}) => {
+  const mountDialog = (reviewers = [CARBERRY, LOVELACE], onSubmit = () => {}) => {
     submitted = [];
     closed = 0;
     cy.mount(CodecheckCodecheckerDialog, {
       props: {
+        submissionId: 1,
+        reviewers,
         submitLabel: 'Add',
         onSubmit: (value) => {
           submitted.push(value);
@@ -27,241 +38,95 @@ describe('CodecheckCodecheckerDialog', () => {
   };
 
   const submit = () => cy.contains('.modal-actions button', 'Add').click();
+  const pick = (name) => cy.get('select[id^=codecheck-checker-reviewer]').select(name);
 
-  const LOOKUP = { method: 'GET', pathname: '/api/v1/codecheck/codecheckers/lookup' };
-
-  // No suggestion unless a test says otherwise, so no test reaches past the
-  // mock.
-  beforeEach(() => {
-    cy.intercept(LOOKUP, { success: true, github: null }).as('lookup');
-  });
-
-  it('hands over the name and the ORCID it was given, then closes', () => {
+  it('answers the entry for the reviewer chosen, then closes', () => {
     mountDialog();
-    cy.get('input[id^=codecheck-checker-name]').type('Ada Lovelace');
-    cy.get('input[id^=codecheck-checker-orcid]').type('0000-0002-1825-0097');
+    pick('Ada Lovelace');
     submit();
 
     cy.then(() => {
-      expect(submitted).to.deep.equal([{ name: 'Ada Lovelace', orcid: '0000-0002-1825-0097', github: '' }]);
-      expect(closed).to.equal(1);
+      expect(submitted).to.deep.equal([{ userId: 8, name: 'Ada Lovelace', orcid: '', github: 'ada' }]);
+      expect(closed).to.eq(1);
     });
   });
 
-  it('trims the name and hands over an empty ORCID as empty', () => {
-    mountDialog();
-    cy.get('input[id^=codecheck-checker-name]').type('  Ada Lovelace  ');
-    submit();
-
-    cy.then(() => expect(submitted).to.deep.equal([{ name: 'Ada Lovelace', orcid: '', github: '' }]));
-  });
-
-  /**
-   * An empty name used to close the dialog and add nothing, so the editor was
-   * told the codechecker had been added when it had not.
-   */
-  it('refuses an empty name, says so beside the field, and stays usable', () => {
+  it('refuses to add nobody, and can still be corrected', () => {
     mountDialog();
     submit();
 
     cy.get('.modal-field-error')
-      .should('have.text', 'plugins.generic.codecheck.codecheckers.validation.nameRequired');
-    cy.then(() => {
-      expect(submitted).to.deep.equal([]);
-      expect(closed).to.equal(0);
-    });
-
-    // the point of drawing our own buttons: the editor can correct and retry
+      .should('have.text', 'plugins.generic.codecheck.codecheckers.validation.reviewerRequired');
     cy.contains('.modal-actions button', 'Add').should('not.be.disabled');
-    cy.get('input[id^=codecheck-checker-name]').type('Ada Lovelace');
+    cy.then(() => expect(submitted).to.have.length(0));
+
+    pick('Josiah Carberry');
     submit();
-    cy.then(() => expect(submitted).to.deep.equal([{ name: 'Ada Lovelace', orcid: '', github: '' }]));
+    cy.then(() => expect(submitted).to.have.length(1));
   });
 
-  it('refuses an ORCID whose check digit does not agree', () => {
+  it('shows what the account holds, and says what it lacks', () => {
     mountDialog();
-    cy.get('input[id^=codecheck-checker-name]').type('Ada Lovelace');
-    cy.get('input[id^=codecheck-checker-orcid]').type('0000-0002-1825-0098');
-    submit();
+    pick('Ada Lovelace');
 
-    cy.get('.modal-field-error')
-      .should('have.text', 'plugins.generic.codecheck.codecheckers.validation.orcidInvalid');
-    cy.then(() => expect(closed).to.equal(0));
+    cy.get('.codecheck-reviewer-details dd').eq(0).should('have.text', 'plugins.generic.codecheck.codecheckers.orcid.none');
+    cy.get('.codecheck-reviewer-details dd').eq(1).should('contain', '@ada');
   });
 
-  it('clears the message as soon as the field is corrected', () => {
+  it('warns when the review is double-anonymous', () => {
     mountDialog();
-    submit();
-    cy.get('.modal-field-error').should('exist');
-    cy.get('input[id^=codecheck-checker-name]').type('Ada Lovelace');
-    cy.get('.modal-field-error').should('not.exist');
+    pick('Josiah Carberry');
+    cy.get('.codecheck-double-anonymous').should('not.exist');
+
+    pick('Ada Lovelace');
+    cy.get('.codecheck-double-anonymous').should('have.text', 'plugins.generic.codecheck.codecheckers.doubleAnonymous');
   });
 
-  it('reduces an ORCID pasted as an address to the bare iD', () => {
-    mountDialog();
-    cy.get('input[id^=codecheck-checker-name]').type('Ada Lovelace');
-    cy.get('input[id^=codecheck-checker-orcid]').type('https://www.orcid.org/0000-0002-1825-0097');
-    submit();
+  it('explains how to assign a codechecker when no reviewer is left to add', () => {
+    mountDialog([]);
 
-    cy.then(() => expect(submitted).to.deep.equal([{ name: 'Ada Lovelace', orcid: '0000-0002-1825-0097', github: '' }]));
-  });
-
-  /** The dialog is what asked for the value, so it is where a refusal belongs. */
-  it('shows a reason the caller refused the value with, and does not close', () => {
-    mountDialog(() => 'nothing was saved');
-    cy.get('input[id^=codecheck-checker-name]').type('Ada Lovelace');
-    submit();
-
-    cy.get('.modal-field-error').should('have.text', 'nothing was saved');
-    cy.then(() => expect(closed).to.equal(0));
-
-    // and the refusal is cleared by the next attempt rather than piling up
-    submit();
-    cy.get('.modal-field-error').should('have.length', 1);
-  });
-
-  /** Nothing else catches a throw here: OJS calls the handler fire-and-forget. */
-  it('stays open and says something when the caller throws', () => {
-    mountDialog(() => { throw new Error('boom'); });
-    cy.get('input[id^=codecheck-checker-name]').type('Ada Lovelace');
-    submit();
-
-    cy.get('.modal-field-error').should('have.text', 'plugins.generic.codecheck.dialog.submitFailed');
-    cy.contains('.modal-actions button', 'Add').should('not.be.disabled');
-    cy.then(() => expect(closed).to.equal(0));
-  });
-
-  it('closes without submitting when cancelled', () => {
-    mountDialog();
-    cy.contains('.modal-actions button', 'common.cancel').click();
-    cy.then(() => {
-      expect(submitted).to.deep.equal([]);
-      expect(closed).to.equal(1);
-    });
+    cy.get('.codecheck-no-reviewers').should('contain', 'plugins.generic.codecheck.codecheckers.noReviewers');
+    cy.get('select[id^=codecheck-checker-reviewer]').should('not.exist');
+    cy.contains('.modal-actions button', 'Add').should('not.exist');
   });
 
   /**
-   * The fields used to be read out of the document by a fixed id, so a second
-   * copy on the page answered for the first — and the `<label for>` of both
-   * pointed at whichever rendered first.
+   * The community list's username is offered, never filled in, and taking
+   * it saves it to the account, from which the entry is then copied.
    */
-  it('gives each copy on the page its own field ids', () => {
-    const props = { submitLabel: 'Add', onSubmit: () => {}, onClose: () => {} };
-    cy.mount({
-      components: { CodecheckCodecheckerDialog },
-      render() {
-        return [
-          h(CodecheckCodecheckerDialog, props),
-          h(CodecheckCodecheckerDialog, props)
-        ];
-      }
-    });
-
-    cy.get('input[id^=codecheck-checker-name]').should('have.length', 2).then(($inputs) => {
-      expect($inputs.eq(0).attr('id')).not.to.equal($inputs.eq(1).attr('id'));
-    });
-  });
-
-  describe('GitHub username (#186)', () => {
-    it('hands over a username pasted as a mention or an address as the bare name', () => {
+  describe("the community list's GitHub username", () => {
+    it('is offered for an account without one and saved to the account when taken', () => {
+      cy.intercept(SAVE_GITHUB, { success: true, github: 'jcarberry' }).as('saveGithub');
       mountDialog();
-      cy.get('input[id^=codecheck-checker-name]').type('Daniel');
-      cy.get('input[id^=codecheck-checker-github]').type('https://github.com/nuest');
-      submit();
+      pick('Josiah Carberry');
 
-      cy.then(() => expect(submitted).to.deep.equal([{ name: 'Daniel', orcid: '', github: 'nuest' }]));
-    });
-
-    it('refuses what GitHub would not accept as a username, and stays open', () => {
-      mountDialog();
-      cy.get('input[id^=codecheck-checker-name]').type('Daniel');
-      cy.get('input[id^=codecheck-checker-github]').type('daniel nuest');
-      submit();
-
-      cy.get('.modal-field-error')
-        .should('have.text', 'plugins.generic.codecheck.codecheckers.validation.githubInvalid');
-      cy.then(() => {
-        expect(submitted).to.deep.equal([]);
-        expect(closed).to.equal(0);
-      });
-    });
-
-    /**
-     * Offered, never filled in: the blur that asks is also the one pressing
-     * Add causes, so a value filled in then would be added unseen.
-     */
-    it('offers a username for a known ORCID iD and fills it only when taken', () => {
-      cy.intercept(LOOKUP, { success: true, github: 'jcarberry' }).as('lookup');
-      mountDialog();
-      cy.get('input[id^=codecheck-checker-name]').type('Josiah Carberry');
-      cy.get('input[id^=codecheck-checker-orcid]').type('0000-0002-1825-0097').blur();
-
-      cy.wait('@lookup').its('request.url').should('contain', 'orcid=0000-0002-1825-0097');
       cy.get('.codecheck-github-suggestion')
-        .should('contain.text', 'The CODECHECK community list gives the GitHub username jcarberry');
-      cy.get('input[id^=codecheck-checker-github]').should('have.value', '');
+        .should('contain', 'The CODECHECK community list gives the GitHub username jcarberry for this ORCID iD.');
+      cy.get('.codecheck-github-suggestion button').click();
 
-      cy.contains('.codecheck-github-suggestion button', 'plugins.generic.codecheck.codecheckers.githubSuggestion.use').click();
-      cy.get('input[id^=codecheck-checker-github]').should('have.value', 'jcarberry');
+      cy.wait('@saveGithub').its('request.body').should('deep.equal', { userId: 7, github: 'jcarberry' });
       cy.get('.codecheck-github-suggestion').should('not.exist');
-      cy.get('input[id^=codecheck-checker-github]').clear().type('someone-else');
+      cy.get('.codecheck-reviewer-details dd').eq(1).should('contain', '@jcarberry');
+      submit();
+      cy.then(() => expect(submitted[0].github).to.eq('jcarberry'));
+    });
+
+    it('is not taken unasked', () => {
+      mountDialog();
+      pick('Josiah Carberry');
       submit();
 
-      cy.then(() => expect(submitted).to.deep.equal([
-        { name: 'Josiah Carberry', orcid: '0000-0002-1825-0097', github: 'someone-else' }
-      ]));
+      cy.then(() => expect(submitted[0].github).to.eq(''));
     });
 
-    it('adds no username the editor did not take', () => {
-      cy.intercept(LOOKUP, { success: true, github: 'jcarberry' }).as('lookup');
+    it('says why when the account refuses it', () => {
+      cy.intercept(SAVE_GITHUB, { statusCode: 400, body: { success: false, error: 'Another account already has this GitHub username.' } });
       mountDialog();
-      cy.get('input[id^=codecheck-checker-name]').type('Josiah Carberry');
-      cy.get('input[id^=codecheck-checker-orcid]').type('0000-0002-1825-0097');
-      submit();
+      pick('Josiah Carberry');
+      cy.get('.codecheck-github-suggestion button').click();
 
-      cy.then(() => expect(submitted).to.deep.equal([
-        { name: 'Josiah Carberry', orcid: '0000-0002-1825-0097', github: '' }
-      ]));
-    });
-
-    it('withdraws the offer when the ORCID iD changes', () => {
-      cy.intercept(LOOKUP, { success: true, github: 'jcarberry' }).as('lookup');
-      mountDialog();
-      cy.get('input[id^=codecheck-checker-orcid]').type('0000-0002-1825-0097').blur();
-      cy.get('.codecheck-github-suggestion').should('exist');
-      cy.get('input[id^=codecheck-checker-orcid]').type('{backspace}');
-      cy.get('.codecheck-github-suggestion').should('not.exist');
-    });
-
-    it('never replaces a username the editor typed', () => {
-      cy.intercept(LOOKUP, { success: true, github: 'jcarberry' }).as('lookup');
-      mountDialog();
-      cy.get('input[id^=codecheck-checker-github]').type('typed-by-hand');
-      cy.get('input[id^=codecheck-checker-orcid]').type('0000-0002-1825-0097').blur();
-
-      cy.get('input[id^=codecheck-checker-github]').should('have.value', 'typed-by-hand');
-      cy.get('.codecheck-github-suggestion').should('not.exist');
-      cy.get('@lookup.all').should('have.length', 0);
-    });
-
-    it('asks nothing for an ORCID iD that is not one', () => {
-      mountDialog();
-      cy.get('input[id^=codecheck-checker-orcid]').type('0000-0002-1825-0098').blur();
-      cy.get('input[id^=codecheck-checker-github]').should('have.value', '');
-      cy.get('@lookup.all').should('have.length', 0);
-    });
-
-    it('works without a suggestion when the lookup is refused', () => {
-      cy.intercept(LOOKUP, { statusCode: 401, body: {} }).as('lookup');
-      mountDialog();
-      cy.get('input[id^=codecheck-checker-name]').type('Josiah Carberry');
-      cy.get('input[id^=codecheck-checker-orcid]').type('0000-0002-1825-0097').blur();
-      cy.wait('@lookup');
-      submit();
-
-      cy.then(() => expect(submitted).to.deep.equal([
-        { name: 'Josiah Carberry', orcid: '0000-0002-1825-0097', github: '' }
-      ]));
+      cy.get('.modal-field-error').should('have.text', 'Another account already has this GitHub username.');
+      cy.get('.codecheck-reviewer-details dd').eq(1).should('contain', 'plugins.generic.codecheck.codecheckers.github.none');
     });
   });
 });

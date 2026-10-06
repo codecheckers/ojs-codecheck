@@ -55,23 +55,22 @@ describe('Codechecker ORCID iDs', () => {
     });
   });
 
-  it('stores an iD pasted as an address in the bare form', () => {
+  /**
+   * A codechecker is a reviewer of the submission, copied from their account
+   * (#13): an entry typed in, with whatever iD, is not one, and nothing is
+   * written. How an iD is stored is pinned in `CodecheckCodecheckersUnitTest`.
+   */
+  it('refuses a codechecker typed in rather than linked to a reviewer', () => {
     readMetadata().then((stored) => {
-      cy.saveCodecheckRecord(SUBMISSION, stored, [{ name: 'Josiah Carberry', orcid: `https://orcid.org/${CARBERRY}` }])
-        .its('status').should('eq', 200);
-
-      // Every save stores the GitHub username too, empty when there is none (#186).
-      readMetadata().its('codecheckers').should('deep.equal', [
-        { name: 'Josiah Carberry', orcid: CARBERRY, github: '' }
-      ]);
-
-      // put the record back, so the rest of the suite sees what it expects —
-      // compared without `github`, which the dataset's entries predate
-      const withoutUsername = (list) => list.map(({ name, orcid }) => ({ name, orcid }));
-      cy.saveCodecheckRecord(SUBMISSION, stored, stored.codecheckers).its('status').should('eq', 200);
-      readMetadata().its('codecheckers').then((restored) => {
-        expect(withoutUsername(restored)).to.deep.equal(withoutUsername(stored.codecheckers));
+      cy.saveCodecheckRecord(SUBMISSION, stored, [
+        ...stored.codecheckers,
+        { name: 'Josiah Carberry', orcid: `https://orcid.org/${CARBERRY}` },
+      ]).then((response) => {
+        expect(response.status).to.eq(400);
+        expect(response.body.error).to.contain('Josiah Carberry is not a reviewer of this submission');
       });
+
+      readMetadata().its('codecheckers').should('deep.equal', stored.codecheckers);
     });
   });
 

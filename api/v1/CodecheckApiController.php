@@ -38,6 +38,9 @@
 namespace APP\plugins\generic\codecheck\api\v1;
 
 use APP\core\Application;
+use APP\facades\Repo;
+use APP\plugins\generic\codecheck\classes\Codecheckers\CodecheckerReviewers;
+use APP\plugins\generic\codecheck\classes\Codecheckers\GithubUsernameField;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifier;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CertificateIdentifierList;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckGithubRegisterApiClient;
@@ -92,6 +95,8 @@ class CodecheckApiController extends PKPBaseController
         'updateStatus',
         'depositToOrcid',
         'addCertificateReference',
+        'getAssignedReviewers',
+        'saveReviewerGithubUsername',
     ];
 
     public function __construct(private CodecheckPlugin $plugin)
@@ -213,13 +218,19 @@ class CodecheckApiController extends PKPBaseController
         $editor = [self::roleAuthorizer(self::EDITOR_ROLES)];
         $admin = [self::roleAuthorizer(self::ADMIN_ROLES)];
 
+        // Submission-scoped, unlike the rest below: the reviewers who can be
+        // linked as codecheckers, and a GitHub username saved to one's account
+        // (#13), for an editor with standing on the submission, as changing
+        // the list is.
+        Route::get('codecheckers/reviewers', $this->getAssignedReviewers(...))
+            ->name('codecheck.codecheckers.reviewers')->middleware($editor);
+
+        Route::post('codecheckers/github', $this->saveReviewerGithubUsername(...))
+            ->name('codecheck.codecheckers.github')->middleware($editor);
+
         // The venue labels are offered only for reserving an identifier (#65).
         Route::get('labels', $this->getCodecheckIssueLabels(...))
             ->name('codecheck.labels')->middleware($admin);
-
-        // The community list is for an editor adding a codechecker (#186).
-        Route::get('codecheckers/lookup', $this->lookupGithubUsername(...))
-            ->name('codecheck.codecheckers.lookup')->middleware($editor);
 
         Route::get('register', $this->getGithubRegisterRepositoryUrl(...))
             ->name('codecheck.register')->middleware($read);
@@ -328,6 +339,12 @@ class CodecheckApiController extends PKPBaseController
             (int) $submission->getId(),
             (int) $request->getContext()?->getId()
         );
+        // Which accounts the codecheckers are is for those who may change the
+        // list (#13); everyone else gets the entries without them, the shape
+        // the register publishes.
+        if (!$result['permissions']['editCodecheckers'] && is_array($result['codecheck'] ?? null)) {
+            $result['codecheck']['codecheckers'] = CodecheckCodecheckers::withNormalizedEntries($result['codecheck']['codecheckers']);
+        }
 
         return response()->json(array_merge($result, ['success' => true]), 200);
     }
@@ -405,6 +422,12 @@ class CodecheckApiController extends PKPBaseController
             return null;
         }
 
+        return $this->roleRefusal();
+    }
+
+    /** The answer PKP's role authorizer gives, for a refusal made inside a handler. */
+    private function roleRefusal(): \Illuminate\Http\JsonResponse
+    {
         return response()->json([
             'success' => false,
             'error' => 'user.authorization.roleBasedAccessDenied',
@@ -796,18 +819,81 @@ class CodecheckApiController extends PKPBaseController
     }
 
     /**
-     * GET api/v1/codecheck/codecheckers/lookup?orcid=…
+     * GET api/v1/codecheck/codecheckers/reviewers?submissionId=N
      *
-     * The GitHub username the CODECHECK community list records for an ORCID
-     * iD. Answers `github: null` when it knows none, including for something
-     * that is not an iD — the dialog has already said so beside the field.
+     * The reviewers assigned to the submission now, whom the "add
+     * codechecker" dialog offers and a `codecheck.yml` import matches by ORCID
+     * iD (#13). An account without a GitHub username is given the one the
+     * CODECHECK community list has for its ORCID iD, as `githubSuggestion`.
      */
-    public function lookupGithubUsername(IlluminateRequest $illuminateRequest): \Illuminate\Http\JsonResponse
+    public function getAssignedReviewers(): \Illuminate\Http\JsonResponse
     {
-        return response()->json([
-            'success' => true,
-            'github' => CommunityCodecheckers::githubUsernameFor((string) $illuminateRequest->query('orcid', '')),
-        ], 200);
+        $request = Application::get()->getRequest();
+        $submission = $this->getAuthorizedContextObject(Application::ASSOC_TYPE_SUBMISSION);
+
+        if (!$this->mayEditCodecheckers($request, $submission)) {
+            return $this->roleRefusal();
+        }
+
+        $reviewers = array_map(
+            fn (array $reviewer) => $reviewer + [
+                'githubSuggestion' => $reviewer['github'] === '' && $reviewer['orcid'] !== ''
+                    ? CommunityCodecheckers::githubUsernameFor($reviewer['orcid'])
+                    : null,
+            ],
+            CodecheckerReviewers::describeAssigned((int) $submission->getId())
+        );
+
+        return response()->json(['success' => true, 'reviewers' => $reviewers], 200);
+    }
+
+    /**
+     * POST api/v1/codecheck/codecheckers/github?submissionId=N
+     *
+     * Saves a GitHub username to the account of a reviewer assigned to the
+     * submission (#13): the dialog's "Use it" for a username the community
+     * list suggested, for an account that has none. Body: `{userId, github}`.
+     */
+    public function saveReviewerGithubUsername(IlluminateRequest $illuminateRequest): \Illuminate\Http\JsonResponse
+    {
+        $request = Application::get()->getRequest();
+        $submission = $this->getAuthorizedContextObject(Application::ASSOC_TYPE_SUBMISSION);
+
+        if (!$this->mayEditCodecheckers($request, $submission)) {
+            return $this->roleRefusal();
+        }
+
+        $userId = (int) $illuminateRequest->input('userId');
+        $username = CodecheckCodecheckers::normalizeGithubUsername($illuminateRequest->input('github'));
+        $isAssigned = isset(CodecheckerReviewers::currentAssignments((int) $submission->getId())[$userId]);
+        $user = $isAssigned ? Repo::user()->get($userId, true) : null;
+
+        $error = match (true) {
+            !$user => __('plugins.generic.codecheck.codecheckers.notAReviewer', ['name' => (string) $userId]),
+            // Only fills a gap: a username on the account is the user's own
+            // or their manager's to change, on the profile or the user form.
+            GithubUsernameField::readFor($userId) !== null => __('plugins.generic.codecheck.codecheckers.githubAlreadySet'),
+            !CodecheckCodecheckers::isGithubUsername($username) => __('plugins.generic.codecheck.githubUsername.invalid'),
+            GithubUsernameField::isHeldByAnother($username, $userId) => __('plugins.generic.codecheck.githubUsername.taken'),
+            default => null,
+        };
+        if ($error !== null) {
+            return response()->json(['success' => false, 'error' => $error], 400);
+        }
+
+        GithubUsernameField::writeFor($user, $username);
+
+        return response()->json(['success' => true, 'github' => $username], 200);
+    }
+
+    /** Whether the user may change this submission's codechecker list. */
+    private function mayEditCodecheckers(PKPRequest $request, $submission): bool
+    {
+        return CodecheckSubmissionAccess::mayEditCodecheckers(
+            $request->getUser(),
+            (int) $submission->getId(),
+            (int) $request->getContext()?->getId()
+        );
     }
 
     public function getGithubRegisterRepositoryUrl(): \Illuminate\Http\JsonResponse

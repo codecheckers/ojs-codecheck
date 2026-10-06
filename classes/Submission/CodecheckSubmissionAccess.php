@@ -24,6 +24,7 @@ namespace APP\plugins\generic\codecheck\classes\Submission;
 
 use APP\core\Application;
 use APP\facades\Repo;
+use APP\plugins\generic\codecheck\classes\Codecheckers\CodecheckerReviewers;
 use PKP\security\Role;
 use PKP\stageAssignment\StageAssignment;
 use PKP\submission\reviewAssignment\ReviewAssignment;
@@ -32,25 +33,16 @@ use PKP\user\User;
 class CodecheckSubmissionAccess
 {
     /**
-     * Is this user a reviewer assigned to this submission?
+     * Is this user a codechecker of this submission (#13)?
      *
-     * Assignment is what makes a reviewer the codechecker of a submission, so
-     * this is the gate for the things a codechecker records about their own
-     * check.
+     * A reviewer whose assignment in force is linked to an entry of the
+     * record's codechecker list. Being assigned is not enough: other reviewers
+     * of an opted-in submission give a regular review and nothing more. This
+     * is the gate for the things a codechecker records about their own check.
      */
-    public static function isAssignedReviewer(?User $user, int $submissionId): bool
+    public static function isLinkedCodechecker(?User $user, int $submissionId): bool
     {
-        if (!$user || $submissionId <= 0) {
-            return false;
-        }
-
-        $assignments = Repo::reviewAssignment()
-            ->getCollector()
-            ->filterBySubmissionIds([$submissionId])
-            ->filterByReviewerIds([$user->getId()])
-            ->getMany();
-
-        return $assignments->isNotEmpty();
+        return CodecheckerReviewers::isLinkedCodechecker($user, $submissionId);
     }
 
     /**
@@ -58,8 +50,8 @@ class CodecheckSubmissionAccess
      *
      * Editors may, for any submission in their journal, and so may a site
      * administrator, who holds no journal role (isEditor() asks the journal's
-     * context). A reviewer may only for the submission they are assigned to.
-     * Nothing else may.
+     * context). A reviewer may only as a codechecker of this submission
+     * (isLinkedCodechecker()). Nothing else may.
      */
     public static function canWriteMetadata(?User $user, int $submissionId, int $contextId): bool
     {
@@ -71,7 +63,7 @@ class CodecheckSubmissionAccess
             return true;
         }
 
-        return self::isAssignedReviewer($user, $submissionId);
+        return self::isLinkedCodechecker($user, $submissionId);
     }
 
     /**
@@ -177,8 +169,8 @@ class CodecheckSubmissionAccess
 
     /**
      * Whose ORCID deposit the user may trigger on this submission: the one
-     * place `orcid-status` and `orcid-deposit` both ask. The reviewer lookup
-     * is only made for someone who is not an editor.
+     * place `orcid-status` and `orcid-deposit` both ask. The codechecker
+     * lookup is only made for someone who is not an editor.
      *
      * @return 'all'|'own'|'none'
      */
@@ -186,22 +178,22 @@ class CodecheckSubmissionAccess
     {
         $isEditor = self::isEditor($user, $contextId);
 
-        return self::orcidDepositScope($isEditor, !$isEditor && self::isAssignedReviewer($user, $submissionId));
+        return self::orcidDepositScope($isEditor, !$isEditor && self::isLinkedCodechecker($user, $submissionId));
     }
 
     /**
      * Whose ORCID deposit the user may trigger: every codechecker's (`all`,
-     * an editor), only their own (`own`, an assigned reviewer) or none.
+     * an editor), only their own (`own`, a codechecker) or none.
      *
      * @return 'all'|'own'|'none'
      */
-    public static function orcidDepositScope(bool $isEditor, bool $isAssignedReviewer): string
+    public static function orcidDepositScope(bool $isEditor, bool $isCodechecker): string
     {
         if ($isEditor) {
             return 'all';
         }
 
-        return $isAssignedReviewer ? 'own' : 'none';
+        return $isCodechecker ? 'own' : 'none';
     }
 
     /**
@@ -247,17 +239,8 @@ class CodecheckSubmissionAccess
      */
     private static function currentReviewMethod(User $user, int $submissionId): ?int
     {
-        $assignment = Repo::reviewAssignment()
-            ->getCollector()
-            ->filterBySubmissionIds([$submissionId])
-            ->filterByReviewerIds([$user->getId()], true)
-            ->getMany()
-            ->first();
+        $assignment = CodecheckerReviewers::currentAssignmentOf((int) $user->getId(), $submissionId);
 
-        if (!$assignment || $assignment->getCancelled() || $assignment->getDeclined()) {
-            return null;
-        }
-
-        return (int) $assignment->getReviewMethod();
+        return $assignment ? (int) $assignment->getReviewMethod() : null;
     }
 }

@@ -8,10 +8,12 @@
  *
  *   - anything that reaches the public CODECHECK register is for a journal
  *     editor or an administrator alone — not a reviewer, and not the codechecker;
- *   - the record, its status and an ORCID deposit are for editors, or the
- *     reviewer assigned to *that* submission.
+ *   - the record, its status and an ORCID deposit are for editors, or a
+ *     codechecker of *that* submission: a reviewer assigned to it whose
+ *     account is linked to an entry of its codechecker list (#13).
  *
- * rreviewer is assigned to submission 9 and to nothing else.
+ * ccodechecker and rreviewer are both assigned to submission 9 and to nothing
+ * else; only ccodechecker is linked, so rreviewer is a reviewer and nothing more.
  */
 
 const JOURNAL = 'codecheck';
@@ -22,6 +24,7 @@ const ASSIGNED_CODECHECKER = 'plugins.generic.codecheck.status.assignedCodecheck
 
 /** Who the fixture says these accounts are, so the recorded actor can be checked. */
 const RREVIEWER_ID = 6;
+const CODECHECKER_ID = 7;
 const ADMIN_ID = 1;
 
 /** A user id the caller is not, posted to prove the body cannot set the actor. */
@@ -57,9 +60,9 @@ function restoreStatuses() {
   });
 }
 
-describe('A reviewer assigned to a submission', () => {
+describe('The codechecker of a submission', () => {
   beforeEach(() => {
-    cy.ojsLogin('rreviewer', 'rreviewer');
+    cy.ojsLogin('ccodechecker', 'ccodechecker');
     cy.visit(`/index.php/${JOURNAL}/submissions`);
   });
 
@@ -78,8 +81,8 @@ describe('A reviewer assigned to a submission', () => {
       expect(response.body.statusRecord.status).to.eq(ASSIGNED_CODECHECKER);
       expect(
         response.body.statusRecord.user_id,
-        'the reviewer who asked is recorded, not the id they sent'
-      ).to.eq(RREVIEWER_ID);
+        'the codechecker who asked is recorded, not the id they sent'
+      ).to.eq(CODECHECKER_ID);
     });
   });
 
@@ -178,6 +181,55 @@ describe('A reviewer assigned to a submission', () => {
   it('may still read CODECHECK data — the reviewer tab shows it', () => {
     api('GET', `metadata?submissionId=${ASSIGNED}`).its('status').should('eq', 200);
   });
+
+  it('is given the CODECHECK form on the reviewer page', () => {
+    cy.visit(`/index.php/${JOURNAL}/reviewer/submission/${ASSIGNED}`);
+    cy.window().its('codecheckReviewerData.submissionId').should('eq', ASSIGNED);
+  });
+
+  it('may not list the reviewers or link anyone (#13)', () => {
+    api('GET', `codecheckers/reviewers?submissionId=${ASSIGNED}`).its('status').should('eq', 401);
+  });
+});
+
+/**
+ * Another reviewer of the same opted-in submission, assigned but not linked to
+ * the codechecker list (#13): they give a regular review and nothing more.
+ */
+describe('A reviewer who is not a codechecker', () => {
+  beforeEach(() => {
+    cy.ojsLogin('rreviewer', 'rreviewer');
+    cy.visit(`/index.php/${JOURNAL}/submissions`);
+  });
+
+  it('may not record the check', () => {
+    post(`status/update?submissionId=${ASSIGNED}`, {
+      submissionId: ASSIGNED,
+      status: ASSIGNED_CODECHECKER,
+      userId: RREVIEWER_ID,
+    }).then((response) => {
+      expect(response.status).to.eq(401);
+      expect(response.body.error).to.eq('user.authorization.roleBasedAccessDenied');
+    });
+  });
+
+  it('may not save the record', () => {
+    api('GET', `metadata?submissionId=${ASSIGNED}`).its('body.codecheck').then((stored) => {
+      cy.saveCodecheckRecord(ASSIGNED, { ...stored, summary: 'Not theirs to write' }, stored.codecheckers)
+        .its('status').should('eq', 401);
+    });
+  });
+
+  it('is offered no writing, and no ORCID deposit', () => {
+    api('GET', `metadata?submissionId=${ASSIGNED}`).its('body.permissions.write').should('eq', false);
+    api('GET', `status?submissionId=${ASSIGNED}`).its('body.canUpdate').should('eq', false);
+    api('GET', `orcid-status?submissionId=${ASSIGNED}`).its('body.depositScope').should('eq', 'none');
+  });
+
+  it('is not given the CODECHECK form on the reviewer page', () => {
+    cy.visit(`/index.php/${JOURNAL}/reviewer/submission/${ASSIGNED}`);
+    cy.window().its('codecheckReviewerData').should('be.undefined');
+  });
 });
 
 describe('An editor', () => {
@@ -199,6 +251,58 @@ describe('An editor', () => {
       manageIdentifier: true,
     });
     api('GET', `status?submissionId=${NOT_ASSIGNED}`).its('body.canUpdate').should('eq', true);
+  });
+
+  /**
+   * A codechecker is a reviewer assigned to the submission, so a link to any
+   * other account is refused, and a link to a reviewer is copied from their
+   * account whatever the request said (#13).
+   */
+  describe('linking codecheckers', () => {
+    let storedRecord = null;
+
+    beforeEach(() => {
+      api('GET', `metadata?submissionId=${ASSIGNED}`).its('body.codecheck').then((stored) => {
+        storedRecord ??= stored;
+      });
+    });
+
+    after(() => {
+      cy.ojsLogin('admin', 'admin');
+      cy.visit(`/index.php/${JOURNAL}/submissions`);
+      cy.saveCodecheckRecord(ASSIGNED, storedRecord, storedRecord.codecheckers).its('status').should('eq', 200);
+    });
+
+    it('lists the reviewers assigned to the submission, and how each review is held', () => {
+      api('GET', `codecheckers/reviewers?submissionId=${ASSIGNED}`).its('body.reviewers').then((reviewers) => {
+        const byId = Object.fromEntries(reviewers.map((reviewer) => [reviewer.userId, reviewer]));
+        expect(Object.keys(byId).map(Number)).to.have.members([RREVIEWER_ID, CODECHECKER_ID]);
+        expect(byId[CODECHECKER_ID]).to.include({ name: 'Cora Codechecker', orcid: '0000-0002-1694-233X', doubleAnonymous: false });
+        expect(byId[RREVIEWER_ID].doubleAnonymous).to.eq(true);
+      });
+    });
+
+    it('refuses a link to someone who is not a reviewer of the submission', () => {
+      cy.saveCodecheckRecord(ASSIGNED, storedRecord, [
+        ...storedRecord.codecheckers,
+        { userId: SOMEONE_ELSE, name: 'Not a reviewer', orcid: '', github: '' },
+      ]).then((response) => {
+        expect(response.status).to.eq(400);
+        expect(response.body.error).to.contain('not a reviewer assigned to this submission');
+      });
+    });
+
+    it('copies a linked reviewer from their account', () => {
+      cy.saveCodecheckRecord(ASSIGNED, storedRecord, [
+        ...storedRecord.codecheckers,
+        { userId: RREVIEWER_ID, name: 'Someone else entirely', orcid: '0000-0002-1825-0097', github: 'octocat' },
+      ]).its('status').should('eq', 200);
+
+      api('GET', `metadata?submissionId=${ASSIGNED}`).its('body.codecheck.codecheckers').then((codecheckers) => {
+        expect(codecheckers.find((entry) => entry.userId === RREVIEWER_ID))
+          .to.deep.equal({ userId: RREVIEWER_ID, name: 'Rosa Reviewer', orcid: '', github: '' });
+      });
+    });
   });
 
   it('may write a submission they were never assigned to', () => {
@@ -378,8 +482,17 @@ describe('The ORCID authorisation routes', () => {
       });
   });
 
-  it('let a reviewer start on the submission they are assigned to', () => {
+  it('refuse a reviewer of the submission who is not its codechecker (#13)', () => {
     cy.ojsLogin('rreviewer', 'rreviewer');
+
+    cy.request({ url: orcid('startAuth', `?submissionId=${ASSIGNED}`) })
+      .then((response) => {
+        expect(response.body).to.contain(REFUSED);
+      });
+  });
+
+  it('let a codechecker start on the submission they are assigned to', () => {
+    cy.ojsLogin('ccodechecker', 'ccodechecker');
 
     cy.request({ url: orcid('startAuth', `?submissionId=${ASSIGNED}`) }).then((response) => {
       expect(response.body, 'past the authorisation check').not.to.contain(REFUSED);
@@ -415,9 +528,6 @@ describe('The ORCID authorisation routes', () => {
  * dataset happens to carry it, which is why this went unnoticed.
  */
 describe('The ORCID redirect URI', () => {
-  // The record the last test changes, to be put back whether or not it passed.
-  let storedRecord = null;
-
   before(() => {
     cy.ojsLogin('admin', 'admin');
     cy.openCodecheckSettings();
@@ -428,13 +538,6 @@ describe('The ORCID redirect URI', () => {
   });
 
   after(() => {
-    if (storedRecord) {
-      cy.ojsLogin('admin', 'admin');
-      cy.visit(`/index.php/${JOURNAL}/dashboard/editorial`);
-      cy.saveCodecheckRecord(ASSIGNED, storedRecord, storedRecord.codecheckers)
-        .its('status').should('eq', 200);
-    }
-
     // The secret field is write-only — an empty value means "keep", so the
     // dummy secret stays until the dataset is reloaded. Switching ORCID off is
     // what actually restores the journal's behaviour for the other specs.
@@ -446,7 +549,7 @@ describe('The ORCID redirect URI', () => {
   });
 
   it('sends the codechecker back to the journal, not to the site', () => {
-    cy.ojsLogin('rreviewer', 'rreviewer');
+    cy.ojsLogin('ccodechecker', 'ccodechecker');
 
     cy.request({
       url: orcid('startAuth', `?submissionId=${ASSIGNED}`),
@@ -460,32 +563,6 @@ describe('The ORCID redirect URI', () => {
 
       expect(redirectUri).to.contain(`/index.php/${JOURNAL}/codecheck/orcid/callback`);
       expect(redirectUri, 'not the site-level path').not.to.contain('/index.php/index/');
-    });
-  });
-
-  /**
-   * An ORCID account is connected only for a codechecker whose iD is on record
-   * (GHSA-4p3r-qgp4-g74r), so a submission whose codecheckers are recorded by
-   * name alone is refused before anyone is sent to ORCID. Which account the
-   * callback accepts is pinned in `OrcidDepositServiceUnitTest` and
-   * `CodecheckCodecheckersUnitTest`; the callback itself needs ORCID to answer.
-   */
-  it('sends nobody to ORCID while no codechecker has an iD on record', () => {
-    cy.ojsLogin('admin', 'admin');
-    cy.visit(`/index.php/${JOURNAL}/dashboard/editorial`);
-
-    api('GET', `metadata?submissionId=${ASSIGNED}`).its('body.codecheck').then((stored) => {
-      storedRecord = stored;
-      cy.saveCodecheckRecord(ASSIGNED, stored, stored.codecheckers.map(({ name }) => ({ name, orcid: '' })))
-        .its('status').should('eq', 200);
-
-      cy.request({
-        url: orcid('startAuth', `?submissionId=${ASSIGNED}`),
-        followRedirect: false,
-      }).then((response) => {
-        expect(response.status, 'not sent on to ORCID').to.eq(200);
-        expect(response.body).to.contain('No codechecker of this submission has an ORCID iD on record');
-      });
     });
   });
 });

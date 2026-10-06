@@ -8,7 +8,7 @@
  *
  * @brief Issue #173 — who may write CODECHECK data for one submission.
  *
- * The assigned-reviewer path reads `review_assignments` and is covered by the
+ * The codechecker path reads `review_assignments` and is covered by the
  * e2e suite. What is pinned here is the part that decides without the database:
  * which roles count as editorial, and that nothing is granted to nobody.
  *
@@ -84,7 +84,7 @@ class CodecheckSubmissionAccessUnitTest extends PKPTestCase
     {
         $this->assertFalse(CodecheckSubmissionAccess::isEditor(null, 1));
         $this->assertFalse(CodecheckSubmissionAccess::canWriteMetadata(null, 42, 1));
-        $this->assertFalse(CodecheckSubmissionAccess::isAssignedReviewer(null, 42));
+        $this->assertFalse(CodecheckSubmissionAccess::isLinkedCodechecker(null, 42));
     }
 
     /** A submission id that cannot exist is refused before any lookup. */
@@ -92,8 +92,8 @@ class CodecheckSubmissionAccessUnitTest extends PKPTestCase
     {
         $reviewer = $this->userWithRoles([Role::ROLE_ID_REVIEWER]);
 
-        $this->assertFalse(CodecheckSubmissionAccess::isAssignedReviewer($reviewer, 0));
-        $this->assertFalse(CodecheckSubmissionAccess::isAssignedReviewer($reviewer, -1));
+        $this->assertFalse(CodecheckSubmissionAccess::isLinkedCodechecker($reviewer, 0));
+        $this->assertFalse(CodecheckSubmissionAccess::isLinkedCodechecker($reviewer, -1));
     }
 
     #[DataProvider('authorVisibilityProvider')]
@@ -169,7 +169,7 @@ class CodecheckSubmissionAccessUnitTest extends PKPTestCase
         $this->assertFalse(CodecheckSubmissionAccess::mayManageIdentifier(null, 1));
     }
 
-    /** An editor deposits for everyone, an assigned reviewer for their own record, anyone else not at all (#127). */
+    /** An editor deposits for everyone, a codechecker for their own record, anyone else not at all (#127). */
     public function testTheOrcidDepositScopeFollowsTheEditorAndTheAssignment()
     {
         $this->assertSame('all', CodecheckSubmissionAccess::orcidDepositScope(true, false));

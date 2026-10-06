@@ -94,7 +94,8 @@ make test-live GITHUB_TOKEN=… / test-orcid-live    # live tests; read dev/live
   directly (`readFor()`, `writeFor()`), never through a user object alone.
 
 **Registered outside the `getEnabled()` block** (and must stay there): register
-deposit, `Publication::publish::before`, the DOI filter hooks and `Context::add`.
+deposit, `Publication::publish::before`, the DOI filter hooks, `Context::add`
+and `UserAction::mergeUsers` (moves codechecker links, #13).
 They run on the command line or in site-scoped requests where `getEnabled()`
 reads the site row; each resolves the journal from the article/document and
 checks enablement for that journal itself.
@@ -121,7 +122,7 @@ A TypeError inside a hook is swallowed by PKP — check the server log.
   answer to whether a submission takes part; an unset flag is "no choice recorded"
 
 Shared JS rules mirrored from PHP: `orcid.js` ↔ `CodecheckCodecheckers`,
-`githubUsername.js`, `isWebUrl.js` ↔ `Constants::isWebUrl()`,
+`isWebUrl.js` ↔ `Constants::isWebUrl()`,
 `configSpec.js` (fields each config version requires — warned, never enforced),
 `authorEntries.js`.
 
@@ -166,8 +167,8 @@ Roles per route: `READ_ROLES` (admits authors), `WRITE_ROLES`, `EDITOR_ROLES`
 and add the method to `SUBMISSION_SCOPED` if it acts on a submission —
 otherwise it answers for any submission in the journal.
 
-Endpoints: `GET labels|metadata|yaml|register|status|status/history|orcid-status|orcid-test|codecheckers/lookup`,
-`POST identifier|issue|metadata|references|repository|repository/validate|yaml/validate|status/update|orcid-deposit`.
+Endpoints: `GET labels|metadata|yaml|register|status|status/history|orcid-status|orcid-test|codecheckers/reviewers`,
+`POST identifier|issue|metadata|references|repository|repository/validate|yaml/validate|status/update|orcid-deposit|codecheckers/github`.
 
 **There is deliberately no file upload/download endpoint**
 (`CodecheckApiControllerRoutesUnitTest` asserts it). Use OJS file services and
@@ -182,9 +183,15 @@ assignment):
   contact and sets `authorsWithheld`; the YAML has no `paper.authors`.
   `$revealAuthors` has no default on `getMetadata()`/`generateYaml()`.
   Repositories and the availability statement are still sent.
+- `isLinkedCodechecker()` (#13) — a reviewer whose assignment in force
+  (latest round, not cancelled/declined: `CodecheckerReviewers::currentOf()`)
+  is linked by `userId` to an entry of the codechecker list. The reviewer
+  branch of `canWriteMetadata()`, `orcidDepositScopeFor()` and the reviewer
+  page's CODECHECK form; any other reviewer gets none of them.
 - `mayEditCodecheckers()` (GHSA-4p3r-qgp4-g74r) — manager/site admin, or Section
   editor/Assistant with a stage assignment. Anyone else's save keeps the stored
-  codechecker list, whatever was posted.
+  codechecker list, whatever was posted. Also gates `codecheckers/reviewers`
+  and `codecheckers/github`.
 - `mayManageIdentifier()` (#65) — journal manager or site admin. `identifier`,
   `issue`, `labels` are `ADMIN_ROLES`; `GET metadata` answers
   `permissions.manageIdentifier`; the form then shows the identifier read-only
@@ -221,7 +228,8 @@ Tables (`classes/migration/install/CodecheckSchemaMigration.php`):
   publication_type, manifest, repository, source, codecheckers, certificate,
   issue, check_time, summary, report, additional_content`. `repository` is
   `TEXT` JSON: `{"repositories": [{url, hidden, providedByAuthor, containsCodecheckYaml}, …]}`.
-  `codecheckers` entries are `{name, orcid, github}`.
+  `codecheckers` entries are `{userId, name, orcid, github}` (`userId` null for
+  an entry not linked to an account; never in the register's JSON block).
 - `codecheck_status` — append-only status history (FK, cascade delete)
 - `codecheck_issue_labels` — venue labels, replaced by the scheduled refresh
 - `codecheck_orcid_tokens` — ORCID tokens per codechecker
@@ -313,15 +321,36 @@ certificate and a public repository flagged `containsCodecheckYaml` whose
 task (CLI) too (#188). Not reached when OJS's web task runner publishes at the
 end of a request for another journal (pkp-lib#9345) — cron works.
 
-### Codecheckers (#186)
+### Codecheckers (#186, #13)
 
-`CodecheckCodecheckers` validates entries at the save boundary (ORCID check
-digit computed locally, not `ValidatorORCID`, which needs a booted app; stored
-bare). Imported `codecheck.yml` spells it `ORCID` — `importedCodecheckers()`
-maps it. `buildYaml()` normalises author (URI) and codechecker (bare) iDs to
-one shape. A username is suggested from the community list
-(`GET codecheckers/lookup`); the dialog offers it with "Use it", never fills
-it in.
+Every codechecker is an OJS user assigned to the submission as a reviewer
+("Add Reviewer", with the "Invitation to codecheck" template), and each entry
+is linked to that account by `userId`. A submission without a review round
+gets no codechecker.
+
+- `CodecheckerReviewers` — the reviewers assigned now (`currentAssignments()`),
+  the entry for an account (`entryFor()`: name, bare ORCID iD, GitHub username
+  from `user_settings`), `isLinkedCodechecker()`, the merge hook.
+- `saveMetadata()` goes through `CodecheckerReviewers::resolveEntries()`: a
+  newly introduced `userId` must be a reviewer assigned now (else 400) and is
+  copied from the account; a stored link keeps its stored entry; an entry
+  without `userId` is kept only as stored (a new one is refused) and gives no
+  access. `GET metadata` strips `userId` for anyone without `editCodecheckers`.
+- `POST codecheckers/github` only fills an account that has no username.
+- `CodecheckCodecheckers::withStoredEntries()` is the stored shape (with
+  `userId`); `normalizedEntry()`/`withNormalizedEntries()` stay the public
+  three-key shape the register uses. ORCID check digit computed locally, not
+  `ValidatorORCID` (needs a booted app); stored bare. `buildYaml()` normalises
+  author (URI) and codechecker (bare) iDs to one shape.
+- The dialog offers assigned reviewers not on the list (`GET
+  codecheckers/reviewers`, with `doubleAnonymous` and the community list's
+  `githubSuggestion` for an account without a username); "Use it" saves the
+  username to the account (`POST codecheckers/github`), never unasked.
+- A `codecheck.yml` import (`importedCodecheckers()`, file spells `ORCID`)
+  keeps only codecheckers matching an assigned reviewer by ORCID iD and names
+  the rest.
+- The CODECHECK tab warns beside a codechecker on a double-anonymous review
+  (#28) and beside an unlinked entry.
 
 ### ORCID deposit (`classes/Orcid/`)
 
@@ -489,7 +518,8 @@ wizard DOM helpers.
   history relatively.
 - **The suite must make no external call.** Anything new on
   `Publication::publish` must be switched off in `publication-validation.cy.js`
-  around the real publish. Intercept `codecheckers/lookup`.
+  around the real publish. `codecheckers/reviewers` reads the community list,
+  which sandbox mode (throwaways, CI) does not fetch.
 - Use the commands in `cypress/support/e2e.js`: `cy.openCodecheckSettings()`,
   `cy.saveCodecheckSettings()`, `cy.codecheckSettingsForm()`,
   `cy.setCodecheckFields({...})`, `cy.setCodecheckSetting()`,
@@ -536,8 +566,10 @@ the testing register (issues rw, contents r, pull requests rw, workflows rw).
 ### Test data
 
 `testData/stable-3_5_0-codecheck/` — dump + files for journal `codecheck`; users
-`admin`, `jmanager`, `seglen`, `dnuest`, `fostermann`, `rreviewer` (password =
-username; `rreviewer` reviews submission 9 only). The dump carries the full
+`admin`, `jmanager`, `seglen`, `dnuest`, `fostermann`, `rreviewer`,
+`ccodechecker` (password = username). On submission 9 only: `rreviewer` is a
+double-anonymous reviewer, `ccodechecker` (Codechecker role) a reviewer linked
+to its codechecker list — its codechecker. The dump carries the full
 CODECHECK schema and `enabled = 1`, so migrations never run against it.
 
 **Any change to `codecheck_metadata`'s shape or its JSON blobs must be applied to

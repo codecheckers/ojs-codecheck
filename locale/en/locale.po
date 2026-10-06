@@ -820,26 +820,53 @@ msgstr "URL of the forked/archived repository used for the CODECHECK."
 msgid "plugins.generic.codecheck.codecheckers.emptyState"
 msgstr "No codecheckers added yet"
 
-msgid "plugins.generic.codecheck.codecheckers.enterName"
-msgstr "Enter codechecker name:"
+msgid "plugins.generic.codecheck.codecheckers.noReviewers"
+msgstr "No reviewer is assigned to this submission yet. A codechecker is a reviewer: in a review round, use \"Add Reviewer\" and choose the \"Invitation to codecheck\" message, then add them here. A submission accepted without a review round cannot get a codechecker."
 
-msgid "plugins.generic.codecheck.codecheckers.enterOrcid"
-msgstr "Enter ORCID (optional):"
+msgid "plugins.generic.codecheck.codecheckers.chooseReviewer"
+msgstr "Reviewer assigned to this submission"
 
-msgid "plugins.generic.codecheck.codecheckers.enterGithubUsername"
-msgstr "GitHub username (optional)"
+msgid "plugins.generic.codecheck.codecheckers.chooseReviewer.none"
+msgstr "Choose a reviewer"
 
-msgid "plugins.generic.codecheck.codecheckers.githubHint"
-msgstr "The register issue is assigned to this account. Without one, the issue names the codechecker and refers readers to the journal."
+msgid "plugins.generic.codecheck.codecheckers.orcid"
+msgstr "ORCID iD"
+
+msgid "plugins.generic.codecheck.codecheckers.orcid.none"
+msgstr "None on the account"
+
+msgid "plugins.generic.codecheck.codecheckers.github.none"
+msgstr "None on the account; the register issue is not assigned to anyone"
+
+msgid "plugins.generic.codecheck.codecheckers.doubleAnonymous"
+msgstr "This review is double-anonymous: the codechecker gets no author names and no contact."
+
+msgid "plugins.generic.codecheck.codecheckers.validation.reviewerRequired"
+msgstr "Choose a reviewer."
+
+msgid "plugins.generic.codecheck.codecheckers.notLinked"
+msgstr "Not linked to a reviewer's account, so they cannot use the CODECHECK form."
+
+msgid "plugins.generic.codecheck.codecheckers.notImported"
+msgstr "Not imported, because no reviewer assigned to this submission has their ORCID iD: {$names}"
+
+msgid "plugins.generic.codecheck.codecheckers.notAReviewer"
+msgstr "{$name} is not a reviewer assigned to this submission."
+
+msgid "plugins.generic.codecheck.codecheckers.notLinkedRefused"
+msgstr "{$name} is not a reviewer of this submission. Add codecheckers with \"Add codechecker\", from the reviewers assigned to the submission."
+
+msgid "plugins.generic.codecheck.codecheckers.githubAlreadySet"
+msgstr "This account already has a GitHub username. It can be changed on the user's profile or in the user form."
+
+msgid "plugins.generic.codecheck.codecheckers.importUnchecked"
+msgstr "The codecheckers were not imported, because the reviewers assigned to this submission could not be read. Try again."
 
 msgid "plugins.generic.codecheck.codecheckers.githubSuggested.community"
 msgstr "The CODECHECK community list gives the GitHub username {$username} for this ORCID iD."
 
 msgid "plugins.generic.codecheck.codecheckers.githubSuggestion.use"
 msgstr "Use it"
-
-msgid "plugins.generic.codecheck.codecheckers.validation.githubInvalid"
-msgstr "This is not a GitHub username. Enter the username alone, for example octocat, or leave the field empty."
 
 msgid "plugins.generic.codecheck.codecheckers.remove.modal.title"
 msgstr "Remove codechecker"
@@ -924,12 +951,6 @@ msgstr "This is not an ORCID iD: {$orcid}. Enter it as 0000-0000-0000-0000, or l
 
 msgid "plugins.generic.codecheck.codecheckers.invalidGithubUsername"
 msgstr "This is not a GitHub username: {$username}. Enter the username alone, without spaces, or leave the field empty."
-
-msgid "plugins.generic.codecheck.codecheckers.validation.nameRequired"
-msgstr "Enter the codechecker's name."
-
-msgid "plugins.generic.codecheck.codecheckers.validation.orcidInvalid"
-msgstr "This is not an ORCID iD. Enter it as 0000-0000-0000-0000, or leave the field empty."
 
 msgid "plugins.generic.codecheck.repositories.infoTitle"
 msgstr "Repositories Info"

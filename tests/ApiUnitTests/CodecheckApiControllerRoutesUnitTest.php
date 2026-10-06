@@ -124,9 +124,10 @@ class CodecheckApiControllerRoutesUnitTest extends PKPTestCase
         $this->assertSame('write', $tiers['POST repository'] ?? null);
         $this->assertSame('write', $tiers['POST orcid-deposit'] ?? null);
 
-        // The community list's lookup is for an editor adding a codechecker
-        // (#186).
-        $this->assertSame('editor', $tiers['GET codecheckers/lookup'] ?? null);
+        // Linking codecheckers is an editor's (#13); the handlers further
+        // require standing on the submission.
+        $this->assertSame('editor', $tiers['GET codecheckers/reviewers'] ?? null);
+        $this->assertSame('editor', $tiers['POST codecheckers/github'] ?? null);
 
         // Reads.
         $this->assertSame('read', $tiers['GET metadata'] ?? null);

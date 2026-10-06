@@ -384,7 +384,7 @@ INSERT INTO `codecheck_metadata` (`submission_id`, `spec_version`, `publication_
 (5, '2.0', 'doi', '[{\"file\":\"NA\",\"size\":0,\"comment\":\"The AGILE 2020 Reproducibility Review did not include manifest documentation, see https:\\/\\/github.com\\/codecheckers\\/register\\/issues\\/25\",\"checked\":false}]', JSON_OBJECT('repositories', JSON_ARRAY(JSON_OBJECT('url', 'https://github.com/reproducible-agile/AGILECA', 'hidden', FALSE, 'containsCodecheckYaml', FALSE))), NULL, '[{\"name\":\"Daniel N\\u00fcst\",\"orcid\":\"0000-0002-0024-5046\"}]', '2020-018', '2020-07-13 10:32:00', 'The check was straightforward as all material was provided and documented well, but computations took about 3 hours to run.', 'https://doi.org/10.17605/OSF.IO/ZTC7M', 'reference: https://doi.org/10.5194/agile-giss-1-6-2020', '2026-03-26 06:57:00', '2026-03-26 06:57:00'),
 (7, '2.0', 'doi', '[{\"file\":\"NA\",\"size\":0,\"comment\":\"he AGILE 2022 Reproducibility Review did not include manifest documentation, see https:\\/\\/github.com\\/codecheckers\\/register\\/issues\\/38\",\"checked\":false}]', JSON_OBJECT('repositories', JSON_ARRAY(JSON_OBJECT('url', 'https://doi.org/10.6084/m9.figshare.19794289.v1', 'hidden', FALSE, 'providedByAuthor', TRUE, 'containsCodecheckYaml', FALSE), JSON_OBJECT('url', 'https://github.com/codecheckers/private-supplement-2022-009', 'hidden', TRUE, 'providedByAuthor', TRUE, 'containsCodecheckYaml', FALSE))), NULL, '[{\"name\":\"Frank O. Ostermann\",\"orcid\":\"0000-0002-9317-8291\"}]', '2022-009', '2022-07-09 11:00:00', 'The paper presents a type of study that is highly valuable as a scientific contribution yet almost impossible to reproduce: a survey and user study involving participants from a convenience sample of a university course, implemented in several phases and using a particular geographic locale. The  study aims to learn more about user preferences on route choice, i.e., whether users prefer the  shortest route or a slightly longer route including landmarks. However, the difficult pandemic conditions under which the study had to be carried out had at least one positive aspect on replicability: The entire communication and survey had to be carried out online, facilitating a similar setup elsewhere. This review there fore attempts not a full reproduction of the study, but evaluates two distinct things:  First, whether there is sufficient information available to replicate the study elsewhere and compare results. Second, whether the statistical analysis of the survey and experimental data is indeed reproducible. The evaluation for both is positive.', 'https://doi.org/10.17605/osf.io/94vnx', 'reference: https://doi.org/10.5194/agile-giss-3-12-2022', '2026-03-26 07:01:08', '2026-03-26 07:01:08'),
 (8, '2.0', 'doi', '[{\"file\":\"figure-2b.png\",\"size\":188596,\"comment\":\"Figure 2(b) of the article\",\"checked\":false},{\"file\":\"figure-3b.png\",\"size\":142875,\"comment\":\"Figure 3(b) of the article\",\"checked\":false},{\"file\":\"figure-4.png\",\"size\":62928,\"comment\":\"Figure 4 of the article\",\"checked\":false},{\"file\":\"figure-5.pdf\",\"size\":157893,\"comment\":\"Figure 5 of the article\",\"checked\":false},{\"file\":\"figure-6.pdf\",\"size\":4768,\"comment\":\"Figure 6 of the article\",\"checked\":false}]', JSON_OBJECT('repositories', JSON_ARRAY(JSON_OBJECT('url', 'https://gitlab.com/cdchck/community-codechecks/2022-svaRetro-svaNUMT.git', 'hidden', FALSE, 'containsCodecheckYaml', FALSE))), NULL, '[{\"name\":\"Raniere Silva\",\"orcid\":\"0000-0002-8381-3749\"}]', '2022-018', '2022-09-26 23:00:00', 'Only visualisation steps performed. All created figures match those in the article.', 'https://doi.org/10.5281/zenodo.7084333', 'reference: https://doi.org/10.46471/gigabyte.70', '2026-03-26 07:17:27', '2026-03-26 07:17:27'),
-(9, '2.0', 'doi', '[{\"file\":\"NA\",\"size\":0,\"comment\":\"The AGILE 2022 Reproducibility Review did not include manifest documentation, see https:\\/\\/github.com\\/codecheckers\\/register\\/issues\\/38\",\"checked\":false}]', JSON_OBJECT('repositories', JSON_ARRAY(JSON_OBJECT('url', 'https://github.com/zilongliu-geo/Geoparsing-Solved-Or-Biased', 'hidden', FALSE, 'containsCodecheckYaml', FALSE))), NULL, '[{\"name\":\"Daniel N\\u00fcst\",\"orcid\":\"0000-0002-0024-5046\"},{\"name\":\"Eleni Tomai\",\"orcid\":\"0000-0003-1162-7389\"}]', '2022-007', '2022-07-09 11:00:00', 'The article presents an evaluation of geoparsing performance using a number of different datasets and methods from various sources.\nThough preprocessing steps and a core analysis step based on proprietary software could not be evaluated, one of two toponym resolution models could be executed successfully.\nThe provided notebooks for exploratory analysis, calculating statistical values, and geographic bias evaluation could be run and the outputs match the data and figures presented in the paper.\nTherefore, this reproducibility report can confirm a partially successful reproduction of a complex pipeline, for which authors provide reasonable but improvable documentation and share all details (code, data) of their computational workflow.', 'https://doi.org/10.17605/OSF.IO/3DSMV', 'reference: https://doi.org/10.5194/agile-giss-3-9-2022', '2026-03-26 07:10:10', '2026-03-26 07:10:10'),
+(9, '2.0', 'doi', '[{\"file\":\"NA\",\"size\":0,\"comment\":\"The AGILE 2022 Reproducibility Review did not include manifest documentation, see https:\\/\\/github.com\\/codecheckers\\/register\\/issues\\/38\",\"checked\":false}]', JSON_OBJECT('repositories', JSON_ARRAY(JSON_OBJECT('url', 'https://github.com/zilongliu-geo/Geoparsing-Solved-Or-Biased', 'hidden', FALSE, 'containsCodecheckYaml', FALSE))), NULL, '[{\"name\":\"Daniel N\\u00fcst\",\"orcid\":\"0000-0002-0024-5046\"},{\"name\":\"Eleni Tomai\",\"orcid\":\"0000-0003-1162-7389\"},{\"userId\":7,\"name\":\"Cora Codechecker\",\"orcid\":\"0000-0002-1694-233X\",\"github\":\"\"}]', '2022-007', '2022-07-09 11:00:00', 'The article presents an evaluation of geoparsing performance using a number of different datasets and methods from various sources.\nThough preprocessing steps and a core analysis step based on proprietary software could not be evaluated, one of two toponym resolution models could be executed successfully.\nThe provided notebooks for exploratory analysis, calculating statistical values, and geographic bias evaluation could be run and the outputs match the data and figures presented in the paper.\nTherefore, this reproducibility report can confirm a partially successful reproduction of a complex pipeline, for which authors provide reasonable but improvable documentation and share all details (code, data) of their computational workflow.', 'https://doi.org/10.17605/OSF.IO/3DSMV', 'reference: https://doi.org/10.5194/agile-giss-3-9-2022', '2026-03-26 07:10:10', '2026-03-26 07:10:10'),
 (10, '2.0', 'doi', '[{\"file\":\"NA\",\"size\":0,\"comment\":\"The AGILE 2023 Reproducibility Review did not include manifest documentation, see https:\\/\\/github.com\\/codecheckers\\/register\\/issues\\/49\",\"checked\":false}]', JSON_OBJECT('repositories', JSON_ARRAY(JSON_OBJECT('url', 'https://doi.org/10.6084/m9.figshare.22109987', 'hidden', FALSE, 'containsCodecheckYaml', FALSE))), NULL, '[{\"name\":\"Philipp A. Friese\",\"orcid\":\"0000-0002-3124-5364\"}]', '', NULL, 'Check in progress — the codechecker has been assigned and is working through the manifest.', '', 'reference: https://doi.org/10.5194/agile-giss-4-9-2023', '2026-03-26 07:06:00', '2026-03-26 07:17:50');
 
 -- --------------------------------------------------------
@@ -2466,13 +2466,15 @@ INSERT INTO `review_rounds` (`review_round_id`, `submission_id`, `stage_id`, `ro
 --
 -- Dumping data for table `review_assignments`
 --
--- rreviewer is assigned to submission 9 and to no other. That assignment is what
--- makes a reviewer the codechecker of a submission: it is the difference between
--- a reviewer who may record this check and one who may not (issue #173).
+-- rreviewer (double-anonymous) and ccodechecker, of the Codechecker role, are assigned
+-- to submission 9 and to no other. ccodechecker is also linked to an entry of the
+-- record's codechecker list, which is what makes a reviewer the codechecker of a
+-- submission (#13); rreviewer is a reviewer and nothing more (#173).
 --
 
 INSERT INTO `review_assignments` (`review_id`, `submission_id`, `reviewer_id`, `competing_interests`, `recommendation`, `date_assigned`, `date_notified`, `date_confirmed`, `date_completed`, `date_considered`, `date_acknowledged`, `date_due`, `date_response_due`, `last_modified`, `reminder_was_automatic`, `declined`, `cancelled`, `date_cancelled`, `date_rated`, `date_reminded`, `quality`, `review_round_id`, `stage_id`, `review_method`, `round`, `step`, `review_form_id`, `considered`, `request_resent`) VALUES
-(1, 9, 6, NULL, NULL, '2026-02-26 02:12:00', '2026-02-26 02:12:00', '2026-02-26 02:13:00', NULL, NULL, NULL, '2026-03-26 02:12:00', '2026-03-05 02:12:00', '2026-02-26 02:13:00', 0, 0, 0, NULL, NULL, NULL, NULL, 2, 3, 2, 1, 1, NULL, NULL, 0);
+(1, 9, 6, NULL, NULL, '2026-02-26 02:12:00', '2026-02-26 02:12:00', '2026-02-26 02:13:00', NULL, NULL, NULL, '2026-03-26 02:12:00', '2026-03-05 02:12:00', '2026-02-26 02:13:00', 0, 0, 0, NULL, NULL, NULL, NULL, 2, 3, 2, 1, 1, NULL, NULL, 0),
+(2, 9, 7, NULL, NULL, '2026-02-26 02:14:00', '2026-02-26 02:14:00', '2026-02-26 02:15:00', NULL, NULL, NULL, '2026-03-26 02:14:00', '2026-03-05 02:14:00', '2026-02-26 02:15:00', 0, 0, 0, NULL, NULL, NULL, NULL, 2, 3, 1, 1, 1, NULL, NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -5047,7 +5049,8 @@ INSERT INTO `users` (`user_id`, `username`, `password`, `email`, `url`, `phone`,
 (3, 'seglen', '$2y$12$hjB7Xmv2mfvJzUBtZfrFDuzm7ZG0oam5r6z7ET0RXye.hSp3djtSm', 'seglen@mailinator.com', '', '', '', NULL, '', '[]', NULL, NULL, '2026-02-12 09:03:59', NULL, '2026-02-26 01:52:28', 0, NULL, NULL, 0, NULL, 1, 'yuSUcx4bpxEnXEUQNxOrH91liKrmG7CXgYC8q7X7SO3hEstzrHR7ybAxUZ5Z'),
 (4, 'fostermann', '$2y$12$oWY81bUPVnrIXtG0U61nz.fO8p/nR6mCaqz8hbL7URiot15jIatA6', 'fostermann@mailinator.com', '', '', '', NULL, '', '[]', NULL, NULL, '2026-02-12 09:05:29', NULL, '2026-02-26 02:11:54', 0, NULL, NULL, 0, NULL, 1, '8ZNJDW6lnOSLE25NPyhXOweZdmkHVkksSt9Uea5miVbvjEB3chgzvoqaaRIL'),
 (5, 'jmanager', '$2y$12$MOedT/6Crk61mLTauMg7e.oaJYAlChXTNUse.ul7ahaaQ1RIhKWFW', 'jmanager@mailinator.com', '', '', '', NULL, '', '[]', NULL, NULL, '2026-02-12 09:07:48', NULL, '2026-02-26 02:19:01', 0, NULL, NULL, 0, NULL, 1, 'dmAs9l278hBRyLz8VXsbJYRhE7FinmRI5pCUbikUlT89RoFApi2ms7p4RJ4I'),
-(6, 'rreviewer', '$2y$12$tWDpcrUr/EKX/UkR.xDJgu0.qZQzcYxeW5dF3lv4p.mt2EeZrBfLu', 'rreviewer@mailinator.com', '', '', '', NULL, '', '[]', NULL, NULL, '2026-02-12 09:09:36', NULL, NULL, 0, NULL, NULL, 0, NULL, 1, NULL);
+(6, 'rreviewer', '$2y$12$tWDpcrUr/EKX/UkR.xDJgu0.qZQzcYxeW5dF3lv4p.mt2EeZrBfLu', 'rreviewer@mailinator.com', '', '', '', NULL, '', '[]', NULL, NULL, '2026-02-12 09:09:36', NULL, NULL, 0, NULL, NULL, 0, NULL, 1, NULL),
+(7, 'ccodechecker', '$2y$12$KowCAxi3hhm1PrFLCKcaLOv5cu.Uv6ewv78B1h6OkFAc2Ll8zdIP6', 'ccodechecker@mailinator.com', '', '', '', NULL, '', '[]', NULL, NULL, '2026-02-12 09:12:00', NULL, NULL, 0, NULL, NULL, 0, NULL, 1, NULL);
 
 -- --------------------------------------------------------
 
@@ -5337,7 +5340,10 @@ INSERT INTO `user_settings` (`user_setting_id`, `user_id`, `locale`, `setting_na
 (29, 6, 'en', 'familyName', 'Reviewer'),
 (30, 6, 'en', 'givenName', 'Rosa'),
 (31, 6, 'en', 'preferredPublicName', ''),
-(32, 6, 'en', 'signature', '');
+(32, 6, 'en', 'signature', ''),
+(33, 7, 'en', 'givenName', 'Cora'),
+(34, 7, 'en', 'familyName', 'Codechecker'),
+(35, 7, '', 'orcid', 'https://orcid.org/0000-0002-1694-233X');
 
 -- --------------------------------------------------------
 
@@ -5366,7 +5372,8 @@ INSERT INTO `user_user_groups` (`user_user_group_id`, `user_group_id`, `user_id`
 (5, 14, 4, '2026-02-12 09:05:55', NULL, 0),
 (6, 2, 5, '2026-02-12 09:08:42', NULL, 0),
 (7, 3, 5, '2026-02-12 09:08:42', NULL, 0),
-(8, 16, 6, '2026-02-12 09:10:36', NULL, 1);
+(8, 16, 6, '2026-02-12 09:10:36', NULL, 1),
+(9, 20, 7, '2026-02-12 09:12:30', NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -7329,7 +7336,7 @@ ALTER TABLE `usage_stats_unique_item_requests_temporary_records`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `user_id` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `user_id` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `user_groups`
@@ -7359,13 +7366,13 @@ ALTER TABLE `user_interests`
 -- AUTO_INCREMENT for table `user_settings`
 --
 ALTER TABLE `user_settings`
-  MODIFY `user_setting_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
+  MODIFY `user_setting_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
 
 --
 -- AUTO_INCREMENT for table `user_user_groups`
 --
 ALTER TABLE `user_user_groups`
-  MODIFY `user_user_group_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `user_user_group_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `versions`

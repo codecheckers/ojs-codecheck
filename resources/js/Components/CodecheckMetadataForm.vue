@@ -288,6 +288,12 @@
                 <div class="item-name">{{ checker.name }}</div>
                 <div class="item-orcid" v-if="checker.orcid">ORCID: {{ checker.orcid }}</div>
                 <div class="item-orcid" v-if="checker.github">GitHub: @{{ checker.github }}</div>
+                <div v-if="codecheckersEditable && !checker.userId" class="codecheck-codechecker-note">
+                  {{ t('plugins.generic.codecheck.codecheckers.notLinked') }}
+                </div>
+                <div v-else-if="codecheckersEditable && reviewerFor(checker)?.doubleAnonymous" class="codecheck-codechecker-note codecheck-double-anonymous">
+                  {{ t('plugins.generic.codecheck.codecheckers.doubleAnonymous') }}
+                </div>
               </div>
               <button 
                 v-if="codecheckersEditable"
@@ -300,6 +306,12 @@
           <div v-else class="empty-state">
             {{ t('plugins.generic.codecheck.codecheckers.emptyState') }}
           </div>
+          <p v-if="codecheckersNotImported.length" class="codecheck-repository-warning" role="alert">
+            {{ t('plugins.generic.codecheck.codecheckers.notImported', { names: codecheckersNotImported.join(', ') }) }}
+          </p>
+          <p v-if="codecheckersImportUnchecked" class="codecheck-repository-warning" role="alert">
+            {{ t('plugins.generic.codecheck.codecheckers.importUnchecked') }}
+          </p>
         </div>
 
         <div class="field-group">
@@ -496,6 +508,7 @@ import { isValidOrcid, normalizeOrcid } from '../orcid.js';
 import { missingMandatoryFields } from '../configSpec.js';
 import { notOptedInReason } from '../optIn.js';
 import { askForConfirmation, askForInput, showInformation } from '../dialogs.js';
+import { fetchAssignedReviewers } from '../codecheckerReviewers.js';
 import CodecheckCodecheckerDialog from './CodecheckCodecheckerDialog.vue';
 
 const { useLocalize } = pkp.modules.useLocalize;
@@ -596,6 +609,14 @@ export default {
         message: null,
         isWarning: true,
       },
+      /** The reviewers assigned to the submission, whom codecheckers are linked to (#13). */
+      assignedReviewers: [],
+      /** The codecheckers of an imported codecheck.yml no assigned reviewer matched (#13). */
+      codecheckersNotImported: [],
+      /** Why the assigned reviewers could not be read, null when they were. */
+      reviewersLoadError: null,
+      /** An import kept the codecheckers, because the reviewers could not be read (#13). */
+      codecheckersImportUnchecked: false,
       /** Why loading the metadata from the report address failed (#36). */
       reportError: null,
     }
@@ -801,6 +822,9 @@ export default {
           this.labelsRequested = true;
           this.getCodecheckIssueLabels();
         }
+        if (this.codecheckersEditable) {
+          this.loadAssignedReviewers();
+        }
 
         this.submissionData = {
           id: data.submission?.id || this.submission.id,
@@ -914,6 +938,12 @@ export default {
       // Either load replaces the form, so neither one's old message stands.
       this.repositoryWarning = {message: null, isWarning: true};
       this.reportError = null;
+      this.codecheckersNotImported = [];
+      this.codecheckersImportUnchecked = false;
+      // The file's codecheckers are matched to the reviewers assigned now,
+      // so those are read first; without them the list is kept as it is
+      // rather than emptied, which a save would then store (#13).
+      const reviewersKnown = this.codecheckersEditable && await this.loadAssignedReviewers();
 
       try {
           const response = await fetch(`${apiUrl}/repository?submissionId=${this.submission.id}`, {
@@ -949,9 +979,7 @@ export default {
             manifest: data.metadata?.manifest ?? this.metadata.manifest,
             repository: this.metadata.repository,
             source: data.metadata?.source ?? this.metadata.source,
-            codecheckers: this.codecheckersEditable && Array.isArray(data.metadata?.codechecker)
-              ? this.importedCodecheckers(data.metadata.codechecker)
-              : this.metadata.codecheckers,
+            codecheckers: this.importCodecheckers(data.metadata?.codechecker, reviewersKnown),
             certificate: this.certificateReadonly
               ? this.metadata.certificate
               : (data.metadata?.certificate ?? this.metadata.certificate),
@@ -1168,27 +1196,100 @@ export default {
     },
 
     /**
-     * The codecheckers of an imported codecheck.yml in the form's shape. The
-     * file spells it `ORCID`, while the form, the dialog and the server read
-     * `orcid` alone, so an imported iD used to be dropped on save. One that is
-     * not an iD is still dropped — kept, it would make every later save fail —
-     * and the file has no GitHub username, so one already on the form for the
-     * same iD, or failing that the same name, survives the import (#186).
+     * The codecheckers of an imported codecheck.yml, matched to the reviewers
+     * assigned to the submission by ORCID iD (#13): a codechecker is always
+     * such a reviewer, so a matched one becomes the entry for that account.
+     * One no reviewer matches — no iD, or nobody assigned with it — is not
+     * imported, and the form names it. The file spells the iD `ORCID`.
      */
     importedCodecheckers(fromFile) {
-      return fromFile.map(({ name, ORCID, orcid }) => {
+      const imported = [];
+      const notImported = [];
+      fromFile.forEach(({ name, ORCID, orcid }) => {
         const id = normalizeOrcid(orcid ?? ORCID ?? '');
-        const usableId = isValidOrcid(id) ? id : '';
-        const known = this.metadata.codecheckers.find((checker) =>
-          usableId ? checker.orcid === usableId : checker.name === name);
-        return { name: name ?? '', orcid: usableId, github: known?.github ?? '' };
+        const reviewer = isValidOrcid(id)
+          ? this.assignedReviewers.find((candidate) => candidate.orcid === id)
+          : null;
+        if (reviewer) {
+          if (!imported.some((entry) => entry.userId === reviewer.userId)) {
+            imported.push(this.entryFor(reviewer));
+          }
+        } else {
+          notImported.push(name || id || '?');
+        }
       });
+      this.codecheckersNotImported = notImported;
+      return imported;
     },
 
-    showCodecheckerModal() {
+    /**
+     * The codecheckers an import leaves on the form: the file's, matched to
+     * the assigned reviewers, where the list may be changed and the reviewers
+     * could be read; otherwise those already on the form.
+     */
+    importCodecheckers(fromFile, reviewersKnown) {
+      if (!this.codecheckersEditable || !Array.isArray(fromFile)) {
+        return this.metadata.codecheckers;
+      }
+      if (!reviewersKnown) {
+        this.codecheckersImportUnchecked = true;
+        return this.metadata.codecheckers;
+      }
+      return this.importedCodecheckers(fromFile);
+    },
+
+    /** The entry for a reviewer, in the shape the record stores (#13). */
+    entryFor({ userId, name, orcid, github }) {
+      return { userId, name, orcid, github };
+    },
+
+    /** The assigned reviewer an entry is linked to, if any. */
+    reviewerFor(checker) {
+      return checker.userId
+        ? this.assignedReviewers.find((reviewer) => reviewer.userId === checker.userId) ?? null
+        : null;
+    },
+
+    /**
+     * The reviewers assigned to the submission. A failure keeps the list read
+     * before and says why in `reviewersLoadError`, and is logged: the rest of
+     * the form works without it.
+     *
+     * @returns {Promise<boolean>} whether they could be read
+     */
+    async loadAssignedReviewers() {
+      try {
+        this.assignedReviewers = await fetchAssignedReviewers(this.submission.id);
+        this.reviewersLoadError = null;
+        return true;
+      } catch (error) {
+        console.error('CODECHECK: could not load the reviewers assigned to the submission', error);
+        this.reviewersLoadError = error.message;
+        return false;
+      }
+    },
+
+    /**
+     * Offers the assigned reviewers who are not codecheckers yet, read again
+     * so one assigned since the form was opened is among them.
+     */
+    async showCodecheckerModal() {
+      // A failure is not "nobody is assigned", which the dialog would say.
+      if (!await this.loadAssignedReviewers()) {
+        showInformation({
+          title: this.t('plugins.generic.codecheck.codecheckers.addCodechecker'),
+          text: this.reviewersLoadError
+        });
+        return;
+      }
+      const linked = this.metadata.codecheckers.map((checker) => checker.userId).filter(Boolean);
       askForInput({
         title: this.t('plugins.generic.codecheck.codecheckers.addCodechecker'),
         bodyComponent: CodecheckCodecheckerDialog,
+        bodyProps: {
+          submissionId: this.submission.id,
+          reviewers: this.assignedReviewers.filter((reviewer) => !linked.includes(reviewer.userId))
+        },
         submitLabel: this.t('common.add'),
         onSubmit: (codechecker) => {
           this.metadata.codecheckers.push(codechecker);
@@ -2165,6 +2266,14 @@ export default {
   flex-direction: column;
   gap: 0.75rem;
 }
+.codecheck-codechecker-note {
+  font-size: 0.875rem;
+  color: #666;
+}
+.codecheck-double-anonymous {
+  color: #8a5300;
+}
+
 .codecheck-metadata-form .codecheckers-list {
   margin-top: 1rem;
 }

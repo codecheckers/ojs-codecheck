@@ -8,6 +8,7 @@ use APP\core\Request;
 use APP\facades\Repo;
 use APP\plugins\generic\codecheck\api\v1\CurlApiClient;
 use APP\plugins\generic\codecheck\api\v1\JsonResponse;
+use APP\plugins\generic\codecheck\classes\Codecheckers\CodecheckerReviewers;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\GithubHttp;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\RegisterCodecheckers;
 use APP\plugins\generic\codecheck\classes\Constants;
@@ -256,7 +257,30 @@ class CodecheckMetadataHandler
             ];
         }
 
-        $codecheckers = CodecheckCodecheckers::withNormalizedEntries($data['codecheckers'] ?? []);
+        // A codechecker is linked to the account of a reviewer assigned to
+        // this submission (#13), and being linked is what gives them the
+        // CODECHECK form: a link this save introduces must name such a
+        // reviewer, and is copied from that account, not taken from the
+        // request. See CodecheckerReviewers::resolveEntries().
+        $assignedReviewers = null;
+        $resolved = CodecheckerReviewers::resolveEntries(
+            $data['codecheckers'] ?? [],
+            $stored->codecheckers ?? null,
+            function (int $userId) use (&$assignedReviewers, $submissionId) {
+                $assignedReviewers ??= CodecheckerReviewers::currentAssignments((int) $submissionId);
+                $account = isset($assignedReviewers[$userId]) ? Repo::user()->get($userId, true) : null;
+
+                return $account ? CodecheckerReviewers::entryFor($account) : null;
+            }
+        );
+        if ($resolved['refusedKey'] !== null) {
+            return [
+                'success' => false,
+                'error' => __($resolved['refusedKey'], ['name' => $resolved['refusedName']]),
+                'status' => 400,
+            ];
+        }
+        $codecheckers = $resolved['entries'];
 
         $metadataData = [
             'submission_id' => $submissionId,

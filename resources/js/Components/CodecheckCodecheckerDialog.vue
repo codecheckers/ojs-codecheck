@@ -1,62 +1,52 @@
 <template>
     <div class="modal-form">
-        <div class="modal-field">
-            <label :for="nameId" class="modal-label">{{ t('plugins.generic.codecheck.codecheckers.enterName') }}</label>
-            <input
-                :id="nameId"
-                ref="nameField"
-                v-model="name"
-                type="text"
+        <p v-if="!reviewers.length" class="modal-field-hint codecheck-no-reviewers">
+            {{ t('plugins.generic.codecheck.codecheckers.noReviewers') }}
+        </p>
+        <div v-else class="modal-field">
+            <label :for="reviewerId" class="modal-label">{{ t('plugins.generic.codecheck.codecheckers.chooseReviewer') }}</label>
+            <select
+                :id="reviewerId"
+                ref="reviewerField"
+                v-model="pickedUserId"
                 class="modal-input"
-                :class="{ 'modal-input--invalid': nameError }"
-                :placeholder="t('plugins.generic.codecheck.codecheckers.enterName')"
-                :aria-invalid="Boolean(nameError)"
-                :aria-describedby="nameError ? `${nameId}-error` : null"
-                @input="nameError = ''"
-            />
-            <p v-if="nameError" :id="`${nameId}-error`" class="modal-field-error" role="alert">{{ nameError }}</p>
+                :class="{ 'modal-input--invalid': pickError }"
+                :aria-invalid="Boolean(pickError)"
+                :aria-describedby="pickError ? `${reviewerId}-error` : null"
+                @change="pickError = ''; githubError = ''"
+            >
+                <option value="">{{ t('plugins.generic.codecheck.codecheckers.chooseReviewer.none') }}</option>
+                <option v-for="reviewer in reviewers" :key="reviewer.userId" :value="String(reviewer.userId)">
+                    {{ reviewer.name }}
+                </option>
+            </select>
+            <p v-if="pickError" :id="`${reviewerId}-error`" class="modal-field-error" role="alert">{{ pickError }}</p>
         </div>
-        <div class="modal-field">
-            <label :for="orcidId" class="modal-label">{{ t('plugins.generic.codecheck.codecheckers.enterOrcid') }}</label>
-            <input
-                :id="orcidId"
-                v-model="orcid"
-                type="text"
-                class="modal-input"
-                :class="{ 'modal-input--invalid': orcidError }"
-                placeholder="0000-0000-0000-0000"
-                :aria-invalid="Boolean(orcidError)"
-                :aria-describedby="orcidError ? `${orcidId}-error` : null"
-                @input="orcidError = ''; githubSuggestion = null"
-                @blur="suggestGithubUsername"
-            />
-            <p v-if="orcidError" :id="`${orcidId}-error`" class="modal-field-error" role="alert">{{ orcidError }}</p>
-        </div>
-        <div class="modal-field">
-            <label :for="githubId" class="modal-label">{{ t('plugins.generic.codecheck.codecheckers.enterGithubUsername') }}</label>
-            <input
-                :id="githubId"
-                v-model="github"
-                type="text"
-                class="modal-input"
-                :class="{ 'modal-input--invalid': githubError }"
-                :aria-invalid="Boolean(githubError)"
-                :aria-describedby="githubError ? `${githubId}-error` : `${githubId}-hint`"
-                @input="githubError = ''"
-            />
-            <p v-if="githubError" :id="`${githubId}-error`" class="modal-field-error" role="alert">{{ githubError }}</p>
-            <p v-else :id="`${githubId}-hint`" class="modal-field-hint">{{ t('plugins.generic.codecheck.codecheckers.githubHint') }}</p>
-            <p v-if="githubSuggestion" class="modal-field-hint codecheck-github-suggestion">
-                {{ t('plugins.generic.codecheck.codecheckers.githubSuggested.community', { username: githubSuggestion }) }}
-                <button type="button" class="pkpButton" @click="useGithubSuggestion">{{ t('plugins.generic.codecheck.codecheckers.githubSuggestion.use') }}</button>
-            </p>
-        </div>
+
+        <dl v-if="picked" class="codecheck-reviewer-details">
+            <dt>{{ t('plugins.generic.codecheck.codecheckers.orcid') }}</dt>
+            <dd>{{ picked.orcid || t('plugins.generic.codecheck.codecheckers.orcid.none') }}</dd>
+            <dt>{{ t('plugins.generic.codecheck.githubUsername.label') }}</dt>
+            <dd>
+                <template v-if="picked.github">@{{ picked.github }}</template>
+                <template v-else>{{ t('plugins.generic.codecheck.codecheckers.github.none') }}</template>
+            </dd>
+        </dl>
+        <p v-if="picked && !picked.github && picked.githubSuggestion" class="modal-field-hint codecheck-github-suggestion">
+            {{ t('plugins.generic.codecheck.codecheckers.githubSuggested.community', { username: picked.githubSuggestion }) }}
+            <button type="button" class="pkpButton" :disabled="savingGithub" @click="useGithubSuggestion">{{ t('plugins.generic.codecheck.codecheckers.githubSuggestion.use') }}</button>
+        </p>
+        <p v-if="githubError" class="modal-field-error" role="alert">{{ githubError }}</p>
+        <p v-if="picked && picked.doubleAnonymous" class="modal-field-hint codecheck-double-anonymous">
+            {{ t('plugins.generic.codecheck.codecheckers.doubleAnonymous') }}
+        </p>
+
         <p v-if="error" class="modal-field-error" role="alert">{{ error }}</p>
         <div class="modal-actions">
             <button type="button" class="pkpButton" @click="onClose">
                 {{ t('common.cancel') }}
             </button>
-            <button type="button" class="pkpButton pkpButton--isPrimary" :disabled="busy" @click="submitDialog">
+            <button v-if="reviewers.length" type="button" class="pkpButton pkpButton--isPrimary" :disabled="busy" @click="submitDialog">
                 {{ submitLabel }}
             </button>
         </div>
@@ -65,80 +55,70 @@
 
 <script>
 import { dialogForm } from '../dialogForm.js';
-import { isValidOrcid, normalizeOrcid } from '../orcid.js';
-import { isValidGithubUsername, normalizeGithubUsername } from '../githubUsername.js';
-import { lookupGithubUsername } from '../codecheckerLookup.js';
+import { saveReviewerGithubUsername } from '../codecheckerReviewers.js';
 
 const { useLocalize } = pkp.modules.useLocalize;
 
 let instances = 0;
 
 /**
- * The body of the "add codechecker" dialog.
+ * The body of the "add codechecker" dialog (#13).
  *
- * It was markup built as a string and read back through
- * `document.getElementById('checker-name')`, which meant a second copy of the
- * form on the same page read the first copy's fields, an empty name closed the
- * dialog without adding anything, and the ORCID was stored unchecked (#180).
- * The element ids are per instance for the same reason — a fixed id is also a
- * `<label for>` pointing at whichever copy rendered first.
+ * Every codechecker is a reviewer assigned to the submission through "Add
+ * Reviewer", so the dialog offers those reviewers who are not on the list yet,
+ * and the entry is copied from the chosen account: name, ORCID iD and GitHub
+ * username. An account without a username is offered the one the CODECHECK
+ * community list has for its ORCID iD; "Use it" saves it to the account, and
+ * it is never filled in unasked.
  *
- * The GitHub username is what the register issue is assigned to (#186). An
- * ORCID iD the CODECHECK community list knows is offered a username, which
- * the editor takes with a button.
+ * The element ids are per instance: a fixed id is a `<label for>` pointing at
+ * whichever copy rendered first (#180).
  */
 export default {
   name: 'CodecheckCodecheckerDialog',
   mixins: [dialogForm],
+  props: {
+    submissionId: { type: [Number, String], required: true },
+    /** The reviewers assigned to the submission who are not on the list yet. */
+    reviewers: { type: Array, required: true }
+  },
   setup() {
     const { t } = useLocalize();
     return { t };
   },
 
   data() {
-    const id = ++instances;
     return {
-      nameId: `codecheck-checker-name-${id}`,
-      orcidId: `codecheck-checker-orcid-${id}`,
-      githubId: `codecheck-checker-github-${id}`,
-      name: '',
-      orcid: '',
-      github: '',
-      nameError: '',
-      orcidError: '',
+      reviewerId: `codecheck-checker-reviewer-${++instances}`,
+      pickedUserId: '',
+      pickError: '',
       githubError: '',
-      githubSuggestion: null,
-      lookedUp: ''
+      savingGithub: false,
+      /** Usernames saved to an account while the dialog is open, by user id. */
+      savedGithub: {}
     };
   },
+  computed: {
+    picked() {
+      const reviewer = this.reviewers.find((candidate) => String(candidate.userId) === this.pickedUserId);
+      return reviewer ? { ...reviewer, github: this.savedGithub[reviewer.userId] ?? reviewer.github } : null;
+    }
+  },
   mounted() {
-    this.$refs.nameField?.focus();
+    this.$refs.reviewerField?.focus();
   },
   methods: {
-    /**
-     * Ask who the ORCID iD belongs to on GitHub, and offer the answer beside
-     * the field. It is never filled in by itself: the blur that asks is also
-     * the one pressing Add causes, so a value filled in then would be added
-     * without the editor having seen it.
-     */
-    async suggestGithubUsername() {
-      const orcid = normalizeOrcid(this.orcid);
-      if (this.github.trim() !== '' || !isValidOrcid(orcid) || orcid === this.lookedUp) {
+    async useGithubSuggestion() {
+      const { userId, githubSuggestion } = this.picked;
+      this.savingGithub = true;
+      this.githubError = '';
+      const answer = await saveReviewerGithubUsername(this.submissionId, userId, githubSuggestion);
+      this.savingGithub = false;
+      if (answer.error) {
+        this.githubError = answer.error;
         return;
       }
-      this.lookedUp = orcid;
-
-      const suggestion = await lookupGithubUsername(orcid);
-
-      if (suggestion && normalizeOrcid(this.orcid) === orcid) {
-        this.githubSuggestion = suggestion;
-      }
-    },
-
-    useGithubSuggestion() {
-      this.github = this.githubSuggestion;
-      this.githubError = '';
-      this.githubSuggestion = null;
+      this.savedGithub = { ...this.savedGithub, [userId]: answer.github };
     },
 
     /**
@@ -146,24 +126,29 @@ export default {
      *                   the message beside the field saying why
      */
     validate() {
-      this.nameError = this.name.trim() ? '' : this.t('plugins.generic.codecheck.codecheckers.validation.nameRequired');
-
-      const orcid = normalizeOrcid(this.orcid);
-      this.orcidError = orcid === '' || isValidOrcid(orcid)
-        ? ''
-        : this.t('plugins.generic.codecheck.codecheckers.validation.orcidInvalid');
-
-      const github = normalizeGithubUsername(this.github);
-      this.githubError = github === '' || isValidGithubUsername(github)
-        ? ''
-        : this.t('plugins.generic.codecheck.codecheckers.validation.githubInvalid');
-
-      if (this.nameError || this.orcidError || this.githubError) {
+      if (!this.picked) {
+        this.pickError = this.t('plugins.generic.codecheck.codecheckers.validation.reviewerRequired');
         return { valid: false };
       }
 
-      return { valid: true, value: { name: this.name.trim(), orcid, github } };
+      const { userId, name, orcid, github } = this.picked;
+      return { valid: true, value: { userId, name, orcid, github } };
     }
   }
 };
 </script>
+
+<style>
+.codecheck-reviewer-details {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 1rem;
+  margin: 0 0 1rem;
+}
+.codecheck-reviewer-details dt {
+  font-weight: 600;
+}
+.codecheck-reviewer-details dd {
+  margin: 0;
+}
+</style>

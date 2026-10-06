@@ -11,7 +11,8 @@
  * @brief The rules for the `codecheckers` list of `codecheck_metadata`, and for
  *   the ORCID iDs and GitHub usernames in it.
  *
- * The list is `[{name, orcid, github}, …]`. The GitHub username is what the
+ * The list is `[{userId, name, orcid, github}, …]`, `userId` linking the entry
+ * to the account of a reviewer of the submission (#13). The GitHub username is what the
  * register issue is assigned to (#186); entries written before it existed
  * have no `github` key and read as having no username. An ORCID iD used to be stored exactly as it
  * was typed, unchecked, and it reaches the generated `codecheck.yml`, the
@@ -124,9 +125,7 @@ class CodecheckCodecheckers
      *
      * Accepts what someone is likely to paste: the name, the `@name` form the
      * community list and GitHub's own mentions use, or the address of the
-     * profile. Mirrored by `normalizeGithubUsername` in
-     * `resources/js/githubUsername.js`. Nothing is validated here, as with
-     * `normalizeOrcid()`.
+     * profile. Nothing is validated here, as with `normalizeOrcid()`.
      */
     public static function normalizeGithubUsername(mixed $value): string
     {
@@ -252,6 +251,75 @@ class CodecheckCodecheckers
             'orcid' => self::isOrcid($orcid) ? $orcid : '',
             'github' => self::isGithubUsername($github) ? $github : '',
         ];
+    }
+
+    /**
+     * The list as it is stored: each entry in the shape normalizedEntry()
+     * gives, plus the OJS account it is linked to (#13), `null` when none.
+     *
+     * The account's id is kept out of normalizedEntry(), whose shape is what
+     * the public register's JSON block carries.
+     *
+     * @return array<int, array{userId: ?int, name: string, orcid: string, github: string}>
+     */
+    public static function withStoredEntries(mixed $codecheckers): array
+    {
+        return array_map(
+            fn (array $entry) => ['userId' => self::linkedUserId($entry)] + self::normalizedEntry($entry),
+            self::entries($codecheckers)
+        );
+    }
+
+    /**
+     * The ids of the accounts a list links its codecheckers to (#13).
+     *
+     * @return array<int, int>
+     */
+    public static function linkedUserIds(mixed $codecheckers): array
+    {
+        return array_values(array_unique(array_filter(
+            array_map([self::class, 'linkedUserId'], self::entries($codecheckers))
+        )));
+    }
+
+    /**
+     * The list with every link to one account moved to another, as when OJS
+     * merges two users (#13). An entry for an account already listed is
+     * dropped; the others are left exactly as they are.
+     *
+     * @return array<int, array> the list, or the same list when nothing changed
+     */
+    public static function withUserIdReplaced(array $codecheckers, int $oldUserId, int $newUserId): array
+    {
+        $listed = [];
+        $result = [];
+        foreach ($codecheckers as $entry) {
+            if (is_array($entry) && self::linkedUserId($entry) === $oldUserId) {
+                $entry = ['userId' => $newUserId] + $entry;
+            }
+            $userId = is_array($entry) ? self::linkedUserId($entry) : null;
+            if ($userId !== null && isset($listed[$userId])) {
+                continue;
+            }
+            if ($userId !== null) {
+                $listed[$userId] = true;
+            }
+            $result[] = $entry;
+        }
+
+        return $result;
+    }
+
+    /**
+     * The account an entry is linked to: a positive whole number, or `null`.
+     */
+    private static function linkedUserId(array $codechecker): ?int
+    {
+        $userId = $codechecker['userId'] ?? null;
+
+        return (is_int($userId) || (is_string($userId) && ctype_digit($userId))) && (int) $userId > 0
+            ? (int) $userId
+            : null;
     }
 
     /**

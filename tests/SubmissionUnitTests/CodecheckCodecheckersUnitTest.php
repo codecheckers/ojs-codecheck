@@ -271,4 +271,75 @@ class CodecheckCodecheckersUnitTest extends PKPTestCase
         $this->assertSame([], CodecheckCodecheckers::recordedOrcids('not json'));
         $this->assertSame([], CodecheckCodecheckers::recordedOrcids([['name' => 'Only a name']]));
     }
+
+    /** The stored shape carries the linked account; the register's does not (#13). */
+    public function testTheStoredShapeKeepsTheLinkedAccountAndThePublicOneDoesNot(): void
+    {
+        $list = [['userId' => '7', 'name' => ' Cora ', 'orcid' => self::CARBERRY, 'github' => '@cora']];
+
+        $this->assertSame(
+            [['userId' => 7, 'name' => 'Cora', 'orcid' => self::CARBERRY, 'github' => 'cora']],
+            CodecheckCodecheckers::withStoredEntries($list)
+        );
+        $this->assertSame(
+            [['name' => 'Cora', 'orcid' => self::CARBERRY, 'github' => 'cora']],
+            CodecheckCodecheckers::withNormalizedEntries($list)
+        );
+    }
+
+    public static function linkProvider(): array
+    {
+        return [
+            'none' => [['name' => 'A'], null],
+            'a number' => [['userId' => 7], 7],
+            'digits' => [['userId' => '7'], 7],
+            'zero' => [['userId' => 0], null],
+            'negative' => [['userId' => -3], null],
+            'not a number' => [['userId' => '7 OR 1=1'], null],
+            'a float' => [['userId' => 7.5], null],
+        ];
+    }
+
+    #[DataProvider('linkProvider')]
+    public function testOnlyAPositiveWholeNumberLinksAnAccount(array $entry, ?int $expected): void
+    {
+        $this->assertSame($expected, CodecheckCodecheckers::withStoredEntries([$entry])[0]['userId']);
+    }
+
+    public function testTheLinkedAccountsAreEachCountedOnce(): void
+    {
+        $this->assertSame([7, 9], CodecheckCodecheckers::linkedUserIds(json_encode([
+            ['userId' => 7], ['name' => 'B'], ['userId' => 9], ['userId' => 7],
+        ])));
+        $this->assertSame([], CodecheckCodecheckers::linkedUserIds(null));
+    }
+
+    /** A merged account's links move to the account it was merged into, and nothing else changes. */
+    public function testAMergeMovesOnlyThatAccountsLinks(): void
+    {
+        $list = [
+            ['userId' => 7, 'name' => 'Cora', 'extra' => 'kept'],
+            ['userId' => 70, 'name' => 'Not Cora'],
+            ['name' => 'Unlinked'],
+        ];
+
+        $this->assertSame([
+            ['userId' => 12, 'name' => 'Cora', 'extra' => 'kept'],
+            ['userId' => 70, 'name' => 'Not Cora'],
+            ['name' => 'Unlinked'],
+        ], CodecheckCodecheckers::withUserIdReplaced($list, 7, 12));
+    }
+
+    /** Merging one codechecker into another lists the account once. */
+    public function testAMergeOfTwoCodecheckersListsTheAccountOnce(): void
+    {
+        $this->assertSame(
+            [['userId' => 8, 'name' => 'First'], ['name' => 'Unlinked']],
+            CodecheckCodecheckers::withUserIdReplaced(
+                [['userId' => '5', 'name' => 'First'], ['userId' => 8, 'name' => 'Second'], ['name' => 'Unlinked']],
+                5,
+                8
+            )
+        );
+    }
 }

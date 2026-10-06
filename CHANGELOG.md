@@ -37,6 +37,8 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 
 - Enabling the plugin gives the journal a *Codechecker* role at the Reviewer level, open to self-registration, and an *Invitation to codecheck* email template that "Add Reviewer" offers beside the review request; the plugin settings show whether each still exists and recreate a deleted one (#13)
 - A user's account has an optional GitHub username, edited on their public profile and in the manager's user form; a username another account holds is refused (#13)
+- "Add codechecker" on the CODECHECK tab offers the reviewers assigned to the submission and copies the codechecker's name, ORCID iD and GitHub username from their account; a GitHub username the CODECHECK community list gives for their ORCID iD can be saved to the account (#13)
+- The CODECHECK tab warns when a codechecker's review is double-anonymous, as they then get no author names and no contact (#13)
 - A *Share Preview* button next to the report field explains how to share a draft certificate with editors and authors through a repository preview link and a submission discussion (#39)
 
 #### Frontend
@@ -57,6 +59,8 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 
 ### Changed
 
+- Only a codechecker of the submission, a reviewer added to its codechecker list, gets the CODECHECK form on the review page and may record the check, its status and an ORCID deposit; other reviewers of an opted-in submission do not (#13)
+- Importing a `codecheck.yml` takes the codecheckers who match a reviewer assigned to the submission by ORCID iD, and names the ones it leaves out (#13)
 - The editorial CODECHECK form saves an unfinished check and refuses only invalid entries; the `codecheck.yml` preview still requires a complete record
 - Checks are recorded against version 2.0 of the CODECHECK config file specification, the only version offered; `latest` and 1.0 are gone and existing records move to 2.0 on upgrade (#185)
 - Saving a check with a config version the plugin does not support, or the journal does not offer, is refused with a reason and the stored version is kept (#185)

@@ -1,99 +1,67 @@
 /**
- * The "add codechecker" dialog against a real OJS, which is the only place the
- * thing #180 is about can be seen.
+ * The "add codechecker" dialog against a real OJS (#13, #180).
  *
- * OJS's `Dialog` disables every one of its own action buttons on the first
- * click and never re-enables them, and draws no close X while a dialog has
- * actions — so a dialog that stays open to say why it refused would have
- * nothing left to press. The plugin therefore opens these with no actions and
- * the body draws its own buttons. `cypress/support/pkp-mock.js` now models the
- * disabling, but only a real dialog proves the arrangement works.
+ * A codechecker is a reviewer assigned to the submission, so the dialog offers
+ * those reviewers who are not on the list yet. OJS's `Dialog` disables its own
+ * action buttons on the first click and draws no close X while a dialog has
+ * actions, so the dialog draws its own; only a real dialog proves that works.
+ *
+ * Nothing here saves: what is asserted is what the unsaved form holds.
  */
 describe('The add-codechecker dialog', () => {
-  // Submission 10 is the one the rest of the suite leaves alone, and nothing
-  // here saves, so the record it carries is unchanged either way.
-  const submissionId = 10;
-
-  beforeEach(() => {
-    // Leaving the ORCID field asks OJS for a GitHub username, which reaches
-    // the CODECHECK community list on GitHub; the e2e suite makes no external
-    // call, so the answer is stubbed (#186).
-    cy.intercept(
-      { method: 'GET', pathname: '/index.php/codecheck/api/v1/codecheck/codecheckers/lookup' },
-      { success: true, github: null }
-    );
+  const openCodecheckTab = (submissionId) => {
     cy.ojsLogin('admin', 'admin');
     cy.visit(
       '/index.php/codecheck/dashboard/editorial' +
       `?workflowSubmissionId=${submissionId}&workflowMenuKey=codecheck`
     );
     cy.get('.codecheck-metadata-form', { timeout: 20000 }).should('exist');
-  });
+  };
 
   const openDialog = () =>
     cy.contains('.field-label', /codechecker/i).parent().find('.btn-add').click();
 
   /**
-   * The names are distinctive because the fixture carries codecheckers of its
-   * own, and because nothing here saves: what these assert on is what the
-   * unsaved form holds.
+   * Submission 9 has two reviewers: ccodechecker, already its codechecker,
+   * and rreviewer, on a double-anonymous review.
    */
-  const codecheckers = () => cy.get('.codecheck-metadata-form');
-
-  it('refuses an empty name and can still be corrected and submitted', () => {
+  it('offers the reviewers who are not codecheckers yet, and adds the one chosen', () => {
+    openCodecheckTab(9);
     openDialog();
 
     cy.get('[data-cy=dialog]').within(() => {
+      cy.get('select[id^=codecheck-checker-reviewer] option')
+        .then(($options) => [...$options].slice(1).map((option) => option.textContent.trim()))
+        .should('deep.equal', ['Rosa Reviewer']);
+
+      // The refusal keeps the dialog usable, where OJS's own buttons would
+      // both be disabled for good by that first click.
       cy.contains('.modal-actions button', 'Add').click();
       cy.get('.modal-field-error').should('be.visible');
-
-      // the whole point: the dialog is still usable after a refusal, where
-      // OJS's own buttons would both be disabled for good by that first click
       cy.contains('.modal-actions button', 'Add').should('not.be.disabled');
-      cy.get('input[id^=codecheck-checker-name]').type('Adalovelace Corrected');
+
+      cy.get('select[id^=codecheck-checker-reviewer]').select('Rosa Reviewer');
+      cy.get('.codecheck-double-anonymous').should('be.visible');
       cy.contains('.modal-actions button', 'Add').click();
     });
 
     cy.get('[data-cy=dialog]').should('not.exist');
-    codecheckers().should('contain', 'Adalovelace Corrected');
+    cy.get('.codecheckers-list').should('contain', 'Rosa Reviewer');
   });
 
-  it('refuses an ORCID iD whose check digit does not agree', () => {
+  /**
+   * Submission 10 was accepted without review: it has no review round, so
+   * nobody can be assigned to it as a reviewer, and it gets no codechecker.
+   */
+  it('explains how to assign one where no reviewer is assigned', () => {
+    openCodecheckTab(10);
     openDialog();
 
     cy.get('[data-cy=dialog]').within(() => {
-      cy.get('input[id^=codecheck-checker-name]').type('Adalovelace Badorcid');
-      cy.get('input[id^=codecheck-checker-orcid]').type('0000-0002-1825-0098');
-      cy.contains('.modal-actions button', 'Add').click();
-      cy.get('.modal-field-error').should('be.visible');
+      cy.get('.codecheck-no-reviewers').should('contain', 'Add Reviewer');
+      cy.get('select').should('not.exist');
+      cy.contains('.modal-actions button', 'Cancel').click();
     });
-
-    cy.get('[data-cy=dialog]').should('exist');
-    codecheckers().should('not.contain', 'Adalovelace Badorcid');
-  });
-
-  it('accepts an ORCID iD copied out of the address bar', () => {
-    openDialog();
-
-    cy.get('[data-cy=dialog]').within(() => {
-      cy.get('input[id^=codecheck-checker-name]').type('Adalovelace Pasted');
-      cy.get('input[id^=codecheck-checker-orcid]').type('https://orcid.org/0000-0002-1825-0097');
-      cy.contains('.modal-actions button', 'Add').click();
-    });
-
     cy.get('[data-cy=dialog]').should('not.exist');
-    codecheckers().should('contain', '0000-0002-1825-0097');
-  });
-
-  it('closes without adding anything when cancelled', () => {
-    openDialog();
-
-    cy.get('[data-cy=dialog]').within(() => {
-      cy.get('input[id^=codecheck-checker-name]').type('Adalovelace Cancelled');
-      cy.contains('.modal-actions button', /cancel/i).click();
-    });
-
-    cy.get('[data-cy=dialog]').should('not.exist');
-    codecheckers().should('not.contain', 'Adalovelace Cancelled');
   });
 });

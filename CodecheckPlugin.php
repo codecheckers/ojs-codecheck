@@ -6,6 +6,7 @@ use APP\core\Application;
 use APP\facades\Repo;
 use APP\plugins\generic\codecheck\api\v1\CodecheckApiController;
 use APP\plugins\generic\codecheck\classes\Codecheckers\CodecheckerJournalSetup;
+use APP\plugins\generic\codecheck\classes\Codecheckers\CodecheckerReviewers;
 use APP\plugins\generic\codecheck\classes\Codecheckers\GithubUsernameField;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\GithubHttp;
 use APP\plugins\generic\codecheck\classes\Constants;
@@ -21,6 +22,7 @@ use APP\plugins\generic\codecheck\classes\Settings\Actions;
 use APP\plugins\generic\codecheck\classes\Settings\Manage;
 use APP\plugins\generic\codecheck\classes\Submission\AvailabilityStatementField;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckAuthorMetadata;
+use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionAccess;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionDAO;
 use APP\plugins\generic\codecheck\classes\Submission\Schema;
 use APP\plugins\generic\codecheck\classes\Submission\SubmissionWizardHandler;
@@ -77,6 +79,11 @@ class CodecheckPlugin extends GenericPlugin implements HasTaskScheduler
             // so the ORCID deposit on the same hook still runs first, as it
             // did when both were inside.
             Hook::add('Publication::publish', $this->depositToRegister(...), Hook::SEQUENCE_LATE);
+
+            // A merged user's codechecker links follow their review
+            // assignments to the account they are merged into (#13). Also
+            // outside: a merge spans every journal.
+            Hook::add('UserAction::mergeUsers', CodecheckerReviewers::moveLinksOnMerge(...));
         }
 
         if ($success && $this->getEnabled()) {
@@ -517,7 +524,10 @@ class CodecheckPlugin extends GenericPlugin implements HasTaskScheduler
                 $contextId = $context->getId();
                 $submission = Repo::submission()->get($submissionId);
 
-                if ($submission && $submission->getData('codecheckOptIn')) {
+                // The CODECHECK form is for the submission's codecheckers, not
+                // for every reviewer of an opted-in submission (#13).
+                if ($submission && $submission->getData('codecheckOptIn')
+                    && CodecheckSubmissionAccess::isLinkedCodechecker($request->getUser(), $submissionId)) {
                     $orcidAuthUrl = $request->getBaseUrl() . '/index.php/' . $context->getPath() . '/codecheck/orcid/startAuth';
 
                     $reviewerData = json_encode([
