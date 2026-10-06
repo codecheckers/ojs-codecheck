@@ -325,4 +325,28 @@ class ConstantsUnitTest extends PKPTestCase
             $this->assertSame('daily', Constants::normalizeListsRefresh($stored));
         }
     }
+
+    public static function bareDoiProvider(): array
+    {
+        return [
+            'bare' => ['10.5281/zenodo.1', '10.5281/zenodo.1'],
+            'prefixed' => ['doi: 10.5281/zenodo.1', '10.5281/zenodo.1'],
+            'a link' => ['https://doi.org/10.5281/zenodo.1', '10.5281/zenodo.1'],
+            'an old link' => ['http://dx.doi.org/10.5281/zenodo.1', '10.5281/zenodo.1'],
+            'a link without scheme' => ['doi.org/10.5281/zenodo.1', '10.5281/zenodo.1'],
+            'surrounding space' => ['  10.5281/zenodo.1 ', '10.5281/zenodo.1'],
+            'a pasted non-breaking space' => ["10.5281/zenodo.1\u{00A0}", '10.5281/zenodo.1'],
+            'no suffix' => ['10.5281', null],
+            'a space inside' => ['10.5281/zenodo 1', null],
+            'another address' => ['https://zenodo.org/records/1', null],
+            'nothing' => [null, null],
+        ];
+    }
+
+    /** The one DOI rule for what is typed in (#190), shared with the resolver. */
+    #[DataProvider('bareDoiProvider')]
+    public function testReadsTheDoiAnAddressNames(?string $value, ?string $expected)
+    {
+        $this->assertSame($expected, Constants::bareDoi($value));
+    }
 }

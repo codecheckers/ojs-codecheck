@@ -14,6 +14,7 @@ use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\DoiDeposit\CodecheckDoiDeposit;
 use APP\plugins\generic\codecheck\classes\Exceptions\GithubUnreachableException;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
+use APP\plugins\generic\codecheck\classes\Submission\CodecheckAuthorMetadata;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckCodecheckerDirectory;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckCodecheckers;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckRepositories;
@@ -76,6 +77,11 @@ class CodecheckMetadataHandler
 
         $response = [
             'submissionId' => $submissionId,
+            // The author's pointer to a check of the paper done elsewhere
+            // (#190). A certificate names the authors, so it is withheld with
+            // them here — though, as a submission field, OJS's own submissions
+            // API answers it to anyone who may read the submission.
+            'existingCodecheck' => $revealAuthors ? ($submission->getData('existingCodecheck') ?: null) : null,
             'submission' => [
                 'id' => $submission->getId(),
                 'title' => $publication ? $publication->getLocalizedTitle() : '',
@@ -590,8 +596,13 @@ class CodecheckMetadataHandler
      * repository, or a DOI that resolves elsewhere — is refused rather than
      * having its other values filled in. A file with no paper title cannot be
      * tied to the paper either, so it is refused the same way.
+     *
+     * An editor who has seen both titles and confirmed may accept the file
+     * anyway (`$acceptTitleMismatch`): a checked preprint's title often
+     * changes before the submission (#190). The refusal names the file's
+     * title so the form can ask.
      */
-    public function importMetadataForSubmission(string $repository, string $submissionTitle): JsonResponse
+    public function importMetadataForSubmission(string $repository, string $submissionTitle, bool $acceptTitleMismatch = false): JsonResponse
     {
         $response = $this->importMetadataFromRepository($repository);
         if (!$response->isSuccess()) {
@@ -599,15 +610,45 @@ class CodecheckMetadataHandler
         }
 
         $payload = $response->getPayloadArray();
-        if (!self::titlesMatch($payload['metadata']['paper']['title'] ?? null, $submissionTitle)) {
+        $paperTitle = $payload['metadata']['paper']['title'] ?? null;
+        if (!$acceptTitleMismatch && !self::titlesMatch($paperTitle, $submissionTitle)) {
             return new JsonResponse([
                 'success' => false,
                 'error' => __('plugins.generic.codecheck.repositories.titleMismatch'),
                 'repository' => $repository,
+                'titleMismatch' => true,
+                'paperTitle' => is_string($paperTitle) && trim($paperTitle) !== '' ? $paperTitle : null,
             ], 422);
         }
 
         return $response;
+    }
+
+    /**
+     * What the submission wizard loads from an existing check (#190): the
+     * repositories and expected outputs of its `codecheck.yml`, and whether
+     * the file names this submission's paper.
+     *
+     * Unlike the editorial import, a title that differs is not refused, only
+     * reported: a paper's title often changes between the checked preprint and
+     * the submission, and the author decides what to keep. The editor's full
+     * import still refuses it. Nothing else from the file is answered.
+     */
+    public function previewForAuthor(string $address, string $submissionTitle): JsonResponse
+    {
+        $response = $this->importMetadataFromRepository($address);
+        if (!$response->isSuccess()) {
+            return $response;
+        }
+
+        $payload = $response->getPayloadArray();
+        $metadata = is_array($payload['metadata'] ?? null) ? $payload['metadata'] : [];
+
+        return new JsonResponse(array_merge([
+            'success' => true,
+            'repository' => $payload['repository'] ?? $address,
+            'titleMatches' => self::titlesMatch($metadata['paper']['title'] ?? null, $submissionTitle),
+        ], CodecheckAuthorMetadata::entriesFromCodecheckYaml($metadata)), 200);
     }
 
     /**

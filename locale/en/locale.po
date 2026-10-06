@@ -422,6 +422,42 @@ msgstr "Error while importing the CODECHECK metadata from the repository. {$erro
 msgid "plugins.generic.codecheck.repositories.loadMetadata"
 msgstr "Load Metadata"
 
+msgid "plugins.generic.codecheck.existingCheck.label"
+msgstr "Existing CODECHECK"
+
+msgid "plugins.generic.codecheck.existingCheck.description"
+msgstr "If the code and data of your paper have already been checked, for example for a preprint, enter the DOI or address of the CODECHECK certificate to add its repositories and expected outputs to the fields below."
+
+msgid "plugins.generic.codecheck.existingCheck.invalid"
+msgstr "Enter the DOI or the web address (starting with http:// or https://) of the CODECHECK certificate."
+
+msgid "plugins.generic.codecheck.existingCheck.loaded"
+msgstr "The repositories and expected outputs of the existing check were added to the fields below."
+
+msgid "plugins.generic.codecheck.existingCheck.alreadyAdded"
+msgstr "The repositories and expected outputs of the existing check are already in the fields below."
+
+msgid "plugins.generic.codecheck.existingCheck.nothingFound"
+msgstr "The codecheck.yml of the existing check lists no repositories or expected outputs, so nothing was added."
+
+msgid "plugins.generic.codecheck.existingCheck.titleMismatch"
+msgstr "The paper title in this codecheck.yml is missing or differs from the title of your submission, so please make sure it is the check of your paper."
+
+msgid "plugins.generic.codecheck.existingCheck.loadError"
+msgstr "The metadata of the existing check could not be loaded. {$error}"
+
+msgid "plugins.generic.codecheck.existingCheck.confirmTitle"
+msgstr "Different paper title"
+
+msgid "plugins.generic.codecheck.existingCheck.confirmOtherTitle"
+msgstr "The codecheck.yml is for the paper “{$paperTitle}”, while this submission is “{$submissionTitle}”; load its metadata anyway?"
+
+msgid "plugins.generic.codecheck.existingCheck.confirmNoTitle"
+msgstr "The codecheck.yml names no paper title, so it cannot be told whether it is for this submission; load its metadata anyway?"
+
+msgid "plugins.generic.codecheck.existingCheck.editorNote"
+msgstr "The authors report an existing CODECHECK of this paper at {$address}, so load its metadata instead of reserving a new certificate identifier."
+
 msgid "plugins.generic.codecheck.repositories.containsCodecheckYaml"
 msgstr "Contains 'codecheck.yml' file"
 

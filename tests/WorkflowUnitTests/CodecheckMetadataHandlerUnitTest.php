@@ -425,6 +425,20 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         $this->assertFalse($payload['success']);
         $this->assertSame($repository, $payload['repository']);
         $this->assertArrayNotHasKey('metadata', $payload, 'nothing of the file is handed back');
+        $this->assertTrue($payload['titleMismatch']);
+        $this->assertSame('Some other paper', $payload['paperTitle'], 'so the editor can be asked');
+    }
+
+    /** An editor who confirmed both titles may load a checked preprint (#190). */
+    public function testTheImportForASubmissionTakesAnotherTitleOnceAccepted()
+    {
+        $repository = 'https://zenodo.org/records/14900193';
+        $handler = $this->handlerServing("paper:\n  title: The preprint\nsummary: ok\n", $repository);
+
+        $response = $handler->importMetadataForSubmission($repository, 'The Paper on Data', true);
+
+        $this->assertSame(200, $response->getHttpResponseCode());
+        $this->assertSame('ok', $response->getPayloadArray()['metadata']['summary']);
     }
 
     public function testTheImportForASubmissionRefusesAFileWithNoPaperTitle()
@@ -451,6 +465,55 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
 
         $this->assertNotSame(422, $response->getHttpResponseCode());
         $this->assertFalse($response->getPayloadArray()['success']);
+    }
+
+    /**
+     * The wizard's load from an existing check (#190) reports a different
+     * title rather than refusing it, and answers only the wizard's entries.
+     */
+    public function testThePreviewForAnAuthorReportsAnotherTitleWithoutRefusing()
+    {
+        $repository = 'https://zenodo.org/records/14900193';
+        $handler = $this->handlerServing(
+            "paper:\n  title: The preprint's title\n  authors:\n    - name: Ann\nrepository: https://github.com/a/b\nmanifest:\n  - file: fig.png\n    comment: Figure\nsummary: ok\n",
+            $repository
+        );
+
+        $response = $handler->previewForAuthor($repository, 'The Paper on Data');
+        $payload = $response->getPayloadArray();
+
+        $this->assertSame(200, $response->getHttpResponseCode());
+        $this->assertTrue($payload['success']);
+        $this->assertFalse($payload['titleMatches']);
+        $this->assertSame(['https://github.com/a/b'], $payload['repositories']);
+        $this->assertSame([['file' => 'fig.png', 'comment' => 'Figure']], $payload['manifest']);
+        $this->assertSame(
+            ['success', 'repository', 'titleMatches', 'repositories', 'manifest'],
+            array_keys($payload),
+            'nothing else of the file is handed to the author'
+        );
+    }
+
+    public function testThePreviewForAnAuthorConfirmsTheSamePaper()
+    {
+        $repository = 'https://zenodo.org/records/14900193';
+        $handler = $this->handlerServing("paper:\n  title: the paper on data\n", $repository);
+
+        $payload = $handler->previewForAuthor($repository, 'The Paper on Data')->getPayloadArray();
+
+        $this->assertTrue($payload['titleMatches']);
+        $this->assertSame([], $payload['repositories']);
+    }
+
+    public function testThePreviewForAnAuthorPassesAFailedFetchOn()
+    {
+        $repository = 'https://zenodo.org/records/14900193';
+        $curlApiClient = $this->createMock(CurlApiClient::class);
+        $curlApiClient->method('resolveDoi')->willReturn($repository);
+        $curlApiClient->method('fetch')->willThrowException(new \RuntimeException('unreadable'));
+        $handler = new CodecheckMetadataHandler(new Request(), $this->createMock(\Github\Client::class), $curlApiClient);
+
+        $this->assertFalse($handler->previewForAuthor($repository, 'The Paper on Data')->getPayloadArray()['success']);
     }
 
     public static function zenodoAddressProvider(): array

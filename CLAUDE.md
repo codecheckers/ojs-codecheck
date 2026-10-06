@@ -161,7 +161,7 @@ and add the method to `SUBMISSION_SCOPED` if it acts on a submission —
 otherwise it answers for any submission in the journal.
 
 Endpoints: `GET labels|metadata|yaml|register|status|status/history|orcid-status|orcid-test|codecheckers|codecheckers/lookup`,
-`POST identifier|issue|metadata|references|repository|repository/validate|yaml/validate|status/update|orcid-deposit`.
+`POST identifier|issue|metadata|references|repository|repository/preview|repository/validate|yaml/validate|status/update|orcid-deposit`.
 
 **There is deliberately no file upload/download endpoint**
 (`CodecheckApiControllerRoutesUnitTest` asserts it). Use OJS file services and
@@ -205,6 +205,18 @@ assignment):
   action in a form needs its flag here, not a JS role check. Not rendered
   into the page: OJS 3.5's workflow is the dashboard's side panel, so the
   submission is unknown at render time.
+
+`POST repository/preview` (`READ_ROLES`, so authors; #190) is the wizard's
+load from an existing check: `previewForAuthor()` fetches like the import but
+writes nothing, answers only the yml's repositories and manifest
+(`CodecheckAuthorMetadata::entriesFromCodecheckYaml()`) and reports a title
+mismatch as `titleMatches: false` instead of refusing. The author's pointer is
+the submission field `existingCodecheck` (DOI or web address,
+`isExistingCheckAddress()`, DOIs via `Constants::bareDoi()` ↔ `doiUrl()` in
+`isWebUrl.js`); `GET metadata` answers it, withheld with the authors — but
+OJS's own submissions API answers it to reviewers too (accepted). The form
+offers the editor's import from it; there, and only there, a title mismatch is
+asked about and imported on Yes (`acceptTitleMismatch`).
 
 `POST repository` imports via `importMetadataForSubmission()`, which refuses a
 `codecheck.yml` whose `paper.title` is missing or not the submission's

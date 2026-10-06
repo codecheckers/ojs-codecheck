@@ -4,6 +4,7 @@ namespace APP\plugins\generic\codecheck\api\v1;
 
 use APP\core\Application;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\GithubHttp;
+use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlHttpException;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ConnectException;
@@ -72,19 +73,18 @@ class CurlApiClient implements ApiClientInterface
     }
 
     /**
-     * If the given URL is a DOI link (doi.org or dx.doi.org), resolve it to its
-     * final destination URL by following redirects. Non-DOI URLs are returned unchanged.
-     * If resolution fails for any reason, the original URL is returned.
+     * If the given address names a DOI (see `Constants::bareDoi()`), resolve it
+     * to its final destination URL by following redirects. Anything else is
+     * returned unchanged. If resolution fails for any reason, the original
+     * address is returned.
      */
     public function resolveDoi(string $possibleDoiUrl): string
     {
-        if (!preg_match('#^(?:(?:https?://)?(?:dx\.)?doi\.org/)?10\.\d{4,9}/.+$#i', $possibleDoiUrl)) {
+        $doi = Constants::bareDoi($possibleDoiUrl);
+        if ($doi === null) {
             return $possibleDoiUrl;
         }
 
-        // Normalize into a fully-qualified URL, regardless of what scheme/host
-        // form the input came in as (bare DOI, doi.org/..., etc.)
-        $doi = preg_replace('#^(?:https?://)?(?:dx\.)?(?:doi\.org/)?#i', '', $possibleDoiUrl);
         $url = 'https://doi.org/' . $doi;
         if (isset(self::$resolvedDois[$doi])) {
             return self::$resolvedDois[$doi];
@@ -93,7 +93,9 @@ class CurlApiClient implements ApiClientInterface
         $effectiveUrl = null;
         try {
             $response = $this->client()->request('GET', $url, [
-                RequestOptions::ALLOW_REDIRECTS => ['max' => self::MAX_REDIRECTS],
+                // Authors may ask for this (#190), so a DOI is followed over
+                // https only: no plain-http hop to an address inside the network.
+                RequestOptions::ALLOW_REDIRECTS => ['max' => self::MAX_REDIRECTS, 'protocols' => ['https']],
                 RequestOptions::CONNECT_TIMEOUT => GithubHttp::CONNECT_TIMEOUT_SECONDS,
                 RequestOptions::TIMEOUT => GithubHttp::TIMEOUT_SECONDS,
                 RequestOptions::HEADERS => ['User-Agent' => self::USER_AGENT],

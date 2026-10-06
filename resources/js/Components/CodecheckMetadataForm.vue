@@ -19,6 +19,23 @@
         {{ t('plugins.generic.codecheck.form.readOnly') }}
       </p>
 
+      <!-- The author points to a check done elsewhere (#190): its record is
+           imported rather than a new identifier reserved. -->
+      <div v-if="existingCodecheck && !hasCertificate" class="codecheck-existing-check">
+        <p v-html="existingCheckText"></p>
+        <button
+          v-if="permissions.write"
+          type="button"
+          class="pkpButton codecheck-existing-check-load"
+          @click="loadMetadataFromExistingCheck"
+        >
+          {{ t('plugins.generic.codecheck.repositories.loadMetadata') }}
+        </button>
+        <p v-if="existingCheckError !== null" class="codecheck-repository-error codecheck-existing-check-error">
+          ⚠ {{ existingCheckError }}
+        </p>
+      </div>
+
       <!-- Disabled as a whole when the user may not save: the server would
            refuse the save, so no field invites an edit (#127). -->
       <fieldset class="codecheck-form-fields" :disabled="!permissions.write">
@@ -497,7 +514,7 @@
 import { workflowStore } from '../piniaStore.js';
 import { getCodecheckApi, getCodecheckJson, loadError } from '../codecheckApi.js';
 import { html, htmlSentence, MARKUP_PLACEHOLDER, toHtml } from '../markup.js';
-import { isWebUrl } from '../isWebUrl.js';
+import { doiUrl, isWebUrl } from '../isWebUrl.js';
 import { isValidOrcid, normalizeOrcid } from '../orcid.js';
 import { missingMandatoryFields } from '../configSpec.js';
 import { notOptedInReason } from '../optIn.js';
@@ -605,6 +622,10 @@ export default {
       },
       /** Why loading the metadata from the report address failed (#36). */
       reportError: null,
+      /** The author's pointer to a check done elsewhere, if any (#190). */
+      existingCodecheck: null,
+      /** Why loading the metadata from that pointer failed. */
+      existingCheckError: null,
     }
   },
   computed: {
@@ -661,6 +682,19 @@ export default {
       });
       return 'mailto:' + encodeURIComponent(email).replace(/%40/g, '@')
         + '?subject=' + encodeURIComponent(subject);
+    },
+
+    /** The note on the author's existing check, its address a link where it is one. */
+    existingCheckText() {
+      const address = this.existingCodecheck;
+      const href = isWebUrl(address) ? address : doiUrl(address);
+      const markup = href
+        ? html`<a href="${href}" target="_blank" rel="noopener noreferrer">${address}</a>`
+        : html`${address}`;
+      return toHtml(htmlSentence(
+        this.t('plugins.generic.codecheck.existingCheck.editorNote', {address: MARKUP_PLACEHOLDER}),
+        markup
+      ));
     },
 
     /**
@@ -801,6 +835,7 @@ export default {
         }
         this.certificateReferenceMode = data.settings?.certificateReferenceMode ?? 'off';
         this.permissions = { ...CLOSED_PERMISSIONS, ...data.permissions };
+        this.existingCodecheck = (data.existingCodecheck || '').trim() || null;
         // The labels are only for reserving an identifier, which is a journal
         // manager's; anyone else would be refused (#65). Asked here rather than
         // on mounting, so a load that succeeds only on Retry still asks.
@@ -904,19 +939,42 @@ export default {
      * no code or data repository to keep it in, so its address — usually a
      * DOI — loads the metadata as a repository's does (#36).
      */
-    async loadMetadataFromReport() {
-      const error = await this.importMetadataFrom(this.reportAddress);
-      this.reportError = error === null
-        ? null
-        : this.t('plugins.generic.codecheck.certificate.reportLoadError', {error});
+    loadMetadataFromReport() {
+      return this.loadMetadataInto('reportError', 'plugins.generic.codecheck.certificate.reportLoadError', this.reportAddress);
+    },
+
+    /** The record of the check the author says was done elsewhere (#190). */
+    /**
+     * A checked preprint's title often changes before the submission, so a
+     * different title is asked about here rather than only refused (#190).
+     */
+    loadMetadataFromExistingCheck() {
+      return this.loadMetadataInto(
+        'existingCheckError',
+        'plugins.generic.codecheck.existingCheck.loadError',
+        this.existingCodecheck,
+        { confirmTitleMismatch: true }
+      );
+    },
+
+    /**
+     * Loads from an address that is not a repository, with any failure worded
+     * by `messageKey` (a literal key, so the build extracts it) into `errorField`.
+     */
+    async loadMetadataInto(errorField, messageKey, address, options = {}) {
+      const error = await this.importMetadataFrom(address, options);
+      this[errorField] = error === null ? null : this.t(messageKey, {error});
     },
 
     /**
      * Fills the form from the `codecheck.yml` the server finds at an address.
      *
+     * With `confirmTitleMismatch`, a file naming another paper title is
+     * offered to the editor with both titles, and imported on Yes.
+     *
      * @returns {Promise<string|null>} why nothing was imported, or null
      */
-    async importMetadataFrom(address) {
+    async importMetadataFrom(address, { confirmTitleMismatch = false, acceptTitleMismatch = false } = {}) {
       // The fieldset keeps the controls from reaching this; the server refuses
       // the request either way (#127).
       if (!this.permissions.write) {
@@ -927,6 +985,7 @@ export default {
       // Either load replaces the form, so neither one's old message stands.
       this.repositoryWarning = {message: null, isWarning: true};
       this.reportError = null;
+      this.existingCheckError = null;
 
       try {
           const response = await fetch(`${apiUrl}/repository?submissionId=${this.submission.id}`, {
@@ -937,11 +996,15 @@ export default {
               },
               body: JSON.stringify({
                 repository: address,
+                ...(acceptTitleMismatch ? { acceptTitleMismatch: true } : {}),
               }),
           });
           const data = await response.json();
 
           if (!data.success) {
+              if (data.titleMismatch && confirmTitleMismatch && await this.confirmTitleMismatch(data.paperTitle)) {
+                return this.importMetadataFrom(address, { acceptTitleMismatch: true });
+              }
               console.error('Error:', data.error);
               return serverMessage(data);
           }
@@ -978,6 +1041,22 @@ export default {
           console.error('Failed to fetch metadata from an existing codecheck.yml:', error);
           return String(error);
       }
+    },
+
+    /** Whether the editor loads a codecheck.yml naming another paper title, or none. */
+    confirmTitleMismatch(paperTitle) {
+      const question = paperTitle
+        ? this.t('plugins.generic.codecheck.existingCheck.confirmOtherTitle', {
+          paperTitle,
+          submissionTitle: this.submissionData.title,
+        })
+        : this.t('plugins.generic.codecheck.existingCheck.confirmNoTitle');
+      return new Promise((resolve) => askForConfirmation({
+        title: this.t('plugins.generic.codecheck.existingCheck.confirmTitle'),
+        question,
+        onConfirm: () => resolve(true),
+        onCancel: () => resolve(false),
+      }));
     },
 
     /** Exactly one repository carries the codecheck.yml, so the flag is exclusive. */
@@ -1777,6 +1856,7 @@ export default {
 
 .codecheck-optin-warning,
 .codecheck-readonly-note,
+.codecheck-existing-check,
 .codecheck-spec-warning {
   box-sizing: border-box;
   margin: 0 0 1rem 0;

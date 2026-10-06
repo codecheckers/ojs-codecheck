@@ -1,4 +1,4 @@
-import { authorProvidedLines } from '../../../resources/js/authorEntries.js';
+import { addLines, authorProvidedLines, manifestFileOf } from '../../../resources/js/authorEntries.js';
 
 /**
  * Issue #170. What the submission wizard puts in its textareas is what
@@ -73,5 +73,34 @@ describe('authorProvidedLines', () => {
     expect(authorProvidedLines(undefined, 'url')).to.equal('');
     expect(authorProvidedLines(null, 'url')).to.equal('');
     expect(authorProvidedLines([], 'url')).to.equal('');
+  });
+});
+
+/**
+ * Issue #190. Loading an existing check adds to the author's list and never
+ * replaces it, since the field is the author's complete list.
+ */
+describe('addLines', () => {
+  it('adds new entries after the author\'s own', () => {
+    expect(addLines('https://github.com/a/one', ['https://github.com/b/two'])).to.deep.equal({
+      text: 'https://github.com/a/one\nhttps://github.com/b/two',
+      added: 1,
+    });
+  });
+
+  it('adds nothing twice', () => {
+    expect(addLines('https://github.com/a/one\n', ['https://github.com/a/one', ' ', 'https://github.com/a/one']))
+      .to.deep.equal({ text: 'https://github.com/a/one', added: 0 });
+  });
+
+  it('keeps the author\'s comment on a file the check also lists', () => {
+    expect(addLines('fig.png - my comment', ['fig.png - Figure 1', 'table.csv'], manifestFileOf)).to.deep.equal({
+      text: 'fig.png - my comment\ntable.csv',
+      added: 1,
+    });
+  });
+
+  it('fills an empty field', () => {
+    expect(addLines('', ['a.png'])).to.deep.equal({ text: 'a.png', added: 1 });
   });
 });

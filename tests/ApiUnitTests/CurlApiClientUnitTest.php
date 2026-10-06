@@ -95,6 +95,17 @@ class CurlApiClientUnitTest extends PKPTestCase
         $this->assertSame('https://zenodo.org/records/3750741', $client->resolveDoi('10.5281/zenodo.3750741'));
     }
 
+    /** A DOI written as `doi:…` resolves too, as the wizard accepts it (#190). */
+    public function testAPrefixedDoiResolves()
+    {
+        $client = self::client([
+            new Response(302, ['Location' => 'https://zenodo.org/records/3750742']),
+            new Response(200, [], '<html></html>'),
+        ]);
+
+        $this->assertSame('https://zenodo.org/records/3750742', $client->resolveDoi('doi:10.5281/zenodo.3750742'));
+    }
+
     /** Nothing is requested for an address that is not a DOI. */
     public function testAnAddressThatIsNotADoiIsKept()
     {

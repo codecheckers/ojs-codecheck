@@ -50,6 +50,7 @@ use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\classes\Orcid\OrcidApiClient;
 use APP\plugins\generic\codecheck\classes\Orcid\OrcidDepositService;
 use APP\plugins\generic\codecheck\classes\Orcid\OrcidTokenDAO;
+use APP\plugins\generic\codecheck\classes\Submission\CodecheckAuthorMetadata;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckCodecheckerDirectory;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckCodecheckers;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionAccess;
@@ -89,6 +90,7 @@ class CodecheckApiController extends PKPBaseController
         'getOrcidStatus',
         'saveMetadata',
         'loadMetadataFromRepository',
+        'previewExistingCheck',
         'updateStatus',
         'depositToOrcid',
         'addCertificateReference',
@@ -196,6 +198,10 @@ class CodecheckApiController extends PKPBaseController
 
         Route::post('repository', $this->loadMetadataFromRepository(...))
             ->name('codecheck.repository.load')->middleware($write);
+
+        // Read-only, so authors may: the wizard's load from an existing check (#190).
+        Route::post('repository/preview', $this->previewExistingCheck(...))
+            ->name('codecheck.repository.preview')->middleware($read);
 
         Route::post('status/update', $this->updateStatus(...))
             ->name('codecheck.status.update')->middleware($write);
@@ -578,7 +584,39 @@ class CodecheckApiController extends PKPBaseController
         // The title comes from the authorised submission, never from the request.
         $title = (string) $submission->getCurrentPublication()?->getLocalizedTitle();
 
-        $response = $this->metadataHandler()->importMetadataForSubmission($repository, $title);
+        // Only after the editor confirmed both titles (#190).
+        $acceptTitleMismatch = ($postParams['acceptTitleMismatch'] ?? false) === true;
+
+        $response = $this->metadataHandler()->importMetadataForSubmission($repository, $title, $acceptTitleMismatch);
+
+        return response()->json($response->getPayloadArray(), $response->getHttpResponseCode());
+    }
+
+    /**
+     * POST api/v1/codecheck/repository/preview?submissionId=N
+     *
+     * What the submission wizard may fill in from an existing check's
+     * `codecheck.yml` (#190). Writes nothing, so it is open to the authors of
+     * the submission; the title is judged against the authorised submission.
+     */
+    public function previewExistingCheck(): \Illuminate\Http\JsonResponse
+    {
+        $submission = $this->getAuthorizedContextObject(Application::ASSOC_TYPE_SUBMISSION);
+
+        $postParams = json_decode(file_get_contents('php://input'), true);
+        $address = trim((string) ($postParams['address'] ?? ''));
+
+        // Empty is a valid pointer to save (it removes one), but nothing to load.
+        if ($address === '' || !CodecheckAuthorMetadata::isExistingCheckAddress($address)) {
+            return response()->json([
+                'success' => false,
+                'error' => __('plugins.generic.codecheck.existingCheck.invalid'),
+            ], 400);
+        }
+
+        $title = (string) $submission->getCurrentPublication()?->getLocalizedTitle();
+
+        $response = $this->metadataHandler()->previewForAuthor($address, $title);
 
         return response()->json($response->getPayloadArray(), $response->getHttpResponseCode());
     }

@@ -134,6 +134,20 @@ class CodecheckApiControllerRoutesUnitTest extends PKPTestCase
         $this->assertSame('read', $tiers['GET metadata'] ?? null);
         $this->assertSame('read', $tiers['GET status'] ?? null);
         $this->assertSame('read', $tiers['GET yaml'] ?? null);
+        // Writes nothing, so the submission's authors may load an existing
+        // check in the wizard (#190); the policy holds them to their own.
+        $this->assertSame('read', $tiers['POST repository/preview'] ?? null);
+    }
+
+    /**
+     * An author may call the preview, so without the submission policy it
+     * would read the title of any submission in the journal (#190).
+     */
+    public function testThePreviewOfAnExistingCheckIsHeldToItsSubmission()
+    {
+        $scoped = (new \ReflectionClassConstant(CodecheckApiController::class, 'SUBMISSION_SCOPED'))->getValue();
+
+        $this->assertContains('previewExistingCheck', $scoped);
     }
 
     /**

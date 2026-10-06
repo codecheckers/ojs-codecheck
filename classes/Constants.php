@@ -115,6 +115,21 @@ class Constants
         return (bool) preg_match('#^https?://#i', trim((string) $url));
     }
 
+    /**
+     * The DOI an address names, bare (`10.…/…`), or null when it names none:
+     * a bare DOI, `doi:10.…`, or a doi.org / dx.doi.org link with or without
+     * its scheme. The one DOI rule for what an author or editor types in;
+     * `resources/js/isWebUrl.js` mirrors it as `doiUrl()`.
+     */
+    public static function bareDoi(?string $value): ?string
+    {
+        // A non-breaking space counts as space, as it does for JS's trim(): a
+        // DOI pasted from a page often ends in one.
+        return preg_match('#^[\s\x{00A0}]*(?:doi:[\s\x{00A0}]*|(?:https?://)?(?:dx\.)?doi\.org/)?(10\.\d{4,9}/[^\s\x{00A0}]+)[\s\x{00A0}]*$#iu', (string) $value, $matches)
+            ? $matches[1]
+            : null;
+    }
+
     public static function getRegisterCertificateUrl(string $certificate): string
     {
         $identifier = self::certificateIdentifier($certificate);
