@@ -88,16 +88,19 @@ password of every account is its username.
 | 2 | published, issue 1 | certificate 2020-002, published | three repositories: the author's code, an archive with the code and data (Zenodo), and the codechecker's copy holding the `codecheck.yml`; two codecheckers |
 | 3, 4, 5 | published, issues 1–2 | certificate published | complete status histories; 4 stalled on the author once on the way |
 | 7 | published, issue 2 | certificate published | a private repository, which readers do not see |
-| 8 | in review | completed, certificate 2022-018 | ready to publish; the repository is marked as holding the `codecheck.yml` |
-| 9 | production, assigned to issue 2 | codechecker assigned, check running | publishing is refused by CODECHECK alone |
+| 8 | in review | completed, certificate 2022-018 | ready to publish; the repository is marked as holding the `codecheck.yml`; codechecker `ccodechecker` has not submitted their review, which the CODECHECK tab offers to close |
+| 9 | production, assigned to issue 2 | codechecker assigned, check running | publishing is refused by CODECHECK alone; `ccodechecker` is its codechecker, `rreviewer` a reviewer who is not |
 | 10 | published, issue 2 | stalled on the codechecker, no certificate | a published article whose check is not finished |
 | 11 | **draft** by `fostermann` | opted in, nothing entered yet | the author's part of the walkthrough |
-| 12 | submitted by `seglen` | needs a codechecker, no identifier | the fallback for the register step |
+| 12 | submitted by `seglen`, in review | needs a codechecker, no identifier | the fallback for the register step; `dnuest` is assigned as a reviewer, ready to be added as its codechecker |
 | 13 | submitted by `dnuest` | not opted in | a submission without CODECHECK: its tab says it has not opted in |
 
 Submissions 11 to 13 use the titles, authors and abstracts of real, openly
-published papers. The manuscript file of each is the dataset's sample PDF. The
-seed also sets these plugin settings:
+published papers. The manuscript file of each is the dataset's sample PDF.
+
+Codecheckers are reviewers (#13): `dnuest` and `ccodechecker` are in the
+Codechecker role, and `dnuest` has his ORCID iD on his account but no GitHub
+username. The seed also sets these plugin settings:
 
 - the testing register is the register;
 - the register issue follows status changes;
@@ -171,10 +174,14 @@ In the editor window, logged in as `admin`:
    the journal name and the label `id assigned`. Saving recorded the status
    *needs codechecker*, so the issue also has a comment saying so and the label
    `needs codechecker`.
-5. Back in OJS, add a codechecker with **+ CODECHECKer**. Enter a mistyped
-   ORCID iD first to show the dialog refusing it, then Daniel Nüst's,
-   `0000-0002-0024-5046`: leaving the field offers the GitHub username `nuest`
-   from the CODECHECK community list. Press **Use it**, add, and save.
+5. A codechecker is a reviewer. Back in OJS, send 11 to review
+   (**Send for Review**), and under **Reviewers** use **Add Reviewer**: search
+   for `codechecker`, which finds the members of the Codechecker role, choose
+   Daniel Nüst, and under *Choose a predefined message* the **Invitation to
+   codecheck**. Then, on the CODECHECK tab, **+ CODECHECKer** offers him:
+   choose him, and the dialog shows his ORCID iD from his account and offers
+   the GitHub username `nuest` from the CODECHECK community list. Press
+   **Use it**, which saves it to his account, add, and save.
    Because a codechecker is now assigned, saving records *codechecker assigned*.
    On GitHub a second comment appears naming the codechecker, the issue is
    assigned to `nuest`, and `needs codechecker` is replaced by
@@ -185,8 +192,10 @@ In the editor window, logged in as `admin`:
 
 If step 1 was skipped or failed, use submission 12 instead:
 <http://localhost:8350/index.php/codecheck/dashboard/editorial?workflowSubmissionId=12&workflowMenuKey=codecheck>.
-Its history already holds one status, so after the codechecker is added, record
-*codechecker assigned* through the status form rather than relying on the save.
+It is in review with Daniel Nüst already assigned, so step 5 starts at
+**+ CODECHECKer**. Its history already holds one status, so after the
+codechecker is added, record *codechecker assigned* through the status form
+rather than relying on the save.
 
 ### 3. Publishing with CODECHECK (1:00)
 
@@ -197,6 +206,9 @@ Its history already holds one status, so after the codechecker is added, record
 2. Tick **Hide from public record** on its repository. The form refuses,
    because that repository holds the `codecheck.yml` and would be named in the
    public register.
+   Optional: the check is completed, so the status panel offers **Close review**
+   for its codechecker, who only had the codecheck to do. It closes the review
+   as their own submission would, with a comment naming the certificate.
 3. Open submission 9, where the check is still running, at **Publication →
    Title & Abstract**, and press **Schedule For Publication**:
    <http://localhost:8350/index.php/codecheck/dashboard/editorial?workflowSubmissionId=9&workflowMenuKey=publication_titleAbstract>.

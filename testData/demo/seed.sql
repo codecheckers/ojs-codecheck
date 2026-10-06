@@ -233,6 +233,43 @@ INSERT INTO codecheck_metadata (submission_id, spec_version, publication_type, m
 INSERT INTO codecheck_status (submission_id, status, timestamp, user_id) VALUES
   (12, 'plugins.generic.codecheck.status.needsCodechecker', '2026-09-22 10:05:00', -1);
 
+-- ---------------------------------------------------------------------------
+-- Codecheckers are reviewers (#13)
+-- ---------------------------------------------------------------------------
+--
+-- A codechecker is a reviewer assigned to the submission whose account is
+-- linked to its codechecker list. The test dataset already makes ccodechecker
+-- (7) the codechecker of 9. Here:
+--
+-- - dnuest (2) joins the Codechecker role (user group 20) with his ORCID iD on
+--   the account and no GitHub username, so "Add codechecker" offers him and
+--   the community list's `nuest` for him.
+-- - 12 is in review, round 1, with dnuest assigned: the walkthrough's fallback
+--   adds him as its codechecker.
+-- - ccodechecker is also 8's codechecker, with a review not submitted: the
+--   check is completed, so the CODECHECK tab offers to close it.
+
+INSERT INTO user_user_groups (user_group_id, user_id, date_start, date_end, masthead) VALUES
+  (20, 2, '2026-02-12 09:02:16', NULL, 0);
+
+INSERT INTO user_settings (user_id, locale, setting_name, setting_value) VALUES
+  (2, '', 'orcid', 'https://orcid.org/0000-0002-0024-5046');
+
+UPDATE submissions SET stage_id = 3 WHERE submission_id = 12;
+
+INSERT INTO review_rounds (review_round_id, submission_id, stage_id, round, review_revision, status) VALUES
+  (3, 12, 3, 1, NULL, 8);
+
+-- Accepted and running, as the codechecker had accepted the invitation.
+INSERT INTO review_assignments (review_id, submission_id, reviewer_id, competing_interests, recommendation, date_assigned, date_notified, date_confirmed, date_completed, date_considered, date_acknowledged, date_due, date_response_due, last_modified, reminder_was_automatic, declined, cancelled, date_cancelled, date_rated, date_reminded, quality, review_round_id, stage_id, review_method, round, step, review_form_id, considered, request_resent) VALUES
+  (3, 12, 2, NULL, NULL, '2026-09-23 09:00:00', '2026-09-23 09:00:00', '2026-09-23 11:00:00', NULL, NULL, NULL, '2026-10-21 09:00:00', '2026-09-30 09:00:00', '2026-09-23 11:00:00', 0, 0, 0, NULL, NULL, NULL, NULL, 3, 3, 1, 1, 1, NULL, NULL, 0),
+  (4, 8, 7, NULL, NULL, '2022-09-12 10:00:00', '2022-09-12 10:00:00', '2022-09-12 12:00:00', NULL, NULL, NULL, '2022-10-10 10:00:00', '2022-09-19 10:00:00', '2022-09-12 12:00:00', 0, 0, 0, NULL, NULL, NULL, NULL, 1, 3, 1, 1, 1, NULL, NULL, 0);
+
+UPDATE codecheck_metadata
+   SET codecheckers = JSON_ARRAY_APPEND(codecheckers, '$',
+         JSON_OBJECT('userId', 7, 'name', 'Cora Codechecker', 'orcid', '0000-0002-1694-233X', 'github', ''))
+ WHERE submission_id = 8;
+
 -- Recorded when they happened, as the status handler would have.
 -- `timestamp` is ON UPDATE CURRENT_TIMESTAMP: assigning it keeps it.
 UPDATE codecheck_status SET timestamp = timestamp, created_at = timestamp, updated_at = timestamp
