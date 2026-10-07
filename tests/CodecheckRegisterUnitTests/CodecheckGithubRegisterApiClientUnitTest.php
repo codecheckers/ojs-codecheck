@@ -11,8 +11,8 @@ use APP\plugins\generic\codecheck\classes\CodecheckRegister\GithubHttp;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\DataStructures\UniqueArray;
 use APP\plugins\generic\codecheck\classes\Exceptions\ApiUpdateException;
+use APP\plugins\generic\codecheck\tests\Support\GithubFake;
 use GuzzleHttp\Exception\ConnectException;
-use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use PKP\tests\PKPTestCase;
@@ -22,10 +22,15 @@ use PKP\tests\PKPTestCase;
  *
  * @class CodecheckGithubRegisterApiClientUnitTest
  *
- * @brief Tests for the CodecheckGithubRegisterApiClient class
+ * @brief Tests for the CodecheckGithubRegisterApiClient class. GitHub answers
+ *   by address through GithubFake, so a test says which requests it expects
+ *   and what GitHub answers, not which methods of the GitHub library are
+ *   called in which order (#191).
  */
 class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
 {
+    private const REPO = '/repos/codecheckers/testing-dev-register';
+
     private CodecheckPostOrigin $origin;
     private int $submissionId;
     private string $githubPAT;
@@ -36,6 +41,7 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
     protected function setUp(): void
     {
         parent::setUp();
+        GithubHttp::reset();
         $this->submissionId = 0;
         $this->githubPAT = 'testtoken123';
         $this->githubRegisterOrganization = 'codecheckers';
@@ -53,6 +59,39 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
         ];
     }
 
+    protected function tearDown(): void
+    {
+        // A static: left tripped, it would refuse every GitHub call in the
+        // tests that follow.
+        GithubHttp::reset();
+        parent::tearDown();
+    }
+
+    /** A register client whose GitHub answers as the fake says. */
+    private function clientOn(GithubFake $github): CodecheckGithubRegisterApiClient
+    {
+        return new CodecheckGithubRegisterApiClient(
+            $this->githubPAT,
+            $this->githubRegisterOrganization,
+            $this->githubRegisterRepository,
+            (string) $this->submissionId,
+            $this->origin,
+            $github->client()
+        );
+    }
+
+    /** A fake whose issue list answers the given pages in turn, and empty after them. */
+    private static function issuePages(array ...$pages): GithubFake
+    {
+        $asked = 0;
+
+        return new GithubFake([
+            'GET ' . self::REPO . '/issues' => function () use (&$asked, $pages) {
+                return $pages[$asked++] ?? [];
+            },
+        ]);
+    }
+
     public function testGithubRegisterClientGetEmptyIssues()
     {
         $apiParser = new CodecheckGithubRegisterApiClient(
@@ -68,32 +107,28 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
 
     public function testGithubRegisterClientFetchIssues()
     {
-        $issueApiMock = $this->createMock(\Github\Api\Issue::class);
-        $issueApiMock->method('all')->willReturn([
+        $github = self::issuePages([
             ['title' => 'Alice | 2025-001'],
             ['title' => 'Issue without a certificate Identifier'],
         ]);
-        $clientMock = $this->createMock(\Github\Client::class);
-        $clientMock->method('api')->with('issue')->willReturn($issueApiMock);
-        $apiParser = new CodecheckGithubRegisterApiClient(
-            $this->githubPAT,
-            $this->githubRegisterOrganization,
-            $this->githubRegisterRepository,
-            $this->submissionId,
-            $this->origin,
-            $clientMock
-        );
+        $apiParser = $this->clientOn($github);
         $apiParser->fetchNewestIssues();
         $issues = $apiParser->getIssues();
 
         $this->assertCount(1, $issues);
         $this->assertEquals('Alice | 2025-001', $issues[0]['title']);
+        // Only the issues carrying the label are asked for, newest first.
+        $github->assertSent('GET ' . self::REPO . '/issues', function ($request) {
+            parse_str($request->getUri()->getQuery(), $query);
+
+            return $query['labels'] === Constants::CODECHECK_REGISTER_ID_ASSIGNED_LABEL
+                && $query['sort'] === 'updated'
+                && $query['direction'] === 'desc';
+        });
     }
 
     public function testAddIssueCreatesIssueAndReturnsUrl()
     {
-        $_ENV['CODECHECK_REGISTER_GITHUB_TOKEN'] = $this->githubPAT;
-
         $codecheckers = ['Example Codechecker'];
         $repos = ['https://repo.com'];
         $paperTitle = 'Some Paper';
@@ -102,8 +137,6 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
         $certMock = $this->createMock(CertificateIdentifier::class);
         $certMock->method('toStr')
             ->willReturn('2025-001');
-
-        $issueApiMock = $this->createMock(\Github\Api\Issue::class);
 
         $issueLabelsMock = $this->createMock(CodecheckIssueLabels::class);
 
@@ -126,42 +159,15 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
             $this->updateInformation,
         );
 
-        $expectedBody = $issue->getBody();
+        $github = new GithubFake([
+            'POST ' . self::REPO . '/issues' => [
+                'html_url' => 'https://github.com/codecheckers/testing-dev-register/issues/123',
+            ],
+        ]);
 
-        $issueApiMock->expects($this->once())
-            ->method('create')
-            ->with(
-                $this->githubRegisterOrganization,
-                $this->githubRegisterRepository,
-                [
-                    'title' => 'Daniel Nüst et al. | 2025-001',
-                    'body' => $expectedBody,
-                    'labels' => ['id assigned', 'institution', 'check-nl']
-                ]
-            )
-            ->willReturn([
-                'html_url' => 'https://github.com/codecheckers/testing-dev-register/issues/123'
-            ]);
-
-        $clientMock = $this->createMock(\Github\Client::class);
-        $clientMock->expects($this->once())->method('authenticate')->with('testtoken123', null, \Github\Client::AUTH_ACCESS_TOKEN);
-
-        $clientMock->method('api')->with('issue')->willReturn($issueApiMock);
-
-        $parser = new CodecheckGithubRegisterApiClient(
-            $this->githubPAT,
-            $this->githubRegisterOrganization,
-            $this->githubRegisterRepository,
-            $this->submissionId,
-            $this->origin,
-            $clientMock
-        );
-
-        $labels = new CodecheckIssueLabels(['institution', 'check-nl']);
-
-        $issue = $parser->addIssue(
+        $created = $this->clientOn($github)->addIssue(
             $certMock,
-            $labels,
+            new CodecheckIssueLabels(['institution', 'check-nl']),
             $paperTitle,
             $authorString,
             $codecheckers,
@@ -171,8 +177,17 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
 
         $this->assertEquals(
             'https://github.com/codecheckers/testing-dev-register/issues/123',
-            $issue['html_url']
+            $created['html_url']
         );
+        $github->assertSent('POST ' . self::REPO . '/issues', function ($request, $body) use ($issue) {
+            $this->assertSame([
+                'title' => 'Daniel Nüst et al. | 2025-001',
+                'body' => $issue->getBody(),
+                'labels' => ['id assigned', 'institution', 'check-nl'],
+            ], $body);
+            // The register's token goes with the request.
+            $this->assertStringContainsString('testtoken123', $request->getHeaderLine('Authorization'));
+        });
     }
 
     /**
@@ -181,20 +196,7 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
      */
     public function testFetchNewestIssuesLeavesTheIssueListEmptyWhenTheRegisterHasNone()
     {
-        $issueApiMock = $this->createMock(\Github\Api\Issue::class);
-        $issueApiMock->method('all')->willReturn([]);
-
-        $clientMock = $this->createMock(\Github\Client::class);
-        $clientMock->method('api')->with('issue')->willReturn($issueApiMock);
-
-        $parser = new CodecheckGithubRegisterApiClient(
-            $this->githubPAT,
-            $this->githubRegisterOrganization,
-            $this->githubRegisterRepository,
-            $this->submissionId,
-            $this->origin,
-            $clientMock
-        );
+        $parser = $this->clientOn(self::issuePages());
 
         $parser->fetchNewestIssues();
 
@@ -204,65 +206,30 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
     /** Paging stops at the first empty page. */
     public function testFetchNewestIssuesStopsPagingWhenNoIssueCarriesAnIdentifier()
     {
-        $issueApiMock = $this->createMock(\Github\Api\Issue::class);
-        $issueApiMock->expects($this->exactly(2))
-            ->method('all')
-            ->willReturnOnConsecutiveCalls(
-                [['title' => 'Issue without a certificate Identifier']],
-                []
-            );
-
-        $clientMock = $this->createMock(\Github\Client::class);
-        $clientMock->method('api')->with('issue')->willReturn($issueApiMock);
-
-        $parser = new CodecheckGithubRegisterApiClient(
-            $this->githubPAT,
-            $this->githubRegisterOrganization,
-            $this->githubRegisterRepository,
-            $this->submissionId,
-            $this->origin,
-            $clientMock
-        );
+        $github = self::issuePages([['title' => 'Issue without a certificate Identifier']], []);
+        $parser = $this->clientOn($github);
 
         $parser->fetchNewestIssues();
 
         $this->assertSame([], $parser->getIssues());
+        $github->assertSent('GET ' . self::REPO . '/issues', null, 2);
     }
 
     public function testRegisterHasIdAssignedLabelWhenTheLabelExists()
     {
-        $labelsApiMock = $this->createMock(\Github\Api\Issue\Labels::class);
-        $labelsApiMock->expects($this->once())
-            ->method('show')
-            ->with(
-                $this->githubRegisterOrganization,
-                $this->githubRegisterRepository,
-                Constants::CODECHECK_REGISTER_ID_ASSIGNED_LABEL
-            )
-            ->willReturn(['name' => Constants::CODECHECK_REGISTER_ID_ASSIGNED_LABEL]);
+        $github = new GithubFake([
+            'GET ' . self::REPO . '/labels/*' => ['name' => Constants::CODECHECK_REGISTER_ID_ASSIGNED_LABEL],
+        ]);
 
-        $issueApiMock = $this->createMock(\Github\Api\Issue::class);
-        $issueApiMock->method('labels')->willReturn($labelsApiMock);
-        $clientMock = $this->createMock(\Github\Client::class);
-        $clientMock->method('api')->with('issue')->willReturn($issueApiMock);
-
-        $parser = new CodecheckGithubRegisterApiClient(
-            $this->githubPAT,
-            $this->githubRegisterOrganization,
-            $this->githubRegisterRepository,
-            $this->submissionId,
-            $this->origin,
-            $clientMock
-        );
-
-        $this->assertTrue($parser->registerHasIdAssignedLabel());
+        $this->assertTrue($this->clientOn($github)->registerHasIdAssignedLabel());
+        $github->assertSent('GET ' . self::REPO . '/labels/id%20assigned');
     }
 
     public function testRegisterHasIdAssignedLabelWhenTheLabelIsMissing()
     {
-        $parser = $this->clientWhoseLabelProbeThrows(new \Exception('Not Found', 404));
+        $github = new GithubFake(['GET ' . self::REPO . '/labels/*' => new Response(404, [], '{"message": "Not Found"}')]);
 
-        $this->assertFalse($parser->registerHasIdAssignedLabel());
+        $this->assertFalse($this->clientOn($github)->registerHasIdAssignedLabel());
     }
 
     /**
@@ -273,14 +240,13 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
      */
     public function testRegisterHasIdAssignedLabelIsUnknownWhenTheRepositoryCannotBeRead()
     {
-        $this->assertNull(
-            $this->clientWhoseLabelProbeThrows(new \Exception('API rate limit exceeded', 403))
-                ->registerHasIdAssignedLabel()
-        );
-        $this->assertNull(
-            $this->clientWhoseLabelProbeThrows(new \Exception('no route to host'))
-                ->registerHasIdAssignedLabel()
-        );
+        $forbidden = new GithubFake(['GET ' . self::REPO . '/labels/*' => new Response(403, [], '{"message": "Resource not accessible"}')]);
+        $this->assertNull($this->clientOn($forbidden)->registerHasIdAssignedLabel());
+
+        $unreachable = new GithubFake([
+            'GET ' . self::REPO . '/labels/*' => new ConnectException('no route to host', new Request('GET', 'https://api.github.com/')),
+        ]);
+        $this->assertNull($this->clientOn($unreachable)->registerHasIdAssignedLabel());
     }
 
     /**
@@ -290,23 +256,9 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
      */
     public function testLabelledIssuesAreSeenEvenWhenNoTitleCarriesAnIdentifier()
     {
-        $issueApiMock = $this->createMock(\Github\Api\Issue::class);
-        $issueApiMock->method('all')->willReturnOnConsecutiveCalls(
-            [['title' => 'Community codecheck 2026-001'], ['title' => 'needs codechecker']],
-            []
-        );
-
-        $clientMock = $this->createMock(\Github\Client::class);
-        $clientMock->method('api')->with('issue')->willReturn($issueApiMock);
-
-        $parser = new CodecheckGithubRegisterApiClient(
-            $this->githubPAT,
-            $this->githubRegisterOrganization,
-            $this->githubRegisterRepository,
-            $this->submissionId,
-            $this->origin,
-            $clientMock
-        );
+        $parser = $this->clientOn(self::issuePages(
+            [['title' => 'Community codecheck 2026-001'], ['title' => 'needs codechecker']]
+        ));
 
         $parser->fetchNewestIssues();
 
@@ -316,20 +268,7 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
 
     public function testAnEmptyRegisterHasSeenNoLabelledIssues()
     {
-        $issueApiMock = $this->createMock(\Github\Api\Issue::class);
-        $issueApiMock->method('all')->willReturn([]);
-
-        $clientMock = $this->createMock(\Github\Client::class);
-        $clientMock->method('api')->with('issue')->willReturn($issueApiMock);
-
-        $parser = new CodecheckGithubRegisterApiClient(
-            $this->githubPAT,
-            $this->githubRegisterOrganization,
-            $this->githubRegisterRepository,
-            $this->submissionId,
-            $this->origin,
-            $clientMock
-        );
+        $parser = $this->clientOn(self::issuePages());
 
         $parser->fetchNewestIssues();
 
@@ -343,27 +282,14 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
      */
     public function testFetchNewestIssuesStopsWalkingAServerThatRepeatsItself()
     {
-        $issueApiMock = $this->createMock(\Github\Api\Issue::class);
-        $issueApiMock->expects($this->atMost(50))
-            ->method('all')
-            ->willReturn([['title' => 'the same page for every query']]);
-
-        $clientMock = $this->createMock(\Github\Client::class);
-        $clientMock->method('api')->with('issue')->willReturn($issueApiMock);
-
-        $parser = new CodecheckGithubRegisterApiClient(
-            $this->githubPAT,
-            $this->githubRegisterOrganization,
-            $this->githubRegisterRepository,
-            $this->submissionId,
-            $this->origin,
-            $clientMock
-        );
+        $github = new GithubFake(['GET ' . self::REPO . '/issues' => [['title' => 'the same page for every query']]]);
+        $parser = $this->clientOn($github);
 
         $parser->fetchNewestIssues();
 
         $this->assertSame([], $parser->getIssues());
         $this->assertTrue($parser->hasSeenLabelledIssues());
+        $this->assertLessThanOrEqual(50, count($github->requests()));
     }
 
     /**
@@ -373,8 +299,7 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
      */
     public function testDevelopmentIssuesAreLeftOutOfTheIdentifiers()
     {
-        $issueApiMock = $this->createMock(\Github\Api\Issue::class);
-        $issueApiMock->method('all')->willReturn([
+        $parser = $this->clientOn(new GithubFake(['GET ' . self::REPO . '/issues' => [
             [
                 'title' => 'Test the register workflow | 2099-999',
                 'labels' => [['name' => 'id assigned'], ['name' => 'development']],
@@ -383,19 +308,7 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
                 'title' => 'Alice | 2025-001',
                 'labels' => [['name' => 'id assigned']],
             ],
-        ]);
-
-        $clientMock = $this->createMock(\Github\Client::class);
-        $clientMock->method('api')->with('issue')->willReturn($issueApiMock);
-
-        $parser = new CodecheckGithubRegisterApiClient(
-            $this->githubPAT,
-            $this->githubRegisterOrganization,
-            $this->githubRegisterRepository,
-            $this->submissionId,
-            $this->origin,
-            $clientMock
-        );
+        ]]));
 
         $parser->fetchNewestIssues();
         $issues = $parser->getIssues();
@@ -410,23 +323,9 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
      */
     public function testARegisterOfOnlyDevelopmentIssuesCountsAsEmpty()
     {
-        $issueApiMock = $this->createMock(\Github\Api\Issue::class);
-        $issueApiMock->method('all')->willReturnOnConsecutiveCalls(
-            [['title' => 'Register tooling | 2099-999', 'labels' => [['name' => 'development']]]],
-            []
-        );
-
-        $clientMock = $this->createMock(\Github\Client::class);
-        $clientMock->method('api')->with('issue')->willReturn($issueApiMock);
-
-        $parser = new CodecheckGithubRegisterApiClient(
-            $this->githubPAT,
-            $this->githubRegisterOrganization,
-            $this->githubRegisterRepository,
-            $this->submissionId,
-            $this->origin,
-            $clientMock
-        );
+        $parser = $this->clientOn(self::issuePages(
+            [['title' => 'Register tooling | 2099-999', 'labels' => [['name' => 'development']]]]
+        ));
 
         $parser->fetchNewestIssues();
 
@@ -440,35 +339,20 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
      */
     public function testGetIssueLabelsReadsTheNamesOffTheIssue()
     {
-        $issueApiMock = $this->createMock(\Github\Api\Issue::class);
-        $issueApiMock->expects($this->once())
-            ->method('show')
-            ->with($this->githubRegisterOrganization, $this->githubRegisterRepository, 190)
-            ->willReturn([
-                'number' => 190,
-                'labels' => [
-                    ['name' => 'id assigned'],
-                    ['name' => 'work in progress'],
-                    ['name' => 'journal'],
-                ],
-            ]);
-
-        $clientMock = $this->createMock(\Github\Client::class);
-        $clientMock->method('api')->with('issue')->willReturn($issueApiMock);
-
-        $parser = new CodecheckGithubRegisterApiClient(
-            $this->githubPAT,
-            $this->githubRegisterOrganization,
-            $this->githubRegisterRepository,
-            $this->submissionId,
-            $this->origin,
-            $clientMock
-        );
+        $github = new GithubFake(['GET ' . self::REPO . '/issues/190' => [
+            'number' => 190,
+            'labels' => [
+                ['name' => 'id assigned'],
+                ['name' => 'work in progress'],
+                ['name' => 'journal'],
+            ],
+        ]]);
 
         $this->assertSame(
             ['id assigned', 'work in progress', 'journal'],
-            $parser->getIssueLabels(190)
+            $this->clientOn($github)->getIssueLabels(190)
         );
+        $this->assertSame(['GET ' . self::REPO . '/issues/190'], $github->addresses());
     }
 
     /**
@@ -477,53 +361,40 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
      */
     public function testAddLabelsToIssueAddsAndNeverReplaces()
     {
-        $labelsApiMock = $this->createMock(\Github\Api\Issue\Labels::class);
-        $labelsApiMock->expects($this->once())
-            ->method('add')
-            ->with(
-                $this->githubRegisterOrganization,
-                $this->githubRegisterRepository,
-                190,
-                ['work in progress']
-            );
-        $labelsApiMock->expects($this->never())->method('replace');
-        $labelsApiMock->expects($this->never())->method('clear');
+        $github = new GithubFake(['POST ' . self::REPO . '/issues/190/labels' => []]);
 
-        $this->clientWithLabelsApi($labelsApiMock)->addLabelsToIssue(190, ['work in progress']);
+        $this->clientOn($github)->addLabelsToIssue(190, ['work in progress']);
+
+        $this->assertSame(['POST ' . self::REPO . '/issues/190/labels'], $github->addresses());
+        $this->assertSame([['work in progress']], $github->bodies('POST *'));
     }
 
     public function testAddLabelsToIssueDoesNothingWithoutLabels()
     {
-        $labelsApiMock = $this->createMock(\Github\Api\Issue\Labels::class);
-        $labelsApiMock->expects($this->never())->method('add');
+        $github = new GithubFake();
 
-        $this->clientWithLabelsApi($labelsApiMock)->addLabelsToIssue(190, []);
+        $this->clientOn($github)->addLabelsToIssue(190, []);
+
+        $this->assertSame([], $github->addresses());
     }
 
     public function testRemoveLabelFromIssueRemovesThatOneLabel()
     {
-        $labelsApiMock = $this->createMock(\Github\Api\Issue\Labels::class);
-        $labelsApiMock->expects($this->once())
-            ->method('remove')
-            ->with(
-                $this->githubRegisterOrganization,
-                $this->githubRegisterRepository,
-                190,
-                'needs codechecker'
-            );
-        $labelsApiMock->expects($this->never())->method('clear');
+        $github = new GithubFake(['DELETE ' . self::REPO . '/issues/190/labels/*' => []]);
 
-        $this->clientWithLabelsApi($labelsApiMock)->removeLabelFromIssue(190, 'needs codechecker');
+        $this->clientOn($github)->removeLabelFromIssue(190, 'needs codechecker');
+
+        // That label alone: never every label on the issue.
+        $this->assertSame(['DELETE ' . self::REPO . '/issues/190/labels/needs%20codechecker'], $github->addresses());
     }
 
     public function testALabelChangeGitHubRefusesIsReportedAsAnUpdateFailure()
     {
-        $labelsApiMock = $this->createMock(\Github\Api\Issue\Labels::class);
-        $labelsApiMock->method('remove')->willThrowException(new \Exception('Forbidden', 403));
+        $github = new GithubFake(['DELETE *' => new Response(403, [], '{"message": "Forbidden"}')]);
 
         $this->expectException(ApiUpdateException::class);
 
-        $this->clientWithLabelsApi($labelsApiMock)->removeLabelFromIssue(190, 'needs codechecker');
+        $this->clientOn($github)->removeLabelFromIssue(190, 'needs codechecker');
     }
 
     /**
@@ -533,13 +404,12 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
      */
     public function testRemovingALabelThatIsNotThereIsNotAFailure()
     {
-        $labelsApiMock = $this->createMock(\Github\Api\Issue\Labels::class);
-        $labelsApiMock->expects($this->once())
-            ->method('remove')
-            ->willThrowException(new \Exception('Label does not exist', 404));
+        $github = new GithubFake(['DELETE *' => new Response(404, [], '{"message": "Label does not exist"}')]);
 
         // The assertion is that this does not throw.
-        $this->clientWithLabelsApi($labelsApiMock)->removeLabelFromIssue(190, 'needs codechecker');
+        $this->clientOn($github)->removeLabelFromIssue(190, 'needs codechecker');
+
+        $github->assertSent('DELETE *');
     }
 
     /**
@@ -558,42 +428,14 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
         $issueLabelsMock = $this->createMock(CodecheckIssueLabels::class);
         $issueLabelsMock->method('get')->willReturn($collectionMock);
 
-        $labelsApiMock = $this->createMock(\Github\Api\Issue\Labels::class);
-        $labelsApiMock->expects($this->once())
-            ->method('add')
-            ->with(
-                $this->githubRegisterOrganization,
-                $this->githubRegisterRepository,
-                190,
-                ['id assigned', 'institution', 'check-nl']
-            );
-        $labelsApiMock->expects($this->never())->method('replace');
+        $github = new GithubFake([
+            // The body is read first, so that an unchanged one is not written again.
+            'GET ' . self::REPO . '/issues/190' => ['number' => 190, 'body' => 'An older body'],
+            'POST ' . self::REPO . '/issues/190/labels' => [],
+            'PATCH ' . self::REPO . '/issues/190' => ['html_url' => 'https://github.com/x/y/issues/190', 'number' => 190],
+        ]);
 
-        $issueApiMock = $this->createMock(\Github\Api\Issue::class);
-        $issueApiMock->method('labels')->willReturn($labelsApiMock);
-        $issueApiMock->expects($this->once())
-            ->method('update')
-            ->with(
-                $this->githubRegisterOrganization,
-                $this->githubRegisterRepository,
-                190,
-                $this->callback(fn ($contents) => !array_key_exists('labels', $contents))
-            )
-            ->willReturn(['html_url' => 'https://github.com/x/y/issues/190', 'number' => 190]);
-
-        $clientMock = $this->createMock(\Github\Client::class);
-        $clientMock->method('api')->with('issue')->willReturn($issueApiMock);
-
-        $parser = new CodecheckGithubRegisterApiClient(
-            $this->githubPAT,
-            $this->githubRegisterOrganization,
-            $this->githubRegisterRepository,
-            $this->submissionId,
-            $this->origin,
-            $clientMock
-        );
-
-        $parser->updateIssue(
+        $this->clientOn($github)->updateIssue(
             $this->updateInformation,
             190,
             $certMock,
@@ -603,62 +445,23 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
             [],
             []
         );
-    }
 
-    /** A client whose issue-labels API is the given mock. */
-    private function clientWithLabelsApi(\Github\Api\Issue\Labels $labelsApiMock): CodecheckGithubRegisterApiClient
-    {
-        $issueApiMock = $this->createMock(\Github\Api\Issue::class);
-        $issueApiMock->method('labels')->willReturn($labelsApiMock);
-        $clientMock = $this->createMock(\Github\Client::class);
-        $clientMock->method('api')->with('issue')->willReturn($issueApiMock);
-
-        return new CodecheckGithubRegisterApiClient(
-            $this->githubPAT,
-            $this->githubRegisterOrganization,
-            $this->githubRegisterRepository,
-            $this->submissionId,
-            $this->origin,
-            $clientMock
-        );
-    }
-
-    /** A client whose label probe fails with the given exception. */
-    private function clientWhoseLabelProbeThrows(\Throwable $e): CodecheckGithubRegisterApiClient
-    {
-        $labelsApiMock = $this->createMock(\Github\Api\Issue\Labels::class);
-        $labelsApiMock->method('show')->willThrowException($e);
-
-        return $this->clientWithLabelsApi($labelsApiMock);
+        $this->assertSame([['id assigned', 'institution', 'check-nl']], $github->bodies('POST */labels'));
+        $github->assertSent('PATCH ' . self::REPO . '/issues/190', fn ($request, $body) => !array_key_exists('labels', $body));
+        $github->assertNotSent('PUT *');
     }
 
     /** Every status comment says where it came from. */
     public function testAStatusCommentEndsWithTheSignature()
     {
-        $commentsApiMock = $this->createMock(\Github\Api\Issue\Comments::class);
-        $commentsApiMock->expects($this->once())
-            ->method('create')
-            ->with(
-                $this->githubRegisterOrganization,
-                $this->githubRegisterRepository,
-                190,
-                ['body' => "The CODECHECK status changed to: completed\n\n---\nSigned by Example journal"]
-            );
-        $issueApiMock = $this->createMock(\Github\Api\Issue::class);
-        $issueApiMock->method('comments')->willReturn($commentsApiMock);
-        $clientMock = $this->createMock(\Github\Client::class);
-        $clientMock->method('api')->with('issue')->willReturn($issueApiMock);
+        $github = new GithubFake(['POST ' . self::REPO . '/issues/190/comments' => []]);
 
-        $parser = new CodecheckGithubRegisterApiClient(
-            $this->githubPAT,
-            $this->githubRegisterOrganization,
-            $this->githubRegisterRepository,
-            $this->submissionId,
-            $this->origin,
-            $clientMock
+        $this->clientOn($github)->commentOnIssue(190, 'The CODECHECK status changed to: completed');
+
+        $this->assertSame(
+            [['body' => "The CODECHECK status changed to: completed\n\n---\nSigned by Example journal"]],
+            $github->bodies('POST *')
         );
-
-        $parser->commentOnIssue(190, 'The CODECHECK status changed to: completed');
     }
 
     /** The deposit's pull request is signed below its table. */
@@ -680,19 +483,6 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
         $this->assertStringEndsWith("|\n\n\n---\nSigned by Example journal", $body);
     }
 
-    /** A client talking to queued HTTP answers rather than GitHub. */
-    private function clientAnswering(MockHandler $answers): CodecheckGithubRegisterApiClient
-    {
-        return new CodecheckGithubRegisterApiClient(
-            $this->githubPAT,
-            $this->githubRegisterOrganization,
-            $this->githubRegisterRepository,
-            (string) $this->submissionId,
-            $this->origin,
-            GithubHttp::client($answers)
-        );
-    }
-
     private function metadataBlock(string $time): string
     {
         return CodecheckGithubRegisterIssue::metadataBlock(
@@ -712,13 +502,12 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
      */
     public function testTheMetadataBlockIsNotRewrittenWhenOnlyItsTimeWouldChange()
     {
-        $issue = ['number' => 7, 'body' => "## Title\n\n" . $this->metadataBlock('2026-10-01 08:00:00Z')];
-        $answers = new MockHandler([
-            new Response(200, ['Content-Type' => 'application/json'], json_encode($issue)),
+        $github = new GithubFake([
+            'GET ' . self::REPO . '/issues/7' => ['number' => 7, 'body' => "## Title\n\n" . $this->metadataBlock('2026-10-01 08:00:00Z')],
         ]);
 
-        $this->assertFalse($this->clientAnswering($answers)->replaceIssueMetadataBlock(7, $this->metadataBlock('2026-10-02 19:15:00Z')));
-        $this->assertSame('GET', $answers->getLastRequest()->getMethod());
+        $this->assertFalse($this->clientOn($github)->replaceIssueMetadataBlock(7, $this->metadataBlock('2026-10-02 19:15:00Z')));
+        $this->assertSame(['GET ' . self::REPO . '/issues/7'], $github->addresses());
     }
 
     /** A block from before the marker is rewritten once, although its JSON is the same. */
@@ -727,13 +516,13 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
         $marked = $this->metadataBlock('2026-10-02 19:15:00Z');
         preg_match('/```json\n.*?\n```/s', $marked, $json);
         $legacy = "<details>\n<summary><h3>JSON encoded CODECHECK metadata</h3></summary>\n\n" . $json[0] . "\n\n</details>";
-        $answers = new MockHandler([
-            new Response(200, ['Content-Type' => 'application/json'], json_encode(['number' => 7, 'body' => $legacy])),
-            new Response(200, ['Content-Type' => 'application/json'], json_encode(['number' => 7])),
+        $github = new GithubFake([
+            'GET ' . self::REPO . '/issues/7' => ['number' => 7, 'body' => $legacy],
+            'PATCH ' . self::REPO . '/issues/7' => ['number' => 7],
         ]);
 
-        $this->assertTrue($this->clientAnswering($answers)->replaceIssueMetadataBlock(7, $marked));
-        $this->assertSame('PATCH', $answers->getLastRequest()->getMethod());
+        $this->assertTrue($this->clientOn($github)->replaceIssueMetadataBlock(7, $marked));
+        $this->assertSame(['GET ' . self::REPO . '/issues/7', 'PATCH ' . self::REPO . '/issues/7'], $github->addresses());
     }
 
     /**
@@ -742,18 +531,15 @@ class CodecheckGithubRegisterApiClientUnitTest extends PKPTestCase
      */
     public function testAGithubThatDoesNotAnswerIsAnUpdateFailure()
     {
-        GithubHttp::reset();
-        $answers = new MockHandler([
-            new ConnectException('cURL error 28: Operation timed out', new Request('GET', 'https://api.github.com/')),
+        $github = new GithubFake([
+            'GET *' => new ConnectException('cURL error 28: Operation timed out', new Request('GET', 'https://api.github.com/')),
         ]);
 
         try {
-            $this->clientAnswering($answers)->replaceIssueMetadataBlock(7, $this->metadataBlock('2026-10-02 19:15:00Z'));
+            $this->clientOn($github)->replaceIssueMetadataBlock(7, $this->metadataBlock('2026-10-02 19:15:00Z'));
             $this->fail('the failure is reported');
         } catch (ApiUpdateException $e) {
             $this->assertTrue(GithubHttp::wasUnreachable());
-        } finally {
-            GithubHttp::reset();
         }
     }
 }

@@ -21,9 +21,8 @@ use APP\plugins\generic\codecheck\classes\CodecheckRegister\CodecheckPostOrigin;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\GithubHttp;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckStatusRegisterUpdate;
-use GuzzleHttp\Client as GuzzleClient;
+use APP\plugins\generic\codecheck\tests\Support\GithubFake;
 use GuzzleHttp\Exception\ConnectException;
-use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\Psr7\Request;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PKP\tests\PKPTestCase;
@@ -309,12 +308,12 @@ class CodecheckStatusRegisterUpdateUnitTest extends PKPTestCase
     /** GitHub not answering is said as that, with the time it was given. */
     public function testASyncGithubDidNotAnswerSaysSo()
     {
-        $client = new GuzzleClient(GithubHttp::options(new MockHandler([
-            new ConnectException('cURL error 28: Operation timed out', new Request('GET', 'https://api.github.com/')),
-        ])));
+        $github = new GithubFake([
+            'GET *' => new ConnectException('cURL error 28: Operation timed out', new Request('GET', 'https://api.github.com/')),
+        ]);
         try {
-            $client->sendRequest(new Request('GET', 'https://api.github.com/'));
-        } catch (ConnectException $e) {
+            $github->client()->api('repo')->show('o', 'r');
+        } catch (\Throwable $e) {
             $this->recordFailure('Could not comment the CODECHECK status on the register issue: ' . $e->getMessage());
         }
 
