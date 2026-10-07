@@ -193,9 +193,8 @@ class CodecheckerReviewClosing
 
     /**
      * The review comment: the check is done, and where its certificate and
-     * register entry are. Visible to the authors as a review is — except on a
-     * double-anonymous review, where the certificate and the register issue
-     * would name the codechecker (#28).
+     * register entry are. Visible to the authors whatever the review method:
+     * a codechecker is never anonymous to them, as the certificate names them.
      */
     private static function addComment(ReviewAssignment $assignment, Submission $submission, string $registerPath): void
     {
@@ -218,9 +217,7 @@ class CodecheckerReviewClosing
             $inRegister ? $issueUrl : null
         ));
         $comment->setCommentTitle('');
-        $comment->setViewable(
-            (int) $assignment->getReviewMethod() !== ReviewAssignment::SUBMISSION_REVIEW_METHOD_DOUBLEANONYMOUS
-        );
+        $comment->setViewable(true);
         $comment->setDatePosted(Core::getCurrentDate());
         $commentDao->insertObject($comment);
     }
