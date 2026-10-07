@@ -27,12 +27,12 @@
 
 namespace APP\plugins\generic\codecheck\classes\CodecheckRegister;
 
-use APP\core\Application;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckCodecheckers;
 use APP\plugins\generic\codecheck\classes\Tasks\RefreshCodecheckLists;
-use GuzzleHttp\Promise\PromiseInterface;
-use GuzzleHttp\Promise\Utils;
+use Illuminate\Http\Client\Factory;
+use Illuminate\Http\Client\Pool;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
 
 class CommunityCodecheckers
@@ -141,9 +141,11 @@ class CommunityCodecheckers
      * Reads all three lists at once, so a read costs the slowest list rather
      * than the sum of them.
      *
+     * @param Factory $http The HTTP client; tests answer by address with `fake()` (#191)
+     *
      * @return array{usernames: array<string, string>, complete: bool}
      */
-    private static function read(): array
+    public static function read(Factory $http = new Factory()): array
     {
         // Not in OJS's sandbox mode; the dialog then suggests no username.
         if (!RefreshCodecheckLists::listsReadable()) {
@@ -153,19 +155,22 @@ class CommunityCodecheckers
         $usernames = [];
         $complete = true;
         try {
-            $client = Application::get()->getHttpClient();
-            $results = Utils::settle(array_map(
-                fn (string $url) => $client->requestAsync('GET', $url, ['timeout' => RefreshCodecheckLists::READ_TIMEOUT_SECONDS]),
+            $options = GithubHttp::transferOptions(RefreshCodecheckLists::READ_TIMEOUT_SECONDS);
+            $results = $http->pool(fn (Pool $pool) => array_map(
+                fn (string $url) => $pool->withOptions($options)->get($url),
                 self::LIST_URLS
-            ))->wait();
+            ));
 
             foreach ($results as $result) {
-                if ($result['state'] !== PromiseInterface::FULFILLED) {
+                // A list that did not answer comes back as the exception, one
+                // that answered with an error page as a response to look at.
+                if (!$result instanceof Response || !$result->successful()) {
                     $complete = false;
-                    CodecheckLogger::warning('Could not read a CODECHECK community list of codecheckers: ' . $result['reason']->getMessage());
+                    CodecheckLogger::warning('Could not read a CODECHECK community list of codecheckers: '
+                        . ($result instanceof Response ? 'HTTP status ' . $result->status() : $result->getMessage()));
                     continue;
                 }
-                $parsed = self::parse((string) $result['value']->getBody());
+                $parsed = self::parse($result->body());
                 if ($parsed === []) {
                     CodecheckLogger::warning('A CODECHECK community list of codecheckers had no codechecker in it.');
                 }
