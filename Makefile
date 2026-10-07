@@ -40,8 +40,10 @@ PORT     := $(or $(THROWAWAY_PORT),8352)
 THROWAWAY_CONTAINER := ojs-codecheck-db-$(THROWAWAY)
 endif
 OJS_ROOT    ?= $(SHARED_OJS_ROOT)
-# Version fetched by `make ojs-install`.
-OJS_VERSION ?= 3.5.0-5
+# Branch checked out by `make ojs-install`: PKP's maintenance branch of the
+# 3.5.0 releases, as CI uses. It carries fixes not yet released, such as the
+# Manage Emails page (pkp-lib#13050, after 3.5.0-5).
+OJS_BRANCH ?= stable-3_5_0
 
 # Database. The `ojs` account is expected to exist already with rights to
 # create databases; see README for the one-off root grant.
@@ -82,7 +84,7 @@ help:
 	@echo
 	@echo "  Setup"
 	@echo "    make setup           one-time bring-up: deps, link, config, database"
-	@echo "    make ojs-install     download and unpack OJS $(OJS_VERSION) into $(OJS_ROOT)"
+	@echo "    make ojs-install     clone and build OJS $(OJS_BRANCH) into $(OJS_ROOT)"
 	@echo "    make deps            composer install + npm install + npm run build"
 	@echo
 	@echo "  Running"
@@ -148,25 +150,21 @@ watch:
 
 # --- OJS installation -------------------------------------------------------
 
+# An existing install is kept as it is: nothing is fetched or rebuilt.
 ojs-install:
 	@if [ -e "$(OJS_ROOT)/index.php" ]; then \
 		echo "OJS already installed at $(OJS_ROOT)"; \
 	else \
-		echo "Downloading OJS $(OJS_VERSION)..."; \
-		tmp=$$(mktemp -d) && \
-		curl -# -o "$$tmp/ojs.tar.gz" "https://pkp.sfu.ca/ojs/download/ojs-$(OJS_VERSION).tar.gz" && \
-		tar xzf "$$tmp/ojs.tar.gz" -C "$$tmp" && \
-		mkdir -p "$(dir $(OJS_ROOT))" && \
-		mv "$$tmp/ojs-$(OJS_VERSION)" "$(OJS_ROOT)" && \
-		rm -rf "$$tmp" && \
-		echo "Installed OJS $(OJS_VERSION) at $(OJS_ROOT)"; \
+		echo "Cloning OJS $(OJS_BRANCH)..." && \
+		git clone -q -b $(OJS_BRANCH) --recurse-submodules --shallow-submodules --depth 1 \
+			https://github.com/pkp/ojs.git "$(OJS_ROOT)" && \
+		composer -d "$(OJS_ROOT)/lib/pkp" install --no-interaction --no-progress && \
+		composer -d "$(OJS_ROOT)/plugins/paymethod/paypal" install --no-interaction --no-progress && \
+		composer -d "$(OJS_ROOT)/plugins/generic/citationStyleLanguage" install --no-interaction --no-progress && \
+		echo "Building OJS's frontend (needs Node 20.19+)..." && \
+		cd "$(OJS_ROOT)" && npm install --no-audit --no-fund && npm run build; \
 	fi
-	@echo "Installing OJS development dependencies (needed for PHPUnit)..."
-	@# The tarball is not a git checkout, so the captainhook composer plugin
-	@# fails when it tries to install git hooks. The dependency install itself
-	@# has already completed at that point, so the failure is tolerated and the
-	@# result verified instead.
-	-cd "$(OJS_ROOT)/lib/pkp" && composer install --no-interaction --no-progress
+	@# PHPUnit comes with pkp-lib's development dependencies.
 	@test -f "$(OJS_ROOT)/lib/pkp/lib/vendor/phpunit/phpunit/phpunit" || { \
 		echo "PHPUnit was not installed into $(OJS_ROOT)/lib/pkp/lib/vendor"; \
 		exit 1; \

@@ -645,7 +645,7 @@ off. Don't source `.env` from a shell.
 ```
 /home/daniel/git/codecheck/
 ├── ojs-codecheck/          this repo
-└── ojs-350/                OJS 3.5.0-5 (`make ojs-install`)
+└── ojs-350/                OJS `stable-3_5_0` checkout, as CI (`make ojs-install`)
     └── plugins/generic/codecheck -> ../ojs-codecheck
 ```
 
@@ -676,7 +676,8 @@ off. Don't source `.env` from a shell.
 `make throwaway-up THROWAWAY=<name>` hard-links the OJS tree (own config, cache,
 files, public), runs MariaDB in Docker (port 3307) and serves on 8352; pass the
 same `THROWAWAY=` to `serve`, `test-e2e`, `db-reset` etc. **Never write into an
-OJS file in place there** (hard links; `sed -i` is fine). Throwaways run in
+OJS file in place there** (hard links; `sed -i` is fine), and run no `git` or
+`npm` in its tree: `.git` and `node_modules` are hard-linked from `ojs-350` too. Throwaways run in
 sandbox mode: no scheduled tasks or jobs from the web, no DOI deposits, no
 venue/codechecker list fetches — but the plugin's register and ORCID writes
 still go out.
@@ -775,6 +776,6 @@ section:
 - `GithubHttp`'s breaker and the ORCID group-id memo are statics nothing resets
   within a process.
 - OJS 3.5.0-5's Manage Emails page fails for every email (pkp-lib#13050, fixed
-  after that release), so the plugin's email template cannot be edited there.
-  To read an email a script sends, switch Laravel to the `array` mailer: OJS's
+  on `stable-3_5_0` for 3.5.0-6), so journals on that release cannot edit the
+  plugin's email template there. To read an email a script sends, switch Laravel to the `array` mailer: OJS's
   `log` mailer fails on the command line.

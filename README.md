@@ -357,7 +357,7 @@ Everything after this uses only the `ojs` account.
 #### Bring-up
 
 ```bash
-make ojs-install    # download OJS into ../ojs-350 and add its dev dependencies
+make ojs-install    # clone OJS stable-3_5_0 into ../ojs-350 and build it (Node 20.19+)
 make setup          # plugin deps + build, link into OJS, write config, load test data
 make serve          # http://localhost:8350 — admin / admin
 ```
@@ -630,7 +630,7 @@ npm run test:component:open   # interactive
 PHPUnit needs an OJS installation, because the tests load OJS classes and the
 runner uses the PHPUnit shipped in `lib/pkp`. That installation must have its
 **development** dependencies installed (`composer install` inside `lib/pkp`) —
-release tarballs ship without PHPUnit. `make ojs-install` does this for you.
+`make ojs-install` does this for you.
 
 With the plugin linked into an OJS install (`make setup`):
 
