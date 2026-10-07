@@ -109,7 +109,7 @@ describe('CODECHECK UI surfaces', () => {
    */
   it('add-codechecker dialog with an offered GitHub username', () => {
     cy.intercept(
-      { method: 'GET', pathname: `/index.php/${JOURNAL}/api/v1/codecheck/codecheckers/reviewers` },
+      { method: 'GET', pathname: `**/index.php/${JOURNAL}/api/v1/codecheck/codecheckers/reviewers` },
       (req) => req.continue((res) => {
         res.body.reviewers = res.body.reviewers.map((reviewer) => ({
           ...reviewer,
@@ -139,13 +139,15 @@ describe('CODECHECK UI surfaces', () => {
    */
   it('certificate reference button and the line it adds', () => {
     cy.intercept(
-      { method: 'GET', pathname: `/index.php/${JOURNAL}/api/v1/codecheck/metadata` },
+      { method: 'GET', pathname: `**/index.php/${JOURNAL}/api/v1/codecheck/metadata` },
       (req) => req.continue((res) => {
         res.body.settings = { ...res.body.settings, certificateReferenceMode: 'button' };
+        // With the mode off the server does not offer the button either.
+        res.body.permissions = { ...res.body.permissions, addCertificateReference: true };
       })
     );
     cy.intercept(
-      { method: 'POST', pathname: `/index.php/${JOURNAL}/api/v1/codecheck/references` },
+      { method: 'POST', pathname: `**/index.php/${JOURNAL}/api/v1/codecheck/references` },
       {
         success: true,
         changed: true,
