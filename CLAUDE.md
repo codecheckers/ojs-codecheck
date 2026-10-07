@@ -35,6 +35,7 @@ make test           # component + PHPUnit
 make test-component # Cypress component tests, no OJS needed
 make test-php       # PHPUnit, needs the linked OJS (sets OJS_ROOT)
 make test-e2e       # Cypress e2e, needs `make serve`
+make test-mail THROWAWAY=<name>  # specs that read sent mail, from Mailpit
 make test-e2e-reverse / test-e2e-shuffle [SEED=n]   # catch order dependence
 make screenshots    # every UI surface -> cypress/ui-screenshots/
 make inspect URL=…  # Playwright: screenshot + DOM + console/network -> dev/out/
@@ -576,10 +577,26 @@ wizard DOM helpers.
   `cy.saveCodecheckSettings()`, `cy.codecheckSettingsForm()`,
   `cy.setCodecheckFields({...})`, `cy.setCodecheckSetting()`,
   `cy.getCodecheckSetting()`, `cy.ojsApi()` (needs a backend page open for the
-  CSRF token), `cy.saveCodecheckRecord()`, `cy.publishedArticleId()`.
+  CSRF token), `cy.saveCodecheckRecord()`, `cy.recordCodecheckStatus()`,
+  `cy.assignParticipant()` / `cy.removeParticipants()` (OJS's participant
+  grid), `cy.publishedArticleId()`.
 - A red run usually has a concrete cause: server down, plugin fatal, symlink
   pointing elsewhere, stale `cache/t_compile/`. Check those before calling it flaky.
 - Uncovered: opt-in, the submission wizard, register deposit.
+
+### Mail tests
+
+`cypress/tests/mail/` is a separate suite, never run by `make test-e2e`:
+`make test-mail THROWAWAY=<name>` starts Mailpit, switches the throwaway into
+mail mode for the run and back afterwards (`mail-up` / `mail-down` alone keep
+it there). CI runs it on every push as the mail leg of the e2e job. Mail mode
+is `dev/mail-mode.sh`, the one place for it: sandbox mode forces OJS's `log`
+mailer, so it turns sandbox off and stops OJS's web task and job runners
+instead. The plugin's list fetches are then live, so **a mail spec opens no
+page that reads the venue labels or the community list** (the CODECHECK tab,
+the codechecker dialog). Read mail only through `cypress/support/mail.js`
+(`cy.clearMail()`, `cy.mailTo(address, subject)`); restore fixtures as e2e
+specs do. Plan and further cases: `.claude/plan-mail-tests.md`.
 
 ### PHPUnit
 
@@ -603,7 +620,8 @@ later tests. `TemplateManager` cannot be mocked
 ### CI
 
 `.github/workflows/tests.yml`: PHPUnit (OJS `stable-3_5_0`, MySQL 8), Cypress
-component, Cypress e2e (full stack, sandbox mode, screenshots artifact).
+component, Cypress e2e (full stack, sandbox mode, screenshots artifact) and, as
+a second matrix leg on the same setup, the mail suite against a Mailpit service.
 `.github/workflows/lint.yml`: php-cs-fixer + `php -l`.
 
 ### Live tests

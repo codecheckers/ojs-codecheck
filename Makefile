@@ -75,7 +75,7 @@ export OJS_ROOT
         test-php screenshots inspect social-preview \
         build watch check-ojs clean \
         throwaway-check throwaway-up throwaway-down doi-test-config doi-export \
-        check-scheduled-deposit
+        check-scheduled-deposit mail-up mail-down test-mail
 
 # --- Entry points -----------------------------------------------------------
 
@@ -125,6 +125,7 @@ help:
 	@echo "                         Crossref/DataCite in test mode and fake DOIs (#19)"
 	@echo "    make doi-export THROWAWAY=name ARTICLES=\"5 2\" [DOI_OUT=dir]  Crossref and DataCite XML, validated"
 	@echo "    make check-scheduled-deposit THROWAWAY=name  the register deposit when the scheduled task publishes (#188)"
+	@echo "    make test-mail THROWAWAY=name       the specs that read sent mail, from Mailpit (mail-up / mail-down)"
 	@echo
 	@echo "  OJS_ROOT = $(OJS_ROOT)"
 	@echo "  DB       = $(DB_NAME) as $(DB_USER)@$(DB_HOST):$(DB_PORT)"
@@ -614,9 +615,43 @@ throwaway-up: throwaway-check
 	@echo "Throwaway instance '$(THROWAWAY)' ready: make serve THROWAWAY=$(THROWAWAY)  ->  $(BASE_URL)"
 
 throwaway-down: throwaway-check
-	-docker rm -f "$(THROWAWAY_CONTAINER)"
+	-docker rm -f "$(THROWAWAY_CONTAINER)" "$(MAILPIT_CONTAINER)"
 	@case "$(OJS_ROOT)" in "$(SHARED_OJS_ROOT)") echo "Refusing to remove the shared install"; exit 1;; esac
 	rm -rf "$(OJS_ROOT)"
+
+# --- Mail tests ---------------------------------------------------------------
+#
+# The specs under cypress/tests/mail/ read what the plugin sends from Mailpit;
+# see CLAUDE.md, "Mail tests". `test-mail` switches the throwaway into mail
+# mode (dev/mail-mode.sh) for the run and back into sandbox mode afterwards.
+
+MAILPIT_IMAGE ?= axllent/mailpit:v1.31
+MAILPIT_SMTP_PORT ?= 1025
+MAILPIT_HTTP_PORT ?= 8025
+MAILPIT_CONTAINER := ojs-codecheck-mailpit-$(THROWAWAY)
+
+mail-up: throwaway-check
+	@docker start "$(MAILPIT_CONTAINER)" >/dev/null 2>&1 || \
+		docker run -d --name "$(MAILPIT_CONTAINER)" \
+			-p 127.0.0.1:$(MAILPIT_SMTP_PORT):1025 -p 127.0.0.1:$(MAILPIT_HTTP_PORT):8025 \
+			$(MAILPIT_IMAGE) >/dev/null
+	@dev/mail-mode.sh on "$(OJS_ROOT)/config.inc.php" $(MAILPIT_SMTP_PORT)
+	@$(MAKE) --no-print-directory clear-cache THROWAWAY=$(THROWAWAY)
+	@echo "Mail from '$(THROWAWAY)' goes to Mailpit: http://localhost:$(MAILPIT_HTTP_PORT)"
+
+mail-down: throwaway-check
+	-docker rm -f "$(MAILPIT_CONTAINER)"
+	@dev/mail-mode.sh off "$(OJS_ROOT)/config.inc.php"
+	@$(MAKE) --no-print-directory clear-cache THROWAWAY=$(THROWAWAY)
+
+# mail-down runs whatever happened, mail-up's failure included, so the
+# throwaway never stays out of sandbox mode.
+test-mail: throwaway-check
+	@status=0; \
+	$(MAKE) --no-print-directory mail-up THROWAWAY=$(THROWAWAY) && \
+	CYPRESS_BASE_URL=$(BASE_URL) CYPRESS_MAILPIT_URL=http://localhost:$(MAILPIT_HTTP_PORT) npm run test:mail || status=$$?; \
+	$(MAKE) --no-print-directory mail-down THROWAWAY=$(THROWAWAY); \
+	exit $$status
 
 # Crossref and DataCite in test mode with fake credentials, and a fake DOI for
 # every published article (dev/doi-test-config.php). It writes, so it refuses

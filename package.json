@@ -14,6 +14,7 @@
     "test:e2e": "cypress run --e2e",
     "test:e2e:open": "cypress open --e2e",
     "test:visual": "cypress run --e2e --config specPattern='cypress/tests/visual/**/*.cy.js'",
+    "test:mail": "cypress run --e2e --config specPattern='cypress/tests/mail/**/*.cy.js'",
     "inspect": "node dev/inspect.mjs",
     "test:headed": "cypress run --headed",
     "test:chrome": "cypress run --browser chrome",

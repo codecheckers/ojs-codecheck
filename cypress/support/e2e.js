@@ -84,6 +84,54 @@ Cypress.Commands.add('saveCodecheckRecord', (submissionId, stored, codecheckers)
 });
 
 /**
+ * Record a CODECHECK status for a submission, as admin, and expect it saved.
+ * Needs a backend page open, as cy.ojsApi() does.
+ */
+Cypress.Commands.add('recordCodecheckStatus', (submissionId, status) => {
+  return cy.ojsApi('POST', `api/v1/codecheck/status/update?submissionId=${submissionId}`, { status, userId: 1 })
+    .its('status').should('eq', 200);
+});
+
+/**
+ * OJS's participant grid on a submission's stage. A legacy grid: it takes the
+ * CSRF token as a form field and answers HTML, so a change to PKP's grid is a
+ * fix here only.
+ */
+const participantGrid = (submissionId, stageId, op) =>
+  `/index.php/${JOURNAL}/$$$call$$$/grid/users/stage-participant/stage-participant-grid/${op}` +
+  `?submissionId=${submissionId}&stageId=${stageId}`;
+
+const participantGridPost = (submissionId, stageId, op, form) =>
+  cy.getCsrfToken().then((csrfToken) =>
+    cy.request({ method: 'POST', url: participantGrid(submissionId, stageId, op), form: true, body: { csrfToken, ...form } })
+  );
+
+/**
+ * Assign a user to a submission in a user group, as "Assign" in the
+ * participants panel does, without a message: OJS sends no email of its own.
+ */
+Cypress.Commands.add('assignParticipant', (submissionId, stageId, userGroupId, userId) => {
+  return participantGridPost(submissionId, stageId, 'save-participant', { userGroupId, userId, assignmentId: '' })
+    .its('body.status').should('eq', true);
+});
+
+/** Remove every assignment of the submission in the given user groups. */
+Cypress.Commands.add('removeParticipants', (submissionId, stageId, userGroupIds) => {
+  return cy.request(participantGrid(submissionId, stageId, 'fetch-grid')).then((response) => {
+    // Rows are "…-category-<user group>-row-<assignment>"; the group's own
+    // heading row is a .category row.
+    const pattern = new RegExp(`-category-(?:${userGroupIds.join('|')})-row-(\\d+)$`);
+    const rows = new DOMParser().parseFromString(response.body.content, 'text/html')
+      .querySelectorAll('tr.gridRow:not(.category)');
+    [...rows].map((row) => row.id.match(pattern)?.[1]).filter(Boolean)
+      .forEach((assignmentId) =>
+        participantGridPost(submissionId, stageId, 'delete-participant', { assignmentId })
+          .its('body.status').should('eq', true)
+      );
+  });
+});
+
+/**
  * Yield the id of a published submission, or null when there is none. Needs a
  * backend page open, as cy.ojsApi() does.
  */

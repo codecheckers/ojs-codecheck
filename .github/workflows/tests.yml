@@ -143,9 +143,15 @@ jobs:
           path: cypress/screenshots
           if-no-files-found: ignore
 
+  # Two legs on the same setup: the e2e suite in sandbox mode, and the specs
+  # that read sent mail (cypress/tests/mail/), with OJS sending to Mailpit.
   e2e-tests:
-    name: Cypress E2E Tests
+    name: ${{ matrix.suite == 'mail' && 'Cypress Mail Tests' || 'Cypress E2E Tests' }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [e2e, mail]
 
     services:
       mysql:
@@ -156,6 +162,12 @@ jobs:
         ports:
           - 3306:3306
         options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+      # An empty image skips the service on the e2e leg.
+      mailpit:
+        image: ${{ matrix.suite == 'mail' && 'axllent/mailpit:v1.31' || '' }}
+        ports:
+          - 1025:1025
+          - 8025:8025
 
     steps:
       - name: Checkout OJS
@@ -227,6 +239,11 @@ jobs:
           # has no sandbox line to set.
           sed -i 's/^sandbox = .*/sandbox = On/' config.inc.php
           grep -q '^sandbox = On' config.inc.php
+
+      # See CLAUDE.md, "Mail tests".
+      - name: Send mail to Mailpit
+        if: matrix.suite == 'mail'
+        run: ojs/plugins/generic/codecheck/dev/mail-mode.sh on ojs/config.inc.php 1025
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -313,11 +330,12 @@ jobs:
       - name: Wait for OJS to be ready
         run: sleep 10
                 
-      - name: Run Cypress E2E tests
+      - name: Run Cypress ${{ matrix.suite }} tests
         working-directory: ojs/plugins/generic/codecheck
-        run: npm run test:e2e
+        run: npm run test:${{ matrix.suite }}
         env:
           CYPRESS_BASE_URL: http://localhost:8888/ojs
+          CYPRESS_MAILPIT_URL: http://localhost:8025
           # For the task that reopens the review close-review.cy.js closes.
           CYPRESS_DB_HOST: 127.0.0.1
           CYPRESS_DB_PORT: 3306
@@ -329,7 +347,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: e2e-screenshots
+          name: ${{ matrix.suite }}-screenshots
           path: ojs/plugins/generic/codecheck/cypress/screenshots
           if-no-files-found: ignore
 
@@ -340,6 +358,7 @@ jobs:
       # cypress.config.js. A separate output directory keeps this run from
       # emptying the e2e screenshots uploaded above.
       - name: Capture CODECHECK UI screenshots
+        if: matrix.suite == 'e2e'
         working-directory: ojs/plugins/generic/codecheck
         run: npm run test:visual
         env:
@@ -349,7 +368,7 @@ jobs:
           CYPRESS_SCREENSHOTS_FOLDER: cypress/ui-screenshots
 
       - name: Upload CODECHECK UI screenshots
-        if: always()
+        if: always() && matrix.suite == 'e2e'
         uses: actions/upload-artifact@v7
         with:
           name: ui-screenshots
@@ -360,6 +379,6 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: e2e-videos
+          name: ${{ matrix.suite }}-videos
           path: ojs/plugins/generic/codecheck/cypress/videos
           if-no-files-found: ignore

@@ -602,7 +602,7 @@ Finally your defined `CodecheckRoleArray` can have the following PKP rules (`PKP
 
 ## Running Tests
 
-The plugin has three test suites. Only the component tests run without an OJS
+The plugin has these test suites. Only the component tests run without an OJS
 installation — see [Local development environment](#local-development-environment)
 for setting one up.
 
@@ -612,6 +612,7 @@ for setting one up.
 | PHP unit tests | `make test-php` | yes | no |
 | End-to-end tests | `make test-e2e` | yes | yes |
 | Screenshots | `make screenshots` | yes | yes |
+| Mail tests | `make test-mail THROWAWAY=<name>` | yes (a throwaway) | yes, and Docker for Mailpit |
 
 `make test` runs everything that does not need a running server.
 
@@ -684,11 +685,12 @@ suite — it only asserts that each page loads and carries its CODECHECK element
 
 ### Continuous integration
 
-[`.github/workflows/tests.yml`](.github/workflows/tests.yml) runs all three
+[`.github/workflows/tests.yml`](.github/workflows/tests.yml) runs all the
 suites on every push and pull request to `main`: PHPUnit against a checkout of
 `pkp/ojs@stable-3_5_0` with MySQL, the Cypress component tests standalone, and
 the e2e tests against a full Apache + MySQL + OJS stack seeded from
-[`testData/`](testData/).
+[`testData/`](testData/). The mail tests run on the same stack in a second leg,
+with OJS sending to a Mailpit service.
 
 [`.github/workflows/lint.yml`](.github/workflows/lint.yml) is separate and runs
 on the same events: the coding-standard check and a `php -l` syntax pass. It
