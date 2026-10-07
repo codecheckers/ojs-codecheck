@@ -169,12 +169,22 @@ describe('CodecheckMetadataForm Component', () => {
 
         if (reason) {
           cy.get('.codecheck-optin-warning').should('contain', reason);
+          cy.get('.codecheck-participation').should('not.exist');
         } else {
           cy.get('.codecheck-header').should('exist');
           cy.get('.codecheck-optin-warning').should('not.exist');
+          cy.get('.codecheck-participation').should('contain', 'plugins.generic.codecheck.participation.optional');
         }
       });
     });
+  });
+
+  it('tells the codechecker the journal requires the check (#31)', () => {
+    cy.mount(CodecheckMetadataForm, {
+      props: { submission: { id: 1, codecheckOptIn: true }, canEdit: true, codecheckMode: 'mandatory' },
+    });
+    cy.wait('@loadMetadata');
+    cy.get('.codecheck-participation').should('contain', 'plugins.generic.codecheck.participation.mandatory');
   });
 
   it('loads and displays submission metadata correctly', () => {

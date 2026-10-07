@@ -37,3 +37,19 @@ export function notOptedInReason(submission, mode) {
     ? tk('plugins.generic.codecheck.warning.optedOut')
     : tk('plugins.generic.codecheck.warning.notOptedIn');
 }
+
+/**
+ * The locale key saying whether the check is required by the journal or
+ * optional, or null when the submission takes no part (#31).
+ *
+ * @param {object} submission carries `codecheckOptIn`
+ * @param {string} mode the journal's CODECHECK mode: opt-in, opt-out or mandatory
+ */
+export function participationReason(submission, mode) {
+  if (!isOptedIn(submission)) {
+    return null;
+  }
+  return mode === 'mandatory'
+    ? tk('plugins.generic.codecheck.participation.mandatory')
+    : tk('plugins.generic.codecheck.participation.optional');
+}

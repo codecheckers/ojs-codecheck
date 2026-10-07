@@ -92,10 +92,18 @@ make test-live GITHUB_TOKEN=… / test-orcid-live    # live tests; read dev/live
   The logged-in user is read before plugins load, against a schema without
   the property, so the value is read and written through `user_settings`
   directly (`readFor()`, `writeFor()`), never through a user object alone.
+- `Mailer::Mailables` → `CodecheckerNeededEmail` under Emails (#31); its default
+  template is `emailTemplates.xml` + `locale/*/emails.po`, installed by the
+  install migration and, where it is missing, before the email is sent
+- `StageAssignment::created` (an Eloquent model event; OJS raises no hook for a
+  stage assignment) → `CodecheckerNeededNotice` emails an editor assigned to an
+  opted-in submission without a linked codechecker (#31). There is no task in
+  OJS's Tasks list: a plugin's notification type cannot have a link (#192).
 
 **Registered outside the `getEnabled()` block** (and must stay there): register
-deposit, `Publication::publish::before`, the DOI filter hooks, `Context::add`
-and `UserAction::mergeUsers` (moves codechecker links, #13).
+deposit, `Publication::publish::before`, the DOI filter hooks, `Context::add`,
+`UserAction::mergeUsers` (moves codechecker links, #13) and the
+`StageAssignment::created` listener (OJS assigns editors on submission).
 They run on the command line or in site-scoped requests where `getEnabled()`
 reads the site row; each resolves the journal from the article/document and
 checks enablement for that journal itself.
@@ -766,3 +774,7 @@ section:
   `providedByAuthor` entries.
 - `GithubHttp`'s breaker and the ORCID group-id memo are statics nothing resets
   within a process.
+- OJS 3.5.0-5's Manage Emails page fails for every email (pkp-lib#13050, fixed
+  after that release), so the plugin's email template cannot be edited there.
+  To read an email a script sends, switch Laravel to the `array` mailer: OJS's
+  `log` mailer fails on the command line.

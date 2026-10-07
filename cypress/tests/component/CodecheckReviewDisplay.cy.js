@@ -26,6 +26,18 @@ describe('CodecheckReviewDisplay Component', () => {
     cy.get('.codecheck-info').should('not.exist');
   });
 
+  it('says whether the journal requires the check or it is optional (#31)', () => {
+    serve();
+    cy.mount(CodecheckReviewDisplay, {
+      props: { submission: { id: 1, codecheckOptIn: true }, codecheckMode: 'mandatory' },
+    });
+    cy.wait('@getStatus');
+    cy.get('.codecheck-participation').should('contain', 'plugins.generic.codecheck.participation.mandatory');
+
+    mount({ id: 1, codecheckOptIn: false });
+    cy.get('.codecheck-participation').should('not.exist');
+  });
+
   it('shows the recorded status', () => {
     serve();
     mount();

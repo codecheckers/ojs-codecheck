@@ -104,6 +104,19 @@ class CodecheckPluginHooksUnitTest extends PKPTestCase
     }
 
     /**
+     * The email to an editor assigned to a submission without a codechecker
+     * (#31) listens to OJS's stage assignments for every journal: OJS assigns
+     * editors on submission, possibly in a queued job.
+     */
+    public function testTheCodecheckerNeededEmailListensBeforeTheEnabledCheck()
+    {
+        $source = self::codeOf(dirname(__DIR__) . '/CodecheckPlugin.php');
+        $this->assertSame(1, preg_match('/if\s*\(\s*\$success\s*&&\s*\$this->getEnabled\(\)\s*\)/', $source, $m, PREG_OFFSET_CAPTURE));
+        $this->assertSame(1, preg_match_all('/StageAssignment::created\(/', $source, $all, PREG_OFFSET_CAPTURE), 'the stage assignment listener is not registered exactly once');
+        $this->assertLessThan($m[0][1], $all[0][0][1], 'the stage assignment listener is inside the enabled check');
+    }
+
+    /**
      * The defect #188 was: the deposit took its journal from the request, which
      * the scheduled task's command line does not have. Neither the hook nor the
      * service may ask the request for a journal again.

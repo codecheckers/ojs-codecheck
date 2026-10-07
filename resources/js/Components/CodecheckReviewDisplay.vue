@@ -11,6 +11,7 @@
     </div>
     <p v-else-if="error" class="codecheck-not-opted">{{ error }}</p>
     <div v-else>
+      <p class="codecheck-participation">{{ t(participation) }}</p>
       <div class="codecheck-info">
         <div class="border border-light p-4">
           <h3 class="mb-2 text-lg-bold text-heading">{{ t("plugins.generic.codecheck.status") }}</h3>
@@ -93,7 +94,7 @@
 
 <script setup>
 import { computed, ref, onMounted} from 'vue';
-import { notOptedInReason } from '../optIn.js';
+import { notOptedInReason, participationReason } from '../optIn.js';
 import { isWebUrl } from '../isWebUrl.js';
 import { getCodecheckJson, openCodecheckTab } from '../codecheckApi.js';
 
@@ -106,6 +107,9 @@ const props = defineProps({
 
 // Why the submission takes no part, worded as on every other tab (#34).
 const notOptedIn = computed(() => notOptedInReason(props.submission, props.codecheckMode));
+
+// Whether the journal requires the check or it is optional (#31).
+const participation = computed(() => participationReason(props.submission, props.codecheckMode));
 
 const status = ref('');
 const metadata = ref({});
@@ -220,6 +224,10 @@ const viewFullMetadata = openCodecheckTab;
   margin-top: var(--spacing-4);
   padding-top: var(--spacing-4);
   border-top: 1px solid var(--color-border);
+}
+
+.codecheck-participation {
+  margin: 0 0 var(--spacing-3) 0;
 }
 
 .codecheck-not-opted {
