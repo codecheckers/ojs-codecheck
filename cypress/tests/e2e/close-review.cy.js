@@ -13,15 +13,12 @@
 const JOURNAL = 'codecheck';
 const SUBMISSION = 9;
 const CODECHECKER_REVIEW = 2;
-const ADMIN_ID = 1;
 
 const ASSIGNED = 'plugins.generic.codecheck.status.assignedCodechecker';
 const COMPLETED = 'plugins.generic.codecheck.status.completed.fullReproduction';
 
 const api = (method, path, body) => cy.ojsApi(method, `api/v1/codecheck/${path}`, body);
-const recordStatus = (status) =>
-  api('POST', `status/update?submissionId=${SUBMISSION}`, { submissionId: SUBMISSION, status, userId: ADMIN_ID })
-    .its('status').should('eq', 200);
+const recordStatus = (status) => cy.recordCodecheckStatus(SUBMISSION, status);
 const openReviews = () => api('GET', `codecheckers/reviews?submissionId=${SUBMISSION}`).its('body.reviews');
 const close = () =>
   api('POST', `codecheckers/reviews/close?submissionId=${SUBMISSION}`, { reviewAssignmentId: CODECHECKER_REVIEW });
@@ -30,25 +27,20 @@ describe("Closing a codechecker's review", () => {
   let snapshot = null;
 
   before(() => {
-    cy.task('snapshotReviewAssignment', CODECHECKER_REVIEW).then((taken) => {
-      expect(taken.dateCompleted, 'the dataset leaves the review open').to.eq(null);
+    cy.snapshotOpenReview(CODECHECKER_REVIEW).then((taken) => {
       snapshot = taken;
     });
   });
 
-  beforeEach(() => {
-    cy.ojsLogin('admin', 'admin');
-    cy.visit(`/index.php/${JOURNAL}/dashboard/editorial`);
-  });
+  beforeEach(() => cy.openBackend());
 
   // The status first: a failing task must not leave the check "completed" for
   // the specs that follow.
   after(() => {
-    cy.ojsLogin('admin', 'admin');
-    cy.visit(`/index.php/${JOURNAL}/dashboard/editorial`);
+    cy.openBackend();
     recordStatus(ASSIGNED);
     if (snapshot) {
-      cy.task('restoreReviewAssignment', snapshot);
+      cy.reopenReview(snapshot);
     }
   });
 

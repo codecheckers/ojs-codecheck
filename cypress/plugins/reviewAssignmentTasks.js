@@ -1,16 +1,18 @@
 /**
- * Putting a review assignment back as it was, for the one spec that closes a
- * review (#13). OJS cannot reopen a submitted review, through its interface or
- * its API, so without this `close-review.cy.js` could close the review only
- * once per dataset load, against the rule that specs restore what they change.
+ * Putting a review assignment back as it was, for the specs that close a
+ * review (#13): `close-review.cy.js` and the mail suite's
+ * `close-review-email.cy.js`, through `cy.snapshotOpenReview()` and
+ * `cy.reopenReview()`. OJS cannot reopen a submitted review, through its
+ * interface or its API, so without this a review could be closed only once per
+ * dataset load, against the rule that specs restore what they change.
  *
  * Runs in Cypress's Node process and reaches the database with the `mysql`
  * client, configured by `CYPRESS_DB_HOST`, `_PORT`, `_NAME`, `_USER` and
  * `_PASS` — which `make test-e2e` and CI set. Deliberately narrow: a snapshot of
  * one assignment and its round, and putting exactly that back, with the review
  * comment and the notifications added since, in one transaction. "Since" is
- * the highest id at the snapshot, which assumes the suite runs one spec at a
- * time. The event log keeps its entries, as the status history keeps its rows.
+ * the highest id at the snapshot, which assumes one spec at a time against the database:
+ * never run the e2e and mail suites against one instance at once. The event log keeps its entries, as the status history keeps its rows.
  */
 
 import { spawnSync } from 'node:child_process';

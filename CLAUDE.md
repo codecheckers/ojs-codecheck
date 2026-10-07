@@ -567,11 +567,12 @@ wizard DOM helpers.
   8, 9 are written by several specs; submission 10 is never touched. The status
   table is append-only: restore by recording the original status, and assert on
   history relatively.
-- **One spec writes the database directly**: `close-review.cy.js` reopens the
-  review it closed through the tasks in `cypress/plugins/reviewAssignmentTasks.js`
-  (the `mysql` client, `CYPRESS_DB_*`, set by the `make` e2e targets and CI;
-  a bare `npm run test:e2e` fails that spec). Nothing else may: drive the form
-  or the API.
+- **Only reopening a closed review writes the database directly**:
+  `cy.snapshotOpenReview()` / `cy.reopenReview()`, through the tasks in
+  `cypress/plugins/reviewAssignmentTasks.js` (the `mysql` client,
+  `CYPRESS_DB_*`, set by the `make` e2e and mail targets and CI; a bare `npm
+  run test:e2e` or `test:mail` fails the specs that use them). Nothing else
+  may: drive the form or the API.
 - **The suite must make no external call.** Anything new on
   `Publication::publish` must be switched off in `publication-validation.cy.js`
   around the real publish. `codecheckers/reviewers` reads the community list,
@@ -580,9 +581,10 @@ wizard DOM helpers.
   `cy.saveCodecheckSettings()`, `cy.codecheckSettingsForm()`,
   `cy.setCodecheckFields({...})`, `cy.setCodecheckSetting()`,
   `cy.getCodecheckSetting()`, `cy.ojsApi()` (needs a backend page open for the
-  CSRF token), `cy.saveCodecheckRecord()`, `cy.recordCodecheckStatus()`,
-  `cy.assignParticipant()` / `cy.removeParticipants()` (OJS's participant
-  grid), `cy.publishedArticleId()`.
+  CSRF token), `cy.openBackend()` (opens one), `cy.saveCodecheckRecord()`,
+  `cy.recordCodecheckStatus()`, `cy.assignParticipant()` /
+  `cy.removeParticipants()` (OJS's participant grid), `cy.snapshotOpenReview()`
+  / `cy.reopenReview()`, `cy.publishedArticleId()`.
 - A red run usually has a concrete cause: server down, plugin fatal, symlink
   pointing elsewhere, stale `cache/t_compile/`. Check those before calling it flaky.
 - Uncovered: opt-in, the submission wizard, register deposit.

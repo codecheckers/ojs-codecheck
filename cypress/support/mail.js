@@ -12,16 +12,19 @@ Cypress.Commands.add('clearMail', () => {
 });
 
 /**
- * The messages to an address with a subject, with their text and HTML. An
- * email is sent within the request that caused it, so no waiting is needed.
+ * The messages to an address whose subject is the given one, or matches a
+ * RegExp, with their text and HTML. An email is sent within the request that
+ * caused it, so no waiting is needed.
  */
 Cypress.Commands.add('mailTo', (address, subject) => {
-  const query = encodeURIComponent(`to:"${address}" subject:"${subject}"`);
-  return cy.request(mailpit(`search?query=${query}`)).then((response) => {
+  const exact = typeof subject === 'string';
+  const matches = exact ? (s) => s === subject : (s) => subject.test(s);
+  // Mailpit's search matches words, so it only narrows; the matcher decides.
+  const query = encodeURIComponent(`to:"${address}"` + (exact ? ` subject:"${subject}"` : ''));
+  return cy.request(mailpit(`search?query=${query}&limit=500`)).then((response) => {
     const messages = [];
     response.body.messages
-      // The search matches words; the subject must be the whole subject.
-      .filter((summary) => summary.Subject === subject)
+      .filter((summary) => matches(summary.Subject))
       .forEach((summary) => cy.request(mailpit(`message/${summary.ID}`)).then((message) => messages.push(message.body)));
     return cy.wrap(messages);
   });

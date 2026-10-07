@@ -12,7 +12,6 @@
 
 import '../../support/mail.js';
 
-const JOURNAL = 'codecheck';
 const SUBMISSION = 9;
 const REVIEW_STAGE = 3;
 const JOURNAL_EDITOR_GROUP = 3;
@@ -23,12 +22,6 @@ const SECTIONEDITOR = { id: 7, email: 'sectioneditor@mailinator.com' };
 const SUBJECT = 'A codechecker is needed';
 const PENDING = 'plugins.generic.codecheck.status.pending';
 const NEEDS_CODECHECKER = 'plugins.generic.codecheck.status.needsCodechecker';
-
-/** A backend page, for the CSRF token; the dashboard reads neither list. */
-const openBackend = () => {
-  cy.ojsLogin('admin', 'admin');
-  cy.visit(`/index.php/${JOURNAL}/dashboard/editorial`);
-};
 
 const api = (path) => cy.ojsApi('GET', `api/v1/codecheck/${path}?submissionId=${SUBMISSION}`);
 const saveCodecheckers = (record, codecheckers) =>
@@ -41,7 +34,7 @@ describe('Email: codechecker needed', () => {
   let statusToRestore = null;
 
   before(() => {
-    openBackend();
+    cy.openBackend();
     api('metadata').its('body.codecheck').then((record) => {
       expect(record.codecheckers, 'the dataset links one codechecker to submission 9').to.have.length(1);
       stored = record;
@@ -54,10 +47,10 @@ describe('Email: codechecker needed', () => {
     });
   });
 
-  beforeEach(openBackend);
+  beforeEach(() => cy.openBackend());
 
   after(() => {
-    openBackend();
+    cy.openBackend();
     cy.removeParticipants(SUBMISSION, REVIEW_STAGE, [JOURNAL_EDITOR_GROUP, SECTION_EDITOR_GROUP]);
     if (stored) {
       saveCodecheckers(stored, stored.codecheckers);

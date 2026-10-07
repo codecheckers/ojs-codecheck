@@ -84,6 +84,31 @@ Cypress.Commands.add('saveCodecheckRecord', (submissionId, stored, codecheckers)
 });
 
 /**
+ * Log in as admin and open a backend page, for the CSRF token cy.ojsApi()
+ * reads. The dashboard reads neither CODECHECK list.
+ */
+Cypress.Commands.add('openBackend', () => {
+  cy.ojsLogin('admin', 'admin');
+  cy.visit(`/index.php/${JOURNAL}/dashboard/editorial`);
+});
+
+/**
+ * A review assignment as the dataset leaves it, open, to put back with
+ * cy.reopenReview() once a spec has closed it: OJS cannot reopen a review.
+ * Through cypress/plugins/reviewAssignmentTasks.js, which needs CYPRESS_DB_*.
+ */
+Cypress.Commands.add('snapshotOpenReview', (reviewAssignmentId) => {
+  return cy.task('snapshotReviewAssignment', reviewAssignmentId).then((taken) => {
+    expect(taken.dateCompleted, 'the dataset leaves the review open').to.eq(null);
+    return taken;
+  });
+});
+
+Cypress.Commands.add('reopenReview', (snapshot) => {
+  return cy.task('restoreReviewAssignment', snapshot);
+});
+
+/**
  * Record a CODECHECK status for a submission, as admin, and expect it saved.
  * Needs a backend page open, as cy.ojsApi() does.
  */

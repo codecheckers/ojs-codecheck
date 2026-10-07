@@ -61,8 +61,8 @@ DATASET  ?= $(CURDIR)/testData/stable-3_5_0-codecheck/mysql
 PLUGIN_LINK := $(OJS_ROOT)/plugins/generic/codecheck
 
 MYSQL := mysql -u$(DB_USER) -p$(DB_PASS) -h$(DB_HOST) -P$(DB_PORT)
-# The database, for the e2e task that reopens the review close-review.cy.js
-# closes (cypress/plugins/reviewAssignmentTasks.js).
+# The database, for the tasks that reopen a review a spec closed, in the e2e
+# and mail suites (cypress/plugins/reviewAssignmentTasks.js).
 CYPRESS_DB := CYPRESS_DB_HOST=$(DB_HOST) CYPRESS_DB_PORT=$(DB_PORT) CYPRESS_DB_NAME=$(DB_NAME) CYPRESS_DB_USER=$(DB_USER) CYPRESS_DB_PASS=$(DB_PASS)
 
 export OJS_ROOT
@@ -649,7 +649,7 @@ mail-down: throwaway-check
 test-mail: throwaway-check
 	@status=0; \
 	$(MAKE) --no-print-directory mail-up THROWAWAY=$(THROWAWAY) && \
-	CYPRESS_BASE_URL=$(BASE_URL) CYPRESS_MAILPIT_URL=http://localhost:$(MAILPIT_HTTP_PORT) npm run test:mail || status=$$?; \
+	$(CYPRESS_DB) CYPRESS_BASE_URL=$(BASE_URL) CYPRESS_MAILPIT_URL=http://localhost:$(MAILPIT_HTTP_PORT) npm run test:mail || status=$$?; \
 	$(MAKE) --no-print-directory mail-down THROWAWAY=$(THROWAWAY); \
 	exit $$status
 

@@ -62,7 +62,7 @@ export default defineConfig({
         return launchOptions;
       });
 
-      // Reopening the review close-review.cy.js closes, which OJS cannot (#13).
+      // Reopening a review a spec closed, which OJS cannot (#13).
       on('task', reviewAssignmentTasks(config.env));
 
       return config;

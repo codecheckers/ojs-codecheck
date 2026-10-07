@@ -336,7 +336,7 @@ jobs:
         env:
           CYPRESS_BASE_URL: http://localhost:8888/ojs
           CYPRESS_MAILPIT_URL: http://localhost:8025
-          # For the task that reopens the review close-review.cy.js closes.
+          # For the tasks that reopen a review a spec closed.
           CYPRESS_DB_HOST: 127.0.0.1
           CYPRESS_DB_PORT: 3306
           CYPRESS_DB_NAME: ojs_dump
