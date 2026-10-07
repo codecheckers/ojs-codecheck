@@ -10,12 +10,14 @@
  *
  * @brief Reading the community's lists of codecheckers (#186). The fixtures are
  *   the headers of the three real lists, with rows of the shapes they hold.
- *   Fetching is not tested: it is the network.
+ *   Reading them is tested with the network answered by address (#191).
  */
 
 namespace APP\plugins\generic\codecheck\tests\CodecheckRegisterUnitTests;
 
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\CommunityCodecheckers;
+use APP\plugins\generic\codecheck\tests\Support\Network;
+use Illuminate\Http\Client\Factory;
 use PKP\tests\PKPTestCase;
 
 class CommunityCodecheckersUnitTest extends PKPTestCase
@@ -65,5 +67,67 @@ class CommunityCodecheckersUnitTest extends PKPTestCase
         $this->assertSame([], CommunityCodecheckers::parse(''));
         $this->assertSame([], CommunityCodecheckers::parse("name,ORCID\nA,0000-0002-1825-0097\n"));
         $this->assertSame([], CommunityCodecheckers::parse('<html>Not found</html>'));
+    }
+
+    private const MAIN = 'https://raw.githubusercontent.com/codecheckers/codecheckers/HEAD/codecheckers.csv';
+    private const AGILE = 'https://raw.githubusercontent.com/codecheckers/codecheckers/HEAD/agile-codecheckers.csv';
+    private const INSTITUTIONAL = 'https://raw.githubusercontent.com/codecheckers/codecheckers/HEAD/institutional-codecheckers.csv';
+
+    private function list(string $handle, string $orcid): string
+    {
+        return "name,handle,ORCID\nSomeone,@{$handle},{$orcid}\n";
+    }
+
+    private function http(array $answers): Factory
+    {
+        return Network::factory($answers);
+    }
+
+    public function testTheThreeListsAreReadTogether(): void
+    {
+        $http = $this->http([
+            self::MAIN => Factory::response($this->list('first', '0000-0002-1825-0097')),
+            self::AGILE => Factory::response($this->list('second', '0000-0001-5109-3700')),
+            self::INSTITUTIONAL => Factory::response($this->list('third', '0000-0001-8607-8025')),
+        ]);
+
+        $read = CommunityCodecheckers::read($http);
+
+        $this->assertTrue($read['complete']);
+        $this->assertSame([
+            '0000-0002-1825-0097' => 'first',
+            '0000-0001-5109-3700' => 'second',
+            '0000-0001-8607-8025' => 'third',
+        ], $read['usernames']);
+        $http->assertSentCount(3);
+    }
+
+    public function testAListThatDoesNotAnswerLeavesTheReadIncomplete(): void
+    {
+        $http = $this->http([]);
+        $http->fake([
+            self::MAIN => Factory::response($this->list('first', '0000-0002-1825-0097')),
+            self::AGILE => $http->failedConnection('timed out'),
+            self::INSTITUTIONAL => Factory::response('', 404),
+        ]);
+
+        $read = CommunityCodecheckers::read($http);
+
+        // What did load is kept, but a refresh must not replace a whole list with part of it.
+        $this->assertFalse($read['complete']);
+        $this->assertSame(['0000-0002-1825-0097' => 'first'], $read['usernames']);
+    }
+
+    /** Pages served with 200 that hold no codechecker are not a read. */
+    public function testListsThatYieldNobodyAreNotARead(): void
+    {
+        $http = $this->http([
+            'raw.githubusercontent.com/*' => Factory::response('<html>Not found</html>'),
+        ]);
+
+        $read = CommunityCodecheckers::read($http);
+
+        $this->assertFalse($read['complete']);
+        $this->assertSame([], $read['usernames']);
     }
 }

@@ -300,6 +300,9 @@ Rules:
 - **Every GitHub client comes from `GithubHttp::client()`** (time limits plus a
   per-request breaker; reset with `GithubHttp::reset()` — tests that trip it
   must). Never `new \Github\Client()`. `depositToRegister()` resets it per article.
+  Everything that is not GitHub goes through Laravel's `Factory` (as
+  `CurlApiClient` and `CommunityCodecheckers` do) with the journal's proxy from
+  `GithubHttp::proxy()` and the same time limits.
 - **Every post is signed** via `CodecheckPostOrigin`. The journal URL is built
   from config (`base_url`, `restful_urls`), **never from the request** (Host
   header is attacker-controlled). The JSON block keys are a published format —
@@ -584,8 +587,14 @@ instead or not at all: API endpoint bodies, `CodecheckStatusHandler`,
 `CodecheckRegisterDepositService`, `SubmissionWizardHandler`,
 migrations, `CodecheckPageHandler`, `OrcidDepositService` beyond
 `depositTargets()`. **Prefer e2e over booting the application in PHPUnit**;
-extract pure static rules to unit-test them. `CurlApiClient` takes a Guzzle
-client, so its tests use Guzzle's `MockHandler`; **a test that uses Guzzle
+extract pure static rules to unit-test them. **Outbound HTTP is faked by
+address, not by method (#191)**: GitHub through `tests/Support/GithubFake`
+(routes like `'POST /repos/o/r/issues/7/labels'`, over `GithubHttp::client()`;
+an unknown route throws; assert with `assertSent()`/`addresses()`), every other
+host through a Laravel `Factory` given to `CurlApiClient` (or
+`CommunityCodecheckers::read()`) with `preventStrayRequests()` and `fake()`.
+Patterns without a scheme match any host that ends so; use whole addresses
+where a redirect leads to a sibling host. **A test that uses Guzzle
 must `require` the plugin's `vendor/autoload.php` first**, as the production
 classes do, or classes from OJS's older copy mix with the plugin's and break
 later tests. `TemplateManager` cannot be mocked

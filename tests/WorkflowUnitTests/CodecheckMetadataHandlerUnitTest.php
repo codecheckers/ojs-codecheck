@@ -5,8 +5,13 @@ namespace APP\plugins\generic\codecheck\tests\WorkflowUnitTests;
 use APP\core\Request;
 use APP\plugins\generic\codecheck\api\v1\CurlApiClient;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\GithubHttp;
-use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlHttpException;
 use APP\plugins\generic\codecheck\classes\Workflow\CodecheckMetadataHandler;
+use APP\plugins\generic\codecheck\tests\Support\GithubFake;
+use APP\plugins\generic\codecheck\tests\Support\Network;
+use GuzzleHttp\Exception\ConnectException;
+use GuzzleHttp\Psr7\Request as PsrRequest;
+use GuzzleHttp\Psr7\Response;
+use Illuminate\Http\Client\Factory;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PKP\tests\PKPTestCase;
 use Symfony\Component\Yaml\Yaml;
@@ -16,13 +21,19 @@ use Symfony\Component\Yaml\Yaml;
  *
  * @class CodecheckMetadataHandlerUnitTest
  *
- * @brief Tests for the CodecheckMetadataHandler class
+ * @brief Tests for the CodecheckMetadataHandler class. The repositories the
+ *   import reads answer by address — GitHub through GithubFake, every other
+ *   host through Laravel's `Factory::fake()` — so a test says what is asked
+ *   for and what comes back, not which methods are called (#191).
  */
 class CodecheckMetadataHandlerUnitTest extends PKPTestCase
 {
     private CodecheckMetadataHandler $handler;
     private $mockRequest;
     private CurlApiClient $curlApiClient;
+    private Factory $http;
+    private GithubFake $github;
+
     /**
      * Set up the test environment
      */
@@ -35,11 +46,30 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
             ->with('submissionId')
             ->willReturn(1);
 
-        /** mock GitHub client */
-        $client = $this->createMock(\Github\Client::class);
-        $this->curlApiClient = new CurlApiClient();
+        GithubHttp::reset();
+        $this->http = Network::factory();
+        $this->github = new GithubFake();
+        $this->curlApiClient = new CurlApiClient($this->http);
 
-        $this->handler = new CodecheckMetadataHandler($this->mockRequest, $client, $this->curlApiClient);
+        $this->handler = new CodecheckMetadataHandler($this->mockRequest, $this->github->client(), $this->curlApiClient);
+    }
+
+    protected function tearDown(): void
+    {
+        GithubHttp::reset();
+        parent::tearDown();
+    }
+
+    /** A handler on the fakes the test has set up. */
+    private function handlerOnTheFakes(): CodecheckMetadataHandler
+    {
+        return new CodecheckMetadataHandler(new Request(), $this->github->client(), $this->curlApiClient);
+    }
+
+    /** @return list<string> the addresses asked of non-GitHub hosts, in order */
+    private function fetched(): array
+    {
+        return array_map(fn (array $exchange) => $exchange[0]->url(), $this->http->recorded()->all());
     }
 
     /**
@@ -192,13 +222,12 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
 
     public function testGetSubmissionId()
     {
-        $client = $this->createMock(\Github\Client::class);
         $request = new Request();
         // create a test content for the user variable 'submissionId'
         $expectedSubmissionId = 123;
         $_POST['submissionId'] = $expectedSubmissionId;
 
-        $this->handler = new CodecheckMetadataHandler($request, $client, $this->curlApiClient);
+        $this->handler = new CodecheckMetadataHandler($request, $this->github->client(), $this->curlApiClient);
 
         $actualSubmissionId = $this->handler->getSubmissionId();
         $this->assertEquals($expectedSubmissionId, $actualSubmissionId);
@@ -206,31 +235,12 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
     }
 
     /**
-     * A GitHub client whose contents API answers `$file` (or throws it), and
-     * which records what was asked for in `$requested`.
+     * GitHub answering `$answer` for the contents of any file: a response, an
+     * array (as JSON) or an exception for the transport failing.
      */
-    private function githubClient(mixed $file, ?array &$requested): \Github\Client
+    private function githubAnswering(mixed $answer): void
     {
-        $requested = [];
-        $contentsApi = $this->createMock(\Github\Api\Repository\Contents::class);
-        $contentsApi->method('show')->willReturnCallback(
-            function (string $owner, string $repo, string $path, ?string $ref) use ($file, &$requested) {
-                $requested[] = compact('owner', 'repo', 'path', 'ref');
-                if ($file instanceof \Throwable) {
-                    throw $file;
-                }
-                return $file;
-            }
-        );
-
-        $repoApi = $this->createMock(\Github\Api\Repo::class);
-        $repoApi->expects($this->never())->method('show');
-        $repoApi->method('contents')->willReturn($contentsApi);
-
-        $client = $this->createMock(\Github\Client::class);
-        $client->method('api')->willReturn($repoApi);
-
-        return $client;
+        $this->github->route('GET /repos/*/contents/*', $answer);
     }
 
     private static function githubFile(string $yaml): array
@@ -255,12 +265,17 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
     #[DataProvider('githubAddressProvider')]
     public function testImportMetadataFromGithubReadsTheFileTheAddressNames(string $address, string $owner, string $repo, string $path, ?string $ref)
     {
-        $client = $this->githubClient(self::githubFile('test: yaml'), $requested);
-        $this->handler = new CodecheckMetadataHandler(new Request(), $client, $this->curlApiClient);
+        $this->githubAnswering(self::githubFile('test: yaml'));
+        $this->handler = $this->handlerOnTheFakes();
 
         $response = $this->handler->importMetadataFromRepository($address);
 
-        $this->assertSame([compact('owner', 'repo', 'path', 'ref')], $requested);
+        // The one file the address names, and nothing else: not the repository's default branch.
+        $requests = $this->github->requests();
+        $this->assertCount(1, $requests);
+        $this->assertSame("GET /repos/{$owner}/{$repo}/contents/{$path}", $requests[0]->getMethod() . ' ' . urldecode($requests[0]->getUri()->getPath()));
+        parse_str($requests[0]->getUri()->getQuery(), $query);
+        $this->assertSame($ref, $query['ref'] ?? null);
         $this->assertEquals(200, $response->getHttpResponseCode());
         $this->assertSame(
             ['success' => true, 'repository' => $address, 'metadata' => ['test' => 'yaml']],
@@ -270,8 +285,8 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
 
     public function testImportMetadataFromGithubContentsShowException()
     {
-        $client = $this->githubClient(new \Github\Exception\RuntimeException('Not Found', 404), $requested);
-        $this->handler = new CodecheckMetadataHandler(new Request(), $client, $this->curlApiClient);
+        $this->githubAnswering(new Response(404, [], '{"message": "Not Found"}'));
+        $this->handler = $this->handlerOnTheFakes();
 
         $repositoryUrl = 'https://github.com/codecheckers/testing-dev-register/';
         $response = $this->handler->importMetadataFromRepository($repositoryUrl);
@@ -284,8 +299,8 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
 
     public function testImportMetadataFromGithubDoesNotCallAFailedRequestAMissingFile()
     {
-        $client = $this->githubClient(new \Github\Exception\RuntimeException('API rate limit exceeded', 403), $requested);
-        $this->handler = new CodecheckMetadataHandler(new Request(), $client, $this->curlApiClient);
+        $this->githubAnswering(new Response(403, ['Content-Type' => 'application/json'], '{"message": "API rate limit exceeded"}'));
+        $this->handler = $this->handlerOnTheFakes();
 
         $response = $this->handler->importMetadataFromRepository('https://github.com/codecheckers/testing-dev-register');
 
@@ -295,16 +310,10 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
 
     public function testImportMetadataFromGithubSaysWhenGithubDidNotAnswer()
     {
-        $client = $this->githubClient(new \Exception('cURL error 28: Operation timed out'), $requested);
-        $this->handler = new CodecheckMetadataHandler(new Request(), $client, $this->curlApiClient);
-        $unreachable = new \ReflectionProperty(GithubHttp::class, 'unreachable');
-        $unreachable->setValue(null, true);
+        $this->githubAnswering(new ConnectException('cURL error 28: Operation timed out', new PsrRequest('GET', 'https://api.github.com/')));
+        $this->handler = $this->handlerOnTheFakes();
 
-        try {
-            $response = $this->handler->importMetadataFromRepository('https://github.com/codecheckers/testing-dev-register');
-        } finally {
-            GithubHttp::reset();
-        }
+        $response = $this->handler->importMetadataFromRepository('https://github.com/codecheckers/testing-dev-register');
 
         $this->assertEquals(504, $response->getHttpResponseCode());
         $this->assertSame('plugins.generic.codecheck.repositories.githubUnreachable', $response->getPayloadArray()['error']);
@@ -323,8 +332,8 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
     #[DataProvider('notAMappingProvider')]
     public function testImportMetadataRefusesAFileThatHoldsNoMetadata(string $yaml)
     {
-        $client = $this->githubClient(self::githubFile($yaml), $requested);
-        $this->handler = new CodecheckMetadataHandler(new Request(), $client, $this->curlApiClient);
+        $this->githubAnswering(self::githubFile($yaml));
+        $this->handler = $this->handlerOnTheFakes();
 
         $response = $this->handler->importMetadataFromRepository('https://github.com/codecheckers/testing-dev-register');
 
@@ -334,8 +343,8 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
 
     public function testImportMetadataFromGithubRefusesAFolderNamedLikeTheFile()
     {
-        $client = $this->githubClient([self::githubFile('test: yaml')], $requested);
-        $this->handler = new CodecheckMetadataHandler(new Request(), $client, $this->curlApiClient);
+        $this->githubAnswering([self::githubFile('test: yaml')]);
+        $this->handler = $this->handlerOnTheFakes();
 
         $response = $this->handler->importMetadataFromRepository('https://github.com/codecheckers/testing-dev-register');
 
@@ -345,8 +354,8 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
 
     public function testImportMetadataFromGithubAnswersAFileThatIsNotYaml()
     {
-        $client = $this->githubClient(self::githubFile("a: b\n  c: : d"), $requested);
-        $this->handler = new CodecheckMetadataHandler(new Request(), $client, $this->curlApiClient);
+        $this->githubAnswering(self::githubFile("a: b\n  c: : d"));
+        $this->handler = $this->handlerOnTheFakes();
 
         $response = $this->handler->importMetadataFromRepository('https://github.com/codecheckers/testing-dev-register');
 
@@ -356,13 +365,13 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
 
     public function testImportMetadataFromGithubRefusesAnAddressThatIsNotARepository()
     {
-        $client = $this->githubClient(self::githubFile('test: yaml'), $requested);
-        $this->handler = new CodecheckMetadataHandler(new Request(), $client, $this->curlApiClient);
+        $this->githubAnswering(self::githubFile('test: yaml'));
+        $this->handler = $this->handlerOnTheFakes();
 
         $response = $this->handler->importMetadataFromRepository('https://github.com/codecheckers/register/issues/5');
 
         $this->assertEquals(400, $response->getHttpResponseCode());
-        $this->assertSame([], $requested);
+        $this->assertSame([], $this->github->addresses(), 'nothing is asked of GitHub');
     }
 
     #[DataProvider('titleComparisonProvider')]
@@ -392,20 +401,21 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
         ];
     }
 
-    /** A handler whose repository answers with the given `codecheck.yml`. */
-    private function handlerServing(string $yaml, string $repository): CodecheckMetadataHandler
-    {
-        $curlApiClient = $this->createMock(CurlApiClient::class);
-        $curlApiClient->method('resolveDoi')->willReturn($repository);
-        $curlApiClient->method('fetch')->willReturn($yaml);
+    /** The address a Zenodo record's `codecheck.yml` is downloaded from. */
+    private const ZENODO_RECORD_YAML = 'https://zenodo.org/records/14900193/files/codecheck.yml?download=1';
 
-        return new CodecheckMetadataHandler(new Request(), $this->createMock(\Github\Client::class), $curlApiClient);
+    /** A handler whose Zenodo record holds the given `codecheck.yml`. */
+    private function handlerServing(string $yaml): CodecheckMetadataHandler
+    {
+        $this->http->fake([self::ZENODO_RECORD_YAML => Factory::response($yaml)]);
+
+        return $this->handlerOnTheFakes();
     }
 
     public function testTheImportForASubmissionAcceptsATitleThatDiffersInCaseAndSpacing()
     {
         $repository = 'https://zenodo.org/records/14900193';
-        $handler = $this->handlerServing("paper:\n  title: 'the  PAPER on data'\nsummary: ok\n", $repository);
+        $handler = $this->handlerServing("paper:\n  title: 'the  PAPER on data'\nsummary: ok\n");
 
         $response = $handler->importMetadataForSubmission($repository, 'The Paper on Data');
 
@@ -416,7 +426,7 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
     public function testTheImportForASubmissionRefusesAnotherPaper()
     {
         $repository = 'https://zenodo.org/records/14900193';
-        $handler = $this->handlerServing("paper:\n  title: Some other paper\nsummary: ok\n", $repository);
+        $handler = $this->handlerServing("paper:\n  title: Some other paper\nsummary: ok\n");
 
         $response = $handler->importMetadataForSubmission($repository, 'The Paper on Data');
         $payload = $response->getPayloadArray();
@@ -433,7 +443,7 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
     public function testTheImportForASubmissionTakesAnotherTitleOnceAccepted()
     {
         $repository = 'https://zenodo.org/records/14900193';
-        $handler = $this->handlerServing("paper:\n  title: The preprint\nsummary: ok\n", $repository);
+        $handler = $this->handlerServing("paper:\n  title: The preprint\nsummary: ok\n");
 
         $response = $handler->importMetadataForSubmission($repository, 'The Paper on Data', true);
 
@@ -444,7 +454,7 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
     public function testTheImportForASubmissionRefusesAFileWithNoPaperTitle()
     {
         $repository = 'https://zenodo.org/records/14900193';
-        $handler = $this->handlerServing("summary: ok\n", $repository);
+        $handler = $this->handlerServing("summary: ok\n");
 
         $response = $handler->importMetadataForSubmission($repository, 'The Paper on Data');
 
@@ -456,10 +466,8 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
     public function testTheImportForASubmissionLeavesAFailedFetchAlone()
     {
         $repository = 'https://zenodo.org/records/14900193';
-        $curlApiClient = $this->createMock(CurlApiClient::class);
-        $curlApiClient->method('resolveDoi')->willReturn($repository);
-        $curlApiClient->method('fetch')->willThrowException(new \RuntimeException('unreadable'));
-        $handler = new CodecheckMetadataHandler(new Request(), $this->createMock(\Github\Client::class), $curlApiClient);
+        $this->http->fake([self::ZENODO_RECORD_YAML => Factory::response('unreadable', 500)]);
+        $handler = $this->handlerOnTheFakes();
 
         $response = $handler->importMetadataForSubmission($repository, 'The Paper on Data');
 
@@ -475,8 +483,7 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
     {
         $repository = 'https://zenodo.org/records/14900193';
         $handler = $this->handlerServing(
-            "paper:\n  title: The preprint's title\n  authors:\n    - name: Ann\nrepository: https://github.com/a/b\nmanifest:\n  - file: fig.png\n    comment: Figure\nsummary: ok\n",
-            $repository
+            "paper:\n  title: The preprint's title\n  authors:\n    - name: Ann\nrepository: https://github.com/a/b\nmanifest:\n  - file: fig.png\n    comment: Figure\nsummary: ok\n"
         );
 
         $response = $handler->previewForAuthor($repository, 'The Paper on Data');
@@ -497,7 +504,7 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
     public function testThePreviewForAnAuthorConfirmsTheSamePaper()
     {
         $repository = 'https://zenodo.org/records/14900193';
-        $handler = $this->handlerServing("paper:\n  title: the paper on data\n", $repository);
+        $handler = $this->handlerServing("paper:\n  title: the paper on data\n");
 
         $payload = $handler->previewForAuthor($repository, 'The Paper on Data')->getPayloadArray();
 
@@ -508,10 +515,8 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
     public function testThePreviewForAnAuthorPassesAFailedFetchOn()
     {
         $repository = 'https://zenodo.org/records/14900193';
-        $curlApiClient = $this->createMock(CurlApiClient::class);
-        $curlApiClient->method('resolveDoi')->willReturn($repository);
-        $curlApiClient->method('fetch')->willThrowException(new \RuntimeException('unreadable'));
-        $handler = new CodecheckMetadataHandler(new Request(), $this->createMock(\Github\Client::class), $curlApiClient);
+        $this->http->fake([self::ZENODO_RECORD_YAML => Factory::response('unreadable', 500)]);
+        $handler = $this->handlerOnTheFakes();
 
         $this->assertFalse($handler->previewForAuthor($repository, 'The Paper on Data')->getPayloadArray()['success']);
     }
@@ -528,11 +533,11 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
     #[DataProvider('zenodoAddressProvider')]
     public function testImportMetadataFromZenodo(string $repository, string $download)
     {
-        $this->handler = $this->handlerAnswering(['test: yaml'], $fetched);
+        $this->handler = $this->handlerAnswering([$download => 'test: yaml']);
 
         $response = $this->handler->importMetadataFromRepository($repository);
 
-        $this->assertSame([$download], $fetched);
+        $this->assertSame([$download], $this->fetched());
         $this->assertEquals(200, $response->getHttpResponseCode());
         $this->assertSame(
             ['success' => true, 'repository' => $repository, 'metadata' => ['test' => 'yaml']],
@@ -541,20 +546,16 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
     }
 
     /**
-     * A handler whose cURL client answers `$answers` in turn and records the
-     * addresses it was asked for in `$fetched`.
+     * A handler on a network that answers these addresses with these bodies.
+     * Which are asked, and in which order, is read back with `fetched()`.
+     *
+     * @param array<string, string> $answers address → body
      */
-    private function handlerAnswering(array $answers, ?array &$fetched): CodecheckMetadataHandler
+    private function handlerAnswering(array $answers): CodecheckMetadataHandler
     {
-        $fetched = [];
-        $curlApiClient = $this->createMock(CurlApiClient::class);
-        $curlApiClient->method('resolveDoi')->willReturnArgument(0);
-        $curlApiClient->method('fetch')->willReturnCallback(function (string $url) use (&$answers, &$fetched) {
-            $fetched[] = $url;
-            return array_shift($answers);
-        });
+        $this->http->fake(array_map(fn (string $body) => Factory::response($body), $answers));
 
-        return new CodecheckMetadataHandler(new Request(), $this->createMock(\Github\Client::class), $curlApiClient);
+        return $this->handlerOnTheFakes();
     }
 
     private static function osfFile(string $name, string $download = 'https://osf.io/download/5zu8b/', string $kind = 'file'): array
@@ -570,14 +571,17 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
             self::osfFile('codecheck.yml.bak', 'https://osf.io/download/4co4h/'),
             self::osfFile('codecheck.yml', 'https://files.de-1.osf.io/v1/resources/ymc3t/providers/osfstorage/66f8'),
         ]]);
-        $this->handler = $this->handlerAnswering([$listing, 'test: yaml'], $fetched);
+        $this->handler = $this->handlerAnswering([
+            'https://api.osf.io/v2/nodes/ymc3t/files/osfstorage/?filter%5Bname%5D=codecheck.yml' => $listing,
+            'https://files.de-1.osf.io/v1/resources/ymc3t/providers/osfstorage/66f8' => 'test: yaml',
+        ]);
 
         $response = $this->handler->importMetadataFromRepository($repository);
 
         $this->assertSame([
             'https://api.osf.io/v2/nodes/ymc3t/files/osfstorage/?filter%5Bname%5D=codecheck.yml',
             'https://files.de-1.osf.io/v1/resources/ymc3t/providers/osfstorage/66f8',
-        ], $fetched);
+        ], $this->fetched());
         $this->assertEquals(200, $response->getHttpResponseCode());
         $this->assertSame(
             ['success' => true, 'repository' => $repository, 'metadata' => ['test' => 'yaml']],
@@ -597,11 +601,14 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
     public function testImportMetadataFromOsfReadsTheFileTheAddressNames(string $repository, string $file)
     {
         $record = json_encode(['data' => self::osfFile('paper.yml')]);
-        $this->handler = $this->handlerAnswering([$record, 'test: yaml'], $fetched);
+        $this->handler = $this->handlerAnswering([
+            "https://api.osf.io/v2/files/{$file}/" => $record,
+            'https://osf.io/download/5zu8b/' => 'test: yaml',
+        ]);
 
         $response = $this->handler->importMetadataFromRepository($repository);
 
-        $this->assertSame(["https://api.osf.io/v2/files/{$file}/", 'https://osf.io/download/5zu8b/'], $fetched);
+        $this->assertSame(["https://api.osf.io/v2/files/{$file}/", 'https://osf.io/download/5zu8b/'], $this->fetched());
         $this->assertEquals(200, $response->getHttpResponseCode());
         $this->assertSame(['test' => 'yaml'], $response->getPayloadArray()['metadata']);
     }
@@ -609,18 +616,19 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
     public function testImportMetadataFromOsfRefusesAFolderTheAddressNames()
     {
         $record = json_encode(['data' => self::osfFile('reports', kind: 'folder')]);
-        $this->handler = $this->handlerAnswering([$record], $fetched);
+        $this->handler = $this->handlerAnswering(['https://api.osf.io/v2/files/66f8/' => $record]);
 
         $response = $this->handler->importMetadataFromRepository('https://osf.io/ymc3t/files/osfstorage/66f8');
 
-        $this->assertCount(1, $fetched);
+        // The folder is not downloaded.
+        $this->assertSame(['https://api.osf.io/v2/files/66f8/'], $this->fetched());
         $this->assertEquals(404, $response->getHttpResponseCode());
     }
 
     public function testImportMetadataFromOsfNoDataFromOsfFilestorage()
     {
         $repository = 'https://osf.io/ymc3t/';
-        $this->handler = $this->handlerAnswering([json_encode(['data' => null])], $fetched);
+        $this->handler = $this->handlerAnswering(['https://api.osf.io/v2/nodes/ymc3t/files/osfstorage/?filter%5Bname%5D=codecheck.yml' => json_encode(['data' => null])]);
 
         $response = $this->handler->importMetadataFromRepository($repository);
 
@@ -635,7 +643,7 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
     {
         $repository = 'https://osf.io/ymc3t/';
         $listing = json_encode(['data' => []]);
-        $this->handler = $this->handlerAnswering([$listing], $fetched);
+        $this->handler = $this->handlerAnswering(['https://api.osf.io/v2/nodes/ymc3t/files/osfstorage/?filter%5Bname%5D=codecheck.yml' => $listing]);
 
         $response = $this->handler->importMetadataFromRepository($repository);
 
@@ -648,49 +656,33 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
 
     public function testImportMetadataFromOsfFetchRefused()
     {
-        $errorCode = 500;
-        $errorMessage = 'Error initializing the cURL API';
-        $osfNodeId = 'ymc3t';
-        $repository = "https://osf.io/{$osfNodeId}/";
-        $client = $this->createMock(\Github\Client::class);
-        $request = new Request();
-        $curlApiClient = $this->createMock(CurlApiClient::class);
-        $curlApiClient->method('resolveDoi')->willReturn($repository);
-        $curlApiClient->method('fetch')
-            ->will($this->throwException(new CurlHttpException($errorMessage, $errorCode)));
+        $repository = 'https://osf.io/ymc3t/';
+        $this->http->fake(['https://api.osf.io/v2/nodes/ymc3t/files/osfstorage/?filter%5Bname%5D=codecheck.yml' => Factory::response('', 500)]);
 
-        $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
-        $response = $this->handler->importMetadataFromRepository($osfNodeId);
-        $actualMetadataReturnArray = json_decode($response->getPayload(), true);
-        $this->assertEquals($errorCode, $response->getHttpResponseCode());
-        $this->assertCount(3, $actualMetadataReturnArray);
-        $this->assertFalse($actualMetadataReturnArray['success']);
-        $this->assertEquals($repository, $actualMetadataReturnArray['repository']);
-        $this->assertEquals($errorMessage, $actualMetadataReturnArray['error']);
+        $response = $this->handlerOnTheFakes()->importMetadataFromRepository($repository);
+        $payload = $response->getPayloadArray();
+
+        // The host's own status is kept, and the error says which address refused.
+        $this->assertEquals(500, $response->getHttpResponseCode());
+        $this->assertCount(3, $payload);
+        $this->assertFalse($payload['success']);
+        $this->assertEquals($repository, $payload['repository']);
+        $this->assertStringContainsString('HTTP status 500', $payload['error']);
     }
 
     public function testImportMetadataFromOsfHostDidNotAnswer()
     {
-        $errorMessage = 'https://example.org did not answer';
-        $osfNodeId = 'ymc3t';
-        $repository = "https://osf.io/{$osfNodeId}/";
-        $client = $this->createMock(\Github\Client::class);
-        $request = new Request();
-        $curlApiClient = $this->createMock(CurlApiClient::class);
-        $curlApiClient->method('resolveDoi')->willReturn($repository);
-        $curlApiClient->method('fetch')
-            ->will($this->throwException(new CurlHttpException($errorMessage, 504)));
+        $repository = 'https://osf.io/ymc3t/';
+        $this->http->fake(['https://api.osf.io/v2/nodes/ymc3t/files/osfstorage/?filter%5Bname%5D=codecheck.yml' => $this->http->failedConnection('timed out')]);
 
-        $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
-        $response = $this->handler->importMetadataFromRepository($osfNodeId);
-        $actualMetadataReturnArray = json_decode($response->getPayload(), true);
-        // A cURL error number is not an HTTP status, so the response carries
-        // a 500 rather than the code the exception happened to have (#130).
+        $response = $this->handlerOnTheFakes()->importMetadataFromRepository($repository);
+        $payload = $response->getPayloadArray();
+
         $this->assertEquals(504, $response->getHttpResponseCode());
-        $this->assertCount(3, $actualMetadataReturnArray);
-        $this->assertFalse($actualMetadataReturnArray['success']);
-        $this->assertEquals($repository, $actualMetadataReturnArray['repository']);
-        $this->assertEquals($errorMessage, $actualMetadataReturnArray['error']);
+        $this->assertCount(3, $payload);
+        $this->assertFalse($payload['success']);
+        $this->assertEquals($repository, $payload['repository']);
+        $this->assertStringContainsString('did not answer', $payload['error']);
     }
 
     public static function gitlabAddressProvider(): array
@@ -705,11 +697,11 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
     #[DataProvider('gitlabAddressProvider')]
     public function testImportMetadataFromGitlab(string $repository, string $download)
     {
-        $this->handler = $this->handlerAnswering(['test: yaml'], $fetched);
+        $this->handler = $this->handlerAnswering([$download => 'test: yaml']);
 
         $response = $this->handler->importMetadataFromRepository($repository);
 
-        $this->assertSame([$download], $fetched);
+        $this->assertSame([$download], $this->fetched());
         $this->assertEquals(200, $response->getHttpResponseCode());
         $this->assertSame(
             ['success' => true, 'repository' => $repository, 'metadata' => ['test' => 'yaml']],
@@ -720,44 +712,32 @@ class CodecheckMetadataHandlerUnitTest extends PKPTestCase
     public function testReadYamlContentFetchRefused()
     {
         $repository = 'https://gitlab.com/cdchck/community-codechecks/2022-svaRetro-svaNUMT';
-        $errorCode = 500;
-        $errorMessage = 'Error initializing the cURL API';
-        $client = $this->createMock(\Github\Client::class);
-        $request = new Request();
-        $curlApiClient = $this->createMock(CurlApiClient::class);
-        $curlApiClient->method('resolveDoi')->willReturn($repository);
-        $curlApiClient->method('fetch')
-            ->will($this->throwException(new CurlHttpException($errorMessage, $errorCode)));
-        $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
-        $response = $this->handler->importMetadataFromRepository($repository);
-        $actualMetadataReturnArray = json_decode($response->getPayload(), true);
-        $this->assertEquals($errorCode, $response->getHttpResponseCode());
-        $this->assertCount(3, $actualMetadataReturnArray);
-        $this->assertFalse($actualMetadataReturnArray['success']);
-        $this->assertEquals($repository, $actualMetadataReturnArray['repository']);
-        $this->assertEquals($errorMessage, $actualMetadataReturnArray['error']);
+        $this->http->fake(['https://gitlab.com/cdchck/community-codechecks/2022-svaRetro-svaNUMT/-/raw/main/codecheck.yml?inline=false' => Factory::response('', 500)]);
+
+        $response = $this->handlerOnTheFakes()->importMetadataFromRepository($repository);
+        $payload = $response->getPayloadArray();
+
+        $this->assertEquals(500, $response->getHttpResponseCode());
+        $this->assertCount(3, $payload);
+        $this->assertFalse($payload['success']);
+        $this->assertEquals($repository, $payload['repository']);
+        $this->assertStringContainsString('HTTP status 500', $payload['error']);
     }
 
     public function testReadYamlContentHostDidNotAnswer()
     {
         $repository = 'https://gitlab.com/cdchck/community-codechecks/2022-svaRetro-svaNUMT';
-        $errorMessage = 'https://example.org did not answer';
-        $client = $this->createMock(\Github\Client::class);
-        $request = new Request();
-        $curlApiClient = $this->createMock(CurlApiClient::class);
-        $curlApiClient->method('resolveDoi')->willReturn($repository);
-        $curlApiClient->method('fetch')
-            ->will($this->throwException(new CurlHttpException($errorMessage, 504)));
-        $this->handler = new CodecheckMetadataHandler($request, $client, $curlApiClient);
-        $response = $this->handler->importMetadataFromRepository($repository);
-        $actualMetadataReturnArray = json_decode($response->getPayload(), true);
-        // A cURL error number is not an HTTP status, so the response carries
-        // a 500 rather than the code the exception happened to have (#130).
+        $this->http->fake(['https://gitlab.com/cdchck/community-codechecks/2022-svaRetro-svaNUMT/-/raw/main/codecheck.yml?inline=false' => $this->http->failedConnection('timed out')]);
+
+        $response = $this->handlerOnTheFakes()->importMetadataFromRepository($repository);
+        $payload = $response->getPayloadArray();
+
+        // A host that did not answer is a 504, not the 500 a failure of ours would be (#130).
         $this->assertEquals(504, $response->getHttpResponseCode());
-        $this->assertCount(3, $actualMetadataReturnArray);
-        $this->assertFalse($actualMetadataReturnArray['success']);
-        $this->assertEquals($repository, $actualMetadataReturnArray['repository']);
-        $this->assertEquals($errorMessage, $actualMetadataReturnArray['error']);
+        $this->assertCount(3, $payload);
+        $this->assertFalse($payload['success']);
+        $this->assertEquals($repository, $payload['repository']);
+        $this->assertStringContainsString('did not answer', $payload['error']);
     }
 
     public function testBuildYamlDeclaresTheRecordedConfigVersion()

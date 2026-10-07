@@ -68,10 +68,24 @@ class GithubHttp
         $stack = HandlerStack::create($handler);
         $stack->push(self::breaker(), 'codecheck_github_breaker');
 
+        return ['handler' => $stack] + self::transferOptions();
+    }
+
+    /**
+     * The time limits and the journal's proxy, as Guzzle options: the one
+     * policy for every outbound call, GitHub's through `options()` and the
+     * others (`CurlApiClient`, `CommunityCodecheckers`) through Laravel's
+     * `withOptions()`.
+     *
+     * @param int $timeout How long one call may take, end to end
+     *
+     * @return array{timeout: int, connect_timeout: int, proxy: array{http: ?string, https: ?string}}
+     */
+    public static function transferOptions(int $timeout = self::TIMEOUT_SECONDS): array
+    {
         return [
-            'handler' => $stack,
-            'timeout' => self::TIMEOUT_SECONDS,
-            'connect_timeout' => self::CONNECT_TIMEOUT_SECONDS,
+            'timeout' => $timeout,
+            'connect_timeout' => min(self::CONNECT_TIMEOUT_SECONDS, $timeout),
             'proxy' => self::proxy(),
         ];
     }

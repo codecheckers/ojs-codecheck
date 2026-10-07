@@ -2,21 +2,22 @@
 
 namespace APP\plugins\generic\codecheck\api\v1;
 
-use APP\core\Application;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\GithubHttp;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Exceptions\CurlExceptions\CurlHttpException;
-use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ConnectException;
-use GuzzleHttp\RequestOptions;
-use GuzzleHttp\TransferStats;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\Factory;
+use Illuminate\Http\Client\PendingRequest;
+use Psr\Http\Message\RequestInterface;
 
 /**
  * Fetches a repository's `codecheck.yml` and resolves DOIs to the repository
  * they name.
  *
- * Through OJS's own HTTP client, so its `[proxy]` setting applies (#65); the
- * name is from when this was a cURL client, kept for its callers.
+ * Through Laravel's HTTP client, which OJS ships, with the journal's `[proxy]`
+ * setting applied (#65); tests answer by address with `Factory::fake()` (#191).
+ * The name is from when this was a cURL client, kept for its callers.
  */
 class CurlApiClient implements ApiClientInterface
 {
@@ -31,14 +32,21 @@ class CurlApiClient implements ApiClientInterface
      */
     private static array $resolvedDois = [];
 
-    /** OJS's client, built on first use: building it reads the version from the database. */
-    public function __construct(private ?Client $client = null)
+    public function __construct(private Factory $http = new Factory())
     {
     }
 
-    private function client(): Client
+    private function request(): PendingRequest
     {
-        return $this->client ??= Application::get()->getHttpClient();
+        return $this->http
+            ->withUserAgent(self::USER_AGENT)
+            // Laravel sends every request as JSON; a GET has no body to describe.
+            ->withRequestMiddleware(fn (RequestInterface $request) => $request->withoutHeader('Content-Type'))
+            // A repository host that never answers must not hold the editor's
+            // request, or a publication, for as long as PHP lets it run.
+            ->withOptions(GithubHttp::transferOptions() + [
+                'allow_redirects' => ['max' => self::MAX_REDIRECTS, 'strict' => true],
+            ]);
     }
 
     /**
@@ -48,28 +56,25 @@ class CurlApiClient implements ApiClientInterface
     public function fetch(string $url): string
     {
         try {
-            $response = $this->client()->request('GET', $url, [
-                // A repository host that never answers must not hold the editor's
-                // request, or a publication, for as long as PHP lets it run.
-                RequestOptions::CONNECT_TIMEOUT => GithubHttp::CONNECT_TIMEOUT_SECONDS,
-                RequestOptions::TIMEOUT => GithubHttp::TIMEOUT_SECONDS,
-                RequestOptions::ALLOW_REDIRECTS => ['max' => self::MAX_REDIRECTS],
-                RequestOptions::HEADERS => ['User-Agent' => self::USER_AGENT, 'Accept' => '*/*'],
-                RequestOptions::HTTP_ERRORS => false,
-            ]);
-        } catch (ConnectException $e) {
-            // Unreachable or too slow: the plugin's word for that is 504, as for GitHub.
-            throw new CurlHttpException("{$url} did not answer: " . $e->getMessage(), 504, $e);
+            $response = $this->request()->accept('*/*')->get($url);
         } catch (\Throwable $e) {
+            // Laravel calls every transfer failure a connection failure; only a
+            // host that did not answer is the plugin's 504, as for GitHub — a
+            // redirect loop or anything else is a 502.
+            $unanswered = $e instanceof ConnectionException
+                && ($e->getPrevious() === null || $e->getPrevious() instanceof ConnectException);
+            if ($unanswered) {
+                throw new CurlHttpException("{$url} did not answer: " . $e->getMessage(), 504, $e);
+            }
             throw new CurlHttpException("Request to {$url} failed: " . $e->getMessage(), 502, $e);
         }
 
-        $httpCode = $response->getStatusCode();
+        $httpCode = $response->status();
         if ($httpCode >= 400) {
             throw new CurlHttpException("Request to {$url} failed with HTTP status {$httpCode}.", $httpCode);
         }
 
-        return (string) $response->getBody();
+        return $response->body();
     }
 
     /**
@@ -90,23 +95,15 @@ class CurlApiClient implements ApiClientInterface
             return self::$resolvedDois[$doi];
         }
 
-        $effectiveUrl = null;
         try {
-            $response = $this->client()->request('GET', $url, [
-                // Authors may ask for this (#190), so a DOI is followed over
-                // https only: no plain-http hop to an address inside the network.
-                RequestOptions::ALLOW_REDIRECTS => ['max' => self::MAX_REDIRECTS, 'protocols' => ['https']],
-                RequestOptions::CONNECT_TIMEOUT => GithubHttp::CONNECT_TIMEOUT_SECONDS,
-                RequestOptions::TIMEOUT => GithubHttp::TIMEOUT_SECONDS,
-                RequestOptions::HEADERS => ['User-Agent' => self::USER_AGENT],
-                RequestOptions::HTTP_ERRORS => false,
-                // Only where it ends up is wanted, not the landing page itself.
-                RequestOptions::STREAM => true,
-                RequestOptions::ON_STATS => function (TransferStats $stats) use (&$effectiveUrl) {
-                    $effectiveUrl = (string) $stats->getEffectiveUri();
-                },
-            ]);
-            $response->getBody()->close();
+            // Only where it ends up is wanted, not the landing page itself. The
+            // body is not streamed: Guzzle's stream handler would pin the TLS
+            // version Laravel asks for to exactly 1.2. A hop to plain http is not followed.
+            $effectiveUrl = (string) $this->request()
+                ->accept('*/*')
+                ->withOptions(['allow_redirects' => ['max' => self::MAX_REDIRECTS, 'strict' => true, 'protocols' => ['https']]])
+                ->get($url)
+                ->effectiveUri();
         } catch (\Throwable $e) {
             return $possibleDoiUrl;
         }
