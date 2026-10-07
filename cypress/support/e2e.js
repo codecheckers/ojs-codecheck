@@ -118,31 +118,36 @@ Cypress.Commands.add('recordCodecheckStatus', (submissionId, status) => {
 });
 
 /**
- * OJS's participant grid on a submission's stage. A legacy grid: it takes the
- * CSRF token as a form field and answers HTML, so a change to PKP's grid is a
- * fix here only.
+ * POST to one of OJS's legacy grids (`$$$call$$$/grid/…`): they take the CSRF
+ * token as a form field, not a header, and answer HTML. A change to PKP's
+ * grids is then a fix in the grid helpers below only.
+ *
+ * @param {string} grid the grid's path, e.g. 'users/reviewer/reviewer-grid'
+ * @param {string} op   the operation, e.g. 'update-reviewer'
+ * @param {object} qs   the query, which identifies the submission and stage
+ * @param {object} form the fields posted
  */
-const participantGrid = (submissionId, stageId, op) =>
-  `/index.php/${JOURNAL}/$$$call$$$/grid/users/stage-participant/stage-participant-grid/${op}` +
-  `?submissionId=${submissionId}&stageId=${stageId}`;
-
-const participantGridPost = (submissionId, stageId, op, form) =>
+const gridUrl = (grid, op) => `/index.php/${JOURNAL}/$$$call$$$/grid/${grid}/${op}`;
+const gridPost = (grid, op, qs, form) =>
   cy.getCsrfToken().then((csrfToken) =>
-    cy.request({ method: 'POST', url: participantGrid(submissionId, stageId, op), form: true, body: { csrfToken, ...form } })
+    cy.request({ method: 'POST', url: gridUrl(grid, op), qs, form: true, body: { csrfToken, ...form } })
   );
+
+const PARTICIPANT_GRID = 'users/stage-participant/stage-participant-grid';
+const REVIEWER_GRID = 'users/reviewer/reviewer-grid';
 
 /**
  * Assign a user to a submission in a user group, as "Assign" in the
  * participants panel does, without a message: OJS sends no email of its own.
  */
 Cypress.Commands.add('assignParticipant', (submissionId, stageId, userGroupId, userId) => {
-  return participantGridPost(submissionId, stageId, 'save-participant', { userGroupId, userId, assignmentId: '' })
+  return gridPost(PARTICIPANT_GRID, 'save-participant', { submissionId, stageId }, { userGroupId, userId, assignmentId: '' })
     .its('body.status').should('eq', true);
 });
 
 /** Remove every assignment of the submission in the given user groups. */
 Cypress.Commands.add('removeParticipants', (submissionId, stageId, userGroupIds) => {
-  return cy.request(participantGrid(submissionId, stageId, 'fetch-grid')).then((response) => {
+  return cy.request({ url: gridUrl(PARTICIPANT_GRID, 'fetch-grid'), qs: { submissionId, stageId } }).then((response) => {
     // Rows are "…-category-<user group>-row-<assignment>"; the group's own
     // heading row is a .category row.
     const pattern = new RegExp(`-category-(?:${userGroupIds.join('|')})-row-(\\d+)$`);
@@ -150,9 +155,61 @@ Cypress.Commands.add('removeParticipants', (submissionId, stageId, userGroupIds)
       .querySelectorAll('tr.gridRow:not(.category)');
     [...rows].map((row) => row.id.match(pattern)?.[1]).filter(Boolean)
       .forEach((assignmentId) =>
-        participantGridPost(submissionId, stageId, 'delete-participant', { assignmentId })
+        gridPost(PARTICIPANT_GRID, 'delete-participant', { submissionId, stageId }, { assignmentId })
           .its('body.status').should('eq', true)
       );
+  });
+});
+
+/** `PKPReviewerGridHandler::REVIEWER_SELECT_ADVANCED_SEARCH`, the "Add Reviewer" search tab. */
+const REVIEWER_SELECT_ADVANCED_SEARCH = 1;
+/** `ReviewAssignment::SUBMISSION_REVIEW_METHOD_OPEN`: codecheckers are never anonymous. */
+const REVIEW_METHOD_OPEN = 3;
+
+/** A date some days ahead, as the browser's local date (YYYY-MM-DD). */
+const dateInDays = (days) => {
+  const date = new Date(Date.now() + days * 86400000);
+  return [date.getFullYear(), date.getMonth() + 1, date.getDate()].map((n) => String(n).padStart(2, '0')).join('-');
+};
+
+/**
+ * Invite a reviewer as "Add Reviewer" does: the message is the template's
+ * body as the form loads it (`fetchTemplateBody`), the subject the template's.
+ *
+ * @param {object} invitation {submissionId, stageId, reviewRoundId, reviewerId, template,
+ *   reviewMethod} — the method defaults to open review, as for a codechecker
+ */
+Cypress.Commands.add('inviteReviewer', ({ submissionId, stageId, reviewRoundId, reviewerId, template, reviewMethod = REVIEW_METHOD_OPEN }) => {
+  const qs = { submissionId, stageId, reviewRoundId };
+  return cy.request({ url: gridUrl(REVIEWER_GRID, 'fetch-template-body'), qs: { ...qs, template } }).then((response) => {
+    expect(response.body.status, `the template ${template}`).to.eq(true);
+    return gridPost(REVIEWER_GRID, 'update-reviewer', qs, {
+      selectionType: REVIEWER_SELECT_ADVANCED_SEARCH, reviewerId, template, reviewMethod,
+      personalMessage: response.body.content,
+      responseDueDate: dateInDays(7), reviewDueDate: dateInDays(28),
+    }).its('body.status').should('eq', true);
+  });
+});
+
+/**
+ * Unassign a reviewer without an email. A review not yet confirmed is deleted,
+ * so an invitation made by a spec leaves nothing behind but the event log.
+ */
+Cypress.Commands.add('unassignReviewer', ({ submissionId, stageId, reviewRoundId, reviewAssignmentId }) => {
+  return gridPost(REVIEWER_GRID, 'update-unassign-reviewer', { submissionId, stageId, reviewRoundId, reviewAssignmentId }, { skipEmail: 1 })
+    .its('body.status').should('eq', true);
+});
+
+/**
+ * The journal's alternates to "Review Request" named as the plugin names its
+ * "Invitation to codecheck" template (#13): one, unless a spec deleted it.
+ * Needs a backend page open, as cy.ojsApi() does.
+ */
+Cypress.Commands.add('invitationTemplates', () => {
+  return cy.ojsApi('GET', 'api/v1/emailTemplates?alternateTo=REVIEW_REQUEST').then((response) => {
+    expect(response.status, 'the email templates API').to.eq(200);
+    return response.body.items.filter((template) =>
+      Object.values(template.name ?? {}).includes('Invitation to codecheck'));
   });
 });
 

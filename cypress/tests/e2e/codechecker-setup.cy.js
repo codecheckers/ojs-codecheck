@@ -15,14 +15,6 @@ const RECREATE = '#codecheckerSetupRecreate';
 
 const shown = (part, state) => `${STATUS} [data-part=${part}] .codecheck-setup-status__${state}`;
 
-/** Yields the journal's alternates to "Review Request" named as the plugin names its own. */
-const invitationTemplates = () =>
-  cy.ojsApi('GET', 'api/v1/emailTemplates?alternateTo=REVIEW_REQUEST').then((response) => {
-    expect(response.status, 'the email templates API').to.eq(200);
-    return response.body.items.filter((template) =>
-      Object.values(template.name ?? {}).includes('Invitation to codecheck'));
-  });
-
 /** Opens the settings and creates whatever is missing, so both exist. */
 const ensureBoth = () => {
   cy.openCodecheckSettings();
@@ -49,7 +41,7 @@ describe('The Codechecker role and invitation template', () => {
 
   it('adds the invitation as an alternate to "Review Request", carrying its variables', () => {
     ensureBoth();
-    invitationTemplates().then((templates) => {
+    cy.invitationTemplates().then((templates) => {
       expect(templates).to.have.length(1);
       const body = Object.values(templates[0].body)[0];
       expect(body).to.contain('{$reviewAssignmentUrl}');
@@ -60,7 +52,7 @@ describe('The Codechecker role and invitation template', () => {
 
   it('shows a deleted template as missing and recreates it', () => {
     ensureBoth();
-    invitationTemplates().then((templates) => {
+    cy.invitationTemplates().then((templates) => {
       cy.ojsApi('DELETE', `api/v1/emailTemplates/${templates[0].key}`).its('status').should('eq', 200);
     });
 
@@ -73,7 +65,7 @@ describe('The Codechecker role and invitation template', () => {
     cy.get(shown('template', 'present')).should('not.have.attr', 'hidden');
     cy.get(shown('template', 'missing')).should('have.attr', 'hidden');
     cy.get(RECREATE).should('have.attr', 'hidden');
-    invitationTemplates().should('have.length', 1);
+    cy.invitationTemplates().should('have.length', 1);
   });
 
   it('refuses a recreation without the CSRF token', () => {
