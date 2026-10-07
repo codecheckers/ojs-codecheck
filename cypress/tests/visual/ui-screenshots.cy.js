@@ -111,9 +111,12 @@ describe('CODECHECK UI surfaces', () => {
     cy.intercept(
       { method: 'GET', pathname: `**/index.php/${JOURNAL}/api/v1/codecheck/codecheckers/reviewers` },
       (req) => req.continue((res) => {
-        res.body.reviewers = res.body.reviewers.map((reviewer) => ({
+        // The server suggests a username only for an account with an ORCID
+        // iD, so the reviewer without one is given one too.
+        res.body.reviewers = res.body.reviewers.map((reviewer) => (reviewer.github ? reviewer : {
           ...reviewer,
-          githubSuggestion: reviewer.github ? null : 'rreviewer',
+          orcid: reviewer.orcid || '0000-0002-1825-0097',
+          githubSuggestion: 'rreviewer',
         }));
       })
     );
