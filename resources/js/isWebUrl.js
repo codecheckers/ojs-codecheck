@@ -17,3 +17,16 @@
 export function isWebUrl(url) {
   return /^https?:\/\//i.test(String(url ?? '').trim());
 }
+
+/**
+ * The doi.org link for a DOI as `Constants::bareDoi()` reads one — bare,
+ * `doi:10.…`, or a doi.org link — or null when the value names no DOI. The
+ * mirror of that PHP rule, as `isWebUrl()` mirrors its own (#190).
+ *
+ * @param {string} value
+ * @returns {?string}
+ */
+export function doiUrl(value) {
+  const match = /^(?:doi:\s*|(?:https?:\/\/)?(?:dx\.)?doi\.org\/)?(10\.\d{4,9}\/\S+)$/i.exec(String(value ?? '').trim());
+  return match ? `https://doi.org/${match[1]}` : null;
+}

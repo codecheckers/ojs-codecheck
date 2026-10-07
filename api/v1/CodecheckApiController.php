@@ -55,6 +55,7 @@ use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\classes\Orcid\OrcidApiClient;
 use APP\plugins\generic\codecheck\classes\Orcid\OrcidDepositService;
 use APP\plugins\generic\codecheck\classes\Orcid\OrcidTokenDAO;
+use APP\plugins\generic\codecheck\classes\Submission\CodecheckAuthorMetadata;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckCodecheckers;
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckSubmissionAccess;
 use APP\plugins\generic\codecheck\classes\Workflow\CertificateReferenceUpdate;
@@ -93,6 +94,7 @@ class CodecheckApiController extends PKPBaseController
         'getOrcidStatus',
         'saveMetadata',
         'loadMetadataFromRepository',
+        'previewExistingCheck',
         'updateStatus',
         'depositToOrcid',
         'addCertificateReference',
@@ -204,6 +206,10 @@ class CodecheckApiController extends PKPBaseController
 
         Route::post('repository', $this->loadMetadataFromRepository(...))
             ->name('codecheck.repository.load')->middleware($write);
+
+        // Read-only, so authors may: the wizard's load from an existing check (#190).
+        Route::post('repository/preview', $this->previewExistingCheck(...))
+            ->name('codecheck.repository.preview')->middleware($read);
 
         Route::post('status/update', $this->updateStatus(...))
             ->name('codecheck.status.update')->middleware($write);
@@ -346,7 +352,8 @@ class CodecheckApiController extends PKPBaseController
         $result['permissions'] = CodecheckSubmissionAccess::permissions(
             $request->getUser(),
             (int) $submission->getId(),
-            (int) $request->getContext()?->getId()
+            (int) $request->getContext()?->getId(),
+            ($result['settings']['certificateReferenceMode'] ?? null) === Constants::CODECHECK_CERTIFICATE_REFERENCE_OFF
         );
         // Which accounts the codecheckers are is for those who may change the
         // list (#13); everyone else gets the entries without them, the shape
@@ -368,6 +375,12 @@ class CodecheckApiController extends PKPBaseController
     {
         $request = Application::get()->getRequest();
         $submission = $this->getAuthorizedContextObject(Application::ASSOC_TYPE_SUBMISSION);
+
+        // The route's role list is journal-wide: a Section editor who reaches
+        // this submission only as its author or an invited reviewer is not its editor (#127).
+        if (!CodecheckSubmissionAccess::isEditorOn($request->getUser(), (int) $submission->getId(), (int) $request->getContext()?->getId())) {
+            return $this->roleRefusal();
+        }
 
         $result = (new CertificateReferenceUpdate($this->plugin))->addToLatestPublication($submission, (int) $request->getUser()->getId());
 
@@ -593,7 +606,39 @@ class CodecheckApiController extends PKPBaseController
         // The title comes from the authorised submission, never from the request.
         $title = (string) $submission->getCurrentPublication()?->getLocalizedTitle();
 
-        $response = $this->metadataHandler()->importMetadataForSubmission($repository, $title);
+        // Only after the editor confirmed both titles (#190).
+        $acceptTitleMismatch = ($postParams['acceptTitleMismatch'] ?? false) === true;
+
+        $response = $this->metadataHandler()->importMetadataForSubmission($repository, $title, $acceptTitleMismatch);
+
+        return response()->json($response->getPayloadArray(), $response->getHttpResponseCode());
+    }
+
+    /**
+     * POST api/v1/codecheck/repository/preview?submissionId=N
+     *
+     * What the submission wizard may fill in from an existing check's
+     * `codecheck.yml` (#190). Writes nothing, so it is open to the authors of
+     * the submission; the title is judged against the authorised submission.
+     */
+    public function previewExistingCheck(): \Illuminate\Http\JsonResponse
+    {
+        $submission = $this->getAuthorizedContextObject(Application::ASSOC_TYPE_SUBMISSION);
+
+        $postParams = json_decode(file_get_contents('php://input'), true);
+        $address = trim((string) ($postParams['address'] ?? ''));
+
+        // Empty is a valid pointer to save (it removes one), but nothing to load.
+        if ($address === '' || !CodecheckAuthorMetadata::isExistingCheckAddress($address)) {
+            return response()->json([
+                'success' => false,
+                'error' => __('plugins.generic.codecheck.existingCheck.invalid'),
+            ], 400);
+        }
+
+        $title = (string) $submission->getCurrentPublication()?->getLocalizedTitle();
+
+        $response = $this->metadataHandler()->previewForAuthor($address, $title);
 
         return response()->json($response->getPayloadArray(), $response->getHttpResponseCode());
     }
@@ -613,6 +658,17 @@ class CodecheckApiController extends PKPBaseController
         $submission = $this->getAuthorizedContextObject(Application::ASSOC_TYPE_SUBMISSION);
         $submissionId = $submission->getId();
 
+        $user = $request->getUser();
+        $scope = CodecheckSubmissionAccess::orcidDepositScopeFor($user, $submissionId, $context->getId());
+
+        // Before the journal's setting is judged, so a refused caller learns
+        // nothing about it.
+        if ($scope === 'none') {
+            // The policy has already refused a reviewer not assigned here; this
+            // is the second lock, kept in case the route leaves SUBMISSION_SCOPED (#175).
+            return $this->roleRefusal();
+        }
+
         // Off, or left to OJS's own ORCID integration (#13).
         if (!$this->plugin->isOrcidDepositOn($context)) {
             return response()->json([
@@ -623,9 +679,6 @@ class CodecheckApiController extends PKPBaseController
             ], 400);
         }
 
-        $user = $request->getUser();
-        $scope = CodecheckSubmissionAccess::orcidDepositScopeFor($user, $submissionId, $context->getId());
-
         // The per-row button names an ORCID iD; "Deposit to all" sends none. The
         // endpoint used to ignore it either way and deposit for every authorised
         // codechecker, so the two buttons did the same thing and a re-deposit
@@ -633,18 +686,6 @@ class CodecheckApiController extends PKPBaseController
         $postParams = json_decode(file_get_contents('php://input'), true) ?? [];
         $requested = $postParams['orcidId'] ?? null;
         $onlyOrcidId = is_string($requested) && $requested !== '' ? $requested : null;
-
-        if ($scope === 'none') {
-            // SubmissionAccessPolicy has already refused a reviewer who is not
-            // assigned here — depositToOrcid is in SUBMISSION_SCOPED — so this is
-            // the second lock rather than the one holding the door. It stays
-            // because dropping this route from that list would otherwise open
-            // the deposit silently (#175).
-            return response()->json([
-                'success' => false,
-                'error' => 'Only an editor, or a reviewer assigned to this submission, may deposit to ORCID.',
-            ], 403);
-        }
 
         if ($scope === 'own') {
             // A reviewer deposits their own record whatever the payload asked

@@ -25,6 +25,9 @@ const mountForm = ({ canUpdate }) => {
 
   cy.mount(CodecheckStatusForm, { props: { submission: { id: 1, codecheckOptIn: true } } });
   cy.wait(['@status', '@history']);
+  // Rendered once the status has loaded, so what is asserted next is not met
+  // before the form is.
+  cy.get('.codecheck-info').should('exist');
 };
 
 describe('CodecheckStatusForm', () => {

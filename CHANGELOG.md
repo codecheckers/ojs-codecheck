@@ -46,6 +46,7 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 
 - With the new setting *Certificate in the References*, the published CODECHECK certificate is listed among the article's references, from a button on the CODECHECK tab or also automatically whenever a version is published; a line already citing the certificate is updated where it stands and no other reference is changed (#183)
 - The CODECHECK form loads the metadata from the report's address or DOI, for a check whose `codecheck.yml` is kept with its certificate rather than in a repository (#36)
+- In the submission form, authors whose paper was already checked can give the certificate's DOI or address, which adds the check's repositories and expected outputs to their entries and warns when its paper title differs; the CODECHECK tab then offers editors to load the check's metadata from it, asking before loading a `codecheck.yml` for a different paper title (#190)
 - Loading metadata from GitLab works for any gitlab.com project, including its clone address and links to a branch, a folder or the `codecheck.yml` itself; the register is given only a project with its `codecheck.yml` at the top level of `main`, by its whole path (#36)
 - Loading metadata from Zenodo works for records of any age, from the older `record/` addresses, from a link to a file in the record and from the Zenodo sandbox, which is deposited to the register as `zenodo-sandbox::` (#36)
 - Loading metadata from OSF works for a link to the `codecheck.yml`'s file page, and finds the `codecheck.yml` in a project with many files (#36)
@@ -98,6 +99,7 @@ This CHANGELOG.md is based on and adapted from [Keep a Changelog](https://keepac
 - An ORCID account can be connected to a submission, and is credited for its check on ORCID, only when its iD is recorded for one of the submission's codecheckers (advisory GHSA-4p3r-qgp4-g74r)
 - Only an editor can change a CODECHECK's codecheckers; the assigned reviewer's form shows them read-only (advisory GHSA-4p3r-qgp4-g74r)
 - Only a journal manager or an administrator can reserve, link or remove a certificate identifier; everyone else's form shows it read-only (#65)
+- A section editor or assistant can change a CODECHECK, record its status and deposit for all its codecheckers only on a submission they are assigned to as an editor, not on one they reach as its author or as an invited reviewer (#127)
 
 ## [0.1.0.0] - 2026-09-30
 

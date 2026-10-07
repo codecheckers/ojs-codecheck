@@ -599,6 +599,13 @@ class CodecheckPlugin extends GenericPlugin implements HasTaskScheduler
             'validation' => ['nullable']
         ];
 
+        // The author's pointer to a check of the paper done elsewhere: a DOI or
+        // address the editor imports the record from (#190).
+        $schema->properties->existingCodecheck = (object) [
+            'type' => 'string',
+            'validation' => ['nullable'],
+        ];
+
         $schema->properties->retrieveReserveCertificateIdentifier = (object) [
             'type' => 'string',
             'apiSummary' => true,
@@ -683,6 +690,16 @@ class CodecheckPlugin extends GenericPlugin implements HasTaskScheduler
         $submission = $params[1];
 
         if (!$submission) {
+            return false;
+        }
+
+        // OJS stores the schema field itself; only its shape is judged here.
+        $props = $params[2] ?? [];
+        $existingCheck = is_array($props) ? ($props['existingCodecheck'] ?? null) : null;
+        if ($existingCheck !== null
+            && (!is_string($existingCheck) || !CodecheckAuthorMetadata::isExistingCheckAddress($existingCheck))) {
+            $errors['existingCodecheck'] = [__('plugins.generic.codecheck.existingCheck.invalid')];
+
             return false;
         }
 

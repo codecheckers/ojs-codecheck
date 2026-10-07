@@ -511,14 +511,43 @@ describe('CodecheckMetadataForm Component', () => {
     cy.mount(CodecheckMetadataForm, { props: { submission: { id: 1 }, canEdit: true } });
     cy.wait('@loadMetadata');
 
+    // Rendered first, so the negatives below are not met before the form is.
+    cy.get('.codecheck-header').should('exist');
     cy.contains('plugins.generic.codecheck.form.readOnly').should('be.visible');
     cy.get('.codecheck-form-fields').should('have.attr', 'disabled');
-    cy.get('.codecheck-form-fields input, .codecheck-form-fields select, .codecheck-form-fields textarea')
-      .each(($field) => expect($field.closest('fieldset[disabled]').length).to.eq(1));
+    // Not a restatement of the attribute: a control left outside the fieldset
+    // would be enabled.
+    cy.get('.codecheck-metadata-form').find('input, select, textarea, button')
+      .should(($controls) => {
+        const enabled = [...$controls].filter((el) => !el.matches(':disabled'))
+          .map((el) => el.getAttribute('data-testid') || el.className);
+        // The YAML preview sits outside the fieldset but is disabled by its own
+        // condition for this incomplete record; nothing else may be enabled.
+        expect(enabled, 'enabled controls').to.deep.equal([]);
+      });
     cy.get('.footer-actions button').contains(/save/i).should('not.exist');
     cy.contains('plugins.generic.codecheck.codecheckers.editorsOnly').should('be.visible');
     // Reading the record stays possible.
     cy.get('[data-testid="preview-yaml-button"]').should('exist');
+  });
+
+  it('refuses to save or import without writing permission, whatever calls it', () => {
+    const requests = [];
+    cy.intercept('POST', '**/codecheck/**', (req) => {
+      requests.push(req.url);
+      req.reply({ statusCode: 200, body: { success: true } });
+    });
+    interceptMetadata({ permissions: { write: false, editCodecheckers: false, manageIdentifier: false, addCertificateReference: false } });
+    cy.mount(CodecheckMetadataForm, { props: { submission: { id: 1 }, canEdit: true } }).then(({ wrapper }) => {
+      cy.wait('@loadMetadata');
+      cy.get('.codecheck-header').should('exist').then(async () => {
+        await wrapper.vm.saveMetadata();
+        const error = await wrapper.vm.importMetadataFrom('https://github.com/a/b');
+        expect(error).to.eq('plugins.generic.codecheck.form.readOnly');
+        await wrapper.vm.addCertificateReference();
+        expect(requests).to.deep.equal([]);
+      });
+    });
   });
 
   it('offers Save and no note to someone who may write the record', () => {
@@ -634,6 +663,101 @@ describe('CodecheckMetadataForm Component', () => {
     cy.get('textarea[placeholder="plugins.generic.codecheck.certificate.summaryPlaceholder"]')
       .should('have.value', 'Imported summary');
     cy.get('.codecheck-report-error').should('not.exist');
+  });
+
+  /**
+   * The author named a check done elsewhere in the wizard (#190): the editor is
+   * told before reserving an identifier, and loads the record from it.
+   */
+  const POINTER_FOR_FORM = '10.5281/zenodo.14900193';
+
+  it('offers the existing check the author named, and loads the record from it', () => {
+    cy.intercept('POST', '**/codecheck/repository?submissionId=1*', { statusCode: 200, body: importedYml() })
+      .as('importExisting');
+    interceptMetadata({ existingCodecheck: '10.5281/zenodo.14900193' });
+    mountForm();
+    cy.wait('@loadMetadata');
+
+    cy.get('.codecheck-existing-check a')
+      .should('have.attr', 'href', 'https://doi.org/10.5281/zenodo.14900193')
+      .and('have.text', '10.5281/zenodo.14900193');
+    cy.get('.codecheck-existing-check-load').click();
+
+    cy.wait('@importExisting').its('request.body').should('deep.equal', {
+      repository: '10.5281/zenodo.14900193',
+    });
+    cy.get('textarea[placeholder="plugins.generic.codecheck.certificate.summaryPlaceholder"]')
+      .should('have.value', 'Imported summary');
+    // The imported certificate is now the record's, so the note has done its job.
+    cy.get('.codecheck-existing-check').should('not.exist');
+  });
+
+  it('asks before loading an existing check for another paper title, and loads it on Yes', () => {
+    let calls = 0;
+    cy.intercept('POST', '**/codecheck/repository?submissionId=1*', (req) => {
+      calls += 1;
+      req.reply(req.body.acceptTitleMismatch
+        ? { statusCode: 200, body: importedYml() }
+        : { statusCode: 422, body: { success: false, error: 'The paper title does not match.', titleMismatch: true, paperTitle: 'The preprint' } });
+    }).as('importExisting');
+    interceptMetadata({ existingCodecheck: POINTER_FOR_FORM });
+    mountForm();
+    cy.wait('@loadMetadata');
+
+    cy.get('.codecheck-existing-check-load').click();
+    cy.get('.pkp-mock-modal').should('contain', 'The preprint').and('contain', 'Test Article Title');
+    answerModal('yes');
+
+    cy.wait('@importExisting');
+    cy.wait('@importExisting').its('request.body.acceptTitleMismatch').should('eq', true);
+    cy.get('textarea[placeholder="plugins.generic.codecheck.certificate.summaryPlaceholder"]')
+      .should('have.value', 'Imported summary');
+  });
+
+  it('loads nothing when the editor declines another paper title', () => {
+    cy.intercept('POST', '**/codecheck/repository?submissionId=1*', {
+      statusCode: 422,
+      body: { success: false, error: 'The paper title does not match.', titleMismatch: true, paperTitle: null },
+    }).as('importExisting');
+    interceptMetadata({ existingCodecheck: POINTER_FOR_FORM });
+    mountForm();
+    cy.wait('@loadMetadata');
+
+    cy.get('.codecheck-existing-check-load').click();
+    cy.get('.pkp-mock-modal').should('contain', 'plugins.generic.codecheck.existingCheck.confirmNoTitle');
+    answerModal('no');
+
+    cy.get('.codecheck-existing-check-error').should('contain', 'The paper title does not match.');
+    cy.get('@importExisting.all').should('have.length', 1);
+  });
+
+  it('escapes the address of the existing check', () => {
+    interceptMetadata({ existingCodecheck: '<img src=x onerror=alert(1)>' });
+    mountForm();
+    cy.wait('@loadMetadata');
+
+    cy.get('.codecheck-existing-check img').should('not.exist');
+    cy.get('.codecheck-existing-check a').should('not.exist');
+    cy.get('.codecheck-existing-check').should('contain', '<img src=x onerror=alert(1)>');
+  });
+
+  it('shows no existing check once the record has a certificate, nor a load button to a reader', () => {
+    interceptMetadata({
+      existingCodecheck: 'https://zenodo.org/records/14900193',
+      codecheck: { ...metadataResponseBody().codecheck, certificate: '2026-001' },
+    });
+    mountForm();
+    cy.wait('@loadMetadata');
+    cy.get('.codecheck-existing-check').should('not.exist');
+
+    interceptMetadata({
+      existingCodecheck: 'https://zenodo.org/records/14900193',
+      permissions: { write: false },
+    }, 'loadReadOnly');
+    mountForm();
+    cy.wait('@loadReadOnly');
+    cy.get('.codecheck-existing-check').should('exist');
+    cy.get('.codecheck-existing-check-load').should('not.exist');
   });
 
   it('says beside the report address why nothing was loaded from it, until the form is loaded again', () => {
@@ -1896,6 +2020,7 @@ describe('CodecheckMetadataForm certificate reference', () => {
     cy.intercept('GET', '**/codecheck/metadata*', { statusCode: 200, body }).as('loadMetadata');
     mountForm();
     cy.wait('@loadMetadata');
+    cy.get('.codecheck-header').should('exist');
     cy.get('.certificate-reference').should('not.exist');
   });
 

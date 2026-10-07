@@ -9,6 +9,20 @@
             {translate key="plugins.generic.codecheck.submission.description"}
         </p>
 
+        {* A check of the paper done elsewhere (#190): the editor imports its
+           record; the wizard adds its repositories and outputs below. *}
+        <div class="pkpFormField">
+            <div class="pkpFormField__heading">
+                <label for="existingCodecheck">
+                    {translate key="plugins.generic.codecheck.existingCheck.label"}
+                </label>
+            </div>
+            <div class="pkpFormField__description">
+                {translate key="plugins.generic.codecheck.existingCheck.description"}
+            </div>
+            <input type="hidden" name="existingCodecheck" value="" />
+        </div>
+
         <div class="pkpFormField">
             <div class="pkpFormField__heading">
                 <label for="repositories">

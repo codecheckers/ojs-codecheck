@@ -3,6 +3,7 @@
 namespace APP\plugins\generic\codecheck\tests\SubmissionUnitTests;
 
 use APP\plugins\generic\codecheck\classes\Submission\CodecheckAuthorMetadata;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PKP\tests\PKPTestCase;
 use ReflectionMethod;
 
@@ -239,5 +240,79 @@ class CodecheckAuthorMetadataUnitTest extends PKPTestCase
         );
 
         $this->assertSame('the codechecker\'s', $manifest[0]['comment']);
+    }
+
+    /** What an existing check gives the wizard (#190): its repositories and outputs only. */
+    public function testTakesRepositoriesAndManifestFromACodecheckYaml()
+    {
+        $entries = CodecheckAuthorMetadata::entriesFromCodecheckYaml([
+            'paper' => ['title' => 'A Paper'],
+            'repository' => ['https://github.com/a/b', ' https://osf.io/abcde ', 'https://github.com/a/b'],
+            'manifest' => [
+                ['file' => 'fig1.png', 'comment' => 'Figure 1'],
+                ['file' => 'table.csv'],
+            ],
+            'certificate' => '2026-001',
+        ]);
+
+        $this->assertSame([
+            'repositories' => ['https://github.com/a/b', 'https://osf.io/abcde'],
+            'manifest' => [
+                ['file' => 'fig1.png', 'comment' => 'Figure 1'],
+                ['file' => 'table.csv', 'comment' => ''],
+            ],
+        ], $entries);
+    }
+
+    /** The wizard's field holds one `file - comment` line per entry. */
+    public function testKeepsEachOutputToOneLineOfTheWizardsField()
+    {
+        $entries = CodecheckAuthorMetadata::entriesFromCodecheckYaml(['manifest' => [
+            ['file' => 'fig.png', 'comment' => "Figure 1,\nleft panel"],
+            ['file' => 'Figure 1 - main.png'],
+            ['file' => "two\nlines.png"],
+        ]]);
+
+        $this->assertSame([['file' => 'fig.png', 'comment' => 'Figure 1, left panel']], $entries['manifest']);
+    }
+
+    public function testReadsASingleRepositoryGivenAsAString()
+    {
+        $entries = CodecheckAuthorMetadata::entriesFromCodecheckYaml(['repository' => 'https://github.com/a/b']);
+
+        $this->assertSame(['https://github.com/a/b'], $entries['repositories']);
+        $this->assertSame([], $entries['manifest']);
+    }
+
+    /** The wizard would refuse what is not a web address, so it is not offered. */
+    public function testLeavesOutWhatTheWizardWouldRefuse()
+    {
+        $entries = CodecheckAuthorMetadata::entriesFromCodecheckYaml([
+            'repository' => ['javascript://x', 'ftp://example.org', 42, ['nested']],
+            'manifest' => ['just a string', ['comment' => 'no file'], ['file' => '  ']],
+        ]);
+
+        $this->assertSame(['repositories' => [], 'manifest' => []], $entries);
+    }
+
+    public static function existingCheckAddressProvider(): array
+    {
+        return [
+            'no pointer' => ['', true],
+            'null' => [null, true],
+            'a web address' => ['https://zenodo.org/records/14900193', true],
+            'a DOI link' => ['https://doi.org/10.5281/zenodo.14900193', true],
+            'a bare DOI' => ['10.5281/zenodo.14900193', true],
+            'a prefixed DOI' => ['doi:10.5281/zenodo.14900193', true],
+            'another scheme' => ['javascript:alert(1)', false],
+            'a word' => ['zenodo', false],
+            'a DOI with spaces' => ['10.5281/zenodo 1', false],
+        ];
+    }
+
+    #[DataProvider('existingCheckAddressProvider')]
+    public function testJudgesAPointerToAnExistingCheck(?string $value, bool $expected)
+    {
+        $this->assertSame($expected, CodecheckAuthorMetadata::isExistingCheckAddress($value));
     }
 }

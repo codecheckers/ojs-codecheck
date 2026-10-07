@@ -27,6 +27,7 @@
 
 <script setup>
 import { ref, onMounted } from "vue";
+import { manifestLine, parseManifestLine } from "../authorEntries.js";
 
 const { useLocalize } = pkp.modules.useLocalize;
 const { t } = useLocalize();
@@ -45,13 +46,8 @@ onMounted(() => {
   if (props.value) {
     props.value.split('\n').forEach(line => {
       if (line.trim()) {
-        // Only the first separator divides them, as on the server
-        // (CodecheckAuthorMetadata::parseManifestLine): a comment may hold one.
-        const at = line.indexOf(' - ');
-        files.value.push({
-          filename: (at === -1 ? line : line.slice(0, at)).trim(),
-          comment: at === -1 ? '' : line.slice(at + 3).trim()
-        });
+        const { file, comment } = parseManifestLine(line);
+        files.value.push({ filename: file, comment });
       }
     });
   }
@@ -71,11 +67,7 @@ function removeFile(index) {
 function updateValue() {
   const data = files.value
     .filter(f => f.filename.trim())
-    .map(f => {
-      const filename = f.filename.trim();
-      const comment = f.comment.trim();
-      return comment ? `${filename} - ${comment}` : filename;
-    })
+    .map(f => manifestLine(f.filename, f.comment))
     .join('\n');
   
   const event = new CustomEvent('update', { detail: data, bubbles: true });

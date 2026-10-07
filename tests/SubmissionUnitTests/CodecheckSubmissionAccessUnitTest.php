@@ -37,52 +37,29 @@ class CodecheckSubmissionAccessUnitTest extends PKPTestCase
         return $user;
     }
 
-    #[DataProvider('editorialRoleProvider')]
-    public function testEditorialRolesAreEditors(int $role)
-    {
-        $this->assertTrue(CodecheckSubmissionAccess::isEditor($this->userWithRoles([$role]), 1));
-    }
-
-    public static function editorialRoleProvider(): array
-    {
-        return [
-            'journal manager' => [Role::ROLE_ID_MANAGER],
-            'site admin' => [Role::ROLE_ID_SITE_ADMIN],
-            'section editor' => [Role::ROLE_ID_SUB_EDITOR],
-            'assistant' => [Role::ROLE_ID_ASSISTANT],
-        ];
-    }
-
     /**
-     * A reviewer is not an editor. Register entries publish under the journal's
-     * name, so they stay with the editors — not with the codechecker either.
+     * A manager writes any submission in their journal; a Section editor or
+     * Assistant only with a stage assignment on it, which is a lookup; no test
+     * logs in as such a user yet, as the dataset has none (#127).
      */
-    #[DataProvider('nonEditorialRoleProvider')]
-    public function testEveryoneElseIsNotAnEditor(int $role)
+    public function testAManagerMayWriteAnySubmissionInTheirJournal()
     {
-        $this->assertFalse(CodecheckSubmissionAccess::isEditor($this->userWithRoles([$role]), 1));
+        $manager = $this->userWithRoles([Role::ROLE_ID_MANAGER]);
+
+        $this->assertTrue(CodecheckSubmissionAccess::canWriteMetadata($manager, 42, 1));
+        $this->assertTrue(CodecheckSubmissionAccess::isEditorOn($manager, 42, 1));
     }
 
-    public static function nonEditorialRoleProvider(): array
+    /** No user and no submission are refused before any lookup (#127). */
+    public function testNobodyIsAnEditorOnNothing()
     {
-        return [
-            'reviewer' => [Role::ROLE_ID_REVIEWER],
-            'author' => [Role::ROLE_ID_AUTHOR],
-            'reader' => [Role::ROLE_ID_READER],
-        ];
-    }
-
-    public function testAnEditorMayWriteAnySubmissionInTheirJournal()
-    {
-        $editor = $this->userWithRoles([Role::ROLE_ID_SUB_EDITOR]);
-
-        $this->assertTrue(CodecheckSubmissionAccess::canWriteMetadata($editor, 42, 1));
+        $this->assertFalse(CodecheckSubmissionAccess::isEditorOn(null, 42, 1));
+        $this->assertFalse(CodecheckSubmissionAccess::isEditorOn($this->userWithRoles([Role::ROLE_ID_MANAGER]), 0, 1));
     }
 
     /** No user, no access — and no database query to find that out. */
     public function testNobodyIsNotAnEditorAndMayNotWrite()
     {
-        $this->assertFalse(CodecheckSubmissionAccess::isEditor(null, 1));
         $this->assertFalse(CodecheckSubmissionAccess::canWriteMetadata(null, 42, 1));
         $this->assertFalse(CodecheckSubmissionAccess::isLinkedCodechecker(null, 42));
     }

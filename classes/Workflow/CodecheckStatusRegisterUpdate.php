@@ -104,7 +104,7 @@ class CodecheckStatusRegisterUpdate
             // Only an editor's recording assigns, as only an editor writes to
             // the register otherwise (#173); a reviewer's still comments (#150).
             $named = null;
-            if ($status === Constants::CODECHECK_STATUS_ASSIGNED_CODECHECKER && self::byEditor()) {
+            if ($status === Constants::CODECHECK_STATUS_ASSIGNED_CODECHECKER && self::byEditor($submissionId)) {
                 $assigned = $client->syncAssignees($issueNumber, $codecheckers);
                 // A failed request says nothing about who is assigned, so the
                 // comment then names nobody rather than calling them unreachable.
@@ -141,7 +141,7 @@ class CodecheckStatusRegisterUpdate
     public static function syncAssignees(int $submissionId): void
     {
         try {
-            if (!self::byEditor() || !self::statusAssigns($submissionId)) {
+            if (!self::byEditor($submissionId) || !self::statusAssigns($submissionId)) {
                 return;
             }
 
@@ -222,13 +222,14 @@ class CodecheckStatusRegisterUpdate
         ], true);
     }
 
-    /** Whether the request comes from someone in an editorial role (#173). */
-    private static function byEditor(): bool
+    /** Whether the request comes from someone acting as an editor on this submission (#173, #127). */
+    private static function byEditor(int $submissionId): bool
     {
         $request = Application::get()->getRequest();
         $context = $request->getContext();
 
-        return $context !== null && CodecheckSubmissionAccess::isEditor($request->getUser(), $context->getId());
+        return $context !== null
+            && CodecheckSubmissionAccess::isEditorOn($request->getUser(), $submissionId, $context->getId());
     }
 
     /**

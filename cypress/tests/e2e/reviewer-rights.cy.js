@@ -24,7 +24,7 @@ const ASSIGNED_CODECHECKER = 'plugins.generic.codecheck.status.assignedCodecheck
 
 /** Who the fixture says these accounts are, so the recorded actor can be checked. */
 const RREVIEWER_ID = 6;
-const CODECHECKER_ID = 7;
+const CODECHECKER_ID = 8;
 const ADMIN_ID = 1;
 
 /** A user id the caller is not, posted to prove the body cannot set the actor. */
@@ -319,6 +319,55 @@ describe('An editor', () => {
         'the editor who asked is recorded, not the id they sent'
       ).to.eq(ADMIN_ID);
     });
+  });
+});
+
+/**
+ * An editor is judged per submission (#127): `sectioneditor` holds the Section
+ * editor group journal-wide, is stage-assigned as an editor to submission 8,
+ * and reaches submission 10 only as its author. The journal-wide role is the
+ * same on both; the standing on the submission is what differs.
+ */
+describe('A Section editor', () => {
+  const AS_EDITOR = 8;
+  const AS_AUTHOR_ONLY = 10;
+
+  beforeEach(() => {
+    cy.ojsLogin('sectioneditor', 'sectioneditor');
+    cy.visit(`/index.php/${JOURNAL}/submissions`);
+  });
+
+  it('writes, and changes the codecheckers of, the submission they are assigned to as an editor', () => {
+    api('GET', `metadata?submissionId=${AS_EDITOR}`).its('body.permissions').should('include', {
+      write: true,
+      editCodecheckers: true,
+      manageIdentifier: false,
+    });
+    api('GET', `status?submissionId=${AS_EDITOR}`).its('body.canUpdate').should('eq', true);
+    api('GET', `orcid-status?submissionId=${AS_EDITOR}`).its('body.depositScope').should('eq', 'all');
+  });
+
+  it('is not the editor of a submission they reach only as its author', () => {
+    api('GET', `metadata?submissionId=${AS_AUTHOR_ONLY}`).its('body.permissions').should('deep.equal', {
+      write: false,
+      editCodecheckers: false,
+      manageIdentifier: false,
+      addCertificateReference: false,
+    });
+    api('GET', `status?submissionId=${AS_AUTHOR_ONLY}`).its('body.canUpdate').should('eq', false);
+    api('GET', `orcid-status?submissionId=${AS_AUTHOR_ONLY}`).its('body.depositScope').should('eq', 'none');
+  });
+
+  it('is refused every write on a submission they reach only as its author', () => {
+    const refused = (response) => {
+      expect(response.status).to.eq(401);
+      expect(response.body.error).to.eq('user.authorization.roleBasedAccessDenied');
+    };
+
+    post(`metadata?submissionId=${AS_AUTHOR_ONLY}`, { version: '2.0', repository: { repositories: [] } }).then(refused);
+    post(`status/update?submissionId=${AS_AUTHOR_ONLY}`, { status: ASSIGNED_CODECHECKER, userId: 3 }).then(refused);
+    post(`references?submissionId=${AS_AUTHOR_ONLY}`, {}).then(refused);
+    post(`orcid-deposit?submissionId=${AS_AUTHOR_ONLY}`, {}).then(refused);
   });
 });
 

@@ -1,7 +1,9 @@
-import { createApp, reactive } from 'vue';
+import { createApp, h, reactive } from 'vue';
 import CodecheckManifestFiles from "./Components/CodecheckManifestFiles.vue";
 import CodecheckRepositoryList from "./Components/CodecheckRepositoryList.vue";
-import { authorProvidedLines } from "./authorEntries.js";
+import { addLines, authorProvidedLines, manifestFileOf, manifestLine } from "./authorEntries.js";
+import CodecheckExistingCheck from "./Components/CodecheckExistingCheck.vue";
+import { doiUrl, isWebUrl } from "./isWebUrl.js";
 import { html, raw, toHtml } from "./markup.js";
 import CodecheckReviewDisplay from "./Components/CodecheckReviewDisplay.vue";
 import CodecheckDataAndSoftwareAvailability from "./Components/CodecheckDataAndSoftwareAvailability.vue";
@@ -154,7 +156,6 @@ pkp.registry.storeExtend("workflow", (piniaContext) => {
           component: "CodecheckStatusForm",
           props: {
             submission: submission,
-            canEdit: true
           },
         },
         {
@@ -213,6 +214,7 @@ class CodecheckWizardManager {
       if (publication) {
         this.setTextareaValue('dataAvailabilityStatement', publication.dataAvailabilityStatement);
       }
+
     } catch (error) {
       console.error('CODECHECK: Failed to load saved data', error);
     }
@@ -236,6 +238,13 @@ class CodecheckWizardManager {
     try {
       const data = await getCodecheckJson('metadata', submissionId);
       const codecheck = data.codecheck;
+
+      // The author's pointer to an existing check (#190) is answered here too,
+      // so one read decides all three fields.
+      const existingCheck = document.querySelector('input[name="existingCodecheck"]');
+      if (existingCheck) {
+        existingCheck.value = data.existingCodecheck ?? '';
+      }
 
       // A read that succeeded and found no record is a new submission: the
       // author has no entries yet, which is known, not "not loaded". Returning
@@ -343,6 +352,19 @@ class CodecheckWizardManager {
       }
     });
 
+    // An empty value removes the pointer (#190). One the server would refuse
+    // is not sent: the refusal would abandon the repositories and outputs in
+    // the same save, for an optional field. It is flagged here instead.
+    const existingCheck = document.querySelector('input[name="existingCodecheck"]');
+    let unusablePointer = false;
+    if (existingCheck) {
+      const pointer = existingCheck.value.trim();
+      unusablePointer = pointer !== '' && !isWebUrl(pointer) && doiUrl(pointer) === null;
+      if (!unusablePointer) {
+        body.existingCodecheck = pointer || null;
+      }
+    }
+
     if (Object.keys(body).length === 0) return;
 
     const response = await fetch(`${pkp.context.apiBaseUrl}/submissions/${submissionId}`, {
@@ -364,12 +386,15 @@ class CodecheckWizardManager {
     }
 
     Object.keys(body).forEach(field => this.showFieldError(field, null));
+    if (unusablePointer) {
+      this.showFieldError('existingCodecheck', t('plugins.generic.codecheck.existingCheck.invalid'));
+    }
   }
 
   /** Put a server-side message under a wizard field, or clear it. */
   showFieldError(name, message) {
-    const textarea = document.querySelector(`textarea[name="${name}"]`);
-    const container = textarea?.parentElement;
+    const field = document.querySelector(`textarea[name="${name}"], input[name="${name}"]`);
+    const container = field?.parentElement;
     if (!container) return;
 
     let error = container.querySelector('.codecheck-wizard-server-error');
@@ -397,7 +422,8 @@ class CodecheckWizardManager {
     document.addEventListener('click', (e) => {
       const button = e.target.closest('button');
       if (!button) return;
-      if (button.id !== 'cancelSubmission') {
+      // Loading an existing check (#190) only reads; the next save sends it.
+      if (button.id !== 'cancelSubmission' && !button.closest('.codecheck-existing-check-field')) {
         this.saveData();
       }
     }, true);
@@ -484,8 +510,18 @@ class CodecheckReviewRefresher {
         .filter(r => r && r.url);
       const manifest = (metadata?.codecheck?.manifest ?? []).filter(m => m && m.file);
       const availability = publication?.dataAvailabilityStatement;
+      const existingCheck = submission.existingCodecheck;
 
       const sections = [];
+
+      if (existingCheck) {
+        sections.push(html`
+          <div class="submissionWizard__reviewPanel__item">
+            <h4>${t('plugins.generic.codecheck.existingCheck.label')}</h4>
+            <div class="review-value"><p>${existingCheck}</p></div>
+          </div>
+        `);
+      }
 
       if (repositories.length) {
         sections.push(html`
@@ -656,67 +692,82 @@ window.mountCodecheckReviewerForm = mountCodecheckReviewerForm;
 // -----------------------------------------------------------------------
 // Submission wizard: mount Vue components into textareas
 // -----------------------------------------------------------------------
+
+/**
+ * Mount a field over its hidden textarea, which stays what the wizard saves.
+ * Answers `add(lines, keyOf)`, which adds entries to the textarea and
+ * remounts the field from it — the fields read their value once, on mounting
+ * (#190). Null when the field is not on the page.
+ */
+function mountWizardList(name, component, props) {
+  const textarea = document.querySelector(`textarea[name="${name}"]`);
+  if (!textarea) return null;
+
+  const vueDiv = document.createElement('div');
+  textarea.parentElement.insertBefore(vueDiv, textarea);
+  textarea.style.display = 'none';
+
+  const state = reactive({ value: textarea.value, version: 0 });
+  createApp({
+    render: () => h(component, { ...props, value: state.value, key: state.version }),
+  }).mount(vueDiv);
+
+  vueDiv.addEventListener('update', (e) => {
+    textarea.value = e.detail;
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+
+  return {
+    add(lines, keyOf) {
+      const { text, added } = addLines(textarea.value, lines, keyOf);
+      if (added > 0) {
+        textarea.value = text;
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        state.value = text;
+        state.version++;
+      }
+      return added;
+    },
+  };
+}
+
 function mountCodecheckVueComponents() {
-  const manifestContainer = document.querySelector('textarea[name="manifestFiles"]')?.parentElement;
-  if (manifestContainer) {
-    const textarea = manifestContainer.querySelector('textarea');
+  const manifest = mountWizardList('manifestFiles', CodecheckManifestFiles, {
+    name: 'manifestFiles',
+    label: t('plugins.generic.codecheck.manifestFiles.label'),
+    description: t('plugins.generic.codecheck.manifestFiles.description'),
+    isRequired: true,
+  });
+
+  const repositories = mountWizardList('repositories', CodecheckRepositoryList, {
+    name: 'repositories',
+    label: t('plugins.generic.codecheck.repositories.label'),
+    description: t('plugins.generic.codecheck.repositories.label.description'),
+  });
+
+  const existingCheck = document.querySelector('input[name="existingCodecheck"]');
+  if (existingCheck && wizardSubmissionId()) {
     const vueDiv = document.createElement('div');
-    manifestContainer.insertBefore(vueDiv, textarea);
-    textarea.style.display = 'none';
-    
-    createApp(CodecheckManifestFiles, {
-      name: 'manifestFiles',
-      label: t('plugins.generic.codecheck.manifestFiles.label'),
-      description: t('plugins.generic.codecheck.manifestFiles.description'),
-      value: textarea.value,
-      isRequired: true,
+    existingCheck.parentElement.insertBefore(vueDiv, existingCheck);
+
+    createApp(CodecheckExistingCheck, {
+      submissionId: wizardSubmissionId(),
+      value: existingCheck.value,
+      onInput: (address) => { existingCheck.value = address; },
+      // Added to what the author has, never replacing it (#190).
+      onLoaded: (entries) => {
+        const manifestLines = entries.manifest.map(m => manifestLine(m.file, m.comment));
+        return (repositories?.add(entries.repositories) ?? 0)
+          + (manifest?.add(manifestLines, manifestFileOf) ?? 0);
+      },
     }).mount(vueDiv);
-    
-    vueDiv.addEventListener('update', (e) => {
-      textarea.value = e.detail;
-      textarea.dispatchEvent(new Event('input', { bubbles: true }));
-    });
   }
 
-  const repositoriesContainer = document.querySelector('textarea[name="repositories"]')?.parentElement;
-  if (repositoriesContainer) {
-    const textarea = repositoriesContainer.querySelector('textarea');
-    const vueDiv = document.createElement('div');
-    repositoriesContainer.insertBefore(vueDiv, textarea);
-    textarea.style.display = 'none';
-
-    createApp(CodecheckRepositoryList, {
-      name: 'repositories',
-      label: t('plugins.generic.codecheck.repositories.label'),
-      description: t('plugins.generic.codecheck.repositories.label.description'),
-      value: textarea.value,
-    }).mount(vueDiv);
-
-    vueDiv.addEventListener('update', (e) => {
-      textarea.value = e.detail;
-      textarea.dispatchEvent(new Event('input', { bubbles: true }));
-    });
-  }
-
-  const dataAndSoftwareAvailabilityContainer = document.querySelector('textarea[name="dataAvailabilityStatement"]')?.parentElement;
-  if (dataAndSoftwareAvailabilityContainer) {
-    const textarea = dataAndSoftwareAvailabilityContainer.querySelector('textarea');
-    const vueDiv = document.createElement('div');
-    dataAndSoftwareAvailabilityContainer.insertBefore(vueDiv, textarea);
-    textarea.style.display = 'none';
-    
-    createApp(CodecheckDataAndSoftwareAvailability, {
-      name: 'dataAvailabilityStatement',
-      label: t('plugins.generic.codecheck.dataSoftwareAvailability'),
-      description: t('plugins.generic.codecheck.dataSoftwareAvailability.description'),
-      value: textarea.value,
-    }).mount(vueDiv);
-    
-    vueDiv.addEventListener('update', (e) => {
-      textarea.value = e.detail;
-      textarea.dispatchEvent(new Event('input', { bubbles: true }));
-    });
-  }
+  mountWizardList('dataAvailabilityStatement', CodecheckDataAndSoftwareAvailability, {
+    name: 'dataAvailabilityStatement',
+    label: t('plugins.generic.codecheck.dataSoftwareAvailability'),
+    description: t('plugins.generic.codecheck.dataSoftwareAvailability.description'),
+  });
 }
 
 // -----------------------------------------------------------------------

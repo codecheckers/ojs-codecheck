@@ -186,6 +186,26 @@ class CodecheckPluginUnitTest extends PKPTestCase
         $this->assertTrue($mockSchema->properties->retrieveReserveCertificateIdentifier->apiSummary);
     }
 
+    public function testAddOptInToSchemaAddsTheExistingCheck()
+    {
+        $mockSchema = (object)['properties' => (object)[]];
+        $args = [&$mockSchema];
+
+        $this->plugin->addOptInToSchema('test_hook', $args);
+
+        $this->assertSame('string', $mockSchema->properties->existingCodecheck->type);
+    }
+
+    /** A pointer that is neither a DOI nor a web address refuses the save (#190). */
+    public function testSaveWizardFieldsRefusesAnUnusableExistingCheck()
+    {
+        $errors = [];
+        $params = [&$errors, $this->createMock(\APP\submission\Submission::class), ['existingCodecheck' => 'javascript:alert(1)']];
+
+        $this->assertFalse($this->plugin->saveWizardFieldsFromRequest('test_hook', $params));
+        $this->assertArrayHasKey('existingCodecheck', $errors);
+    }
+
     public function testAddOptInCheckboxDoesNotAddFieldToOtherForms()
     {
         $mockForm = $this->createMock(FormComponent::class);

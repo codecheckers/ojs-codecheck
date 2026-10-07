@@ -61,7 +61,7 @@ describe("Closing a codechecker's review", () => {
   it("is offered from completed on, for the codecheckers' reviews alone, and closes the review once", () => {
     recordStatus(COMPLETED);
     // rreviewer's review is not a codechecker's, and is never offered.
-    openReviews().should('deep.equal', [{ reviewAssignmentId: CODECHECKER_REVIEW, userId: 7, name: 'Cora Codechecker', round: 1 }]);
+    openReviews().should('deep.equal', [{ reviewAssignmentId: CODECHECKER_REVIEW, userId: 8, name: 'Cora Codechecker', round: 1 }]);
 
     cy.visit(`/index.php/${JOURNAL}/dashboard/editorial?workflowSubmissionId=${SUBMISSION}&workflowMenuKey=codecheck`);
     cy.contains('.codecheck-codechecker-reviews__item', 'Cora Codechecker', { timeout: 20000 })

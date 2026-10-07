@@ -168,7 +168,7 @@ and add the method to `SUBMISSION_SCOPED` if it acts on a submission —
 otherwise it answers for any submission in the journal.
 
 Endpoints: `GET labels|metadata|yaml|register|status|status/history|orcid-status|orcid-test|codecheckers/reviewers|codecheckers/reviews`,
-`POST identifier|issue|metadata|references|repository|repository/validate|yaml/validate|status/update|orcid-deposit|codecheckers/github|codecheckers/reviews/close`.
+`POST identifier|issue|metadata|references|repository|repository/preview|repository/validate|yaml/validate|status/update|orcid-deposit|codecheckers/github|codecheckers/reviews/close`.
 
 **There is deliberately no file upload/download endpoint**
 (`CodecheckApiControllerRoutesUnitTest` asserts it). Use OJS file services and
@@ -198,7 +198,12 @@ assignment):
   and sends no `issue` update; `saveMetadata()` keeps the stored `certificate` and `issue`
   for anyone else. Automatic register writes (status comment, labels, JSON
   block) are not covered by it.
-- `isEditor()` — gates GitHub assignment.
+- `isEditorOn()` (#127) — per submission, the one editor question (there is no
+  journal-wide one): manager/site admin, or Section editor/Assistant with a
+  stage assignment on it. `canWriteMetadata()` (an editor on it, or a linked
+  codechecker), the ORCID deposit scope and GitHub assignment use it, so a
+  journal-wide Section editor who reaches a submission only as its author or
+  as an invited reviewer is not treated as its editor.
 - `permissions()` (#127) — what the forms offer, built from the rules above:
   `GET metadata` answers `permissions` (`write`, `editCodecheckers`,
   `manageIdentifier`, `addCertificateReference`), `GET status` `canUpdate`,
@@ -213,6 +218,18 @@ assignment):
   action in a form needs its flag here, not a JS role check. Not rendered
   into the page: OJS 3.5's workflow is the dashboard's side panel, so the
   submission is unknown at render time.
+
+`POST repository/preview` (`READ_ROLES`, so authors; #190) is the wizard's
+load from an existing check: `previewForAuthor()` fetches like the import but
+writes nothing, answers only the yml's repositories and manifest
+(`CodecheckAuthorMetadata::entriesFromCodecheckYaml()`) and reports a title
+mismatch as `titleMatches: false` instead of refusing. The author's pointer is
+the submission field `existingCodecheck` (DOI or web address,
+`isExistingCheckAddress()`, DOIs via `Constants::bareDoi()` ↔ `doiUrl()` in
+`isWebUrl.js`); `GET metadata` answers it, withheld with the authors — but
+OJS's own submissions API answers it to reviewers too (accepted). The form
+offers the editor's import from it; there, and only there, a title mismatch is
+asked about and imported on Yes (`acceptTitleMismatch`).
 
 `POST repository` imports via `importMetadataForSubmission()`, which refuses a
 `codecheck.yml` whose `paper.title` is missing or not the submission's
@@ -594,10 +611,12 @@ the testing register (issues rw, contents r, pull requests rw, workflows rw).
 
 `testData/stable-3_5_0-codecheck/` — dump + files for journal `codecheck`; users
 `admin`, `jmanager`, `seglen`, `dnuest`, `fostermann`, `rreviewer`,
-`ccodechecker` (password = username). On submission 9 only: `rreviewer` is a
-double-anonymous reviewer, `ccodechecker` (Codechecker role) a reviewer linked
-to its codechecker list — its codechecker, and the list's only entry, so specs
-can change the list and put it back (an unlinked entry cannot be re-added). The dump carries the full
+`sectioneditor`, `ccodechecker` (password = username). `sectioneditor` is
+Section editor, assigned as editor to submission 8 and only the author of 10.
+On submission 9 only: `rreviewer` is a double-anonymous reviewer,
+`ccodechecker` (user 8, Codechecker role) a reviewer linked to its
+codechecker list — its codechecker, and the list's only entry, so specs can
+change the list and put it back (an unlinked entry cannot be re-added). The dump carries the full
 CODECHECK schema and `enabled = 1`, so migrations never run against it.
 
 **Any change to `codecheck_metadata`'s shape or its JSON blobs must be applied to

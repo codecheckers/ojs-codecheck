@@ -27,6 +27,7 @@
 
 namespace APP\plugins\generic\codecheck\classes\Submission;
 
+use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use Illuminate\Support\Facades\DB;
 
@@ -92,6 +93,53 @@ class CodecheckAuthorMetadata
             'file' => trim($parts[0]),
             'comment' => trim($parts[1] ?? ''),
         ];
+    }
+
+    /**
+     * What an existing check's `codecheck.yml` can give the wizard (#190): its
+     * repositories and expected outputs, in the shape of the wizard's fields.
+     * Everything else in the file is the editorial record's.
+     *
+     * `repository` is a string or a list; anything that is not a web address
+     * is left out, as the wizard would refuse it.
+     *
+     * @return array{repositories: string[], manifest: array<int, array{file: string, comment: string}>}
+     */
+    public static function entriesFromCodecheckYaml(array $yml): array
+    {
+        $repositories = $yml['repository'] ?? [];
+        $repositories = is_array($repositories) ? $repositories : [$repositories];
+        $repositories = array_values(array_unique(array_map(
+            'trim',
+            array_filter($repositories, fn ($url) => is_string($url) && Constants::isWebUrl($url))
+        )));
+
+        // The wizard's field is one `file - comment` line per entry, so line
+        // breaks in a comment become spaces, and a file it cannot write back
+        // as one line — a line break, or the separator in its name — is left out.
+        $oneLine = fn ($value) => is_scalar($value) ? trim(preg_replace('/\s+/u', ' ', (string) $value) ?? '') : '';
+        $manifest = [];
+        foreach (is_array($yml['manifest'] ?? null) ? $yml['manifest'] : [] as $entry) {
+            $file = is_array($entry) && is_scalar($entry['file'] ?? null) ? trim((string) $entry['file']) : '';
+            if ($file === '' || preg_match('/[\r\n]/', $file) || str_contains($file, ' - ')) {
+                continue;
+            }
+            $manifest[] = ['file' => $file, 'comment' => $oneLine($entry['comment'] ?? '')];
+        }
+
+        return ['repositories' => $repositories, 'manifest' => $manifest];
+    }
+
+    /**
+     * Whether a value can point to an existing check (#190): a web address, or
+     * a DOI as `Constants::bareDoi()` reads one. An empty value is no pointer,
+     * and is allowed when saving: it removes one.
+     */
+    public static function isExistingCheckAddress(?string $value): bool
+    {
+        return trim((string) $value) === ''
+            || Constants::isWebUrl($value)
+            || Constants::bareDoi($value) !== null;
     }
 
     /**
