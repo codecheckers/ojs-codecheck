@@ -6,6 +6,8 @@ use APP\core\Application;
 use APP\facades\Repo;
 use APP\plugins\generic\codecheck\api\v1\CodecheckApiController;
 use APP\plugins\generic\codecheck\classes\Codecheckers\CodecheckerJournalSetup;
+use APP\plugins\generic\codecheck\classes\Codecheckers\CodecheckerNeededEmail;
+use APP\plugins\generic\codecheck\classes\Codecheckers\CodecheckerNeededNotice;
 use APP\plugins\generic\codecheck\classes\Codecheckers\CodecheckerReviewers;
 use APP\plugins\generic\codecheck\classes\Codecheckers\GithubUsernameField;
 use APP\plugins\generic\codecheck\classes\CodecheckRegister\GithubHttp;
@@ -42,6 +44,7 @@ use PKP\plugins\GenericPlugin;
 use PKP\plugins\Hook;
 use PKP\plugins\interfaces\HasTaskScheduler;
 use PKP\scheduledTask\PKPScheduler;
+use PKP\stageAssignment\StageAssignment;
 
 class CodecheckPlugin extends GenericPlugin implements HasTaskScheduler
 {
@@ -85,6 +88,13 @@ class CodecheckPlugin extends GenericPlugin implements HasTaskScheduler
             // assignments to the account they are merged into (#13). Also
             // outside: a merge spans every journal.
             Hook::add('UserAction::mergeUsers', CodecheckerReviewers::moveLinksOnMerge(...));
+
+            // An editor assigned to a submission without a codechecker is
+            // told so by email (#31). Also outside: OJS assigns editors when a
+            // submission is submitted, which may run in a queued job, so the
+            // journal is read from the submission and asked there. OJS raises
+            // no hook for a stage assignment; it is an Eloquent model.
+            StageAssignment::created((new CodecheckerNeededNotice($this))->onStageAssignmentCreated(...));
         }
 
         if ($success && $this->getEnabled()) {
@@ -114,6 +124,8 @@ class CodecheckPlugin extends GenericPlugin implements HasTaskScheduler
             Hook::add('Form::config::before', $availabilityStatementField->addToMetadataForm(...));
             // Add hook for Ajax API calls
             Hook::add('APIHandler::endpoints::plugin', [$this, 'registerApiControllers']);
+            // The plugin's email under Emails, where the journal edits it (#31).
+            Hook::add('Mailer::Mailables', $this->addMailables(...));
             // Add hook for the custom CODECHECK Pages
             Hook::add('LoadHandler', $this->setCodecheckPageHandler(...));
             // Add hook for the Template Manager
@@ -456,7 +468,7 @@ class CodecheckPlugin extends GenericPlugin implements HasTaskScheduler
             // close the inline script they are written into.
             $dashboardConfig = json_encode([
                 'showDashboardColumn' => (bool) $this->getSettingWithDefault($contextId, Constants::CODECHECK_SHOW_DASHBOARD_COLUMN),
-                'codecheckMode' => $this->getSetting($contextId, Constants::CODECHECK_MODE) ?? 'opt-in',
+                'codecheckMode' => $this->getCodecheckMode($contextId),
                 // The workflow opens inside the dashboard: this is for the
                 // panel on its publication Metadata page (#34).
                 'publicationInfo' => $this->getPublicationInfoConfig($context),
@@ -534,6 +546,7 @@ class CodecheckPlugin extends GenericPlugin implements HasTaskScheduler
                     $reviewerData = json_encode([
                         'submissionId' => $submission->getId(),
                         'codecheckOptIn' => true,
+                        'codecheckMode' => $this->getCodecheckMode($contextId),
                         'orcid' => [
                             'enabled' => $this->isOrcidDepositOn($context),
                             'authUrl' => $orcidAuthUrl,
@@ -620,7 +633,7 @@ class CodecheckPlugin extends GenericPlugin implements HasTaskScheduler
         if ($form->id === 'submitStart' || $form->id === 'submissionStart' || str_contains($form->id, 'start')) {
             $request = Application::get()->getRequest();
             $context = $request->getContext();
-            $codecheckMode = $this->getSetting($context->getId(), Constants::CODECHECK_MODE);
+            $codecheckMode = $this->getCodecheckMode((int) $context->getId());
             CodecheckLogger::debug('Mode: ' . $codecheckMode);
             $checkboxValue = false;
             $codecheckMandatory = false;
@@ -830,6 +843,30 @@ class CodecheckPlugin extends GenericPlugin implements HasTaskScheduler
         return $manage->execute($args, $request);
     }
 
+    /**
+     * The plugin's default email templates, installed by the install migration
+     * and, in each language added later, by OJS (#31).
+     */
+    public function getInstallEmailTemplatesFile(): string
+    {
+        return self::emailTemplatesFile();
+    }
+
+    /** The same, for where the plugin is not at hand (#31). */
+    public static function emailTemplatesFile(): string
+    {
+        return __DIR__ . '/emailTemplates.xml';
+    }
+
+    /**
+     * Lists the plugin's emails among the journal's, under Emails (#31).
+     */
+    public function addMailables(string $hookName, array $args): bool
+    {
+        $args[0]->push(CodecheckerNeededEmail::class);
+        return false;
+    }
+
     public function setEnabled($enabled, $contextId = null)
     {
         // The parent takes only $enabled and derives the context itself, so
@@ -997,6 +1034,14 @@ class CodecheckPlugin extends GenericPlugin implements HasTaskScheduler
     public function isEnabledIn(?int $contextId): bool
     {
         return $contextId !== null && $this->getEnabled($contextId);
+    }
+
+    /**
+     * The journal's CODECHECK mode: opt-in (the default), opt-out or mandatory.
+     */
+    public function getCodecheckMode(int $contextId): string
+    {
+        return $this->getSetting($contextId, Constants::CODECHECK_MODE) ?? 'opt-in';
     }
 
     /**

@@ -1,4 +1,4 @@
-import { isOptedIn, notOptedInReason } from '../../../resources/js/optIn.js';
+import { isOptedIn, notOptedInReason, participationReason } from '../../../resources/js/optIn.js';
 
 /**
  * The one rule every backend view asks about a submission's part in a
@@ -42,6 +42,31 @@ describe('notOptedInReason', () => {
         .to.equal('plugins.generic.codecheck.warning.noChoice');
       expect(notOptedInReason({}, mode))
         .to.equal('plugins.generic.codecheck.warning.noChoice');
+    });
+  });
+});
+
+/**
+ * The codechecker is told whether the check is required by the journal or
+ * optional (#31).
+ */
+describe('participationReason', () => {
+  it('says the journal requires it in a mandatory journal', () => {
+    expect(participationReason({ codecheckOptIn: true }, 'mandatory'))
+      .to.equal('plugins.generic.codecheck.participation.mandatory');
+  });
+
+  it('says it is optional in an opt-in or an opt-out journal', () => {
+    ['opt-in', 'opt-out'].forEach((mode) => {
+      expect(participationReason({ codecheckOptIn: true }, mode))
+        .to.equal('plugins.generic.codecheck.participation.optional');
+    });
+  });
+
+  it('has nothing to say for a submission that takes no part', () => {
+    ['opt-in', 'opt-out', 'mandatory'].forEach((mode) => {
+      expect(participationReason({ codecheckOptIn: false }, mode)).to.be.null;
+      expect(participationReason({}, mode)).to.be.null;
     });
   });
 });

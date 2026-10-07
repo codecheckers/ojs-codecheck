@@ -59,6 +59,18 @@ class CodecheckStatusHandler
         return CodecheckStatusHandler::getCurrentStatusData($submissionId);
     }
 
+    /**
+     * Whether a status is one at which a codechecker is assigned: anything
+     * past waiting for one.
+     */
+    public static function assignsCodechecker(?string $status): bool
+    {
+        return is_string($status) && !in_array($status, [
+            Constants::CODECHECK_STATUS_PENDING,
+            Constants::CODECHECK_STATUS_NEEDS_CODECHECKER,
+        ], true);
+    }
+
     public static function automaticStatusUpdate(array $submissionMetadata): object|null
     {
         $submissionId = $submissionMetadata['submissionId'];

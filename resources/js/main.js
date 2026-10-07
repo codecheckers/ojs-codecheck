@@ -667,6 +667,7 @@ function mountCodecheckReviewerForm() {
     submission: submission,
     canEdit: true,
     canEditCodecheckers: false,
+    codecheckMode: reviewerData.codecheckMode,
   });
   metadataApp.component('pkp-button', pkp.registry.getComponent('PkpButton'));
   metadataApp.mount(metadataDiv);

@@ -15,6 +15,8 @@
       <div v-if="notOptedInReason" class="codecheck-optin-warning">
         ⚠ {{ t(notOptedInReason) }}
       </div>
+      <!-- Required by the journal or optional (#31) -->
+      <p v-else class="codecheck-participation">{{ t(participationReason) }}</p>
       <p v-if="!permissions.write" class="codecheck-readonly-note">
         {{ t('plugins.generic.codecheck.form.readOnly') }}
       </p>
@@ -529,7 +531,7 @@ import { html, htmlSentence, MARKUP_PLACEHOLDER, toHtml } from '../markup.js';
 import { doiUrl, isWebUrl } from '../isWebUrl.js';
 import { isValidOrcid, normalizeOrcid } from '../orcid.js';
 import { missingMandatoryFields } from '../configSpec.js';
-import { notOptedInReason } from '../optIn.js';
+import { notOptedInReason, participationReason } from '../optIn.js';
 import { serverMessage } from '../serverMessage.js';
 import { askForConfirmation, askForInput, showInformation } from '../dialogs.js';
 import { fetchAssignedReviewers } from '../codecheckerReviewers.js';
@@ -791,6 +793,11 @@ export default {
     // the rule every backend view shares (#30, #34).
     notOptedInReason() {
       return notOptedInReason(this.submission, this.codecheckMode);
+    },
+
+    // Whether the journal requires the check or it is optional (#31).
+    participationReason() {
+      return participationReason(this.submission, this.codecheckMode);
     },
 
     identifierInputEmpty() {
@@ -1967,6 +1974,11 @@ export default {
   border-radius: 3px;
   font-size: 14px;
   color: #856404;
+}
+
+.codecheck-participation {
+  margin: 0 0 1rem 0;
+  font-size: 14px;
 }
 
 /* The fields' fieldset only carries `disabled`: no border, padding or minimum width of its own. */

@@ -214,12 +214,7 @@ class CodecheckStatusRegisterUpdate
      */
     private static function statusAssigns(int $submissionId): bool
     {
-        $current = CodecheckStatusHandler::getCurrentStatusData($submissionId)->status ?? null;
-
-        return is_string($current) && !in_array($current, [
-            Constants::CODECHECK_STATUS_PENDING,
-            Constants::CODECHECK_STATUS_NEEDS_CODECHECKER,
-        ], true);
+        return CodecheckStatusHandler::assignsCodechecker(CodecheckStatusHandler::getCurrentStatusData($submissionId)->status ?? null);
     }
 
     /** Whether the request comes from someone acting as an editor on this submission (#173, #127). */

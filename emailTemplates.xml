@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE emails SYSTEM "../../../lib/pkp/dtd/emailTemplates.dtd">
+<!--
+  * emailTemplates.xml
+  *
+  * Copyright (c) 2026 CODECHECK Initiative
+  * Distributed under the Apache License, Version 2.0. For full terms see the file LICENSE.
+  *
+  * The plugin's default email templates, installed by the install migration.
+  -->
+<emails>
+	<email key="CODECHECK_CODECHECKER_NEEDED" name="plugins.generic.codecheck.codecheckerNeededEmail.name" subject="plugins.generic.codecheck.codecheckerNeededEmail.subject" body="plugins.generic.codecheck.codecheckerNeededEmail.body"/>
+</emails>

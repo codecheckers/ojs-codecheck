@@ -18,9 +18,11 @@
 
 namespace APP\plugins\generic\codecheck\classes\migration\install;
 
+use APP\facades\Repo;
 use APP\plugins\generic\codecheck\classes\Constants;
 use APP\plugins\generic\codecheck\classes\Log\CodecheckLogger;
 use APP\plugins\generic\codecheck\classes\migration\CodecheckMigration;
+use APP\plugins\generic\codecheck\CodecheckPlugin;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
@@ -98,7 +100,18 @@ class CodecheckSchemaMigration extends CodecheckMigration
         }
 
         $this->createCodecheckGenres();
+        $this->installEmailTemplates();
         $this->writeDefaultSettings();
+    }
+
+    /**
+     * Install the plugin's default email templates that are not installed yet
+     * (#31). OJS only does it itself when OJS is installed or upgraded, not
+     * when a plugin is enabled.
+     */
+    private function installEmailTemplates(): void
+    {
+        Repo::emailTemplate()->dao->installEmailTemplates(CodecheckPlugin::emailTemplatesFile(), [], null, true);
     }
 
     /**

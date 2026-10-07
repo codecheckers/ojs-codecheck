@@ -1222,6 +1222,12 @@ msgstr "The author opted out of CODECHECK for this article."
 msgid "plugins.generic.codecheck.publicationInfo.heading"
 msgstr "This article takes part in CODECHECK"
 
+msgid "plugins.generic.codecheck.participation.mandatory"
+msgstr "This journal requires a CODECHECK for every submission."
+
+msgid "plugins.generic.codecheck.participation.optional"
+msgstr "This CODECHECK is optional for submissions to this journal."
+
 msgid "plugins.generic.codecheck.warning.noChoice"
 msgstr "No CODECHECK choice was recorded for this article, for example because it was submitted before the journal enabled CODECHECK."
 
