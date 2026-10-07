@@ -64,7 +64,23 @@ export function manifestLine(file, comment) {
   return trimmed ? `${String(file).trim()} - ${trimmed}` : String(file).trim();
 }
 
+/**
+ * A manifest line split into the file and the comment on it. Only the first
+ * ` - ` separates them, as on the server
+ * (`CodecheckAuthorMetadata::parseManifestLine()`): a comment may hold one.
+ *
+ * @param {string} line
+ * @returns {{file: string, comment: string}}
+ */
+export function parseManifestLine(line) {
+  const text = String(line ?? '');
+  const at = text.indexOf(' - ');
+  return at === -1
+    ? { file: text.trim(), comment: '' }
+    : { file: text.slice(0, at).trim(), comment: text.slice(at + 3).trim() };
+}
+
 /** The file a manifest line names. */
 export function manifestFileOf(line) {
-  return line.split(' - ')[0].trim();
+  return parseManifestLine(line).file;
 }

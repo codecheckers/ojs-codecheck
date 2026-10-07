@@ -1,4 +1,4 @@
-import { addLines, authorProvidedLines, manifestFileOf } from '../../../resources/js/authorEntries.js';
+import { addLines, authorProvidedLines, manifestFileOf, manifestLine, parseManifestLine } from '../../../resources/js/authorEntries.js';
 
 /**
  * Issue #170. What the submission wizard puts in its textareas is what
@@ -102,5 +102,22 @@ describe('addLines', () => {
 
   it('fills an empty field', () => {
     expect(addLines('', ['a.png'])).to.deep.equal({ text: 'a.png', added: 1 });
+  });
+});
+
+/** One reading of the wizard's `file - comment` line, the server's (#190). */
+describe('manifest lines', () => {
+  it('splits at the first separator only', () => {
+    expect(parseManifestLine(' fig.png - left - right panels ')).to.deep.equal({ file: 'fig.png', comment: 'left - right panels' });
+  });
+
+  it('reads a line without a comment as the file alone', () => {
+    expect(parseManifestLine('table.csv')).to.deep.equal({ file: 'table.csv', comment: '' });
+    expect(manifestFileOf('table.csv - Table 1')).to.equal('table.csv');
+  });
+
+  it('writes the comment only when there is one', () => {
+    expect(manifestLine(' fig.png ', ' Figure 1 ')).to.equal('fig.png - Figure 1');
+    expect(manifestLine('fig.png', '  ')).to.equal('fig.png');
   });
 });
