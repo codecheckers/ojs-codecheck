@@ -19,7 +19,7 @@ describe('The add-codechecker dialog', () => {
     // the CODECHECK community list on GitHub; the e2e suite makes no external
     // call, so the answer is stubbed (#186).
     cy.intercept(
-      { method: 'GET', pathname: '/index.php/codecheck/api/v1/codecheck/codecheckers/lookup' },
+      { method: 'GET', pathname: '**/index.php/codecheck/api/v1/codecheck/codecheckers/lookup' },
       { success: true, github: null, source: null }
     );
     cy.ojsLogin('admin', 'admin');

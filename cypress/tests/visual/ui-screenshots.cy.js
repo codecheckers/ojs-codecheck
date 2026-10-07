@@ -113,11 +113,11 @@ describe('CODECHECK UI surfaces', () => {
     }
 
     cy.intercept(
-      { method: 'GET', pathname: `/index.php/${JOURNAL}/api/v1/codecheck/codecheckers` },
+      { method: 'GET', pathname: `**/index.php/${JOURNAL}/api/v1/codecheck/codecheckers` },
       { success: true, codecheckers: [{ name: 'Stephen J. Eglen', orcid: '0000-0001-8607-8025', github: 'sje30' }] }
     );
     cy.intercept(
-      { method: 'GET', pathname: `/index.php/${JOURNAL}/api/v1/codecheck/codecheckers/lookup` },
+      { method: 'GET', pathname: `**/index.php/${JOURNAL}/api/v1/codecheck/codecheckers/lookup` },
       { success: true, github: 'nuest', source: 'community' }
     );
     cy.visit(
@@ -144,13 +144,15 @@ describe('CODECHECK UI surfaces', () => {
    */
   it('certificate reference button and the line it adds', () => {
     cy.intercept(
-      { method: 'GET', pathname: `/index.php/${JOURNAL}/api/v1/codecheck/metadata` },
+      { method: 'GET', pathname: `**/index.php/${JOURNAL}/api/v1/codecheck/metadata` },
       (req) => req.continue((res) => {
         res.body.settings = { ...res.body.settings, certificateReferenceMode: 'button' };
+        // With the mode off the server does not offer the button either.
+        res.body.permissions = { ...res.body.permissions, addCertificateReference: true };
       })
     );
     cy.intercept(
-      { method: 'POST', pathname: `/index.php/${JOURNAL}/api/v1/codecheck/references` },
+      { method: 'POST', pathname: `**/index.php/${JOURNAL}/api/v1/codecheck/references` },
       {
         success: true,
         changed: true,
