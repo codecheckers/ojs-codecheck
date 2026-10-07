@@ -1,4 +1,5 @@
 import { defineConfig } from 'cypress';
+import { reviewAssignmentTasks } from './cypress/plugins/reviewAssignmentTasks.js';
 
 export default defineConfig({
   component: {
@@ -60,6 +61,9 @@ export default defineConfig({
 
         return launchOptions;
       });
+
+      // Reopening the review close-review.cy.js closes, which OJS cannot (#13).
+      on('task', reviewAssignmentTasks(config.env));
 
       return config;
     }

@@ -314,6 +314,12 @@ jobs:
         run: npm run test:e2e
         env:
           CYPRESS_BASE_URL: http://localhost:8888/ojs
+          # For the task that reopens the review close-review.cy.js closes.
+          CYPRESS_DB_HOST: 127.0.0.1
+          CYPRESS_DB_PORT: 3306
+          CYPRESS_DB_NAME: ojs_dump
+          CYPRESS_DB_USER: root
+          CYPRESS_DB_PASS: root
 
       - name: Upload E2E screenshots
         if: failure()

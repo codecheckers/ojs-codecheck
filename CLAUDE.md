@@ -350,7 +350,11 @@ gets no codechecker.
   keeps only codecheckers matching an assigned reviewer by ORCID iD and names
   the rest.
 - The CODECHECK tab warns beside a codechecker on a double-anonymous review
-  (#28) and beside an unlinked entry.
+  (#28: they get no authors) and beside an unlinked entry.
+- **Codecheckers are never anonymous to the authors**, whatever the review
+  method, and nothing may say they are: their names are in the record,
+  the certificate and the register. A codechecker who also gives a regular
+  review is an accepted conflict.
 - **Closing a review** (`CodecheckerReviewClosing`): from any *completed*
   status on, the status panel (`CodecheckCodecheckerReviews`) lists linked
   codecheckers' assignments in force without a completion date
@@ -360,10 +364,10 @@ gets no codechecker.
   comments", a review comment (certificate, register entry), editors'
   notification and email (last, each editor's failure logged, not fatal), task
   removed, event log. The review is claimed by a conditional update of
-  `date_completed`, so it closes once. The comment is hidden from authors on a
-  double-anonymous review, and names the register issue only if it is in the
-  configured register. OJS cannot reopen a review, so `close-review.cy.js`
-  closes it once per dataset load and only checks the refusal on a rerun.
+  `date_completed`, so it closes once. The comment is always visible to the
+  authors, and names the register issue only if it is in the configured
+  register. OJS cannot reopen a review, so `close-review.cy.js` puts it back
+  through the `snapshotReviewAssignment`/`restoreReviewAssignment` tasks.
 
 ### ORCID deposit (`classes/Orcid/`)
 
@@ -534,6 +538,11 @@ wizard DOM helpers.
   8, 9 are written by several specs; submission 10 is never touched. The status
   table is append-only: restore by recording the original status, and assert on
   history relatively.
+- **One spec writes the database directly**: `close-review.cy.js` reopens the
+  review it closed through the tasks in `cypress/plugins/reviewAssignmentTasks.js`
+  (the `mysql` client, `CYPRESS_DB_*`, set by the `make` e2e targets and CI;
+  a bare `npm run test:e2e` fails that spec). Nothing else may: drive the form
+  or the API.
 - **The suite must make no external call.** Anything new on
   `Publication::publish` must be switched off in `publication-validation.cy.js`
   around the real publish. `codecheckers/reviewers` reads the community list,
@@ -587,7 +596,8 @@ the testing register (issues rw, contents r, pull requests rw, workflows rw).
 `admin`, `jmanager`, `seglen`, `dnuest`, `fostermann`, `rreviewer`,
 `ccodechecker` (password = username). On submission 9 only: `rreviewer` is a
 double-anonymous reviewer, `ccodechecker` (Codechecker role) a reviewer linked
-to its codechecker list — its codechecker. The dump carries the full
+to its codechecker list — its codechecker, and the list's only entry, so specs
+can change the list and put it back (an unlinked entry cannot be re-added). The dump carries the full
 CODECHECK schema and `enabled = 1`, so migrations never run against it.
 
 **Any change to `codecheck_metadata`'s shape or its JSON blobs must be applied to

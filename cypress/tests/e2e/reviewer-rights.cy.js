@@ -528,6 +528,9 @@ describe('The ORCID authorisation routes', () => {
  * dataset happens to carry it, which is why this went unnoticed.
  */
 describe('The ORCID redirect URI', () => {
+  // The record a test below changes, to be put back whether or not it passed.
+  let storedRecord = null;
+
   before(() => {
     cy.ojsLogin('admin', 'admin');
     cy.openCodecheckSettings();
@@ -538,6 +541,13 @@ describe('The ORCID redirect URI', () => {
   });
 
   after(() => {
+    if (storedRecord) {
+      cy.ojsLogin('admin', 'admin');
+      cy.visit(`/index.php/${JOURNAL}/dashboard/editorial`);
+      cy.saveCodecheckRecord(ASSIGNED, storedRecord, storedRecord.codecheckers)
+        .its('status').should('eq', 200);
+    }
+
     // The secret field is write-only — an empty value means "keep", so the
     // dummy secret stays until the dataset is reloaded. Switching ORCID off is
     // what actually restores the journal's behaviour for the other specs.
@@ -563,6 +573,40 @@ describe('The ORCID redirect URI', () => {
 
       expect(redirectUri).to.contain(`/index.php/${JOURNAL}/codecheck/orcid/callback`);
       expect(redirectUri, 'not the site-level path').not.to.contain('/index.php/index/');
+    });
+  });
+
+  /**
+   * An ORCID account is connected only for a codechecker whose iD is on record
+   * (GHSA-4p3r-qgp4-g74r), so a submission whose codecheckers have no iD — here
+   * rreviewer linked instead of ccodechecker, an account without one — is
+   * refused before anyone is sent to ORCID. Which account the callback accepts
+   * is pinned in `OrcidDepositServiceUnitTest` and `CodecheckCodecheckersUnitTest`.
+   */
+  it('sends nobody to ORCID while no codechecker has an iD on record', () => {
+    cy.ojsLogin('admin', 'admin');
+    cy.visit(`/index.php/${JOURNAL}/dashboard/editorial`);
+
+    api('GET', `metadata?submissionId=${ASSIGNED}`).its('body.codecheck').then((stored) => {
+      storedRecord = stored;
+      cy.saveCodecheckRecord(ASSIGNED, stored, [{ userId: RREVIEWER_ID }]).its('status').should('eq', 200);
+      api('GET', `metadata?submissionId=${ASSIGNED}`).its('body.codecheck.codecheckers')
+        .should('deep.equal', [{ userId: RREVIEWER_ID, name: 'Rosa Reviewer', orcid: '', github: '' }]);
+
+      cy.request({
+        url: orcid('startAuth', `?submissionId=${ASSIGNED}`),
+        followRedirect: false,
+      }).then((response) => {
+        expect(response.status, 'not sent on to ORCID').to.eq(200);
+        expect(response.body).to.contain('No codechecker of this submission has an ORCID iD on record');
+      });
+
+      // Put back at once, not only in after(): the tests below need
+      // ccodechecker linked again.
+      cy.saveCodecheckRecord(ASSIGNED, stored, stored.codecheckers).its('status').should('eq', 200);
+      cy.then(() => {
+        storedRecord = null;
+      });
     });
   });
 

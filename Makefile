@@ -59,6 +59,9 @@ DATASET  ?= $(CURDIR)/testData/stable-3_5_0-codecheck/mysql
 PLUGIN_LINK := $(OJS_ROOT)/plugins/generic/codecheck
 
 MYSQL := mysql -u$(DB_USER) -p$(DB_PASS) -h$(DB_HOST) -P$(DB_PORT)
+# The database, for the e2e task that reopens the review close-review.cy.js
+# closes (cypress/plugins/reviewAssignmentTasks.js).
+CYPRESS_DB := CYPRESS_DB_HOST=$(DB_HOST) CYPRESS_DB_PORT=$(DB_PORT) CYPRESS_DB_NAME=$(DB_NAME) CYPRESS_DB_USER=$(DB_USER) CYPRESS_DB_PASS=$(DB_PASS)
 
 export OJS_ROOT
 
@@ -468,7 +471,7 @@ test-php: check-ojs
 	cd tests && sh runTests.sh
 
 test-e2e:
-	CYPRESS_BASE_URL=$(BASE_URL) npm run test:e2e
+	$(CYPRESS_DB) CYPRESS_BASE_URL=$(BASE_URL) npm run test:e2e
 
 # The same specs, in the opposite order.
 #
@@ -481,7 +484,7 @@ test-e2e:
 # run: a suite whose order changes every time turns a coupling bug into a flake
 # nobody can reproduce, which is the problem this is meant to prevent, not cause.
 test-e2e-reverse:
-	CYPRESS_BASE_URL=$(BASE_URL) npx cypress run --e2e \
+	$(CYPRESS_DB) CYPRESS_BASE_URL=$(BASE_URL) npx cypress run --e2e \
 	  --spec "$$(ls -r cypress/tests/e2e/*.cy.js | tr '\n' ',' | sed 's/,$$//')"
 
 # The same specs in a random order — but a *seeded* one, printed before the run
@@ -498,7 +501,7 @@ test-e2e-shuffle:
 	if [ -z "$$seed" ]; then seed=$$(date +%s); fi; \
 	specs="$$(node dev/shuffle-specs.mjs $$seed)" || exit 1; \
 	echo "Replay this order with: make test-e2e-shuffle SEED=$$seed"; \
-	CYPRESS_BASE_URL=$(BASE_URL) npx cypress run --e2e --spec "$$specs"
+	$(CYPRESS_DB) CYPRESS_BASE_URL=$(BASE_URL) npx cypress run --e2e --spec "$$specs"
 
 # Live tests write to the real CODECHECK register on GitHub and leave issues
 # behind, so they are not in any suite: specPattern excludes cypress/tests/live/
