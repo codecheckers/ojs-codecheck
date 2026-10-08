@@ -67,9 +67,7 @@ const AGENCIES = {
   },
 };
 
-const codecheckApi = (method, path, body) => cy.ojsApi(method, `api/v1/codecheck/${path}`, body);
-const recordStatus = (status) =>
-  codecheckApi('POST', `status/update?submissionId=${SUBMISSION}`, { status, userId: 1 }).its('status').should('eq', 200);
+const recordStatus = (status) => cy.recordCodecheckStatus(SUBMISSION, status);
 
 /** Switch a generic plugin on or off through the plugin grid, as its checkbox does. */
 const setPluginEnabled = (plugin, enabled) =>

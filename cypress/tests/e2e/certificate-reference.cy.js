@@ -43,9 +43,7 @@ const PUBLISHED_CERTIFICATE = 'plugins.generic.codecheck.status.publishedCertifi
 
 const OTHER_REFERENCE = 'Nüst, D., & Eglen, S. J. (2021). CODECHECK: an Open Science initiative for the independent execution of computations underlying research articles during peer review to improve reproducibility. F1000Research, 10, 253.';
 
-const setStatusOf = (submissionId, status) =>
-  cy.ojsApi('POST', `api/v1/codecheck/status/update?submissionId=${submissionId}`, { status, userId: 1 })
-    .its('status').should('eq', 200);
+const setStatusOf = (submissionId, status) => cy.recordCodecheckStatus(submissionId, status);
 
 const addReference = (submissionId) => cy.ojsApi('POST', `api/v1/codecheck/references?submissionId=${submissionId}`);
 

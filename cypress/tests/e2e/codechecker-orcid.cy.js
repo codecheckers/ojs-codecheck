@@ -18,8 +18,7 @@ const SUBMISSION = 2;
 const CARBERRY = '0000-0002-1825-0097';
 
 describe('Codechecker ORCID iDs', () => {
-  let csrfToken;
-
+  // The CODECHECK tab, opened so cy.ojsApi() has a backend page for its token.
   beforeEach(() => {
     cy.ojsLogin('admin', 'admin');
     cy.visit(
@@ -27,19 +26,14 @@ describe('Codechecker ORCID iDs', () => {
       `?currentViewId=published&workflowSubmissionId=${SUBMISSION}&workflowMenuKey=codecheck`
     );
     cy.get('.codecheck-metadata-form', { timeout: 20000 }).should('exist');
-    cy.window().then((win) => {
-      csrfToken = win.pkp?.currentUser?.csrfToken;
-      expect(csrfToken, 'CSRF token').to.exist;
-    });
   });
 
   /** The record as it stands, so a test can put it back. */
   const readMetadata = () =>
-    cy.request({
-      method: 'GET',
-      url: `/index.php/${JOURNAL}/api/v1/codecheck/metadata?submissionId=${SUBMISSION}`,
-      headers: { 'X-Csrf-Token': csrfToken }
-    }).its('body.codecheck');
+    cy.ojsApi('GET', `api/v1/codecheck/metadata?submissionId=${SUBMISSION}`).then((response) => {
+      expect(response.status).to.eq(200);
+      return response.body.codecheck;
+    });
 
   it('refuses an iD whose check digit does not agree, and says which', () => {
     readMetadata().then((stored) => {
@@ -80,11 +74,7 @@ describe('Codechecker ORCID iDs', () => {
    * different ways.
    */
   it('writes one shape of iD into the generated codecheck.yml', () => {
-    cy.request({
-      method: 'GET',
-      url: `/index.php/${JOURNAL}/api/v1/codecheck/yaml?submissionId=${SUBMISSION}`,
-      headers: { 'X-Csrf-Token': csrfToken }
-    }).then((response) => {
+    cy.ojsApi('GET', `api/v1/codecheck/yaml?submissionId=${SUBMISSION}`).then((response) => {
       expect(response.status).to.eq(200);
       const yaml = response.body.yaml;
 

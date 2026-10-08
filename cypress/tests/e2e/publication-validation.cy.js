@@ -52,8 +52,7 @@ let originalMetadata = null;
  */
 let orcidWasEnabled = null;
 
-const setStatusOf = (submissionId, status) =>
-  cy.ojsApi('POST', `api/v1/codecheck/status/update?submissionId=${submissionId}`, { status, userId: 1 });
+const setStatusOf = (submissionId, status) => cy.recordCodecheckStatus(submissionId, status);
 
 const setStatus = (status) => setStatusOf(SUBMISSION, status);
 
