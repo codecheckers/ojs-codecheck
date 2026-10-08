@@ -583,9 +583,10 @@ wizard DOM helpers.
   `cy.getCodecheckSetting()`, `cy.ojsApi()` (needs a backend page open for the
   CSRF token), `cy.openBackend()` (opens one), `cy.saveCodecheckRecord()`,
   `cy.recordCodecheckStatus()`, `cy.assignParticipant()` /
-  `cy.removeParticipants()` (OJS's participant grid), `cy.inviteReviewer()` /
-  `cy.unassignReviewer()` (its reviewer grid), `cy.invitationTemplates()`, `cy.snapshotOpenReview()`
-  / `cy.reopenReview()`, `cy.publishedArticleId()`.
+  `cy.removeParticipants()` / `cy.participantAssignments()` (OJS's participant
+  grid), `cy.inviteReviewer()` / `cy.unassignReviewer()` (its reviewer grid),
+  `cy.invitationTemplates()`, `cy.snapshotOpenReview()` / `cy.reopenReview()`,
+  `cy.publishedArticleId()`.
 - A red run usually has a concrete cause: server down, plugin fatal, symlink
   pointing elsewhere, stale `cache/t_compile/`. Check those before calling it flaky.
 - Uncovered: opt-in, the submission wizard, register deposit.
@@ -651,6 +652,8 @@ the testing register (issues rw, contents r, pull requests rw, workflows rw).
 `admin`, `jmanager`, `seglen`, `dnuest`, `fostermann`, `rreviewer`,
 `sectioneditor`, `ccodechecker` (password = username). `sectioneditor` is
 Section editor, assigned as editor to submission 8 and only the author of 10.
+`jmanager` is Journal manager, Journal editor and Section editor, so it can be
+assigned to one submission in two editorial roles.
 On submission 9 only: `rreviewer` is a double-anonymous reviewer,
 `ccodechecker` (user 8, Codechecker role) a reviewer linked to its
 codechecker list — its codechecker, and the list's only entry, so specs can

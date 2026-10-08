@@ -145,20 +145,26 @@ Cypress.Commands.add('assignParticipant', (submissionId, stageId, userGroupId, u
     .its('body.status').should('eq', true);
 });
 
-/** Remove every assignment of the submission in the given user groups. */
-Cypress.Commands.add('removeParticipants', (submissionId, stageId, userGroupIds) => {
+/** Yields the ids of the submission's stage assignments in the given user groups. */
+Cypress.Commands.add('participantAssignments', (submissionId, stageId, userGroupIds) => {
+  // An empty list would match every group, and removeParticipants() remove all.
+  expect(userGroupIds, 'the user groups to look in').not.to.be.empty;
   return cy.request({ url: gridUrl(PARTICIPANT_GRID, 'fetch-grid'), qs: { submissionId, stageId } }).then((response) => {
     // Rows are "…-category-<user group>-row-<assignment>"; the group's own
     // heading row is a .category row.
     const pattern = new RegExp(`-category-(?:${userGroupIds.join('|')})-row-(\\d+)$`);
     const rows = new DOMParser().parseFromString(response.body.content, 'text/html')
       .querySelectorAll('tr.gridRow:not(.category)');
-    [...rows].map((row) => row.id.match(pattern)?.[1]).filter(Boolean)
-      .forEach((assignmentId) =>
-        gridPost(PARTICIPANT_GRID, 'delete-participant', { submissionId, stageId }, { assignmentId })
-          .its('body.status').should('eq', true)
-      );
+    return [...rows].map((row) => row.id.match(pattern)?.[1]).filter(Boolean);
   });
+});
+
+/** Remove every assignment of the submission in the given user groups. */
+Cypress.Commands.add('removeParticipants', (submissionId, stageId, userGroupIds) => {
+  return cy.participantAssignments(submissionId, stageId, userGroupIds).each((assignmentId) =>
+    gridPost(PARTICIPANT_GRID, 'delete-participant', { submissionId, stageId }, { assignmentId })
+      .its('body.status').should('eq', true)
+  );
 });
 
 /** `PKPReviewerGridHandler::REVIEWER_SELECT_ADVANCED_SEARCH`, the "Add Reviewer" search tab. */

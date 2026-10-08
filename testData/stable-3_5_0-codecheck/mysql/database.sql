@@ -5382,7 +5382,8 @@ INSERT INTO `user_user_groups` (`user_user_group_id`, `user_group_id`, `user_id`
 (8, 16, 6, '2026-02-12 09:10:36', NULL, 1),
 (9, 5, 7, '2026-02-12 09:11:00', NULL, 0),
 (10, 14, 7, '2026-02-12 09:11:00', NULL, 0),
-(11, 20, 8, '2026-02-12 09:12:30', NULL, 0);
+(11, 20, 8, '2026-02-12 09:12:30', NULL, 0),
+(12, 5, 5, '2026-02-12 09:08:42', NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -7381,7 +7382,7 @@ ALTER TABLE `user_settings`
 -- AUTO_INCREMENT for table `user_user_groups`
 --
 ALTER TABLE `user_user_groups`
-  MODIFY `user_user_group_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `user_user_group_id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `versions`

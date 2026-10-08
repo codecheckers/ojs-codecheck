@@ -7,7 +7,8 @@
  * ccodechecker's review, so the list can be emptied and put back. The editors
  * assigned here are removed in after(). A status past *needs codechecker*
  * (left by e2e specs on the same instance) is set back to it for the spec and
- * restored.
+ * restored. The dataset makes jmanager Journal editor and Section editor, for
+ * the test of an editor assigned in two editorial roles.
  */
 
 import '../../support/mail.js';
@@ -88,5 +89,27 @@ describe('Email: codechecker needed', () => {
     saveCodecheckers(stored, []);
     assignEditor(SECTIONEDITOR, SECTION_EDITOR_GROUP);
     cy.mailTo(SECTIONEDITOR.email, SUBJECT).should('have.length', 1);
+  });
+
+  /**
+   * One email per editor: jmanager, Journal editor and Section editor in the
+   * dataset, is assigned in both editorial roles.
+   */
+  it('is sent once to an editor assigned in two editorial roles', () => {
+    cy.ojsApi('GET', `api/v1/users/${JMANAGER.id}`).its('body.groups').then((groups) => {
+      const active = groups.filter((group) => !group.dateEnd).map((group) => group.id);
+      expect(active, 'jmanager is Journal editor and Section editor in the dataset')
+        .to.include.members([JOURNAL_EDITOR_GROUP, SECTION_EDITOR_GROUP]);
+    });
+    cy.removeParticipants(SUBMISSION, REVIEW_STAGE, [JOURNAL_EDITOR_GROUP, SECTION_EDITOR_GROUP]);
+    saveCodecheckers(stored, []);
+    cy.clearMail();
+
+    assignEditor(JMANAGER, JOURNAL_EDITOR_GROUP);
+    assignEditor(JMANAGER, SECTION_EDITOR_GROUP);
+    cy.participantAssignments(SUBMISSION, REVIEW_STAGE, [JOURNAL_EDITOR_GROUP, SECTION_EDITOR_GROUP])
+      .should('have.length', 2);
+
+    cy.mailTo(JMANAGER.email, SUBJECT).should('have.length', 1);
   });
 });
